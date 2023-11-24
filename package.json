@@ -1,0 +1,26 @@
+{
+  "name": "bilidown",
+  "version": "1.0.0",
+  "description": "Bilibili Resources Downloader",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "package-backend": "npx pkg backend.js --targets node18-win-x64"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btjawa/BiliDown.git"
+  },
+  "author": "btjawa",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/btjawa/BiliDown/issues"
+  },
+  "homepage": "https://github.com/btjawa/BiliDown#readme",
+  "devDependencies": {
+    "@tauri-apps/api": "^1.5.1",
+    "@tauri-apps/cli": "^1.5.6",
+    "tauri-plugin-context-menu": "^0.5.0",
+    "typescript": "^5.0.2"
+  }
+}

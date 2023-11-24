@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="color-scheme" content="dark light">
+        <link rel="stylesheet" href="./css/font-awesome/all.css">
+        <link rel="stylesheet" href="./css/iziToast.min.css">
+        <link rel="stylesheet" type="text/css" href="./css/style.css">
+        <link rel="stylesheet" type="text/css" href="./css/context-menu.css">
+    </head>
+    <body>
+        <div class="context-menu">
+            <div class="context-menu-simple">
+                <div class="context-menu-item cut">
+                    <i class="fa-light fa-cut context-menu-item-icon"></i>
+                    剪切<a class="context-menu-item-key">Ctrl+X</a>
+                </div>
+                <div class="context-menu-item copy">
+                    <i class="fa-light fa-copy context-menu-item-icon"></i>
+                    复制<a class="context-menu-item-key">Ctrl+C</a>
+                </div>
+                <div class="context-menu-item paste">
+                    <i class="fa-light fa-paste context-menu-item-icon"></i>
+                    粘贴<a class="context-menu-item-key">Ctrl+V</a>
+                </div>
+                <div class="context-menu-split"></div>
+                <div class="context-menu-item bilibili">
+                    <i class="fa-brands fa-bilibili context-menu-item-icon"></i>
+                    在Bilibili上打开此页
+                </div>
+            </div>
+        </div>
+        <div class="search">
+            <div class="search-bar">
+                <input name="search-input" type="text" placeholder="链接/AV/BV/SS/EP号..." autocomplete="off">
+                <i class="fa-solid fa-search search-btn"></i>
+            </div>
+        </div>
+        <div class="side-bar">
+            <div class="profile">
+                <div class="user-avatar-placeholder">
+                    <img class="user-avatar" src="./icon/default.jpg" draggable="false" referrerPolicy="no-referrer">
+                </div>
+                <div class="user-name">登录</div>
+            </div>
+            <div class="down-page-bar">
+                <div class="down-page-bar-background"><i class="fa-solid fa-download down-page-bar-icon"></i></div>
+                <div class="down-page-bar-name">下载页</div>
+            </div>
+        </div>
+        <div class="profile-page"></div>
+        <div class="down-page">
+            <a class="down-page-empty-text">空空如也 (゜-゜)つロ</a>
+        </div>
+        <div class="login">
+            <div id="login-qrcode" draggable="false"></div>
+            <div class="login-text">
+                <div class="login-title">请使用哔哩哔哩客户端扫码登录<br>
+                    或是<a href="https://app.bilibili.com/" target="_blank">点击此处<a class="fa-solid fa-arrow-up-right-from-square" style="margin: 2px;"></a></a>跳转至官方下载中心<br>
+                    <i>Cookie将会保存在本地</i></div>
+                <div class="login-status"></div>
+            </div>
+        </div>
+        <div class="loading"></div>
+        <div class="backward"><i class="fa-solid fa-chevron-left"></i></div>
+        <div class="info">
+            <img class="info-cover" draggable="false" referrerPolicy="no-referrer">
+            <div class="info-data">
+                <div class="info-title">标题</div>
+                <div class="info-stat">数据</div>
+                <div class="info-styles">分类</div>
+                <div class="info-desc">简介</div>
+                <div class="info-owner">
+                    <img class="info-owner-face" draggable="false" referrerPolicy="no-referrer">
+                    <div class="info-owner-name">UP名称</div>
+                </div>
+            </div>
+        </div>
+        <div class="video-list-tab-head">
+            <div class="video-block-page">编号</div>
+            <div class="video-block-split"></div>
+            <div class="video-block-name">标题</div>
+            <div class="video-block-split"></div>
+            <div class="video-block-duration">时长</div>
+            <div class="video-block-split"></div>
+            <div class="video-block-operates">下载选项</div>
+        </div>
+        <div class="video-list"></div>
+        <script type="text/javascript" src="./js/jquery-3.6.0.min.js"></script>
+        <script type="text/javascript" src="./js/iziToast.min.js"></script>
+        <script type="text/javascript" src="./js/sweetalert2.all.min.js"></script>
+        <script type="text/javascript" src="./js/qrcode.min.js"></script>
+        <script type="module" src="./js/render.js"></script>
+    </body>
+</html>
