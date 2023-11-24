@@ -10,7 +10,7 @@
     position: fixed;
     user-select: none;
     opacity: 0;
-    display: flex;
+    display: none;
     transition: top 0.2s;
     transition: left 0.2s;
 }

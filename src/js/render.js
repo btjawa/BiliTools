@@ -179,7 +179,7 @@ function copy() {
     if (selectedText) {
         navigator.clipboard.writeText(selectedText);
     }
-    $('.context-menu').css({ opacity: 0 });
+    $('.context-menu').css({ opacity: 0, display: "none" });
 };
 
 async function paste() {
@@ -189,7 +189,7 @@ async function paste() {
             currentFocus.value = text;
         }
     })
-    $('.context-menu').css({ opacity: 0 });
+    $('.context-menu').css({ opacity: 0, display: "none" });
 }
 
 async function cutText() {
@@ -203,7 +203,7 @@ async function cutText() {
             currentFocus.setSelectionRange(currentFocus.selectionStart, currentFocus.selectionStart);
         }
     }
-    $('.context-menu').css({ opacity: 0 });
+    $('.context-menu').css({ opacity: 0, display: "none" });
 }
 
 async function bilibili() {
@@ -214,13 +214,13 @@ async function bilibili() {
             if (match) {
                 let url = 'https://www.bilibili.com/video/' + match[0];
                 open(url);
-                $('.context-menu').css({ opacity: 0 });
+                $('.context-menu').css({ opacity: 0, display: "none" });
             }
             match = input.match(/ep(\d+)|ss(\d+)/i);
             if (match) {
                 let url = 'https://www.bilibili.com/bangumi/play/' + match[0];
                 open(url);
-                $('.context-menu').css({ opacity: 0 });
+                $('.context-menu').css({ opacity: 0, display: "none" });
             }
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',
@@ -312,14 +312,15 @@ $(document).ready(function () {
             top: top,
             left: left,
             animation: '',
-            opacity: 1
+            opacity: 1,
+            display: "flex"
         });
         void $('.context-menu')[0].offsetHeight;
         $('.context-menu').css('animation', 'fadeInAnimation 0.2s');
     });
     $(document).on('click', async (e) => {
         if (!$('.context-menu').is(e.target) && $('.context-menu').has(e.target).length === 0)
-        $('.context-menu').css({ opacity: 0 });
+        $('.context-menu').css({ opacity: 0, display: "none" });
     });
     $(document).on('focusin', function(event) {
         currentFocus = event.target;
