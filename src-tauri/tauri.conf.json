@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "BiliDown",
-    "version": "1.0.0"
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {

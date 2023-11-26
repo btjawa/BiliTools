@@ -66,12 +66,11 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
         eprintln!("无法写入SESSDATA文件");
         return Err("无法写入SESSDATA文件".to_string());
     }
-    println!("SESSDATA写入成功: {}", sessdata_path.display());
+    println!("SESSDATA写入成功");
     let url = Url::parse("https://www.bilibili.com").unwrap();
     let cookie_str = format!("{}; Domain=.bilibili.com; Path=/", sessdata);
     let jar = GLOBAL_COOKIE_JAR.write().unwrap();
     jar.add_cookie_str(&cookie_str, &url);
-    println!("cookie_str: {}", cookie_str);
     return Ok("Updated Cookies".to_string());
 }
 
@@ -84,10 +83,10 @@ async fn init_sessdata(window: tauri::Window) -> Result<i64, String> {
     if !sessdata_path.exists() {
         if let Some(dir_path) = sessdata_path.parent() {
             fs::create_dir_all(dir_path).map_err(|e| e.to_string())?;
-            println!("已创建目录: {:?}", dir_path);
+            println!("成功创建BiliDown");
         }
         fs::write(&sessdata_path, "").map_err(|e| e.to_string())?;
-        println!("已创建文件: {:?}", sessdata_path);
+        println!("成功创建Store");
         window.emit("user-mid", vec![0.to_string(), "init".to_string()]).unwrap();
         return Ok(0);
     }
@@ -132,6 +131,10 @@ fn stop_login() {
 #[tauri::command]
 async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, String> {
     let client = init_client();
+    let mut cloned_key = qrcode_key.clone();
+    let mask_range = 8..cloned_key.len()-8;
+    let mask = "*".repeat(mask_range.end - mask_range.start);
+    cloned_key.replace_range(mask_range, &mask);
     loop {
         let stop = {
             let lock = STOP_LOGIN.lock().unwrap();
@@ -139,7 +142,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
         };
         if stop {
             *STOP_LOGIN.lock().unwrap() = false;
-            eprintln!("{}: \"登录轮询被前端截断\"", qrcode_key);
+            eprintln!("{}: \"登录轮询被前端截断\"", cloned_key);
             return Ok("登录过程被终止".to_string());
         }
         let response = client
@@ -180,7 +183,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
                             update_cookies(sessdata).await.map_err(|e| e.to_string())?;
                             let mid = init_mid().await.map_err(|e| e.to_string())?;
                             window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
-                            println!("{}: \"二维码已扫描\"", qrcode_key);
+                            println!("{}: \"二维码已扫描\"", cloned_key);
                             return Ok("二维码已扫描".to_string());
                         } else {
                             eprintln!("Cookie响应头为空");
@@ -190,7 +193,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
                     Some(86038) => return Err("二维码已失效".to_string()),
                     Some(86101) | Some(86090) => {
                         window.emit("login-status", response_data["data"]["message"].to_string()).map_err(|e| e.to_string())?;
-                        println!("{}: {}", qrcode_key, response_data["data"]["message"]);
+                        println!("{}: {}", cloned_key, response_data["data"]["message"]);
                     }
                     _ => {
                         eprintln!("未知的响应代码");
@@ -211,8 +214,6 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
 async fn download_file(window: tauri::Window, url: String, filename: String, cid: String) -> Result<String, String> {
     let client = init_client();
     let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
-    let headers = response.headers().clone();
-    println!("{:?}", headers);
     let total_size = response
         .headers().get(header::CONTENT_LENGTH)
         .and_then(|value| value.to_str().ok())
