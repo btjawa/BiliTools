@@ -11,7 +11,8 @@ const videoListTabHead = $('.video-list-tab-head');
 const loadingBox = $('.loading');
 const loginElm = $('.login');
 const downPageElm = $('.down-page');
-let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(3);
+let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(5);
+let videoData;
 let downVideos = 0, downAudios = 0;
 
 const viewIcon = `<svg class="icon-small" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20" width="20" height="20">
@@ -57,7 +58,7 @@ iziToast.settings({
     theme: 'dark'
 });
   
-async function getVideoFull(aid, cid, type, videoData, action) {
+async function getVideoFull(aid, cid, type, action) {
     let getDetailUrl = type !== "bangumi" 
         ? `http://127.0.0.1:50808/api/x/player/wbi/playurl?avid=${aid}&cid=${cid}&fnval=2000&fnver=0&fourk=1`
         : `http://127.0.0.1:50808/api/pgc/player/web/playurl?avid=${aid}&cid=${cid}&fnval=2000&fnver=0&fourk=1`;
@@ -74,10 +75,10 @@ async function getVideoFull(aid, cid, type, videoData, action) {
             const videoDownBtn = $('<div>').addClass(`video-block-${action=="only"?'only':'multi'}-video-down-btn`).text('下载');
             const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action=="only"?'only':'multi'}-audio-down-btn`).text('下载'):'';
             currentVideoBlock.next($(`.video-block-${action=="only"?'only':'multi'}`)).append(videoDownBtn, AudioDownBtn);
-            applyDimensionList(JSON.stringify(details, null, 2), type, videoData, action);
+            applyDimensionList(JSON.stringify(details, null, 2), type, action);
             applyCodecList(JSON.stringify(details, null, 2), type, action);
-            applyAudioList(JSON.stringify(details, null, 2), type, videoData, action);
-            applyDownBtn();
+            applyAudioList(JSON.stringify(details, null, 2), type, action);
+            applyDownBtn(details, type, action);
         } else {
             console.error("请求失败");
         }
@@ -140,9 +141,9 @@ function handelErr(err, type) {
             title: `警告`,
             message: `遇到错误：${errMsg}`,
         });
+        console.error(err);
         return true;
     } else {
-        console.error(err);
         return false;
     }
 }
@@ -192,10 +193,11 @@ function formatStat(num) {
 function formatDuration(num) {
     const hs = Math.floor(num / 3600);
     const mins = Math.floor((num % 3600) / 60);
-    const finalHs = hs > 0 ? String(hs).padStart(2, '0') + ':' : '';
-    const finalMins = String(mins).padStart(2, '0');
-    const finalSecs = String(num % 60).padStart(2, '0');
-    return finalHs + finalMins + ':' + Math.round(finalSecs);
+    const secs = Math.round(num % 60);
+    const finalHs = hs > 0 ? hs.toString().padStart(2, '0') + ':' : '';
+    const finalMins = mins.toString().padStart(2, '0');
+    const finalSecs = secs.toString().padStart(2, '0');
+    return finalHs + finalMins + ':' + finalSecs;
 }
 
 function getPartition(cid){switch(cid){case 1:return'动画';case 24:return'动画';case 25:return'动画';case 47:return'动画';case 210:return'动画';case 86:return'动画';case 253:return'动画';case 27:return'动画';case 13:return'番剧';case 51:return'番剧';case 152:return'番剧';case 32:return'番剧';case 33:return'番剧';case 167:return'国创';case 153:return'国创';case 168:return'国创';case 169:return'国创';case 170:return'国创';case 195:return'国创';case 3:return'音乐';case 28:return'音乐';case 31:return'音乐';case 30:return'音乐';case 59:return'音乐';case 193:return'音乐';case 29:return'音乐';case 130:return'音乐';case 243:return'音乐';case 244:return'音乐';case 129:return'舞蹈';case 20:return'舞蹈';case 154:return'舞蹈';case 156:return'舞蹈';case 198:return'舞蹈';case 199:return'舞蹈';case 200:return'舞蹈';case 4:return'游戏';case 17:return'游戏';case 171:return'游戏';case 172:return'游戏';case 65:return'游戏';case 173:return'游戏';case 121:return'游戏';case 136:return'游戏';case 19:return'游戏';case 36:return'知识';case 201:return'知识';case 124:return'知识';case 228:return'知识';case 207:return'知识';case 208:return'知识';case 209:return'知识';case 229:return'知识';case 122:return'知识';case 188:return'科技';case 95:return'科技';case 230:return'科技';case 231:return'科技';case 232:return'科技';case 233:return'科技';case 234:return'运动';case 235:return'运动';case 249:return'运动';case 164:return'运动';case 236:return'运动';case 237:return'运动';case 238:return'运动';case 223:return'汽车';case 245:return'汽车';case 246:return'汽车';case 247:return'汽车';case 248:return'汽车';case 240:return'汽车';case 227:return'汽车';case 176:return'汽车';case 160:return'生活';case 138:return'生活';case 250:return'生活';case 251:return'生活';case 239:return'生活';case 161:return'生活';case 162:return'生活';case 21:return'生活';case 211:return'美食';case 76:return'美食';case 212:return'美食';case 213:return'美食';case 214:return'美食';case 215:return'美食';case 217:return'动物圈';case 218:return'动物圈';case 219:return'动物圈';case 220:return'动物圈';case 221:return'动物圈';case 222:return'动物圈';case 75:return'动物圈';case 119:return'鬼畜';case 22:return'鬼畜';case 26:return'鬼畜';case 126:return'鬼畜';case 216:return'鬼畜';case 127:return'鬼畜';case 155:return'时尚';case 157:return'时尚';case 252:return'时尚';case 158:return'时尚';case 159:return'时尚';case 202:return'资讯';case 203:return'资讯';case 204:return'资讯';case 205:return'资讯';case 206:return'资讯';case 5:return'娱乐';case 71:return'娱乐';case 241:return'娱乐';case 242:return'娱乐';case 137:return'娱乐';case 181:return'影视';case 182:return'影视';case 183:return'影视';case 85:return'影视';case 184:return'影视';case 177:return'纪录片';case 37:return'纪录片';case 178:return'纪录片';case 179:return'纪录片';case 180:return'纪录片';case 23:return'电影';case 147:return'电影';case 145:return'电影';case 146:return'电影';case 83:return'电影';case 11:return'电视剧';case 185:return'电视剧';case 187:return'电视剧';default:return'未知分区'}}
@@ -409,7 +411,7 @@ function appendVideoBlock(data, type, index, extra) {
         videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data.duration));
     } else if (type == "bangumi") {
         videoPage = $('<div>').addClass('video-block-page').text(index);
-        videoName = $('<div>').addClass('video-block-name').html(`第${index}话&nbsp;${data.long_title}`);
+        videoName = $('<div>').addClass('video-block-name').html(data.long_title?`第${index}话&nbsp;${data.long_title}`:data.share_copy);
         videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data.duration / 1000));
     }
     const videoBlock = $('<div>').addClass('video-block');
@@ -453,11 +455,14 @@ function appendVideoBlock(data, type, index, extra) {
         videoBlockMulti.addClass('active');
         videoBlockMulti.append($('<div>').addClass('loading-multi active'));
         if (type == "video") {
-            getVideoFull(index, data.cid, type, [data.part, extra[0], extra[1], data.cid]);
+            videoData = [data.part, extra[0], extra[1], data.cid];
+            getVideoFull(index, data.cid, type, "multi");
         } else if (type == "ugc_season") {
-            getVideoFull(data.aid, data.cid, type, [data.title, data.arc.desc, data.arc.pic, data.cid]);
+            videoData = [data.title, data.arc.desc, data.arc.pic, data.cid];
+            getVideoFull(data.aid, data.cid, type, "multi");
         } else if (type == "bangumi") {
-            getVideoFull(data.aid, data.cid, type, [data.share_copy, data.share_copy, data.cover, data.cid]);
+            videoData = [data.share_copy, data.share_copy, data.cover, data.cid];
+            getVideoFull(data.aid, data.cid, type, "multi");
         }
     });
     getOnlyBtn.on('click', function() {
@@ -466,20 +471,23 @@ function appendVideoBlock(data, type, index, extra) {
         currentVideoBlock.after(videoBlockOnly);
         videoBlockOnly.addClass('active').append($('<div>').addClass('loading-only active'));
         if (type == "video") {
-            getVideoFull(index, data.cid, type, [data.part, extra[0], extra[1], data.cid], "only");
+            videoData = [data.part, extra[0], extra[1], data.cid];
+            getVideoFull(index, data.cid, type, "only");
         } else if (type == "ugc_season") {
-            getVideoFull(data.aid, data.cid, type, [data.title, data.arc.desc, data.arc.pic, data.cid], "only");
+            videoData = [data.title, data.arc.desc, data.arc.pic, data.cid];
+            getVideoFull(data.aid, data.cid, type, "only");
         } else if (type == "bangumi") {
-            getVideoFull(data.aid, data.cid, type, [data.share_copy, data.share_copy, data.cover, data.cid], "only");
+            videoData = [data.share_copy, data.share_copy, data.cover, data.cid];
+            getVideoFull(data.aid, data.cid, type, "only");
         }
     });
 }
 
-function getVideoDownUrl(data, quality, videoData, action) {
+function getVideoDownUrl(data, quality, action, extra) {
     let found;
     let downUrl = new Array(3);
     for (let video of data.dash.video) {
-        if (video.id == quality) {
+        if (video.id == quality[0]) {
             found = true;
             downUrl = [video.baseUrl, video.backupUrl[0], video.backupUrl[1]];
             break;
@@ -487,7 +495,6 @@ function getVideoDownUrl(data, quality, videoData, action) {
     }
     if (found) {
         downVideos++;
-        const quality = videoData[videoData.length-1].slice(3);
         const handelDown = async() => {
             Swal.close();
             $('.swal-btn-main').off('click');
@@ -497,47 +504,22 @@ function getVideoDownUrl(data, quality, videoData, action) {
                 icon: 'fa-solid fa-circle-info',
                 layout: '2',
                 title: '下载',
-                message: `已添加《${downVideos}_${videoData[0]}_${quality}》至下载页~`,
+                message: `已添加《${downVideos}_${videoData[0]}_${quality[1].slice(3)}.mp4》至下载页~`,
             });
-            appendDownPageBlock(videoData, 'm4s', quality);
+            appendDownPageBlock('mp4', `${quality[1].slice(3)}`);
         }
-        let options = {
-            title: '选择下载线路',
-            background: "#2b2b2b",
-            color: "#c4c4c4",
-            html: `
-                <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
-                <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
-                <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
-            `,
-            showConfirmButton: false,
-        };
-        Swal.fire(options);
-        $('.swal-btn-main').on('click', () => {
-            console.log(downUrl[0]);
-            invoke('download_file', {url: downUrl[0], filename: `${downVideos}_${videoData[0]}_${quality}.m4s`, cid: videoData[3].toString()});
-            handelDown();
-        })
-        $('.swal-btn-backup1').on('click', () => {
-            console.log(downUrl[1]);
-            invoke('download_file', {url: downUrl[1], filename: `${downVideos}_${videoData[0]}_${quality}.m4s`, cid: videoData[3].toString()});
-            handelDown();
-        })
-        $('.swal-btn-backup2').on('click', () => {
-            console.log(downUrl[1]);
-            invoke('download_file', {url: downUrl[1], filename: `${downVideos}_${videoData[0]}_${quality}.m4s`, cid: videoData[3].toString()});
-            handelDown();
-        })
+        invoke('download_file', {url: downUrl[extra], filenameParam: `${downVideos}_${videoData[0]}_${quality[1].slice(3)}.mp4`, cid: videoData[3].toString(), action: action || "only", fileType: "video"});
+        handelDown();
     } else {
 
     }
 }
 
-function getAudioDownUrl(data, quality, videoData, action) {
+function getAudioDownUrl(data, quality, action, extra) {
     let found;
     let downUrl;
     for (let audio of data.dash.audio) {
-        if (audio.id == quality) {
+        if (audio.id == quality[3]) {
             found = true;
             downUrl = [audio.baseUrl, audio.backupUrl[0], audio.backupUrl[1]];
             break;
@@ -545,7 +527,6 @@ function getAudioDownUrl(data, quality, videoData, action) {
     }
     if (found) {
         downAudios++;
-        const quality = videoData[videoData.length-1];
         const handelDown = async() => {
             Swal.close();
             $('.swal-btn-main').off('click');
@@ -555,73 +536,33 @@ function getAudioDownUrl(data, quality, videoData, action) {
                 icon: 'fa-solid fa-circle-info',
                 layout: '2',
                 title: '下载',
-                message: `已添加《${downVideos}_${videoData[0]}_${quality}》至下载页~`,
+                message: `已添加《${downAudios}_${videoData[0]}_${quality[4]}.aac》至下载页~`,
             });
-            appendDownPageBlock(videoData, 'm4s', quality);
+            appendDownPageBlock('aac', quality[4]);
         }
-        let options = {
-            title: '选择下载线路',
-            background: "#2b2b2b",
-            color: "#c4c4c4",
-            html: `
-                <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
-                <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
-                <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
-            `,
-            showConfirmButton: false,
-        };
-        Swal.fire(options);
-        $('.swal-btn-main').on('click', () => {
-            console.log(downUrl[0]);
-            invoke('download_file', {url: downUrl[0], filename: `${downVideos}_${videoData[0]}_${quality}.m4s`, cid: videoData[3].toString()});
-            handelDown();
-        })
-        $('.swal-btn-backup1').on('click', () => {
-            console.log(downUrl[1]);
-            invoke('download_file', {url: downUrl[1], filename: `${downVideos}_${videoData[0]}_${quality}.m4s`, cid: videoData[3].toString()});
-            handelDown();
-        })
-        $('.swal-btn-backup2').on('click', () => {
-            console.log(downUrl[1]);
-            invoke('download_file', {url: downUrl[1], filename: `${downVideos}_${videoData[0]}_${quality}.m4s`, cid: videoData[3].toString()});
-            handelDown();
-        })
+        invoke('download_file', {url: downUrl[extra], filenameParam: `${downAudios}_${videoData[0]}_${quality[4]}.aac`, cid: videoData[3].toString(), action: action || "only", fileType: "audio"});
+        handelDown();
     } else {
-
     }
 }
 
-function getMultiDownUrl(data, quality, videoData, action) {
-
-}
-
-async function appendDownPageBlock(videoData, type, quality) {
+async function appendDownPageBlock(type, quality) {
     const title = videoData[0];
     const desc = videoData[1];
     const pic = videoData[2];
     const cid = videoData[3];
     const downPage = $('.down-page');
-    if (downPage.find('.down-page-empty-text').length) {
-        downPage.find('.down-page-empty-text').removeClass('active');
+    if (downPage.find('.down-page-empty-text')) {
+        downPage.find('.down-page-empty-text').remove();
     }
-    let dupl;
-    if (downPage.find('.down-page-info').length) {
-        downPage.children().each(function() {
-            const infoId = $(this).find('.down-page-info-id');
-            const infoTitle = $(this).find('.down-page-info-title');
-            if (infoId.text() == `cid: ${cid}` && infoTitle.text() == `${downVideos}_${title}_${quality}.${type}`)
-            dupl = true;
-        });
-    }
-    if (dupl) return;
     const infoBlock = $('<div>').addClass('down-page-info')
     const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace(/http:/g, 'https:'))
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
     const infoId = $('<i>').addClass('down-page-info-id').text(`cid: ${cid}`);
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
-    const infoTitle = $('<div>').addClass('down-page-info-title').html(`${downVideos}_${title}_${quality}.${type}`).css('max-width', `100%`);
-    const infoProgressText = $('<div>').addClass('down-page-info-progress-text');
+    const infoTitle = $('<div>').addClass('down-page-info-title').html(`${type=="aac"?downAudios:downVideos}_${title}_${quality}.${type}`).css('max-width', `100%`);
+    const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载/合并`);
     const infoProgress = $('<div>').addClass('down-page-info-progress').html($('<div>').addClass('down-page-info-progress-bar'));
     infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, infoProgressText, infoProgress)).appendTo(downPage);
 }
@@ -744,7 +685,7 @@ function describeCodec(codecString) {
     return '未知编码格式';
 }
 
-function applyDimensionList(detailData, type, videoData, action) {
+function applyDimensionList(detailData, type, action) {
     const details = JSON.parse(detailData);
     if (details.code == 0) {
         const dms = $('<div>').addClass("video-block-dimension-dms");
@@ -776,11 +717,13 @@ function applyDimensionList(detailData, type, videoData, action) {
             if (i === 0) {
                 currentBtn.addClass('checked');
                 currentSel[0] = quality;
+                currentSel[1] = description;
             }
             currentBtn.on('click', function() {
                 currentVideoBlock.next(`.video-block-${action=="only"?'only':'multi'}`).find('.video-block-dimension-dms-item').removeClass('checked');
                 $(this).addClass('checked');
                 currentSel[0] = quality;
+                currentSel[1] = description;
             });
             if (action == "only") {
             }
@@ -808,14 +751,14 @@ function applyCodecList(detailData, type, action) {
             const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
             currentBtn.append(currentIcon, description);
             cdsOpt.append(currentBtn);
-            if (i === 0) {
+            if (description.includes('H.264')) {
                 currentBtn.addClass('checked');
-                currentSel[1] = codec;
+                currentSel[2] = codec;
             }
             currentBtn.on('click', function() {
                 currentVideoBlock.next(`.video-block-${action=="only"?'only':'multi'}`).find('.video-block-codec-cds-item').removeClass('checked');
                 $(this).addClass('checked');
-                currentSel[1] = codec;
+                currentSel[2] = codec;
             });
             if (action == "only") {
             }
@@ -825,7 +768,7 @@ function applyCodecList(detailData, type, action) {
     }
 }
 
-function applyAudioList(detailData, type, videoData, action) {
+function applyAudioList(detailData, type, action) {
     const details = JSON.parse(detailData);
     if (details.code == 0) {
         const ads = $('<div>').addClass("video-block-audio-ads");
@@ -839,8 +782,8 @@ function applyAudioList(detailData, type, videoData, action) {
             30280: "192K"
         }
         const length = type!="bangumi" ? details.data.dash.audio.length : details.result.dash.audio.length;
-        $(`.video-block-${action=="only"?'only':'multi'}`).find('.video-block-audio-ads').remove();
-        currentVideoBlock.next(`.video-block-${action=="only"?'only':'multi'}`).append(ads);
+        $(`.video-block-${action}`).find('.video-block-audio-ads').remove();
+        currentVideoBlock.next(`.video-block-${action}`).append(ads);
         for (let i = 0; i < length; i++) {
             const quality = type!="bangumi" ? details.data.dash.audio[i].id : details.result.dash.audio[i].id;
             const description = qualityDesc[quality];
@@ -848,33 +791,101 @@ function applyAudioList(detailData, type, videoData, action) {
             const currentIcon = $('<i>').addClass(`fa-solid fa-audio-description icon-small`);
             currentBtn.append(currentIcon, description);
             adsOpt.append(currentBtn);
-            if (action == "only") {
-                currentBtn.on('click', function(){
-                    const updatedVideoData = [...videoData, description];
-                    getAudioDownUrl(type!="bangumi" ? details.data : details.result, quality, updatedVideoData);
-                })
-            } else {
-                if (i === 0) {
-                    currentBtn.addClass('checked');
-                    currentSel[2] = quality;
-                }
-                currentBtn.on('click', function() {
-                    currentVideoBlock.next(`.video-block-${action=="only"?'only':'multi'}`).find('.video-block-audio-ads-item').removeClass('checked');
-                    $(this).addClass('checked');
-                    currentSel[2] = quality;
-                });
+            if (i === 0) {
+                currentBtn.addClass('checked');
+                currentSel[3] = quality;
+                currentSel[4] = description;
             }
+            currentBtn.on('click', function() {
+                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
+                $(this).addClass('checked');
+                currentSel[3] = quality;
+                currentSel[4] = description;
+            });
         }
     } else {
         handelErr(details, type);
     }
 }
 
-function applyDownBtn() {
-    const downBtn = currentVideoBlock.next('.video-block-multi').find('.video-block-multi-down-btn');
-    downBtn.on('click', () => {
-        console.log(currentSel);
+function applyDownBtn(detailData, type, action) {
+    const videoDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-video-down-btn`);
+    videoDownBtn.on('click', () => {
+        const handelClose = async() => {
+            Swal.close();
+            $('.swal-btn-main').off('click');
+            $('.swal-btn-backup1').off('click');
+            $('.swal-btn-backup2').off('click');
+        }
+        let options = {
+            title: '选择下载线路',
+            background: "#2b2b2b",
+            color: "#c4c4c4",
+            html: `
+                <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
+                <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
+                <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
+            `,
+            showConfirmButton: false,
+        };
+        Swal.fire(options);
+        $('.swal-btn-main').on('click', () => {
+            getVideoDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 0);
+            if (action == "multi") {
+                getAudioDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 0);
+            }
+            handelClose();
+        })
+        $('.swal-btn-backup1').on('click', () => {
+            getVideoDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 1);
+            if (action == "multi") {
+                getAudioDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 1);
+            }
+            handelClose();
+        })
+        $('.swal-btn-backup2').on('click', () => {
+            getVideoDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 2);
+            if (action == "multi") {
+                getAudioDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 2);
+            }
+            handelClose();
+        })
     })
+    if (action == "only") {
+        const audioDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-audio-down-btn`);
+        audioDownBtn.on('click', () => {
+            const handelClose = async() => {
+                Swal.close();
+                $('.swal-btn-main').off('click');
+                $('.swal-btn-backup1').off('click');
+                $('.swal-btn-backup2').off('click');
+            }
+            let options = {
+                title: '选择下载线路',
+                background: "#2b2b2b",
+                color: "#c4c4c4",
+                html: `
+                    <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
+                    <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
+                    <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
+                `,
+                showConfirmButton: false,
+            };
+            Swal.fire(options);
+            $('.swal-btn-main').on('click', () => {
+                getAudioDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 0);
+                handelClose();
+            })
+            $('.swal-btn-backup1').on('click', () => {
+                getAudioDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 1);
+                handelClose();
+            })
+            $('.swal-btn-backup2').on('click', () => {
+                getAudioDownUrl((type!="bangumi"?detailData.data:detailData.result), currentSel, action, 2);
+                handelClose();
+            })
+        })
+    }
 }
 
 async function getUserProfile(mid, action) {
@@ -928,6 +939,46 @@ listen("download-progress", async (event) => {
             $(this).find('.down-page-info-progress-bar').css('width', event.payload[1]);
             $(this).find('.down-page-info-progress-text')
             .html(`总进度: ${event.payload[1]}&emsp;剩余时间: ${event.payload[2]}&emsp;当前速度: ${event.payload[4]}`);
+            if (parseFloat(event.payload[1]) >= 100) {
+                $(this).find('.down-page-info-progress-text').html(`已下载至桌面`);
+            }
+        }
+    });
+})
+
+listen("merge-start", async (event) => {
+    const videoRe = event.payload.match(/([0-9]+(?:P\+?|K))(?=_)/i)[0];
+    const audioRe = event.payload.match(/([0-9]+K)(?=.mp4)/i)[1];
+    appendDownPageBlock('mp4', `${videoRe}_${audioRe}`);
+})
+
+listen("merge-progress", async (event) => {
+    const infoBlock = $('.down-page-info');
+    infoBlock.children().each(function() {
+        const title = $(this).find('.down-page-info-title');
+        if (title.text() == event.payload[4].match(/[^\\\/:*?"<>|\r\n]+$/i)[0]) {
+            $(this).find('.down-page-info-progress-text')
+            .html(`frame: ${event.payload[0]}&emsp;fps: ${event.payload[1]}&emsp;out_time: ${event.payload[2]}&emsp;speed: ${event.payload[3]}`);
+        }
+    });
+})
+
+listen("merge-success", async (event) => {
+    const infoBlock = $('.down-page-info');
+    infoBlock.children().each(function() {
+        const title = $(this).find('.down-page-info-title');
+        if (title.text() == event.payload.match(/[^\\\/:*?"<>|\r\n]+$/i)[0]) {
+            $(this).find('.down-page-info-progress-text').html(`合并成功`);
+        }
+    });
+})
+
+listen("merge-failed", async (event) => {
+    const infoBlock = $('.down-page-info');
+    infoBlock.children().each(function() {
+        const title = $(this).find('.down-page-info-title');
+        if (title.text() == event.payload.match(/[^\\\/:*?"<>|\r\n]+$/i)[0]) {
+            $(this).find('.down-page-info-progress-text').html(`合并失败`);
         }
     });
 })
@@ -938,13 +989,5 @@ listen("download-complete", async (event) => {
         layout: '2',
         title: '下载',
         message: `《${event.payload[1]}》已下载至桌面~`,
-    });
-    const infoBlock = $('.down-page-info');
-    infoBlock.children().each(function() {
-        const id = $(this).find('.down-page-info-id');
-        const title = $(this).find('.down-page-info-title');
-        if (id.text() == `cid: ${event.payload[0]}` && title.text() == event.payload[1]) {
-            $(this).find('.down-page-info-progress-text').html(`已下载至桌面`);
-        }
     });
 })

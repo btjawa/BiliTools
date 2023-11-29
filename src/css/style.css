@@ -711,6 +711,7 @@ input[name="search-input"]:hover {
     visibility: hidden;
     transition: opacity 0.4s, visibility 0.5s;
     z-index: 2;
+    overflow: auto;
 }
 
 .down-page {

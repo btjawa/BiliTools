@@ -5,9 +5,10 @@ use lazy_static::lazy_static;
 use serde_json::Value;
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{CookieStore, Jar}};
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
-use std::{env, fs, path::PathBuf, sync::{Arc, RwLock, Mutex}, convert::Infallible, time::Instant};
-use tokio::{fs::File, io::AsyncWriteExt};
-use futures::StreamExt;
+use std::{env, fs, path::{Path, PathBuf}, sync::{Arc, RwLock}, convert::Infallible, time::Instant, process::Stdio, collections::{VecDeque, HashSet}};
+use tokio::{fs::File, sync::Mutex, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, process::Command, time::{sleep, Duration}};
+use futures::stream::StreamExt;
+use regex::RegexBuilder;
 
 fn init_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -23,6 +24,40 @@ fn init_headers() -> HeaderMap {
 lazy_static! {
     static ref GLOBAL_COOKIE_JAR: Arc<RwLock<Jar>> = Arc::new(RwLock::new(Jar::default()));
     static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    static ref GLOBAL_DOWNLOAD_STATUS: Mutex<DownloadStatus> = Mutex::new(DownloadStatus::new());
+}
+
+#[derive(Default)]
+struct DownloadStatus {
+    audio_downloaded: bool,
+    video_downloaded: bool,
+    audio_path: Option<String>,
+    video_path: Option<String>,
+}
+
+impl DownloadStatus {
+    fn new() -> Self {
+        DownloadStatus {
+            audio_downloaded: false,
+            video_downloaded: false,
+            audio_path: None,
+            video_path: None,
+        }
+    }
+    fn is_ready_for_merge(&self) -> bool {
+        self.audio_downloaded
+            && self.video_downloaded
+            && self.audio_path.as_ref().map_or(false, |p| Path::new(p).exists())
+            && self.video_path.as_ref().map_or(false, |p| Path::new(p).exists())
+    }
+    fn set_audio_downloaded(&mut self, path: String) {
+        self.audio_downloaded = true;
+        self.audio_path = Some(path);
+    }
+    fn set_video_downloaded(&mut self, path: String) {
+        self.video_downloaded = true;
+        self.video_path = Some(path);
+    }
 }
 
 struct ThreadSafeCookieStore(Arc<RwLock<Jar>>);
@@ -120,11 +155,11 @@ async fn init_mid() -> Result<i64, String> {
         eprintln!("请求失败");
         return Err("请求失败".into());
     }    
-}    
+}   
 
 #[tauri::command]
-fn stop_login() {
-    let mut stop = STOP_LOGIN.lock().unwrap();
+async fn stop_login() {
+    let mut stop = STOP_LOGIN.lock().await;
     *stop = true;
 }
 
@@ -137,11 +172,12 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
     cloned_key.replace_range(mask_range, &mask);
     loop {
         let stop = {
-            let lock = STOP_LOGIN.lock().unwrap();
+            let lock = STOP_LOGIN.lock().await;
             *lock
         };
         if stop {
-            *STOP_LOGIN.lock().unwrap() = false;
+            let mut lock = STOP_LOGIN.lock().await;
+            *lock = false;
             eprintln!("{}: \"登录轮询被前端截断\"", cloned_key);
             return Ok("登录过程被终止".to_string());
         }
@@ -206,12 +242,129 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
                 return Err("未知的响应代码".to_string())
             }
         }
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        sleep(Duration::from_secs(1)).await;
+    }
+}
+
+async fn merge_video_audio(window: tauri::Window, audio_path: &String, video_path: &String, output_path: &PathBuf) -> Result<(), String> {
+    println!("Starting merge process for audio");
+    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
+    let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
+    let video_filename = Path::new(output_path)
+    .file_name()
+    .and_then(|f| f.to_str())
+    .ok_or_else(|| "无法提取视频文件名".to_string())?;
+    let progress_path = current_dir.join("ffmpeg")
+    .join(format!("{}.progress", video_filename));
+    let output_path_str = output_path.to_string_lossy().to_string();
+    let output_path_str_clone = output_path_str.clone();
+    let _ = window.emit("merge-start", output_path_str.clone());
+    println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
+    let mut child = Command::new(ffmpeg_path)
+        .arg("-i")
+        .arg(video_path)
+        .arg("-i")
+        .arg(audio_path)
+        .arg("-c:v")
+        .arg("copy")
+        .arg("-c:a")
+        .arg("aac")
+        .arg(&output_path)
+        .arg("-progress")
+        .arg(&progress_path)
+        .arg("-y")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    let audio_path_clone = audio_path.clone();
+    let video_path_clone = video_path.clone();
+    let window_clone = window.clone();
+    let progress_path_clone = &progress_path.clone();
+    let progress_handle = tokio::spawn(async move {
+        while !progress_path.exists() {
+            sleep(Duration::from_millis(100)).await;
+        }
+        let mut progress_lines = VecDeque::new();
+        let mut last_size: u64 = 0;
+        loop {
+            let mut printed_keys = HashSet::new();
+            let metadata = tokio::fs::metadata(&progress_path).await.unwrap();
+            if metadata.len() > last_size {
+                let mut file = File::open(&progress_path).await.unwrap();
+                file.seek(SeekFrom::Start(last_size)).await.unwrap();
+                let mut reader = BufReader::new(file);
+                let mut line = String::new();
+                while reader.read_line(&mut line).await.unwrap() != 0 {
+                    if progress_lines.len() >= 12 {
+                        progress_lines.pop_front();
+                    }
+                    progress_lines.push_back(line.clone());
+                    line.clear();
+                }
+                last_size = metadata.len();
+            }
+            let mut messages = Vec::new();
+            for l in &progress_lines {
+                let parts: Vec<&str> = l.split('=').collect();
+                if parts.len() == 2 {
+                    let key = parts[0].trim();
+                    let value = parts[1].trim();
+                    if !printed_keys.contains(key) {
+                        match key {
+                            "frame" | "fps" | "out_time" | "speed" => {
+                                messages.push(value);
+                            },
+                            _ => continue,
+                        };
+                        printed_keys.insert(key.to_string());
+                    }
+                }
+            }
+            messages.push(&output_path_str_clone);
+            println!("{:?}", messages);
+            let _ = window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string());
+            if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
+                println!("FFmpeg process completed.");
+                break;
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+    });    
+    let status = child.wait().await.map_err(|e| e.to_string())?;
+    let _ = progress_handle.await.map_err(|e| e.to_string())?;
+    if status.success() {
+        if let Err(e) = tokio::fs::remove_file(audio_path_clone.clone()).await {
+            eprintln!("无法删除原始音频文件: {}", e);
+        }
+        if let Err(e) = tokio::fs::remove_file(video_path_clone.clone()).await {
+            eprintln!("无法删除原始视频文件: {}", e);
+        }
+        if let Err(e) = tokio::fs::remove_file(progress_path_clone).await {
+            eprintln!("无法删除进度文件: {}", e);
+        }
+        let _ = window.emit("merge-success", output_path_str);
+        Ok(())
+    } else {
+        let _ = window.emit("merge-failed", output_path_str);
+        Err("FFmpeg command failed".to_string())
     }
 }
 
 #[tauri::command]
-async fn download_file(window: tauri::Window, url: String, filename: String, cid: String) -> Result<String, String> {
+async fn download_file(
+    window: tauri::Window, 
+    url: String, filename_param: String, 
+    cid: String, action: String, 
+    file_type: String
+) -> Result<(), String> {
+    let mut status = GLOBAL_DOWNLOAD_STATUS.lock().await;
+    if file_type == "audio" {
+        status.audio_downloaded = false;
+    } else if file_type == "video" {
+        status.video_downloaded = false;
+    }
     let client = init_client();
     let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
     let total_size = response
@@ -219,7 +372,7 @@ async fn download_file(window: tauri::Window, url: String, filename: String, cid
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(0);
-    // let filename = 
+    // let filename = if action == "multi" {
     //     Url::parse(&url)
     //         .ok()
     //         .and_then(|parsed_url| {
@@ -227,7 +380,11 @@ async fn download_file(window: tauri::Window, url: String, filename: String, cid
     //                 .and_then(|segments| segments.last())
     //                 .map(|last_segment| last_segment.to_string())
     //         })
-    //         .unwrap_or_else(|| format!("{}.m4s", filename).to_string());
+    //         .unwrap_or_else(|| filename_param.clone())
+    // } else {
+    //     filename_param.clone()
+    // };
+    let filename = filename_param.clone();
     let filename_clone = filename.clone();
     let filedir = PathBuf::from(env::var("USERPROFILE").map_err(|e| e.to_string())?)
         .join("Desktop")
@@ -260,9 +417,43 @@ async fn download_file(window: tauri::Window, url: String, filename: String, cid
         ];
         println!("{:?}", formatted_values);
         window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
-    }    
-    window.emit("download-complete", vec![format!("{}", cid), filename_clone]).map_err(|e| e.to_string())?;
-    Ok(cid)
+    }
+    if file_type == "audio" {
+        status.set_audio_downloaded(filedir.to_string_lossy().into_owned());
+    } else if file_type == "video" {
+        status.set_video_downloaded(filedir.to_string_lossy().into_owned());
+    }
+    if action == "multi" && status.is_ready_for_merge() {
+        let audio_path_clone = status.audio_path.clone().ok_or_else(|| "找不到音频路径".to_string())?;
+        let video_path_clone = status.video_path.clone().ok_or_else(|| "找不到视频路径".to_string())?;
+        let window_clone = window.clone();
+        tokio::spawn(async move {
+            let re_raw = RegexBuilder::new(r"([0-9]+(?:P\+?|K))")
+                .case_insensitive(true)
+                .build()
+                .unwrap();
+            let video_quality = re_raw.captures(&video_path_clone)
+                .and_then(|caps| caps.get(1))
+                .map_or("", |m| m.as_str());
+            let audio_quality = re_raw.captures(&audio_path_clone)
+                .and_then(|caps| caps.get(1))
+                .map_or("", |m| m.as_str());
+            let output_filename = video_path_clone.replace(video_quality, &format!("{}_{}", video_quality, audio_quality));
+            let output_path = PathBuf::from(env::var("USERPROFILE").unwrap())
+                .join("Desktop")
+                .join(output_filename);
+        
+            match merge_video_audio(window_clone, &audio_path_clone, &video_path_clone, &output_path).await {
+                Ok(_) => println!("Merge operation completed successfully."),
+                Err(e) => eprintln!("Error during merge operation: {}", e),
+            }
+        });
+    } else if action == "only" {
+        window.emit("download-complete", vec![format!("{}", cid), filename_clone]).map_err(|e| e.to_string())?;
+    } else {
+        println!("Not ready for merge. Audio or video is still downloading.");
+    }
+    Ok(())
 }
 
 #[tokio::main]
