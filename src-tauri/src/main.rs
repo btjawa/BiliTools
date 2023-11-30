@@ -44,17 +44,17 @@ impl DownloadStatus {
             video_path: None,
         }
     }
-    fn is_ready_for_merge(&self) -> bool {
+    fn ready_for_merge(&self) -> bool {
         self.audio_downloaded
             && self.video_downloaded
             && self.audio_path.as_ref().map_or(false, |p| Path::new(p).exists())
             && self.video_path.as_ref().map_or(false, |p| Path::new(p).exists())
     }
-    fn set_audio_downloaded(&mut self, path: String) {
+    fn audio(&mut self, path: String) {
         self.audio_downloaded = true;
         self.audio_path = Some(path);
     }
-    fn set_video_downloaded(&mut self, path: String) {
+    fn video(&mut self, path: String) {
         self.video_downloaded = true;
         self.video_path = Some(path);
     }
@@ -261,18 +261,12 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &String, video_pat
     let _ = window.emit("merge-start", output_path_str.clone());
     println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
-        .arg("-i")
-        .arg(video_path)
-        .arg("-i")
-        .arg(audio_path)
-        .arg("-c:v")
-        .arg("copy")
-        .arg("-c:a")
-        .arg("aac")
-        .arg(&output_path)
-        .arg("-progress")
-        .arg(&progress_path)
-        .arg("-y")
+        .arg("-i").arg(video_path)
+        .arg("-i").arg(audio_path)
+        .arg("-c:v").arg("copy")
+        .arg("-c:a").arg("aac")
+        .arg(&output_path).arg("-progress")
+        .arg(&progress_path).arg("-y")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -419,11 +413,11 @@ async fn download_file(
         window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
     }
     if file_type == "audio" {
-        status.set_audio_downloaded(filedir.to_string_lossy().into_owned());
+        status.audio(filedir.to_string_lossy().into_owned());
     } else if file_type == "video" {
-        status.set_video_downloaded(filedir.to_string_lossy().into_owned());
+        status.video(filedir.to_string_lossy().into_owned());
     }
-    if action == "multi" && status.is_ready_for_merge() {
+    if action == "multi" && status.ready_for_merge() {
         let audio_path_clone = status.audio_path.clone().ok_or_else(|| "找不到音频路径".to_string())?;
         let video_path_clone = status.video_path.clone().ok_or_else(|| "找不到视频路径".to_string())?;
         let window_clone = window.clone();
@@ -506,8 +500,16 @@ async fn proxy_request(args: (Method, FullPath, String, Bytes, String)) -> Resul
             response_builder = response_builder.header(key, value);
         }
         response_builder = response_builder.header("Access-Control-Allow-Origin", "*");
-
-        let body = response.text().await.unwrap_or_default();
+        let content_type = response.headers().get(warp::http::header::CONTENT_TYPE);
+        let body = if let Some(content_type) = content_type {
+            if content_type.to_str().unwrap_or_default().starts_with("text/") {
+                response.text().await.unwrap_or_default().into()
+            } else {
+                response.bytes().await.unwrap_or_default()
+            }
+        } else {
+            response.bytes().await.unwrap_or_default()
+        };
         Ok(response_builder.body(body).unwrap())
     } else {
         Ok(response_builder
