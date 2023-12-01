@@ -158,6 +158,22 @@ async fn init_mid() -> Result<i64, String> {
 }   
 
 #[tauri::command]
+async fn exit(window: tauri::Window) -> Result<i64, String> {
+    {
+        let mut cookie_jar = GLOBAL_COOKIE_JAR.write().unwrap();
+        *cookie_jar = Jar::default();
+    }
+    let appdata_path = env::var("APPDATA").map_err(|e| e.to_string())?;
+    let working_dir = PathBuf::from(appdata_path).join("BiliDown");
+    let sessdata_path = working_dir.join("Store");
+    if let Err(e) = fs::remove_file(sessdata_path) {
+        return Err(format!("Failed to delete store directory: {}", e));
+    }
+    window.emit("exit-success", 0).unwrap();
+    return Ok(0)
+}
+
+#[tauri::command]
 async fn stop_login() {
     let mut stop = STOP_LOGIN.lock().await;
     *stop = true;
@@ -460,6 +476,14 @@ async fn main() {
         .map(|method, path, query, body| (method, path, query, body, "https://api.bilibili.com".to_string()))
         .and_then(proxy_request);
 
+    let i0_route = warp::path("i0")
+        .and(warp::method())
+        .and(warp::path::full())
+        .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
+        .and(warp::body::bytes())
+        .map(|method, path, query, body| (method, path, query, body, "https://i0.hdslb.com".to_string()))
+        .and_then(proxy_request);
+
     let passport_route = warp::path("passport")
         .and(warp::method())
         .and(warp::path::full())
@@ -468,12 +492,12 @@ async fn main() {
         .map(|method, path, query, body| (method, path, query, body, "https://passport.bilibili.com".to_string()))
         .and_then(proxy_request);
     
-    let routes = api_route.or(passport_route);
+    let routes = i0_route.or(api_route.or(passport_route));
     tokio::task::spawn(async move {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![init_sessdata, login, stop_login, download_file])
+        .invoke_handler(tauri::generate_handler![init_sessdata, login, stop_login, download_file, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -484,6 +508,7 @@ async fn proxy_request(args: (Method, FullPath, String, Bytes, String)) -> Resul
     let trimmed_path = path_str
         .strip_prefix("/api")
         .or_else(|| path_str.strip_prefix("/passport"))
+        .or_else(|| path_str.strip_prefix("/i0"))
         .unwrap_or(path_str);
     let full_path = if !raw_query.is_empty() {
         format!("{}?{}", trimmed_path, raw_query)

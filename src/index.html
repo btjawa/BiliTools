@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="color-scheme" content="dark light">
+        <meta name="referrer" content="no-referrer">
         <link rel="stylesheet" href="./css/font-awesome/all.css">
         <link rel="stylesheet" href="./css/iziToast.min.css">
         <link rel="stylesheet" type="text/css" href="./css/style.css">
@@ -38,8 +39,8 @@
         </div>
         <div class="side-bar">
             <div class="profile">
-                <div class="user-avatar-placeholder">
-                    <img class="user-avatar" src="./icon/default.jpg" draggable="false" referrerPolicy="no-referrer">
+                <div class="user-avatar-placeholder" data-after="登录">
+                    <img class="user-avatar" src="./icon/default.jpg" draggable="false">
                 </div>
                 <div class="user-name">登录</div>
             </div>
@@ -48,7 +49,36 @@
                 <div class="down-page-bar-name">下载页</div>
             </div>
         </div>
-        <div class="profile-page"></div>
+        <div class="user-profile">
+            <div class="user-profile-background">
+                <div class="user-profile-card">
+                    <img class="user-profile-avatar" src="./icon/default.jpg" draggable="false">
+                    <div class="user-profile-h-basic">
+                        <div class="user-profile-head">
+                            <div class="user-profile-name">名称</div>
+                            <img class="user-profile-sex icon-small" src="./icon/male.png" draggable="false"></img>
+                            <img class="user-profile-level icon-small" src="./icon/level/level0.svg" draggable="false"></img>
+                            <img class="user-profile-bigvip icon-small" draggable="false"></img>
+                        </div>
+                        <div class="user-profile-h-spacing">
+                            <div class="user-profile-desc">简介</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="user-profile-n-statistics">
+                    <div class="user-profile-coins"><a>硬币</a><br>N/A</div>
+                    <div class="user-profile-subs"><a>关注数</a><br>N/A</div>
+                    <div class="user-profile-fans"><a>粉丝数</a><br>N/A</div>
+                    <div class="user-profile-likes"><a>获赞数</a><br>N/A</div>
+                </div>
+                <div class="user-profile-exit">
+                    <div class="user-profile-exit-background">
+                        <i class="fa-solid fa-arrow-right-from-bracket user-profile-exit-icon"></i>
+                        <div class="user-profile-exit-name">退出登录</div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="down-page">
             <a class="down-page-empty-text">空空如也 (゜-゜)つロ</a>
         </div>
@@ -64,14 +94,14 @@
         <div class="loading"></div>
         <div class="backward"><i class="fa-solid fa-chevron-left"></i></div>
         <div class="info">
-            <img class="info-cover" draggable="false" referrerPolicy="no-referrer">
+            <img class="info-cover" draggable="false">
             <div class="info-data">
                 <div class="info-title">标题</div>
                 <div class="info-stat">数据</div>
                 <div class="info-styles">分类</div>
                 <div class="info-desc">简介</div>
                 <div class="info-owner">
-                    <img class="info-owner-face" draggable="false" referrerPolicy="no-referrer">
+                    <img class="info-owner-face" src="./icon/default.jpg" draggable="false">
                     <div class="info-owner-name">UP名称</div>
                 </div>
             </div>

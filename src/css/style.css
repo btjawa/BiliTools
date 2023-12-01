@@ -1,6 +1,12 @@
 @font-face {
     font-family: "HarmonyOS_Regular";
-    src: url('../font/HarmonyOS_Sans_SC_Regular.woff') format('woff2');
+    src: url('../font/HarmonyOS_Sans_SC_Regular.woff2') format('woff2');
+    font-display: fallback;
+}
+
+@font-face {
+    font-family: "HarmonyOS_Bold";
+    src: url('../font/HarmonyOS_Sans_SC_Bold.woff2') format('woff2');
     font-display: fallback;
 }
 
@@ -9,7 +15,6 @@
     top: 2vh;
     margin-left: 2vh;
     left: 0px;
-    color: #c4c4c4;
     height: 50px;
     width: 50px;
     border-radius: 25px;
@@ -55,10 +60,6 @@
         transform: rotate(360deg);
     }
 }
-  
-*{
-    font-family: "HarmonyOS_Regular", Arial, sans-serif;
-}
 
 .swal-btn-main,
 .swal-btn-backup1,
@@ -92,6 +93,8 @@
 }
 
 body {
+    font-family: "HarmonyOS_Regular", sans-serif;
+    font-weight: 400;
     background-color: #1f1f1f;
     margin: 0;
     padding: 0;
@@ -101,10 +104,14 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    color: #c4c4c4;
+}
+
+i {
+    color: #757575;
 }
 
 input {
-    color: #c4c4c4;
     height: 100%;
     margin: 0;
     padding: 0;
@@ -171,7 +178,6 @@ input[name="search-input"]:hover {
 }
 
 .search-btn:hover {
-    color: #c4c4c4;
     background-color: #5c5c5c9d;
 }
 
@@ -365,7 +371,6 @@ input[name="search-input"]:hover {
 .down-page-info-title,
 .info-title {
     font-size: 18px;
-    color: #c4c4c4;
     margin-bottom: 6px;
     min-height: 24px;
     max-height: 48px;
@@ -403,7 +408,6 @@ input[name="search-input"]:hover {
     line-height: 20px;
     font-size: 14px;
     min-width: calc(100% - 10px);
-    color: #c4c4c4;
     position: relative;
     align-self: flex-start;
     margin-bottom: 12px;
@@ -418,7 +422,6 @@ input[name="search-input"]:hover {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    color: #c4c4c4;
     font-size: 14px;
 }
 
@@ -442,7 +445,6 @@ input[name="search-input"]:hover {
 }
 
 .down-page-empty-text {
-    color: #c4c4c4;
     opacity: 0;
     max-height: 0;
     transition: opacity 0.4s;
@@ -476,7 +478,6 @@ input[name="search-input"]:hover {
 
 .info-owner-name {
     font-size: 12px;
-    color: #c4c4c4;
     max-width: 110px;
     overflow-x: auto;
     white-space: nowrap;
@@ -487,7 +488,6 @@ input[name="search-input"]:hover {
 .video-block-duration,
 .video-block-operates {
     font-size: 14px;
-    color: #c4c4c4;
     position: relative;
     margin-left: 10px;
     white-space: nowrap;
@@ -497,7 +497,6 @@ input[name="search-input"]:hover {
 
 .video-block-title {
     position: absolute;
-    color: #c4c4c4;
     font-size: 14px;
     right: 0;
     top: 0;
@@ -582,7 +581,6 @@ input[name="search-input"]:hover {
     margin: 10px;
     font-size: 13px;
     border-radius: 8px;
-    color: #c4c4c4;
     align-self: flex-end;
     cursor: pointer;
     user-select: none;
@@ -674,7 +672,6 @@ input[name="search-input"]:hover {
 .video-block-codec-cds-opt,
 .video-block-dimension-dms-opt {
     font-size: 14px;
-    color: #c4c4c4;
     position: relative;
     margin-left: 10px;
     white-space: nowrap;
@@ -713,7 +710,8 @@ input[name="search-input"]:hover {
 
 .profile-page,
 .down-page,
-.login {
+.login,
+.user-profile {
     width: 100vw;
     height: 100vh;
     background-color: #1f1f1f;
@@ -745,7 +743,8 @@ input[name="search-input"]:hover {
 
 .profile-page.active,
 .down-page.active,
-.login.active {
+.login.active,
+.user-profile.active {
     animation: login-anime 0.5s cubic-bezier(0,1,.6,1);
     opacity: 1;
     visibility: visible;
@@ -762,20 +761,130 @@ input[name="search-input"]:hover {
 
 .profile-page.back,
 .down-page.back,
-.login.back {
+.login.back,
+.user-profile.back {
     animation: login-back-anime 0.5s cubic-bezier(0,1,.6,1);
     opacity: 0;
     visibility: hidden;
 }
 
+.user-profile a {
+    margin-bottom: 5px;
+    display: inline-block;
+}
+
+.user-profile-background {
+    background-size: cover;
+    width: 1080px;
+    height: 169px;
+    z-index: -1;
+    position: absolute;
+    border-radius: 8px;
+}
+
+.user-profile-background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.13) 25%, rgba(0,0,0,0.26) 50%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0.66) 100%);
+    z-index: -1;
+    border-radius: 8px;
+}
+
+.user-profile-card {
+    color: #e5e5e5;
+    justify-content: center;
+    position: absolute;
+    left: 22px;
+    bottom: 15px;
+}
+
+.user-profile-n-statistics {
+    color: #e5e5e5;
+    justify-content: center;
+    position: absolute;
+    right: 22px;
+    bottom: 15px;
+    display: flex;
+    font-size: 12px;
+}
+
+.user-profile-card,
+.user-profile-head {
+    display: flex;
+    align-items: center;
+}
+
+.user-profile-avatar {
+    border-radius: 32px;
+    height: 64px;
+    user-select: none;
+    position: relative;
+    border: 2px solid rgba(47, 50, 52, 0.4);
+}
+
+.user-profile-h-basic {
+    margin-left: 22px;
+}
+
+
+.user-profile-h-spacing {
+    margin-top: 3px;
+    font-size: 12px;
+}
+
+.user-profile-name,
+.user-profile-desc {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 768px;
+    overflow: none;
+}
+
+.user-profile-desc { line-height: 26px; }
+
+.user-profile-name {
+    display: inline-block;
+    height: 24px;
+    margin-right: 5px;
+    line-height: 18px;
+    font-size: 18px;
+    vertical-align: middle;
+    line-height: 20px;
+    font-family: "HarmonyOS_Bold", sans-serif;
+    font-weight: 500;
+}
+
+.user-profile-bigvip {
+    width: 69px;
+    height: 20px;
+    display: none;
+}
+
+.user-profile-bigvip,
+.user-profile-sex,
+.user-profile-level {
+    margin-bottom: 3px;
+}
+
+.user-profile-coins,
+.user-profile-subs,
+.user-profile-fans,
+.user-profile-likes {
+    width: auto;
+    margin-left: 5px;
+    margin-right: 5px;
+    text-align: center;
+    min-width: 36px;
+}
+
 #login-qrcode {
     margin-right: 20px;
     user-select: none;
-}
-
-.login-title,
-.login-status {
-    color: #c4c4c4;
 }
 
 .login-status {
@@ -785,11 +894,6 @@ input[name="search-input"]:hover {
 .login a {
     color: #6995bf;
     text-decoration: none;
-}
-
-.down-page-info-data i,
-.login i {
-    color: #757575;
 }
 
 .down-page-info-id {
@@ -822,6 +926,36 @@ input[name="search-input"]:hover {
     min-width: 75px;
 }
 
+.user-profile-exit {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: flex-start;
+    width: 100px;
+    left: 22px;
+    top: 15px;
+}
+
+.user-profile-exit-background {
+    width: 100px;
+    height: 40px;
+    background-color: #2a2a2a;
+    cursor: pointer;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition-property: all;
+    transition-duration: 0.3s;
+}
+
+.user-profile-exit-name {
+    font-size: 12px;
+    margin-left: 8px;
+    user-select: none;
+}
+
 .down-page-bar-background {
     width: 50px;
     height: 50px;
@@ -836,11 +970,12 @@ input[name="search-input"]:hover {
     transition-duration: 0.3s;
 }
 
+.user-profile-exit-background:hover,
 .down-page-bar-background:hover {
     background-color: #3b3b3b;
 }
 
-.down-page-bar-name,
+.user-profile-exit-icon,
 .down-page-bar-icon {
     color: #c4c4c4;
 }
@@ -861,8 +996,7 @@ input[name="search-input"]:hover {
 }
 
 .user-avatar-placeholder::after {
-    content: '登录';
-    color: #c4c4c4;
+    content: attr(data-after);
     font-size: 12px;
     line-height: 46px;
     text-align: center;
@@ -885,7 +1019,6 @@ input[name="search-input"]:hover {
 .down-page-bar-name,
 .user-name {
     font-size: 13px;
-    color: #c4c4c4;
     max-width: 110px;
     overflow-x: auto;
     white-space: nowrap;

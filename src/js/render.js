@@ -10,10 +10,24 @@ const infoBlock = $('.info');
 const videoListTabHead = $('.video-list-tab-head');
 const loadingBox = $('.loading');
 const loginElm = $('.login');
+const userProfileElm = $('.user-profile');
 const downPageElm = $('.down-page');
-let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(5);
-let videoData, downVideos = 0, downAudios = 0;
-let bouncing = false;
+
+// for producing
+// let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(5);
+// let videoData, userData = new Array(2), downVideos = 0, downAudios = 0;
+// let bouncing = false;
+
+// for deving
+window.getDetailUrl = '';
+window.currentElm = null;
+window.currentFocus = null;
+window.currentSel = new Array(5);
+window.videoData = '';
+window.downVideos = 0;
+window.downAudios = 0;
+window.bouncing = false;
+window.userData = new Array(2);
 
 const viewIcon = `<svg class="icon-small" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20" width="20" height="20">
 <path d="M10 4.040041666666666C7.897383333333334 4.040041666666666 6.061606666666667 4.147 4.765636666666667 4.252088333333334C3.806826666666667 4.32984 3.061106666666667 5.0637316666666665 2.9755000000000003 6.015921666666667C2.8803183333333333 7.074671666666667 2.791666666666667 8.471183333333332 2.791666666666667 9.998333333333333C2.791666666666667 11.525566666666668 2.8803183333333333 12.922083333333333 2.9755000000000003 13.9808C3.061106666666667 14.932983333333334 3.806826666666667 15.666916666666667 4.765636666666667 15.744683333333336C6.061611666666668 15.849716666666666 7.897383333333334 15.956666666666667 10 15.956666666666667C12.10285 15.956666666666667 13.93871666666667 15.849716666666666 15.234766666666667 15.74461666666667C16.193416666666668 15.66685 16.939000000000004 14.933216666666667 17.024583333333336 13.981216666666668C17.11975 12.922916666666667 17.208333333333332 11.526666666666666 17.208333333333332 9.998333333333333C17.208333333333332 8.470083333333333 17.11975 7.073818333333334 17.024583333333336 6.015513333333334C16.939000000000004 5.063538333333333 16.193416666666668 4.329865000000001 15.234766666666667 4.252118333333334C13.93871666666667 4.147016666666667 12.10285 4.040041666666666 10 4.040041666666666zM4.684808333333334 3.255365C6.001155 3.14862 7.864583333333334 3.0400416666666668 10 3.0400416666666668C12.13565 3.0400416666666668 13.999199999999998 3.148636666666667 15.315566666666667 3.2553900000000002C16.753416666666666 3.3720016666666672 17.890833333333333 4.483195 18.020583333333335 5.925965000000001C18.11766666666667 7.005906666666667 18.208333333333336 8.433 18.208333333333336 9.998333333333333C18.208333333333336 11.56375 18.11766666666667 12.990833333333335 18.020583333333335 14.0708C17.890833333333333 15.513533333333331 16.753416666666666 16.624733333333335 15.315566666666667 16.74138333333333C13.999199999999998 16.848116666666666 12.13565 16.95666666666667 10 16.95666666666667C7.864583333333334 16.95666666666667 6.001155 16.848116666666666 4.684808333333334 16.7414C3.2467266666666665 16.624750000000002 2.1092383333333338 15.513266666666667 1.9795200000000002 14.070383333333334C1.8823900000000002 12.990000000000002 1.7916666666666667 11.562683333333334 1.7916666666666667 9.998333333333333C1.7916666666666667 8.434066666666666 1.8823900000000002 7.00672 1.9795200000000002 5.926381666666667C2.1092383333333338 4.483463333333334 3.2467266666666665 3.371976666666667 4.684808333333334 3.255365z" fill="currentColor"></path>
@@ -301,6 +315,9 @@ async function backward() {
     } else if (currentElm == '.down-page') {
         downPageElm.removeClass('active').addClass('back');
         $('.down-page-empty-text').removeClass('active');
+    } else if (currentElm = '.user-profile') {
+        userProfileElm.removeClass('active').addClass('back');
+        $('.user-profile-empty-text').removeClass('active');
     } else {
         infoBlock.removeClass('active');
         videoList.removeClass('active');
@@ -322,12 +339,13 @@ $(document).ready(function () {
     searchInput.on('keydown', (e) => {
         if (e.keyCode === 13) debouncedSearch();
     });
-    // if ($('.user-name').text() == "游客")
-    $('.user-avatar-placeholder').on('click', debounce(login, 1000));
-    $('.down-page-bar-background').on('click', () => {
+    $('.down-page-bar').on('click', () => {
         currentElm = '.down-page';
         downPageElm.addClass('active').removeClass('back');
         $('.down-page-empty-text').addClass('active');
+    })
+    $('.user-profile-exit').on('click', () => {
+        invoke('exit');
     })
     $('.cut').on('click', () => cutText());
     $('.copy').on('click', () => copy());
@@ -602,7 +620,33 @@ async function appendDownPageBlock(type, quality) {
     infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, infoProgressText, infoProgress)).appendTo(downPage);
 }
 
+async function userProfile() {
+    if ($('.user-name').text() == "登录") return;
+    currentElm = '.user-profile';
+    userProfileElm.addClass('active').removeClass('back');
+    const getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/card?mid=${userData[0]}&photo=true`;
+    const detailData = await fetch(getDetailUrl);
+    if (detailData.ok) {
+        const details = await detailData.json();
+        $('.user-profile-background').css("background-image", `url(${details.data.space.l_img.replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0")})`);
+        $('.user-profile-avatar').attr("src", details.data.card.face);
+        $('.user-profile-name').html(details.data.card.name);
+        $('.user-profile-desc').html(details.data.card.sign);
+        $('.user-profile-sex').attr("src", `./icon/${details.data.card.sex=="男"?'male':'female'}.png`);
+        $('.user-profile-level').attr("src", `./icon/level/level${details.data.card.level_info.current_level}${details.data.card.is_senior_member?'_hardcore':''}.svg`);
+        if (details.data.card.vip) {
+            $('.user-profile-bigvip').css("display", "block");
+            $('.user-profile-bigvip').attr("src", details.data.card.vip.label.img_label_uri_hans_static);
+        }
+        $('.user-profile-coins').html('<a>硬币</a><br>' + userData[1]);
+        $('.user-profile-subs').html('<a>关注数</a><br>' + formatStat(details.data.card.friend));
+        $('.user-profile-fans').html('<a>粉丝数</a><br>' + formatStat(details.data.card.fans));
+        $('.user-profile-likes').html('<a>获赞数</a><br>' + formatStat(details.data.like_num));
+    }
+}
+
 async function login() {
+    if ($('.user-name').text() != "登录") return;
     try {
         currentElm = '.login';
         $('.login-status').html('当前状态：正在与服务器通信...');
@@ -933,6 +977,8 @@ async function getUserProfile(mid, action) {
     const detailData = await fetch(getDetailUrl);
     if (detailData.ok) {
         const details = await detailData.json();
+        userData[0] = mid;
+        userData[1] = details.data.coins;
         if (details.code != "0"){
             console.error(details);
             return;
@@ -955,6 +1001,8 @@ async function getUserProfile(mid, action) {
             }, 1000);
             $('.user-avatar').attr('src', details.data.face);
             $('.user-name').text(details.data.name);
+            $('.user-avatar-placeholder').attr('data-after', '主页');
+            $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));    
             if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
                 $('.user-vip-icon').css('display', 'block');
             }
@@ -963,7 +1011,29 @@ async function getUserProfile(mid, action) {
 }
 
 listen("user-mid", async (event) => {
-    if (event.payload[0] !== '0') getUserProfile(event.payload[0], event.payload[1]);
+    if (event.payload[0] !== '0') {
+        getUserProfile(event.payload[0], event.payload[1]);
+        $('.user-avatar-placeholder').attr('data-after', '主页');
+        $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));
+    } else {
+        $('.user-avatar-placeholder').attr('data-after', '登录');
+        $('.user-avatar-placeholder').on('click', debounce(login, 1000));
+    }
+})
+
+listen("exit-success", async (event) => {
+    backward();
+    $('.user-avatar').attr('src', './icon/default.jpg');
+    $('.user-name').text("登录");
+    $('.user-vip-icon').css("display", "none")
+    $('.user-avatar-placeholder').attr('data-after', '登录');
+    $('.user-avatar-placeholder').on('click', debounce(login, 1000));
+    iziToast.info({
+        icon: 'fa-solid fa-circle-info',
+        layout: '2',
+        title: '登录',
+        message: `已退出登录~`,
+    });
 })
 
 listen("login-status", async (event) => {
