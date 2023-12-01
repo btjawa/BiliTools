@@ -89,7 +89,7 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
             return Err("无法获取APPDATA路径".to_string());
         }
     };
-    let working_dir = PathBuf::from(appdata_path).join("BiliDown");
+    let working_dir = PathBuf::from(appdata_path).join("BiliGet");
     let sessdata_path = working_dir.join("Store");
     if let Some(dir_path) = sessdata_path.parent() {
         if let Err(_) = fs::create_dir_all(dir_path) {
@@ -113,12 +113,12 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
 #[tauri::command]
 async fn init_sessdata(window: tauri::Window) -> Result<i64, String> {
     let appdata_path = env::var("APPDATA").map_err(|e| e.to_string())?;
-    let working_dir = PathBuf::from(appdata_path).join("BiliDown");
+    let working_dir = PathBuf::from(appdata_path).join("BiliGet");
     let sessdata_path = working_dir.join("Store");
     if !sessdata_path.exists() {
         if let Some(dir_path) = sessdata_path.parent() {
             fs::create_dir_all(dir_path).map_err(|e| e.to_string())?;
-            println!("成功创建BiliDown");
+            println!("成功创建BiliGet");
         }
         fs::write(&sessdata_path, "").map_err(|e| e.to_string())?;
         println!("成功创建Store");
@@ -164,7 +164,7 @@ async fn exit(window: tauri::Window) -> Result<i64, String> {
         *cookie_jar = Jar::default();
     }
     let appdata_path = env::var("APPDATA").map_err(|e| e.to_string())?;
-    let working_dir = PathBuf::from(appdata_path).join("BiliDown");
+    let working_dir = PathBuf::from(appdata_path).join("BiliGet");
     let sessdata_path = working_dir.join("Store");
     if let Err(e) = fs::remove_file(sessdata_path) {
         return Err(format!("Failed to delete store directory: {}", e));

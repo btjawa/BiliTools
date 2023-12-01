@@ -1,5 +1,5 @@
 {
-  "name": "bilidown",
+  "name": "biliget",
   "version": "0.1.0",
   "description": "Bilibili Resources Downloader",
   "type": "module",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/btjawa/BiliDown.git"
+    "url": "git+https://github.com/btjawa/BiliGet.git"
   },
   "author": "btjawa",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/btjawa/BiliDown/issues"
+    "url": "https://github.com/btjawa/BiliGet/issues"
   },
-  "homepage": "https://github.com/btjawa/BiliDown#readme",
+  "homepage": "https://github.com/btjawa/BiliGet#readme",
   "devDependencies": {
     "@tauri-apps/api": "^1.5.1",
     "@tauri-apps/cli": "^1.5.6",

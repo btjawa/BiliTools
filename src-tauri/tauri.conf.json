@@ -7,7 +7,7 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "BiliDown",
+    "productName": "BiliGet",
     "version": "0.1.0"
   },
   "tauri": {
@@ -20,7 +20,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.btjawa.bilidown",
+      "identifier": "com.btjawa.biliget",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -40,7 +40,7 @@
         "minHeight": 720,
         "maxWidth": 1280,
         "maxHeight": 720,
-        "title": "BiliDown",
+        "title": "BiliGet",
         "width": 1280,
         "height": 720
       }
