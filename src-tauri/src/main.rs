@@ -27,7 +27,7 @@ lazy_static! {
     static ref GLOBAL_DOWNLOAD_STATUS: Mutex<DownloadStatus> = Mutex::new(DownloadStatus::new());
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone)]
 struct DownloadStatus {
     audio_downloaded: bool,
     video_downloaded: bool,
@@ -45,10 +45,7 @@ impl DownloadStatus {
         }
     }
     fn ready_for_merge(&self) -> bool {
-        self.audio_downloaded
-            && self.video_downloaded
-            && self.audio_path.as_ref().map_or(false, |p| Path::new(p).exists())
-            && self.video_path.as_ref().map_or(false, |p| Path::new(p).exists())
+        self.audio_downloaded && self.video_downloaded
     }
     fn audio(&mut self, path: String) {
         self.audio_downloaded = true;
@@ -369,11 +366,13 @@ async fn download_file(
     cid: String, action: String, 
     file_type: String
 ) -> Result<(), String> {
-    let mut status = GLOBAL_DOWNLOAD_STATUS.lock().await;
-    if file_type == "audio" {
-        status.audio_downloaded = false;
-    } else if file_type == "video" {
-        status.video_downloaded = false;
+    {
+        let mut status = GLOBAL_DOWNLOAD_STATUS.lock().await;
+        if file_type == "audio" {
+            status.audio_downloaded = false;
+        } else if file_type == "video" {
+            status.video_downloaded = false;
+        }
     }
     let client = init_client();
     let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
@@ -396,48 +395,61 @@ async fn download_file(
     // };
     let filename = filename_param.clone();
     let filename_clone = filename.clone();
+    let cid_clone = cid.clone();
+    let window_clone = window.clone();
     let filedir = PathBuf::from(env::var("USERPROFILE").map_err(|e| e.to_string())?)
         .join("Desktop")
-        .join(filename);
+        .join(filename.clone());
     let mut file = File::create(&filedir).await.map_err(|e| e.to_string())?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     let start_time = Instant::now();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        downloaded += chunk.len() as u64;
-        let elapsed_time = start_time.elapsed().as_millis();
-        let speed = if elapsed_time > 0 {
-            (downloaded as f64 / elapsed_time as f64) * 1000.0 / 1048576.0
-        } else { 0.0 };
-        let remaining_time = if speed > 0.0 {
-            (total_size - downloaded) as f64 / (speed * 1048576.0)
-        } else { 0.0 };
-        file.write_all(&chunk).await.map_err(|e| e.to_string())?;
-        let progress = downloaded as f64 / total_size as f64 * 100.0;
-        let downloaded_mb = downloaded as f64 / 1048576.0;
-        let formatted_values = vec![
-            format!("{}", cid),
-            format!("{:.2}%", progress),
-            format!("{:.2} s", remaining_time),
-            format!("{:.2} MB", downloaded_mb),
-            format!("{:.2} MB/s", speed),
-            format!("{:.2} ms", elapsed_time),
-            format!("{}", filename_clone),
-        ];
-        println!("{:?}", formatted_values);
-        window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
+    while let Some(chunk_result) = stream.next().await {
+        match chunk_result {
+            Ok(chunk) => {
+                downloaded += chunk.len() as u64;
+                let elapsed_time = start_time.elapsed().as_millis();
+                let speed = if elapsed_time > 0 {
+                    (downloaded as f64 / elapsed_time as f64) * 1000.0 / 1048576.0
+                } else { 0.0 };
+                let remaining_time = if speed > 0.0 {
+                    (total_size - downloaded) as f64 / (speed * 1048576.0)
+                } else { 0.0 };
+                if let Err(e) = file.write_all(&chunk).await {
+                    eprintln!("Error writing to file: {}", e);
+                    break;
+                }
+                let progress = downloaded as f64 / total_size as f64 * 100.0;
+                let downloaded_mb = downloaded as f64 / 1048576.0;
+                let formatted_values = vec![
+                    format!("{}", cid_clone),
+                    format!("{:.2}%", progress),
+                    format!("{:.2} s", remaining_time),
+                    format!("{:.2} MB", downloaded_mb),
+                    format!("{:.2} MB/s", speed),
+                    format!("{:.2} ms", elapsed_time),
+                    format!("{}", filename_clone),
+                ];
+                println!("{:?}", formatted_values);
+                let _ = window_clone.emit("download-progress", formatted_values);
+            },
+            Err(e) => {
+                eprintln!("Error downloading chunk: {}", e);
+                break;
+            }
+        }
     }
-    if file_type == "audio" {
-        status.audio(filedir.to_string_lossy().into_owned());
-    } else if file_type == "video" {
-        status.video(filedir.to_string_lossy().into_owned());
-    }
-    if action == "multi" && status.ready_for_merge() {
-        let audio_path_clone = status.audio_path.clone().ok_or_else(|| "找不到音频路径".to_string())?;
-        let video_path_clone = status.video_path.clone().ok_or_else(|| "找不到视频路径".to_string())?;
-        let window_clone = window.clone();
-        tokio::spawn(async move {
+    if action == "multi" {
+        let mut status = GLOBAL_DOWNLOAD_STATUS.lock().await;
+        if file_type == "audio" {
+            status.audio(filedir.to_string_lossy().into_owned());
+        } else if file_type == "video" {
+            status.video(filedir.to_string_lossy().into_owned());
+        }
+        if status.ready_for_merge() {
+            let window_clone = window.clone();
+            let audio_path_clone = status.audio_path.clone().unwrap();
+            let video_path_clone = status.video_path.clone().unwrap();
             let re_raw = RegexBuilder::new(r"([0-9]+(?:P\+?|K))")
                 .case_insensitive(true)
                 .build()
@@ -457,9 +469,9 @@ async fn download_file(
                 Ok(_) => println!("Merge operation completed successfully."),
                 Err(e) => eprintln!("Error during merge operation: {}", e),
             }
-        });
+        }
     } else if action == "only" {
-        window.emit("download-complete", vec![format!("{}", cid), filename_clone]).map_err(|e| e.to_string())?;
+        let _ = window.emit("download-complete", vec![format!("{}", cid), filename]);
     } else {
         println!("Not ready for merge. Audio or video is still downloading.");
     }

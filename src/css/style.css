@@ -72,6 +72,17 @@
     background-color: #5c5c5c9d;
 }
 
+* {
+    font-family: "HarmonyOS_Regular", sans-serif;
+    color: #c4c4c4;
+}
+
+.fa-solid, .fa-regular,
+.fa-thin, .fa-light,
+.fa-duotone {
+    color: #c4c4c4;
+}
+
 ::-webkit-scrollbar {
     width: 7.5px;
     height: 7.5px;
@@ -93,7 +104,6 @@
 }
 
 body {
-    font-family: "HarmonyOS_Regular", sans-serif;
     font-weight: 400;
     background-color: #1f1f1f;
     margin: 0;
@@ -104,7 +114,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #c4c4c4;
 }
 
 i {
@@ -131,10 +140,6 @@ input[name="search-input"] {
     user-select: none;
     transition-property: all;
     transition-duration: 0.4s;
-}
-
-.search:focus-within .search-bar {
-    background-color: #c4c4c4;
 }
 
 input[name="search-input"]:hover {
@@ -374,6 +379,7 @@ input[name="search-input"]:hover {
     margin-bottom: 6px;
     min-height: 24px;
     max-height: 48px;
+    max-width: 86%;
     overflow: auto;
     word-wrap: break-word;
     flex-shrink: 0;
@@ -795,15 +801,15 @@ input[name="search-input"]:hover {
 }
 
 .user-profile-card {
-    color: #e5e5e5;
     justify-content: center;
     position: absolute;
     left: 22px;
     bottom: 15px;
 }
 
+.user-profile-n-statistics a { color: #e5e5e5; }
+
 .user-profile-n-statistics {
-    color: #e5e5e5;
     justify-content: center;
     position: absolute;
     right: 22px;
@@ -843,6 +849,7 @@ input[name="search-input"]:hover {
     text-overflow: ellipsis;
     max-width: 768px;
     overflow: none;
+    color: #e5e5e5;
 }
 
 .user-profile-desc { line-height: 26px; }
@@ -875,6 +882,7 @@ input[name="search-input"]:hover {
 .user-profile-subs,
 .user-profile-fans,
 .user-profile-likes {
+    color: #e5e5e5;
     width: auto;
     margin-left: 5px;
     margin-right: 5px;
@@ -973,11 +981,6 @@ input[name="search-input"]:hover {
 .user-profile-exit-background:hover,
 .down-page-bar-background:hover {
     background-color: #3b3b3b;
-}
-
-.user-profile-exit-icon,
-.down-page-bar-icon {
-    color: #c4c4c4;
 }
 
 .user-avatar-placeholder {
