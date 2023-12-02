@@ -535,8 +535,8 @@ function getDownUrl(data, quality, action, extra, fileType) {
     let downUrl;
     const isVideo = fileType === "video";
     for (let file of isVideo?data.dash.video:data.dash.audio) {
-        if (file.id == (isVideo ? quality[1] : quality[3])
-        && (!isVideo || file.codecs == quality[2])) {
+        if (file.id == isVideo ? quality[1] : quality[3]
+        && !isVideo || file.codecs == quality[2]) {
             found = true;
             downUrl = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
             break;
