@@ -329,7 +329,7 @@ async function backward() {
 }
 
 $(document).ready(function () {
-    invoke('init_sessdata');
+    invoke('init');
     $('.user-avatar-placeholder').append(bigVipIcon);
     async function handleSearch() {
         await search(searchInput.val());
@@ -531,32 +531,58 @@ function appendVideoBlock(data, type, index, extra) {
 }
 
 function getDownUrl(data, quality, action, extra, fileType) {
-    let found = false;
-    let downUrl;
+    let found = [];
+    let downUrl = [];
     const isVideo = fileType === "video";
     for (let file of isVideo?data.dash.video:data.dash.audio) {
-        if (file.id == isVideo ? quality[1] : quality[3]
+        if (file.id == isVideo ? quality[0] : quality[2]
         && !isVideo || file.codecs == quality[2]) {
-            found = true;
-            downUrl = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
+            found[0] = true;
+            downUrl[0] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
             break;
         }
     }
-    if (found) {
-        isVideo?downVideos++:downAudios++;
-        const qualityStr = isVideo?quality[1].slice(3):quality[4];
-        const ext = isVideo?"mp4":"aac";
-        const safeTitle = videoData[0].replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
-        const suffix = action=="multi"?'_multi':'';
-        const fileName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}${suffix}.${ext}`;
+    if (action == "multi") {
+        for (let audio of data.dash.audio) {
+            if (audio.id == quality[3]) {
+                found[1] = true;
+                downUrl[1] = [audio.baseUrl, ...audio.backupUrl.slice(0, 2)];
+                break;
+            }
+        }
+    }
+    if (found[0]&&(action=="multi"?found[1]:found[0])) {
+        isVideo ? downVideos++ : downAudios++;
+        if (action=="multi") downAudios++;
+        let qualityStr, ext, safeTitle, displayName;
+        safeTitle = videoData[0].replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
+        if (action == "only") {
+            qualityStr = isVideo ? quality[1].slice(3) : quality[4];
+            ext = isVideo ? "mp4" : "aac";
+            displayName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}.${ext}`;
+            invoke('init_download_only', {
+                url: downUrl[0][extra], 
+                displayName: displayName, 
+                cid: videoData[3].toString(),
+            });
+        } else if (action == "multi") {
+            qualityStr = `${quality[1].slice(3)}_${quality[4]}`;
+            ext = "mp4";
+            displayName = `${downVideos}_${safeTitle}_${qualityStr}.mp4`;
+            invoke('init_download_multi', {
+                videoUrl: downUrl[0][extra],
+                audioUrl: downUrl[1][extra],
+                displayName: displayName, 
+                cid: videoData[3].toString(),
+            });
+        }
         iziToast.info({
             icon: 'fa-solid fa-circle-info',
             layout: '2',
             title: '下载',
-            message: `已添加《${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}${suffix}.${ext}》至下载页~`,
+            message: `已添加《${displayName}》至下载页~`,
         });
-        appendDownPageBlock(ext, `${qualityStr}${suffix}`);
-        invoke('download_file', {url: downUrl[extra], filenameParam: fileName, cid: videoData[3].toString(), action: action, fileType: fileType});
+        appendDownPageBlock(ext, qualityStr);
     } else {
         iziToast.error({
             icon: 'fa-solid fa-circle-info',
@@ -583,7 +609,7 @@ async function appendDownPageBlock(type, quality) {
     const infoId = $('<i>').addClass('down-page-info-id').text(`cid: ${cid}`);
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
     const infoTitle = $('<div>').addClass('down-page-info-title').html(`${type=="aac"?downAudios:downVideos}_${title}_${quality}.${type}`).css('max-width', `100%`);
-    const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载/合并`);
+    const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载`);
     const infoProgress = $('<div>').addClass('down-page-info-progress').html($('<div>').addClass('down-page-info-progress-bar'));
     infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, infoProgressText, infoProgress)).appendTo(downPage);
 }
@@ -897,12 +923,10 @@ function applyDownBtn(detailData, type, action) {
     };
     function handleDown(fileType) {
         Swal.fire(options);
+        $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
         $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2', function() {
             let line = $(this).hasClass('swal-btn-backup1') ? 1 : ($(this).hasClass('swal-btn-backup2') ? 2 : 0);
             getDownUrl((type != "bangumi" ? detailData.data : detailData.result), currentSel, action, line, fileType);
-            if (action == "multi" && fileType == "video") {
-                getDownUrl((type != "bangumi" ? detailData.data : detailData.result), currentSel, action, line, "audio");
-            }
             Swal.close();
         });
     }
@@ -989,28 +1013,22 @@ listen("download-progress", async (event) => {
         if (id.text() == `cid: ${event.payload[0]}` && title.text() == event.payload[6]) {
             $(this).find('.down-page-info-progress-bar').css('width', event.payload[1]);
             $(this).find('.down-page-info-progress-text')
-            .html(`总进度: ${event.payload[1]}&emsp;剩余时间: ${event.payload[2]}&emsp;当前速度: ${event.payload[4]}`);
+            .html(`${event.payload[7]=="audio"?"音频":"视频"} - 总进度: ${event.payload[1]}&emsp;剩余时间: ${event.payload[2]}&emsp;当前速度: ${event.payload[4]}`);
             if (parseFloat(event.payload[1]) >= 100) {
-                $(this).find('.down-page-info-progress-text').html(`已下载至桌面`);
+                $(this).find('.down-page-info-progress-text')
+                .html(`${event.payload[7]=="audio"?"音频":"视频"}下载成功`);
             }
         }
     });
-})
-
-listen("merge-start", async (event) => {
-    console.log(event.payload)
-    const videoRe = event.payload.match(/([0-9]+(?:P\+?|K))(?=_)/i)[0];
-    const audioRe = event.payload.match(/([0-9]+K)(?=_multi.mp4)/i)[1];
-    appendDownPageBlock('mp4', `${videoRe}_${audioRe}_multi`);
 })
 
 listen("merge-progress", async (event) => {
     const infoBlock = $('.down-page-info');
     infoBlock.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (title.text() == event.payload[4].match(/[^\\\/:*?"<>|\r\n]+$/i)[0]) {
+        if (title.text() == event.payload[4]) {
             $(this).find('.down-page-info-progress-text')
-            .html(`frame: ${event.payload[0]}&emsp;fps: ${event.payload[1]}&emsp;out_time: ${event.payload[2]}&emsp;speed: ${event.payload[3]}`);
+            .html(`合并音视频 - 已合并帧: ${event.payload[0]}&emsp;fps: ${event.payload[1]}&emsp;已合并至: ${event.payload[2]}&emsp;速度: ${event.payload[3]}`);
         }
     });
 })
@@ -1019,8 +1037,8 @@ listen("merge-success", async (event) => {
     const infoBlock = $('.down-page-info');
     infoBlock.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (title.text() == event.payload.match(/[^\\\/:*?"<>|\r\n]+$/i)[0]) {
-            $(this).find('.down-page-info-progress-text').html(`合并成功`);
+        if (title.text() == event.payload) {
+            $(this).find('.down-page-info-progress-text').html(`合并成功 - 音视频下载成功`);
         }
     });
 })
@@ -1029,8 +1047,8 @@ listen("merge-failed", async (event) => {
     const infoBlock = $('.down-page-info');
     infoBlock.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (title.text() == event.payload.match(/[^\\\/:*?"<>|\r\n]+$/i)[0]) {
-            $(this).find('.down-page-info-progress-text').html(`合并失败`);
+        if (title.text() == event.payload) {
+            $(this).find('.down-page-info-progress-text').html(`合并失败 - 音视频下载失败`);
         }
     });
 })
