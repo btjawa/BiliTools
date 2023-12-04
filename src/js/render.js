@@ -201,6 +201,16 @@ async function search(input) {
             loadingBox.addClass('active');
             return;
         }
+        match = input.match(/au(\d+)/i);
+        if (match) {
+            iziToast.error({
+                icon: 'fa-regular fa-circle-exclamation',
+                layout: '2',
+                title: `警告`,
+                message: "暂不支持au解析"
+            });
+            return;
+        }
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
             layout: '2',
@@ -244,13 +254,23 @@ function copy() {
     $('.context-menu').css({ opacity: 0, display: "none" });
 };
 
-async function paste() {
-    await navigator.clipboard.readText()
-    .then((text) => {
-        if (currentFocus && (currentFocus.tagName === 'INPUT' || currentFocus.tagName === 'TEXTAREA')) {
-            currentFocus.value += text;
+function handleTextUpdate(element, newText = '', cut) {
+    if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
+        const start = element.value.substring(0, element.selectionStart);
+        const end = element.value.substring(element.selectionEnd);
+        element.value = start + (cut ? '' : newText) + end;
+        if (cut) {
+            element.setSelectionRange(element.selectionStart, element.selectionStart);
+        } else {
+            const newCursorPos = element.selectionStart + newText.length;
+            element.setSelectionRange(newCursorPos, newCursorPos);
         }
-    })
+    }
+}
+
+async function paste() {
+    const text = await navigator.clipboard.readText();
+    handleTextUpdate(currentFocus, text);
     $('.context-menu').css({ opacity: 0, display: "none" });
 }
 
@@ -258,11 +278,8 @@ async function cutText() {
     if (currentFocus && (currentFocus.tagName === 'INPUT' || currentFocus.tagName === 'TEXTAREA')) {
         const selectedText = currentFocus.value.substring(currentFocus.selectionStart, currentFocus.selectionEnd);
         if (selectedText) {
-            navigator.clipboard.writeText(selectedText);
-            const start = currentFocus.value.substring(0, currentFocus.selectionStart);
-            const end = currentFocus.value.substring(currentFocus.selectionEnd);
-            currentFocus.value = start + end;
-            currentFocus.setSelectionRange(currentFocus.selectionStart, currentFocus.selectionStart);
+            await navigator.clipboard.writeText(selectedText);
+            handleTextUpdate(currentFocus, '', true);
         }
     }
     $('.context-menu').css({ opacity: 0, display: "none" });
@@ -277,12 +294,14 @@ async function bilibili() {
                 let url = 'https://www.bilibili.com/video/' + match[0];
                 open(url);
                 $('.context-menu').css({ opacity: 0, display: "none" });
+                return;
             }
             match = input.match(/ep(\d+)|ss(\d+)/i);
             if (match) {
                 let url = 'https://www.bilibili.com/bangumi/play/' + match[0];
                 open(url);
                 $('.context-menu').css({ opacity: 0, display: "none" });
+                return;
             }
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',

@@ -5,22 +5,27 @@ use lazy_static::lazy_static;
 use serde_json::Value;
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{CookieStore, Jar}};
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
-use std::{env, fs, path::{Path, PathBuf}, sync::{Arc, RwLock}, convert::Infallible, time::Instant, process::Stdio, collections::{VecDeque, HashSet, HashMap}};
-use tokio::{fs::File, sync::Mutex, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, process::Command, time::{sleep, Duration}};
+use std::{env, fs, path::{Path, PathBuf}, sync::Arc, convert::Infallible, time::Instant, process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}};
+use tokio::{fs::File, sync::{Mutex, RwLock}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, process::Command, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 
 lazy_static! {
-    static ref GLOBAL_COOKIE_JAR: Arc<RwLock<Jar>> = Arc::new(RwLock::new(Jar::default()));
+    static ref GLOBAL_COOKIE_JAR: Arc<std::sync::RwLock<Jar>> = Arc::new(std::sync::RwLock::new(Jar::default()));
     static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
-    static ref DOWNLOAD_DIRECTORY: PathBuf = {
+    static ref WORKING_DIR: PathBuf = {
+        PathBuf::from(env::var("APPDATA").expect("APPDATA environment variable not found"))
+        .join("com.btjawa.biliget")
+    };
+    static ref DOWNLOAD_DIR: PathBuf = {
         PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
         .join("Desktop")
     };
-    static ref TEMP_DIRECTORY: PathBuf = {
-        PathBuf::from(env::var("APPDATA").expect("USERPROFILE environment variable not found"))
-        .join("com.btjawa.biliget").join("Temp")
-    };
+    static ref TEMP_DIR: PathBuf = WORKING_DIR.join("Temp");
+    static ref SESSDATA_PATH: PathBuf = WORKING_DIR.join("Cookies");
+    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(5));
+    static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
+    static ref CURRENT_DOWNLOADS: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
 }
 
 fn init_headers() -> HeaderMap {
@@ -53,16 +58,18 @@ fn extract_filename(url: &str) -> String {
         .unwrap_or_else(|| "default_filename".to_string())
 }
 
-struct ThreadSafeCookieStore(Arc<RwLock<Jar>>);
+struct ThreadSafeCookieStore(Arc<std::sync::RwLock<Jar>>);
 
 #[derive(Debug, Clone)]
 struct VideoInfo {
     cid: String,
+    display_name: String,
     video_path: PathBuf,
     audio_path: PathBuf,
     video_downloaded: bool,
     audio_downloaded: bool,
     finished: bool,
+    tasks: Vec<DownloadTask>
 }
 
 #[derive(Debug, Clone)]
@@ -73,8 +80,6 @@ struct DownloadTask {
     path: PathBuf,
     file_type: String,
 }
-
-type DownloadQueue = Vec<DownloadTask>;
 
 impl CookieStore for ThreadSafeCookieStore {
     fn set_cookies(&self, cookie_headers: &mut dyn Iterator<Item = &HeaderValue>, url: &Url) {
@@ -89,52 +94,73 @@ impl CookieStore for ThreadSafeCookieStore {
 
 #[tauri::command]
 async fn init_download_only(
-    window: tauri::Window,
-    url: String, cid: String,
+    window: tauri::Window, url: String, cid: String,
     display_name: String, file_type: String
 ) {
-    let path = DOWNLOAD_DIRECTORY.join(&display_name);
+    let path = DOWNLOAD_DIR.join(&display_name);
+    let task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url, path: path.clone(), file_type: file_type.clone() };
     let download_info = VideoInfo{
-        cid: cid.clone(),
+        cid,
+        display_name: display_name.clone(),
         video_path: if file_type == "video" { path.clone() } else { PathBuf::new() },
         audio_path: if file_type == "audio" { path.clone() } else { PathBuf::new() },
         video_downloaded: false,
         audio_downloaded: false,
-        finished: false
+        finished: false,
+        tasks: vec![task],
     };
-    DOWNLOAD_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
-    let task = DownloadTask { cid, display_name, url, path, file_type };
-    let queue = vec![task];
-    process_download_queue(window, queue, "only".to_string()).await;
+    DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone()); // 插入新info
+    WAITING_QUEUE.lock().await.push_back(download_info.clone()); // 推入等待队列
+    process_queue(window, "only".to_string()).await;
 }
 
 #[tauri::command]
 async fn init_download_multi(
-    window: tauri::Window, 
-    video_url: String, audio_url: String,
-    cid: String, display_name: String,
+    window: tauri::Window, video_url: String, audio_url: String,
+    cid: String, display_name: String
 ) {
-    let video_filename = extract_filename(&video_url);
-    let audio_filename = extract_filename(&audio_url);
-    let video_path = TEMP_DIRECTORY.join(&video_filename);
-    let audio_path = TEMP_DIRECTORY.join(&audio_filename);
+    let video_path = TEMP_DIR.join(&extract_filename(&video_url));
+    let audio_path = TEMP_DIR.join(&extract_filename(&audio_url));
+    let video_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: video_url, path: video_path.clone(), file_type: "video".to_string() };
+    let audio_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: audio_url, path: audio_path.clone(), file_type: "audio".to_string() };
     let download_info = VideoInfo {
-        cid: cid.clone(),
-        video_path: video_path.clone(),
-        audio_path: audio_path.clone(),
+        cid,
+        display_name: display_name.clone(),
+        video_path,
+        audio_path,
         video_downloaded: false,
         audio_downloaded: false,
-        finished: false
+        finished: false,
+        tasks: vec![video_task, audio_task]
     };
-    DOWNLOAD_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
-    let video_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: video_url, path: video_path, file_type: "video".to_string() };
-    let audio_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: audio_url, path: audio_path, file_type: "audio".to_string() };
-    let queue = vec![video_task, audio_task];
-    process_download_queue(window, queue, "multi".to_string()).await;
+    DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone()); // 插入新info
+    WAITING_QUEUE.lock().await.push_back(download_info.clone()); // 推入等待队列
+    process_queue(window, "multi".to_string()).await;
 }
 
-async fn process_download_queue(window: tauri::Window, queue: DownloadQueue, action: String) {
-    for task in queue.into_iter() {
+async fn process_queue(window: tauri::Window, action: String) {
+    let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
+    let mut waiting_queue = WAITING_QUEUE.lock().await;
+    let max_concurrent_downloads = MAX_CONCURRENT_DOWNLOADS.read().await;
+    while current_downloads.len() < *max_concurrent_downloads && !waiting_queue.is_empty() {
+        // 当当前下载数量小于并发限制，同时等候队列有待处理请求
+        if let Some(video_info) = waiting_queue.pop_front() {
+            current_downloads.push_back(video_info.clone());
+            let window_clone = window.clone();
+            let action_clone = action.clone();
+            tokio::spawn(async move {
+                // 放到后台避免堵塞
+                process_download(window_clone, video_info, action_clone.to_string()).await;
+            });
+        }
+    }
+}
+
+async fn process_download(window: tauri::Window, mut download_info: VideoInfo, action: String) {
+    for task in download_info.tasks.into_iter() {
+        if download_info.cid != task.cid {
+            continue; 
+        }
         match download_file(window.clone(), task.clone(), action.clone()).await {
             Ok(o) => {
                 if action == "only" {
@@ -143,31 +169,25 @@ async fn process_download_queue(window: tauri::Window, queue: DownloadQueue, act
             }
             Err(e) => { let _ = window.emit("download-failed", vec![task.display_name.clone(), e]); }
         };
-        let mut info = DOWNLOAD_INFO_MAP.lock().await;
-        if let Some(download_info) = info.get_mut(&task.display_name) {
-            if download_info.cid != task.cid {
-                continue; 
-            }
-            match task.file_type.as_str() {
-                "video" => download_info.video_downloaded = true,
-                "audio" => download_info.audio_downloaded = true,
-                _ => {}
-            }
-            if action == "multi" && download_info.video_downloaded
-            && download_info.audio_downloaded {
-                match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &task.display_name).await {
-                    Ok(o) => { let _ = window.emit("download-success", o); }
-                    Err(e) => { let _ = window.emit("download-failed", vec![task.display_name, e]); }
-                }
-                download_info.finished = true;
-            } else if action == "only" {
-                download_info.finished = true;
-            }
+        match task.file_type.as_str() {
+            "video" => download_info.video_downloaded = true,
+            "audio" => download_info.audio_downloaded = true,
+            _ => {}
         }
     }
+    if action == "multi"  {
+        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.display_name).await {
+            Ok(o) => { let _ = window.emit("download-success", o); }
+            Err(e) => { let _ = window.emit("download-failed", vec![download_info.display_name, e]); }
+        }
+    }
+    download_info.finished = true;
+    let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
+    current_downloads.retain(|info| info.cid != download_info.cid);
 }
 
 async fn download_file(window: tauri::Window, task: DownloadTask, action: String) -> Result<String, String> {
+    println!("\nStarting download for: {}", &task.display_name);
     let client = init_client();
     let response = match client.get(&task.url).send().await {
         Ok(res) => res,
@@ -213,7 +233,8 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     format!("{}", task.file_type),
                     format!("{}", action)
                 ];
-                println!("{:?}", formatted_values);
+                print!("\r{:?}", formatted_values);
+                io::stdout().flush().unwrap();
                 window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
             },
             Err(e) => return Err(e.to_string()),
@@ -223,10 +244,10 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
 }
 
 async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String) -> Result<String, String> {
-    println!("Starting merge process for audio");
+    println!("\nStarting merge process for audio");
     let current_dir = env::current_dir().map_err(|e| e.to_string())?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
-    let output_path = DOWNLOAD_DIRECTORY.join(&output);
+    let output_path = DOWNLOAD_DIR.join(&output);
     let output_clone = output.clone();
     let video_filename = Path::new(&output_path)
         .file_name()
@@ -236,7 +257,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     let progress_path = current_dir.join("ffmpeg")
         .join(format!("{}.progress", video_filename));
 
-    println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
+    // println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
         .arg("-i").arg(video_path)
         .arg("-i").arg(audio_path)
@@ -293,10 +314,10 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
             }
         }
         messages.push(&output_clone);
-        println!("{:?}", messages);
+        print!("\r{:?}", messages);
+        io::stdout().flush().unwrap();
         window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string())?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
-            println!("FFmpeg process completed.");
             break;
         }
         sleep(Duration::from_secs(1)).await;
@@ -312,6 +333,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         return Err(format!("无法删除进度文件: {}", e));
     }
     if status.success() {
+        println!("\nFFmpeg process completed.");
         window.emit("merge-success", output).map_err(|e| e.to_string())?;
         Ok(output.to_string())
     } else {
@@ -324,20 +346,12 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
 }
 
 async fn update_cookies(sessdata: &str) -> Result<String, String> {
-    let appdata_path = match env::var("APPDATA") {
-        Ok(path) => path,
-        Err(_) => {
-            return Err("无法获取APPDATA路径".to_string());
-        }
-    };
-    let working_dir = PathBuf::from(appdata_path).join("com.btjawa.biliget");
-    let sessdata_path = working_dir.join("Cookies");
-    if let Some(dir_path) = sessdata_path.parent() {
+    if let Some(dir_path) = SESSDATA_PATH.parent() {
         if let Err(e) = fs::create_dir_all(dir_path) {
             return Err(format!("无法创建目录：{}", e));
         }
     }
-    if let Err(e) = fs::write(&sessdata_path, sessdata) {
+    if let Err(e) = fs::write(&*SESSDATA_PATH, sessdata) {
         return Err(format!("无法写入Cookie：{}", e));
     }
     println!("SESSDATA写入成功");
@@ -351,24 +365,21 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 async fn init(window: tauri::Window) -> Result<i64, String> {
-    let appdata_path = env::var("APPDATA").map_err(|e| e.to_string())?;
-    let working_dir = PathBuf::from(appdata_path).join("com.btjawa.biliget");
-    let sessdata_path = working_dir.join("Cookies");
-    if !working_dir.exists() {
-        fs::create_dir_all(&working_dir).map_err(|e| e.to_string())?;
+    if !&WORKING_DIR.exists() {
+        fs::create_dir_all(&*WORKING_DIR).map_err(|e| e.to_string())?;
         println!("成功创建com.btjawa.biliget");
     }
-    if !&TEMP_DIRECTORY.exists() {
-        fs::create_dir_all(&*TEMP_DIRECTORY).map_err(|e| e.to_string())?;
-        println!("成功创建TEMP_DIRECTORY");
+    if !&TEMP_DIR.exists() {
+        fs::create_dir_all(&*TEMP_DIR).map_err(|e| e.to_string())?;
+        println!("成功创建TEMP_DIR");
     }
-    if !sessdata_path.exists() {
-        fs::write(&sessdata_path, "").map_err(|e| e.to_string())?;
+    if !SESSDATA_PATH.exists() {
+        fs::write(&*SESSDATA_PATH, "").map_err(|e| e.to_string())?;
         println!("成功创建Cookies");
         window.emit("user-mid", vec![0.to_string(), "init".to_string()]).unwrap();
         return Ok(0);
     }
-    let sessdata = fs::read_to_string(&sessdata_path).map_err(|e| e.to_string())?;
+    let sessdata = fs::read_to_string(&*SESSDATA_PATH).map_err(|e| e.to_string())?;
     if sessdata.trim().is_empty() {
         window.emit("user-mid", vec![0.to_string(), "init".to_string()]).unwrap();
         return Ok(0);
@@ -407,10 +418,7 @@ async fn exit(window: tauri::Window) -> Result<i64, String> {
         let mut cookie_jar = GLOBAL_COOKIE_JAR.write().unwrap();
         *cookie_jar = Jar::default();
     }
-    let appdata_path = env::var("APPDATA").map_err(|e| e.to_string())?;
-    let working_dir = PathBuf::from(appdata_path).join("com.btjawa.biliget");
-    let sessdata_path = working_dir.join("Cookies");
-    if let Err(e) = fs::remove_file(sessdata_path) {
+    if let Err(e) = fs::remove_file(&*SESSDATA_PATH) {
         return Err(format!("Failed to delete store directory: {}", e));
     }
     window.emit("exit-success", 0).unwrap();
@@ -431,11 +439,8 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
     let mask = "*".repeat(mask_range.end - mask_range.start);
     cloned_key.replace_range(mask_range, &mask);
     loop {
-        let stop = {
-            let lock = STOP_LOGIN.lock().await;
-            *lock
-        };
-        if stop {
+        let stop = STOP_LOGIN.lock().await;
+        if *stop {
             let mut lock = STOP_LOGIN.lock().await;
             *lock = false;
             eprintln!("{}: \"登录轮询被前端截断\"", cloned_key);
