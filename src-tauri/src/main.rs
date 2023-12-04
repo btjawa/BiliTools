@@ -12,7 +12,8 @@ use futures::stream::StreamExt;
 lazy_static! {
     static ref GLOBAL_COOKIE_JAR: Arc<RwLock<Jar>> = Arc::new(RwLock::new(Jar::default()));
     static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoDownloadInfo>> = Mutex::new(HashMap::new());
+    static ref DOWNLOAD_MULTI_INFO_MAP: Mutex<HashMap<String, VideoMultiInfo>> = Mutex::new(HashMap::new());
+    static ref DOWNLOAD_ONLY_INFO_MAP: Mutex<HashMap<String, VideoOnlyInfo>> = Mutex::new(HashMap::new());
     static ref DOWNLOAD_DIRECTORY: PathBuf = {
         PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
         .join("Desktop")
@@ -56,12 +57,20 @@ fn extract_filename(url: &str) -> String {
 struct ThreadSafeCookieStore(Arc<RwLock<Jar>>);
 
 #[derive(Debug, Clone)]
-struct VideoDownloadInfo {
+struct VideoMultiInfo {
     cid: String,
     video_path: PathBuf,
     audio_path: PathBuf,
     video_downloaded: bool,
     audio_downloaded: bool,
+    finished: bool
+}
+
+#[derive(Debug, Clone)]
+struct VideoOnlyInfo {
+    cid: String,
+    path: PathBuf,
+    downloaded: bool,
     finished: bool
 }
 
@@ -88,6 +97,28 @@ impl CookieStore for ThreadSafeCookieStore {
 }
 
 #[tauri::command]
+async fn init_download_only(
+    window: tauri::Window,
+    url: String, cid: String,
+    display_name: String, file_type: String
+) {
+    println!("{}, {}, {}", url, cid, display_name);
+    let path = DOWNLOAD_DIRECTORY.join(&display_name);
+    println!("{:?}", path);
+    let download_info = VideoOnlyInfo{
+        cid: cid.clone(),
+        path: path.clone(),
+        downloaded: false,
+        finished: false
+    };
+    println!("{:?}", download_info);
+    DOWNLOAD_ONLY_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
+    let task = DownloadTask { cid, display_name, url, path, file_type };
+    let queue = vec![task];
+    process_download_queue(window, queue, "only".to_string()).await;
+}
+
+#[tauri::command]
 async fn init_download_multi(
     window: tauri::Window, 
     video_url: String, audio_url: String,
@@ -99,7 +130,7 @@ async fn init_download_multi(
     let video_path = TEMP_DIRECTORY.join(&video_filename);
     let audio_path = TEMP_DIRECTORY.join(&audio_filename);
     println!("{}, {}, {:?}, {:?}", video_filename, audio_filename, video_path, audio_path);
-    let download_info = VideoDownloadInfo {
+    let download_info = VideoMultiInfo {
         cid: cid.clone(),
         video_path: video_path.clone(),
         audio_path: audio_path.clone(),
@@ -108,32 +139,42 @@ async fn init_download_multi(
         finished: false
     };
     println!("{:?}", download_info);
-    DOWNLOAD_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
+    DOWNLOAD_MULTI_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
     let video_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: video_url, path: video_path, file_type: "video".to_string() };
     let audio_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: audio_url, path: audio_path, file_type: "audio".to_string() };
-    process_download_queue(window, video_task, audio_task, "multi".to_string()).await;
+    let queue = vec![video_task, audio_task];
+    process_download_queue(window, queue, "multi".to_string()).await;
 }
 
-async fn process_download_queue(window: tauri::Window, video_task: DownloadTask, audio_task: DownloadTask, action: String) {
-    let mut queue = DownloadQueue::new();
-    queue.push(audio_task);
-    queue.push(video_task);
-    while let Some(task) = queue.pop() {
+async fn process_download_queue(window: tauri::Window, queue: DownloadQueue, action: String) {
+    for task in queue.into_iter() {
         download_file(window.clone(), task.clone(), action.clone()).await;
-        let mut info = DOWNLOAD_INFO_MAP.lock().await;
-        if let Some(download_info) = info.get_mut(&task.display_name) {
-            if task.file_type == "video" {
-                if download_info.cid == task.cid {
-                    download_info.video_downloaded = true;
+        if action == "multi" {
+            let mut info = DOWNLOAD_MULTI_INFO_MAP.lock().await;
+            if let Some(download_info) = info.get_mut(&task.display_name) {
+                if task.file_type == "video" {
+                    if download_info.cid == task.cid {
+                        download_info.video_downloaded = true;
+                    }
+                } else if task.file_type == "audio" {
+                    if download_info.cid == task.cid {
+                        download_info.audio_downloaded = true;
+                    }
+                println!("{:?}", *download_info);
                 }
-            } else if task.file_type == "audio" {
-                if download_info.cid == task.cid {
-                    download_info.audio_downloaded = true;
+                if download_info.video_downloaded && download_info.audio_downloaded {
+                    let _ = merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &task.display_name).await;
+                    download_info.finished = true;
+                    println!("{:?}", *download_info);
                 }
-            println!("{:?}", *download_info);
             }
-            if download_info.video_downloaded && download_info.audio_downloaded {
-                let _ = merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &task.display_name).await;
+        } else if action == "only" {
+            let mut info = DOWNLOAD_ONLY_INFO_MAP.lock().await;
+            if let Some(download_info) = info.get_mut(&task.display_name) {
+                if download_info.cid == task.cid {
+                    download_info.downloaded = true;
+                }
+                println!("{:?}", *download_info);
                 download_info.finished = true;
                 println!("{:?}", *download_info);
             }
@@ -526,7 +567,7 @@ async fn main() {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![init, login, stop_login, init_download_multi, exit])
+        .invoke_handler(tauri::generate_handler![init, login, stop_login, init_download_multi, init_download_only, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

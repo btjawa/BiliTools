@@ -564,6 +564,7 @@ function getDownUrl(data, quality, action, extra, fileType) {
                 url: downUrl[0][extra], 
                 displayName: displayName, 
                 cid: videoData[3].toString(),
+                fileType
             });
         } else if (action == "multi") {
             qualityStr = `${quality[1].slice(3)}_${quality[4]}`;
