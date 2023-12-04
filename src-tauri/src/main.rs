@@ -12,8 +12,7 @@ use futures::stream::StreamExt;
 lazy_static! {
     static ref GLOBAL_COOKIE_JAR: Arc<RwLock<Jar>> = Arc::new(RwLock::new(Jar::default()));
     static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    static ref DOWNLOAD_MULTI_INFO_MAP: Mutex<HashMap<String, VideoMultiInfo>> = Mutex::new(HashMap::new());
-    static ref DOWNLOAD_ONLY_INFO_MAP: Mutex<HashMap<String, VideoOnlyInfo>> = Mutex::new(HashMap::new());
+    static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref DOWNLOAD_DIRECTORY: PathBuf = {
         PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
         .join("Desktop")
@@ -57,21 +56,13 @@ fn extract_filename(url: &str) -> String {
 struct ThreadSafeCookieStore(Arc<RwLock<Jar>>);
 
 #[derive(Debug, Clone)]
-struct VideoMultiInfo {
+struct VideoInfo {
     cid: String,
     video_path: PathBuf,
     audio_path: PathBuf,
     video_downloaded: bool,
     audio_downloaded: bool,
-    finished: bool
-}
-
-#[derive(Debug, Clone)]
-struct VideoOnlyInfo {
-    cid: String,
-    path: PathBuf,
-    downloaded: bool,
-    finished: bool
+    finished: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -102,17 +93,16 @@ async fn init_download_only(
     url: String, cid: String,
     display_name: String, file_type: String
 ) {
-    println!("{}, {}, {}", url, cid, display_name);
     let path = DOWNLOAD_DIRECTORY.join(&display_name);
-    println!("{:?}", path);
-    let download_info = VideoOnlyInfo{
+    let download_info = VideoInfo{
         cid: cid.clone(),
-        path: path.clone(),
-        downloaded: false,
+        video_path: if file_type == "video" { path.clone() } else { PathBuf::new() },
+        audio_path: if file_type == "audio" { path.clone() } else { PathBuf::new() },
+        video_downloaded: false,
+        audio_downloaded: false,
         finished: false
     };
-    println!("{:?}", download_info);
-    DOWNLOAD_ONLY_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
+    DOWNLOAD_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
     let task = DownloadTask { cid, display_name, url, path, file_type };
     let queue = vec![task];
     process_download_queue(window, queue, "only".to_string()).await;
@@ -124,13 +114,11 @@ async fn init_download_multi(
     video_url: String, audio_url: String,
     cid: String, display_name: String,
 ) {
-    println!("{}, {}, {}, {}", video_url, audio_url, cid, display_name);
     let video_filename = extract_filename(&video_url);
     let audio_filename = extract_filename(&audio_url);
     let video_path = TEMP_DIRECTORY.join(&video_filename);
     let audio_path = TEMP_DIRECTORY.join(&audio_filename);
-    println!("{}, {}, {:?}, {:?}", video_filename, audio_filename, video_path, audio_path);
-    let download_info = VideoMultiInfo {
+    let download_info = VideoInfo {
         cid: cid.clone(),
         video_path: video_path.clone(),
         audio_path: audio_path.clone(),
@@ -138,8 +126,7 @@ async fn init_download_multi(
         audio_downloaded: false,
         finished: false
     };
-    println!("{:?}", download_info);
-    DOWNLOAD_MULTI_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
+    DOWNLOAD_INFO_MAP.lock().await.insert(display_name.clone(), download_info); // 插入新info
     let video_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: video_url, path: video_path, file_type: "video".to_string() };
     let audio_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: audio_url, path: audio_path, file_type: "audio".to_string() };
     let queue = vec![video_task, audio_task];
@@ -148,61 +135,52 @@ async fn init_download_multi(
 
 async fn process_download_queue(window: tauri::Window, queue: DownloadQueue, action: String) {
     for task in queue.into_iter() {
-        download_file(window.clone(), task.clone(), action.clone()).await;
-        if action == "multi" {
-            let mut info = DOWNLOAD_MULTI_INFO_MAP.lock().await;
-            if let Some(download_info) = info.get_mut(&task.display_name) {
-                if task.file_type == "video" {
-                    if download_info.cid == task.cid {
-                        download_info.video_downloaded = true;
-                    }
-                } else if task.file_type == "audio" {
-                    if download_info.cid == task.cid {
-                        download_info.audio_downloaded = true;
-                    }
-                println!("{:?}", *download_info);
-                }
-                if download_info.video_downloaded && download_info.audio_downloaded {
-                    let _ = merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &task.display_name).await;
-                    download_info.finished = true;
-                    println!("{:?}", *download_info);
+        match download_file(window.clone(), task.clone(), action.clone()).await {
+            Ok(o) => {
+                if action == "only" {
+                    let _ = window.emit("download-success", o);
                 }
             }
-        } else if action == "only" {
-            let mut info = DOWNLOAD_ONLY_INFO_MAP.lock().await;
-            if let Some(download_info) = info.get_mut(&task.display_name) {
-                if download_info.cid == task.cid {
-                    download_info.downloaded = true;
+            Err(e) => { let _ = window.emit("download-failed", vec![task.display_name.clone(), e]); }
+        };
+        let mut info = DOWNLOAD_INFO_MAP.lock().await;
+        if let Some(download_info) = info.get_mut(&task.display_name) {
+            if download_info.cid != task.cid {
+                continue; 
+            }
+            match task.file_type.as_str() {
+                "video" => download_info.video_downloaded = true,
+                "audio" => download_info.audio_downloaded = true,
+                _ => {}
+            }
+            if action == "multi" && download_info.video_downloaded
+            && download_info.audio_downloaded {
+                match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &task.display_name).await {
+                    Ok(o) => { let _ = window.emit("download-success", o); }
+                    Err(e) => { let _ = window.emit("download-failed", vec![task.display_name, e]); }
                 }
-                println!("{:?}", *download_info);
                 download_info.finished = true;
-                println!("{:?}", *download_info);
+            } else if action == "only" {
+                download_info.finished = true;
             }
         }
     }
 }
 
-async fn download_file(window: tauri::Window, task: DownloadTask, action: String) {
+async fn download_file(window: tauri::Window, task: DownloadTask, action: String) -> Result<String, String> {
     let client = init_client();
     let response = match client.get(&task.url).send().await {
         Ok(res) => res,
-        Err(e) => {
-            eprintln!("Error sending request: {}", e);
-            return;
-        }
+        Err(e) => return Err(e.to_string()),
     };
     let total_size = response.headers()
         .get(header::CONTENT_LENGTH)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(0);
-
     let mut file = match File::create(&task.path).await {
         Ok(f) => f,
-        Err(e) => {
-            eprintln!("Error creating file: {}", e);
-            return;
-        }
+        Err(e) => return Err(e.to_string()),
     };
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
@@ -219,8 +197,8 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     (total_size - downloaded) as f64 / (speed * 1048576.0)
                 } else { 0.0 };
                 if let Err(e) = file.write_all(&chunk).await {
-                    eprintln!("Error writing to file: {}", e);
-                    break;
+                    eprintln!("{}", e);
+                    return Err(e.to_string());
                 }
                 let progress = downloaded as f64 / total_size as f64 * 100.0;
                 let downloaded_mb = downloaded as f64 / 1048576.0;
@@ -236,17 +214,15 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     format!("{}", action)
                 ];
                 println!("{:?}", formatted_values);
-                let _ = window.emit("download-progress", formatted_values);
+                window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
             },
-            Err(e) => {
-                eprintln!("Error downloading chunk: {}", e);
-                break;
-            }
+            Err(e) => return Err(e.to_string()),
         }
     }
+    Ok(task.display_name.to_string())
 }
 
-async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String) -> Result<(), String> {
+async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String) -> Result<String, String> {
     println!("Starting merge process for audio");
     let current_dir = env::current_dir().map_err(|e| e.to_string())?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
@@ -260,7 +236,6 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     let progress_path = current_dir.join("ffmpeg")
         .join(format!("{}.progress", video_filename));
 
-    // let _ = window.emit("merge-start", output);
     println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
         .arg("-i").arg(video_path)
@@ -278,75 +253,72 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     let video_path_clone = video_path.clone();
     let window_clone = window.clone();
     let progress_path_clone = &progress_path.clone();
-    let progress_handle = tokio::spawn(async move {
-        while !progress_path.exists() {
-            sleep(Duration::from_millis(100)).await;
-        }
-        let mut progress_lines = VecDeque::new();
-        let mut last_size: u64 = 0;
-        loop {
-            let mut printed_keys = HashSet::new();
-            let metadata = tokio::fs::metadata(&progress_path).await.unwrap();
-            if metadata.len() > last_size {
-                let mut file = File::open(&progress_path).await.unwrap();
-                file.seek(SeekFrom::Start(last_size)).await.unwrap();
-                let mut reader = BufReader::new(file);
-                let mut line = String::new();
-                while reader.read_line(&mut line).await.unwrap() != 0 {
-                    if progress_lines.len() >= 12 {
-                        progress_lines.pop_front();
-                    }
-                    progress_lines.push_back(line.clone());
-                    line.clear();
+    while !progress_path.exists() {
+        sleep(Duration::from_millis(100)).await;
+    }
+    let mut progress_lines = VecDeque::new();
+    let mut last_size: u64 = 0;
+    loop {
+        let mut printed_keys = HashSet::new();
+        let metadata = tokio::fs::metadata(&progress_path).await.unwrap();
+        if metadata.len() > last_size {
+            let mut file = File::open(&progress_path).await.unwrap();
+            file.seek(SeekFrom::Start(last_size)).await.unwrap();
+            let mut reader = BufReader::new(file);
+            let mut line = String::new();
+            while reader.read_line(&mut line).await.unwrap() != 0 {
+                if progress_lines.len() >= 12 {
+                    progress_lines.pop_front();
                 }
-                last_size = metadata.len();
+                progress_lines.push_back(line.clone());
+                line.clear();
             }
-            let mut messages = Vec::new();
-            for l in &progress_lines {
-                let parts: Vec<&str> = l.split('=').collect();
-                if parts.len() == 2 {
-                    let key = parts[0].trim();
-                    let value = parts[1].trim();
-                    if !printed_keys.contains(key) {
-                        match key {
-                            "frame" | "fps" | "out_time" | "speed" => {
-                                messages.push(value);
-                            },
-                            _ => continue,
-                        };
-                        printed_keys.insert(key.to_string());
-                    }
+            last_size = metadata.len();
+        }
+        let mut messages = Vec::new();
+        for l in &progress_lines {
+            let parts: Vec<&str> = l.split('=').collect();
+            if parts.len() == 2 {
+                let key = parts[0].trim();
+                let value = parts[1].trim();
+                if !printed_keys.contains(key) {
+                    match key {
+                        "frame" | "fps" | "out_time" | "speed" => {
+                            messages.push(value);
+                        },
+                        _ => continue,
+                    };
+                    printed_keys.insert(key.to_string());
                 }
             }
-            messages.push(&output_clone);
-            println!("{:?}", messages);
-            let _ = window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string());
-            if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
-                println!("FFmpeg process completed.");
-                break;
-            }
-            sleep(Duration::from_secs(1)).await;
         }
-    });    
+        messages.push(&output_clone);
+        println!("{:?}", messages);
+        window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string())?;
+        if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
+            println!("FFmpeg process completed.");
+            break;
+        }
+        sleep(Duration::from_secs(1)).await;
+    }
     let status = child.wait().await.map_err(|e| e.to_string())?;
-    let _ = progress_handle.await.map_err(|e| e.to_string())?;
     if let Err(e) = tokio::fs::remove_file(audio_path_clone.clone()).await {
-        eprintln!("无法删除原始音频文件: {}", e);
+        return Err(format!("无法删除原始音频文件: {}", e));
     }
     if let Err(e) = tokio::fs::remove_file(video_path_clone.clone()).await {
-        eprintln!("无法删除原始视频文件: {}", e);
+        return Err(format!("无法删除原始视频文件: {}", e));
     }
     if let Err(e) = tokio::fs::remove_file(progress_path_clone).await {
-        eprintln!("无法删除进度文件: {}", e);
+        return Err(format!("无法删除进度文件: {}", e));
     }
     if status.success() {
-        let _ = window.emit("merge-success", output);
-        Ok(())
+        window.emit("merge-success", output).map_err(|e| e.to_string())?;
+        Ok(output.to_string())
     } else {
         if let Err(e) = tokio::fs::remove_file(output_path.clone()).await {
-            eprintln!("无法删除合并失败视频文件: {}", e);
+            return Err(format!("无法删除合并失败视频文件: {}", e));
         }
-        let _ = window.emit("merge-failed", output);
+        window.emit("merge-failed", output).map_err(|e| e.to_string())?;
         Err("FFmpeg command failed".to_string())
     }
 }
@@ -355,21 +327,18 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
     let appdata_path = match env::var("APPDATA") {
         Ok(path) => path,
         Err(_) => {
-            eprintln!("无法获取APPDATA路径");
             return Err("无法获取APPDATA路径".to_string());
         }
     };
     let working_dir = PathBuf::from(appdata_path).join("com.btjawa.biliget");
     let sessdata_path = working_dir.join("Cookies");
     if let Some(dir_path) = sessdata_path.parent() {
-        if let Err(_) = fs::create_dir_all(dir_path) {
-            eprintln!("无法创建目录");
-            return Err("无法创建目录".to_string());
+        if let Err(e) = fs::create_dir_all(dir_path) {
+            return Err(format!("无法创建目录：{}", e));
         }
     }
-    if let Err(_) = fs::write(&sessdata_path, sessdata) {
-        eprintln!("无法写入SESSDATA文件");
-        return Err("无法写入SESSDATA文件".to_string());
+    if let Err(e) = fs::write(&sessdata_path, sessdata) {
+        return Err(format!("无法写入Cookie：{}", e));
     }
     println!("SESSDATA写入成功");
     let url = Url::parse("https://www.bilibili.com").unwrap();
@@ -405,7 +374,10 @@ async fn init(window: tauri::Window) -> Result<i64, String> {
         return Ok(0);
     }
     update_cookies(&sessdata).await.map_err(|e| e.to_string())?;
-    let mid = init_mid().await.map_err(|e| e.to_string())?;
+    let mid = match init_mid().await {
+        Ok(mid) => mid,
+        Err(_) => 0
+    };
     window.emit("user-mid", vec![mid.to_string(), "init".to_string()]).unwrap();
     return Ok(mid);
 }
@@ -422,12 +394,10 @@ async fn init_mid() -> Result<i64, String> {
         if let Some(mid) = json["data"]["mid"].as_i64() {
             return Ok(mid);
         } else {
-            eprint!("找不到Mid");
             return Err("找不到Mid".to_string());
         }    
     } else {
-        eprintln!("请求失败");
-        return Err("请求失败".into());
+        return Err("请求失败".to_string());
     }    
 }   
 
@@ -480,6 +450,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
         if response.status() != reqwest::StatusCode::OK {
             if response.status().to_string() != "412 Precondition Failed" {
                 eprintln!("检查登录状态失败");
+                window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
                 return Err("检查登录状态失败".to_string());
             }
         }
@@ -503,8 +474,8 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
                         if let Some(cookie) = cookie_header {
                             let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
                             .ok_or_else(|| {
-                                eprintln!("找不到SESSDATA");
-                                "找不到SESSDATA".to_string()
+                            eprintln!("找不到SESSDATA");
+                            "找不到SESSDATA".to_string()
                             })?;
                             update_cookies(sessdata).await.map_err(|e| e.to_string())?;
                             let mid = init_mid().await.map_err(|e| e.to_string())?;

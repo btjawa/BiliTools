@@ -562,9 +562,8 @@ function getDownUrl(data, quality, action, extra, fileType) {
             displayName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}.${ext}`;
             invoke('init_download_only', {
                 url: downUrl[0][extra], 
-                displayName: displayName, 
-                cid: videoData[3].toString(),
-                fileType
+                displayName, fileType,
+                cid: videoData[3].toString()
             });
         } else if (action == "multi") {
             qualityStr = `${quality[1].slice(3)}_${quality[4]}`;
@@ -573,8 +572,7 @@ function getDownUrl(data, quality, action, extra, fileType) {
             invoke('init_download_multi', {
                 videoUrl: downUrl[0][extra],
                 audioUrl: downUrl[1][extra],
-                displayName: displayName, 
-                cid: videoData[3].toString(),
+                displayName, cid: videoData[3].toString(),
             });
         }
         iziToast.info({
@@ -977,7 +975,7 @@ async function getUserProfile(mid, action) {
 }
 
 listen("user-mid", async (event) => {
-    if (event.payload[0] !== '0') {
+    if (event.payload[0] != '0') {
         getUserProfile(event.payload[0], event.payload[1]);
         $('.user-avatar-placeholder').attr('data-after', '主页');
         $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));
@@ -1054,11 +1052,20 @@ listen("merge-failed", async (event) => {
     });
 })
 
-listen("download-complete", async (event) => {
+listen("download-success", async (event) => {
     iziToast.info({
         icon: 'fa-solid fa-circle-info',
         layout: '2',
         title: '下载',
-        message: `《${event.payload[1]}》已下载至桌面~`,
+        message: `《${event.payload}》下载成功~`,
+    });
+})
+
+listen("download-failed", async (event) => {
+    iziToast.error({
+        icon: 'fa-solid fa-circle-info',
+        layout: '2',
+        title: '下载',
+        message: `《${event.payload[0]}》下载失败<br>错误原因：${event.payload[1]}`,
     });
 })
