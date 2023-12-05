@@ -13,21 +13,9 @@ const loginElm = $('.login');
 const userProfileElm = $('.user-profile');
 const downPageElm = $('.down-page');
 
-// for producing
-// let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(5);
-// let videoData, userData = new Array(2), downVideos = 0, downAudios = 0;
-// let bouncing = false;
-
-// for deving
-window.getDetailUrl = '';
-window.currentElm = null;
-window.currentFocus = null;
-window.currentSel = new Array(5);
-window.videoData = '';
-window.downVideos = 0;
-window.downAudios = 0;
-window.bouncing = false;
-window.userData = new Array(2);
+let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(5);
+let videoData, userData = new Array(2), downVideos = 0, downAudios = 0;
+let bouncing = false;
 
 const viewIcon = `<svg class="icon-small" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20" width="20" height="20">
 <path d="M10 4.040041666666666C7.897383333333334 4.040041666666666 6.061606666666667 4.147 4.765636666666667 4.252088333333334C3.806826666666667 4.32984 3.061106666666667 5.0637316666666665 2.9755000000000003 6.015921666666667C2.8803183333333333 7.074671666666667 2.791666666666667 8.471183333333332 2.791666666666667 9.998333333333333C2.791666666666667 11.525566666666668 2.8803183333333333 12.922083333333333 2.9755000000000003 13.9808C3.061106666666667 14.932983333333334 3.806826666666667 15.666916666666667 4.765636666666667 15.744683333333336C6.061611666666668 15.849716666666666 7.897383333333334 15.956666666666667 10 15.956666666666667C12.10285 15.956666666666667 13.93871666666667 15.849716666666666 15.234766666666667 15.74461666666667C16.193416666666668 15.66685 16.939000000000004 14.933216666666667 17.024583333333336 13.981216666666668C17.11975 12.922916666666667 17.208333333333332 11.526666666666666 17.208333333333332 9.998333333333333C17.208333333333332 8.470083333333333 17.11975 7.073818333333334 17.024583333333336 6.015513333333334C16.939000000000004 5.063538333333333 16.193416666666668 4.329865000000001 15.234766666666667 4.252118333333334C13.93871666666667 4.147016666666667 12.10285 4.040041666666666 10 4.040041666666666zM4.684808333333334 3.255365C6.001155 3.14862 7.864583333333334 3.0400416666666668 10 3.0400416666666668C12.13565 3.0400416666666668 13.999199999999998 3.148636666666667 15.315566666666667 3.2553900000000002C16.753416666666666 3.3720016666666672 17.890833333333333 4.483195 18.020583333333335 5.925965000000001C18.11766666666667 7.005906666666667 18.208333333333336 8.433 18.208333333333336 9.998333333333333C18.208333333333336 11.56375 18.11766666666667 12.990833333333335 18.020583333333335 14.0708C17.890833333333333 15.513533333333331 16.753416666666666 16.624733333333335 15.315566666666667 16.74138333333333C13.999199999999998 16.848116666666666 12.13565 16.95666666666667 10 16.95666666666667C7.864583333333334 16.95666666666667 6.001155 16.848116666666666 4.684808333333334 16.7414C3.2467266666666665 16.624750000000002 2.1092383333333338 15.513266666666667 1.9795200000000002 14.070383333333334C1.8823900000000002 12.990000000000002 1.7916666666666667 11.562683333333334 1.7916666666666667 9.998333333333333C1.7916666666666667 8.434066666666666 1.8823900000000002 7.00672 1.9795200000000002 5.926381666666667C2.1092383333333338 4.483463333333334 3.2467266666666665 3.371976666666667 4.684808333333334 3.255365z" fill="currentColor"></path>
@@ -94,8 +82,8 @@ function debounce(fn, wait) {
 
 async function getVideoFull(aid, cid, type, action) {
     let getDetailUrl = type !== "bangumi" 
-        ? `http://127.0.0.1:50808/api/x/player/wbi/playurl?avid=${aid}&cid=${cid}&fnval=2000&fnver=0&fourk=1`
-        : `http://127.0.0.1:50808/api/pgc/player/web/playurl?avid=${aid}&cid=${cid}&fnval=2000&fnver=0&fourk=1`;
+        ? `http://127.0.0.1:50808/api/x/player/wbi/playurl?avid=${aid}&cid=${cid}&fnval=3088&fnver=0&fourk=1`
+        : `http://127.0.0.1:50808/api/pgc/player/web/playurl?avid=${aid}&cid=${cid}&fnval=3088&fnver=0&fourk=1`;
         try {
         const detailsData = await fetch(getDetailUrl);
         if (detailsData.ok) {
@@ -110,7 +98,7 @@ async function getVideoFull(aid, cid, type, action) {
             const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action}-audio-down-btn`).text('下载'):'';
             currentVideoBlock.next($(`.video-block-${action}`)).append(videoDownBtn, AudioDownBtn);
             applyDimensionList(JSON.stringify(details, null, 2), type, action);
-            applyCodecList(JSON.stringify(details, null, 2), type, action);
+            // applyCodecList(JSON.stringify(details, null, 2), type, action);
             applyAudioList(JSON.stringify(details, null, 2), type, action);
             applyDownBtn(details, type, action);
         } else {
@@ -576,7 +564,7 @@ function getDownUrl(data, quality, action, extra, fileType) {
         let qualityStr, ext, safeTitle, displayName;
         safeTitle = videoData[0].replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
         if (action == "only") {
-            qualityStr = isVideo ? quality[1].slice(3) : quality[4];
+            qualityStr = isVideo ? quality[1] : quality[4];
             ext = isVideo ? "mp4" : "aac";
             displayName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}.${ext}`;
             invoke('init_download_only', {
@@ -585,7 +573,7 @@ function getDownUrl(data, quality, action, extra, fileType) {
                 cid: videoData[3].toString()
             });
         } else if (action == "multi") {
-            qualityStr = `${quality[1].slice(3)}_${quality[4]}`;
+            qualityStr = `${quality[1]}_${quality[4]}`;
             ext = "mp4";
             displayName = `${downVideos}_${safeTitle}_${qualityStr}.mp4`;
             invoke('init_download_multi', {
@@ -661,7 +649,7 @@ async function login() {
     if ($('.user-name').text() != "登录") return;
     try {
         currentElm = '.login';
-        $('.login-status').html('当前状态：正在与服务器通信...');
+        $('.login-status').html('当前状态：正在与服务器通信...<br>若长时间未成功可尝试重启应用');
         loginElm.addClass('active').removeClass('back');
         const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
         const qrData = await response.json();
@@ -728,11 +716,11 @@ function applyVideoList(detailData) {
 function describeCodec(codecString) {
     const parts = codecString.split('.');
     const codecType = parts[0];
+    let profileDesc;
+    let levelDesc;
     if (codecType === 'hev1') {
         const profilePart = parts[1];
         const levelPart = parts[3].slice(1); 
-        let profileDesc = '';
-        let levelDesc = '';
         switch (profilePart) {
             case '1':
                 profileDesc = 'Main';
@@ -753,11 +741,9 @@ function describeCodec(codecString) {
         } else {
             levelDesc = "Unknown Level";
         }
-        return `H.265/HEVC ${profileDesc} ${levelDesc}`;
+        return `HEVC/H.265 ${profileDesc} ${levelDesc}`;
     } else if (codecType === 'avc' || codecType === 'avc1') {
         const profileAndLevel = parts[1];
-        let profileDesc = '';
-        let levelDesc = '';
         if (profileAndLevel.startsWith('42')) {
             profileDesc = 'Baseline';
         } else if (profileAndLevel.startsWith('4D')) {
@@ -776,7 +762,10 @@ function describeCodec(codecString) {
         } else {
             levelDesc = "Unknown Level";
         }
-        return `H.264/AVC ${profileDesc} ${levelDesc}`;
+        return `AVC/H.264 ${profileDesc} ${levelDesc}`;
+    } else if (codecType === 'av01') {
+        profileDesc = parts[2];
+        return `AV1 ${profileDesc}`;
     }
     return '未知编码格式';
 }
@@ -784,40 +773,33 @@ function describeCodec(codecString) {
 function applyDimensionList(detailData, type, action) {
     const details = JSON.parse(detailData);
     if (details.code == 0) {
+        const root = type == "bangumi" ? details.result : details.data;
         const dms = $('<div>').addClass("video-block-dimension-dms");
         const dm = $('<div>').addClass("video-block-dimension-dm").text("分辨率/画质");
         const split = $('<div>').addClass("video-block-dimension-split");
         const dmsOpt = $('<div>').addClass("video-block-dimension-dms-opt");
         dms.append(dm, split, dmsOpt);
-        const qualityIcon = {
-            16: 'fa-standard-definition',
-            32: 'fa-standard-definition',
-            64: 'fa-high-definition',
-            80: 'fa-high-definition',
-            112: 'fa-high-definition',
-            116: 'fa-high-definition',
-            120: 'fa-high-definition',
-            127: 'fa-high-definition'
-        };
-        const length = type!="bangumi" ? details.data.accept_quality.length : details.result.accept_quality.length;
         if (currentVideoBlock.next(`.video-block-${action}`).length) {
             currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
         } else {
             currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
         }
         currentVideoBlock.next(`.video-block-${action}`).append(dms);
-        for (let i = 0; i < length; i++) {
-            const quality = type!="bangumi" ? details.data.accept_quality[i] : details.result.accept_quality[i];
-            const description = type!="bangumi" ? details.data.accept_description[i] : details.result.accept_description[i];
-            const iconClass = qualityIcon[quality] || 'fa-standard-definition';
+        const maxQuality = Math.max(...root.dash.video.map(v => v.id));
+        const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
+        for (let i = 0; i < qualityList.length; i++) {
+            const quality = qualityList[i];
+            const qualityItem = root.support_formats.find(format => format.quality === quality);
+            const description = qualityItem.new_description;
             const currentBtn = $('<div>').addClass(`video-block-dimension-dms-${quality} video-block-dimension-dms-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid ${iconClass} icon-small`);
+            const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
             currentBtn.append(currentIcon, description);
             dmsOpt.append(currentBtn);
-            if (i === 0) {
+            if (quality == maxQuality) {
                 currentBtn.addClass('checked');
                 currentSel[0] = quality;
-                currentSel[1] = description;
+                currentSel[1] = qualityItem.display_desc;
+                applyCodecList(qualityItem, type, action, "init");
             }
             currentBtn.on('click', function() {
                 if (currentVideoBlock.next(`.video-block-${action}`).length) {
@@ -827,7 +809,8 @@ function applyDimensionList(detailData, type, action) {
                 }
                 $(this).addClass('checked');
                 currentSel[0] = quality;
-                currentSel[1] = description;
+                currentSel[1] = qualityItem.display_desc;
+                applyCodecList(qualityItem, type, action);
             });
         }
     } else {
@@ -835,31 +818,39 @@ function applyDimensionList(detailData, type, action) {
     }
 };
 
-function applyCodecList(detailData, type, action) {
-    const details = JSON.parse(detailData);
-    if (details.code == 0) {
+function applyCodecList(details, type, action, extra) {
+    console.log(details);
+    if (details.codecs) {
         const cds = $('<div>').addClass("video-block-codec-cds");
         const cd = $('<div>').addClass("video-block-codec-cd").text("编码格式");
         const split = $('<div>').addClass("video-block-codec-split");
         const cdsOpt = $('<div>').addClass("video-block-codec-cds-opt");
         const crossSplit = $('<div>').addClass('video-block-cross-split');
-        cds.append(cd, split, cdsOpt);
-        if (currentVideoBlock.next(`.video-block-${action}`).length) {
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-cross-split').remove();
-        } else {
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-cross-split').remove();
-        }
-        currentVideoBlock.next(`.video-block-${action}`).append(cds).append(action=="only"?crossSplit:'');
-        for (let i = 0; i < 2; i++) {
-            const codec = type!="bangumi" ? details.data.dash.video[i].codecs : details.result.dash.video[i].codecs;
+        if (extra == "init") {
+            cds.append(cd, split, cdsOpt);
+            if (currentVideoBlock.next(`.video-block-${action}`).length) {
+                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
+                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-cross-split').remove();
+            } else {
+                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
+                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-cross-split').remove();
+            }
+            currentVideoBlock.next(`.video-block-${action}`).append(cds).append(action=="only"?crossSplit:'');
+        } else $('.video-block-codec-cds-opt').empty();
+        const codecsList = details.codecs.map(codec => ({
+            codec, 
+            priority: (codec.includes('avc') ? 1 : codec.includes('hev') ? 2 : 3)
+        }))
+        .sort((a, b) => a.priority - b.priority);
+        for (let i = 0; i < codecsList.length; i++) {
+            const codec = codecsList[i].codec;
             const description = describeCodec(codec);
             const currentBtn = $('<div>').addClass(`video-block-codec-cds-${codec} video-block-codec-cds-item`);
             const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
             currentBtn.append(currentIcon, description);
-            cdsOpt.append(currentBtn);
-            if (description.includes('H.264')) {
+            if (extra == "init") cdsOpt.append(currentBtn);
+            else $('.video-block-codec-cds-opt').append(currentBtn)
+            if (i === 0) {
                 currentBtn.addClass('checked');
                 currentSel[2] = codec;
             }
@@ -873,6 +864,7 @@ function applyCodecList(detailData, type, action) {
                 currentSel[2] = codec;
             });
         }
+
     } else {
         handleErr(details, type);
     }
@@ -881,6 +873,7 @@ function applyCodecList(detailData, type, action) {
 function applyAudioList(detailData, type, action) {
     const details = JSON.parse(detailData);
     if (details.code == 0) {
+        const root = type == "bangumi" ? details.result : details.data;
         const ads = $('<div>').addClass("video-block-audio-ads");
         const ad = $('<div>').addClass("video-block-audio-ad").text("比特率/音质");
         const split = $('<div>').addClass("video-block-audio-split");
@@ -891,15 +884,15 @@ function applyAudioList(detailData, type, action) {
             30232: "132K",
             30280: "192K"
         }
-        const length = type!="bangumi" ? details.data.dash.audio.length : details.result.dash.audio.length;
         if (currentVideoBlock.next(`.video-block-${action}`).length) {
             currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
         } else {
             currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
         }
         currentVideoBlock.next(`.video-block-${action}`).append(ads);
-        for (let i = 0; i < length; i++) {
-            const quality = type!="bangumi" ? details.data.dash.audio[i].id : details.result.dash.audio[i].id;
+        const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
+        for (let i = 0; i < qualityList.length; i++) {
+            const quality = qualityList[i];
             const description = qualityDesc[quality];
             const currentBtn = $('<div>').addClass(`video-block-audio-ads-${quality} video-block-audio-ads-item`);
             const currentIcon = $('<i>').addClass(`fa-solid fa-audio-description icon-small`);
