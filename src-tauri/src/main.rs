@@ -5,8 +5,9 @@ use lazy_static::lazy_static;
 use serde_json::Value;
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{CookieStore, Jar}};
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
-use std::{env, fs, path::{Path, PathBuf}, sync::Arc, convert::Infallible, time::Instant, process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}};
-use tokio::{fs::File, sync::{Mutex, RwLock}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, process::Command, time::{sleep, Duration}};
+use std::{env, fs, path::{Path, PathBuf}, sync::Arc, convert::Infallible, time::Instant, process::Command,
+process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
+use tokio::{fs::File, sync::{Mutex, RwLock}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 
 lazy_static! {
@@ -259,6 +260,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
 
     // println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
+        .creation_flags(0x08000000)
         .arg("-i").arg(video_path)
         .arg("-i").arg(audio_path)
         .arg("-c:v").arg("copy")
@@ -322,7 +324,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         }
         sleep(Duration::from_secs(1)).await;
     }
-    let status = child.wait().await.map_err(|e| e.to_string())?;
+    let status = child.wait().unwrap();
     if let Err(e) = tokio::fs::remove_file(audio_path_clone.clone()).await {
         return Err(format!("无法删除原始音频文件: {}", e));
     }

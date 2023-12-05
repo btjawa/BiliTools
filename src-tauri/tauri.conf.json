@@ -35,7 +35,7 @@
     "windows": [
       {
         "fullscreen": false,
-        "resizable": false,
+        "resizable": true,
         "minWidth": 1280,
         "minHeight": 720,
         "maxWidth": 1280,
