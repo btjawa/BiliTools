@@ -71,7 +71,8 @@ struct VideoInfo {
     audio_downloaded: bool,
     finished: bool,
     tasks: Vec<DownloadTask>,
-    action: String
+    action: String,
+    ss_dir: String
 }
 
 #[derive(Debug, Clone)]
@@ -97,7 +98,7 @@ impl CookieStore for ThreadSafeCookieStore {
 #[tauri::command]
 async fn push_back_queue(
     video_url: Option<String>, audio_url: Option<String>,
-    cid: String, display_name: String, action: String
+    cid: String, display_name: String, action: String, ss_dir: String
 ) {
     let mut tasks = vec![];
     if let Some(v_url) = video_url {
@@ -128,8 +129,7 @@ async fn push_back_queue(
         video_downloaded: false,
         audio_downloaded: false,
         finished: false,
-        tasks,
-        action,
+        tasks, action, ss_dir
     };
     DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone());
     WAITING_QUEUE.lock().await.push_back(download_info.clone());
@@ -181,7 +181,7 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
     current_downloads.retain(|info| info.cid != download_info.cid);
     DOWNLOAD_COMPLETED_NOTIFY.notify_one();
     if action == "multi"  {
-        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.display_name).await {
+        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.display_name, &download_info.ss_dir).await {
             Ok(o) => { let _ = window.emit("download-success", o); }
             Err(e) => { let _ = window.emit("download-failed", vec![download_info.display_name, e]); }
         }
@@ -247,11 +247,16 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
     Ok(task.display_name.to_string())
 }
 
-async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String) -> Result<String, String> {
+async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String, ss_dir: &String) -> Result<String, String> {
     println!("\nStarting merge process for audio");
     let current_dir = env::current_dir().map_err(|e| e.to_string())?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
-    let output_path = DOWNLOAD_DIR.join(&output);
+    let ss_dir_path = DOWNLOAD_DIR.join(&ss_dir);
+    let output_path = ss_dir_path.join(&output);
+    if !&ss_dir_path.exists() {
+        fs::create_dir_all(&ss_dir_path).map_err(|e| e.to_string())?;
+        println!("成功创建{}", ss_dir);
+    }
     let output_clone = output.clone();
     let video_filename = Path::new(&output_path)
         .file_name()

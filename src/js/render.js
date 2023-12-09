@@ -56,7 +56,7 @@ iziToast.settings({
 });
 
 class VideoData {
-    constructor(title, desc, pic, duration, aid, cid, type, index) {
+    constructor(title, desc, pic, duration, aid, cid, type, index, ss_title) {
         this.title = title;
         this.desc = desc;
         this.pic = pic;
@@ -65,6 +65,7 @@ class VideoData {
         this.cid = cid;
         this.type = type;
         this.index = index;
+        this.ss_title = ss_title;
     }
 }
 
@@ -186,6 +187,7 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 if (action=="multi") downAudios++;
                 let qualityStr, ext, displayName;
                 const safeTitle = videoData[index].title.replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
+                const ssDir = videoData[index].ss_title;
                 if (action == "only") {
                     qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
                     ext = isVideo ? "mp4" : "aac";
@@ -198,7 +200,7 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 invoke('push_back_queue', {
                     videoUrl: (downUrl[0] && downUrl[0][line]) || null,
                     audioUrl: (downUrl[1] && downUrl[1][line]) || null,
-                    displayName, action, 
+                    displayName, action, ssDir,
                     cid: videoData[index].cid.toString(),
                 });
                 // iziToast.info({
@@ -256,7 +258,8 @@ async function search(input) {
         infoBlock.removeClass('active');
         videoList.removeClass('active');
         videoListTabHead.removeClass('active');
-        multiSelect.click().off('click');
+        multiSelect.off('click');
+        if ($('.multi-select-icon').hasClass('checked')) multiSelect.click();
         let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
         if (match) {
             parseVideo(match[0]);
@@ -304,8 +307,8 @@ function formatStat(num) {
     }
 }
 
-function formatDuration(int) {
-    const num = int % 1000 === 0 ? int / 1000 : int;
+function formatDuration(int, type) {
+    const num = type == "bangumi" ? Math.round(int / 1000) : int;
     const hs = Math.floor(num / 3600);
     const mins = Math.floor((num % 3600) / 60);
     const secs = Math.round(num % 60);
@@ -410,7 +413,6 @@ async function backward() {
     } else if (currentElm[index] == '.video-multi-next') {
         multiNextPage.removeClass('active').addClass('back');
         multiSelect.addClass('active');
-        multiSelectDown.removeClass('active');
         $('.video-multi-next-list').removeClass('active')
         $('.multi-select-box-org').prop('checked', false).trigger('change');
         lastChecked = -1;
@@ -420,7 +422,6 @@ async function backward() {
         videoList.removeClass('active');
         videoListTabHead.removeClass('active');
         multiSelect.removeClass('active');
-        multiSelectNext.removeClass('active');
         $('.video-list').empty();
     }
     currentElm.pop();
@@ -569,7 +570,7 @@ function applyVideoList(details) { // 分类填充视频块
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
                         episode.aid, episode.cid, 
-                        type, i + 1
+                        type, i + 1, ugc_root.title
                     );
                     appendVideoBlock(i + 1);
                     if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.aid))) {
@@ -590,7 +591,7 @@ function applyVideoList(details) { // 分类填充视频块
                         title, data_root.desc, 
                         data_root.pic, page.duration, 
                         data_root.aid, page.cid, 
-                        type, j + 1
+                        type, j + 1, data_root.title
                     );
                     appendVideoBlock(j + 1);
                     if (!actualSearchVideo[0] && title == $('.info-title').text()) {
@@ -611,7 +612,7 @@ function applyVideoList(details) { // 分类填充视频块
                     episode.share_copy, episode.share_copy,
                     episode.cover, episode.duration,
                     episode.aid, episode.cid,
-                    type, k + 1
+                    type, k + 1, eps_root.season_title
                 );
                 appendVideoBlock(k + 1);
                 if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.ep_id))) {
@@ -708,7 +709,7 @@ function applyVideoList(details) { // 分类填充视频块
                         $(videoBlocks[i]).find('.video-block-multi-select-quality').html(`${res[i][0].dms_desc} ｜ ${res[i][0].codec_desc} ｜ ${res[i][0].ads_desc}`);
                         downUrls.push(res[i][1]);
                         const currentSel = new CurrentSel(res[i][0].dms_id, res[i][0].dms_desc, res[i][0].codec_id, res[i][0].codec_desc, res[i][0].ads_id, res[i][0].ads_desc);
-                        await getDownUrl(downUrls[i], currentSel, "multi", line, "video", selectedVideos[i].index - 1)
+                        await getDownUrl(downUrls[i], currentSel, "multi", line, "video", selectedVideos[i].index - 1);
                     }
                     $('.video-multi-next-title').text('本次获取有效期为120分钟, 请确认分辨率等信息, 随后点击“开始下载”');
                     multiSelectDown.addClass('active');
@@ -763,7 +764,7 @@ function appendVideoBlock(index) { // 填充视频块
     const data_root = videoData[index - 1];
     const videoPage = $('<div>').addClass('video-block-page').text(index);
     const videoName = $('<div>').addClass('video-block-name').text(data_root.title);
-    const videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data_root.duration));
+    const videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data_root.duration, data_root.type));
     const videoBlock = $('<div>').addClass('video-block');
     const videoMultiSelect = $('<label>').addClass('multi-select-box');
     const checkBoxLabel = $('<input>').attr('type', 'checkbox').addClass('multi-select-box-org');
