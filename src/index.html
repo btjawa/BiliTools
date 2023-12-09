@@ -5,6 +5,7 @@
         <meta name="color-scheme" content="dark light">
         <meta name="referrer" content="no-referrer">
         <link rel="stylesheet" href="./css/font-awesome/all.css">
+        <link rel="stylesheet" type="text/css" href="./css/bcc-iconfont.css">
         <link rel="stylesheet" href="./css/iziToast.min.css">
         <link rel="stylesheet" type="text/css" href="./css/style.css">
         <link rel="stylesheet" type="text/css" href="./css/context-menu.css">
@@ -33,7 +34,7 @@
         </div>
         <div class="search">
             <div class="search-bar">
-                <input name="search-input" type="text" placeholder="链接/AV/BV/SS/EP号..." autocomplete="off">
+                <input name="search-input" type="text" placeholder="链接/AV/BV/SS/EP号..." autocomplete="off" spellcheck="false">
                 <i class="fa-solid fa-search search-btn"></i>
             </div>
         </div>
@@ -86,13 +87,28 @@
             <div id="login-qrcode" draggable="false"></div>
             <div class="login-text">
                 <div class="login-title">请使用哔哩哔哩客户端扫码登录<br>
-                    或是<a href="https://app.bilibili.com/" target="_blank">点击此处<a class="fa-solid fa-arrow-up-right-from-square" style="margin: 2px;"></a></a>跳转至官方下载中心<br>
+                    <a href="https://app.bilibili.com/" target="_blank">点击此处<a class="fa-solid fa-arrow-up-right-from-square login-icon"></a></a>跳转至官方APP下载中心<br>
                     <i>Cookie将会保存在本地</i></div>
                 <div class="login-status"></div>
             </div>
         </div>
         <div class="loading"></div>
         <div class="backward"><i class="fa-solid fa-chevron-left"></i></div>
+        <div class="multi-select-btn">
+            <div class="multi-select-background">
+                <i class="fa-regular fa-square-check multi-select-icon"></i>
+                <div class="multi-select-name">启用多选</div>
+            </div>
+        </div>
+        <div class="video-multi-next">
+            <div class="video-multi-next-title">等待选择线路</div>
+            <div class="multi-select-next-down-btn">
+                <div class="multi-select-next-down-background">
+                    <i class="fa-solid fa-down multi-select-next-down-icon"></i>
+                    <div class="multi-select-next-down-name">开始下载</div>
+                </div>
+            </div>
+        </div>
         <div class="video-root">
             <div class="info">
                 <img class="info-cover" draggable="false">
@@ -108,6 +124,7 @@
                 </div>
             </div>
             <div class="video-list-tab-head">
+                <div class="multi-select-box-tab">选中</div>
                 <div class="video-block-page">编号</div>
                 <div class="video-block-split"></div>
                 <div class="video-block-name">标题</div>
@@ -117,6 +134,12 @@
                 <div class="video-block-operates">下载选项</div>
             </div>
             <div class="video-list"></div>
+        </div>
+        <div class="multi-select-next-btn">
+            <div class="multi-select-next-background">
+                <i class="fa-solid fa-arrow-right multi-select-next-icon"></i>
+                <div class="multi-select-next-name">确认/结算</div>
+            </div>
         </div>
         <script type="text/javascript" src="./js/jquery-3.6.0.min.js"></script>
         <script type="text/javascript" src="./js/iziToast.min.js"></script>

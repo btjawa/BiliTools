@@ -7,7 +7,7 @@ use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{Co
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
 use std::{env, fs, path::{Path, PathBuf}, sync::Arc, convert::Infallible, time::Instant, process::Command,
 process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
-use tokio::{fs::File, sync::{Mutex, RwLock}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
+use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 
 lazy_static! {
@@ -24,9 +24,10 @@ lazy_static! {
     };
     static ref TEMP_DIR: PathBuf = WORKING_DIR.join("Temp");
     static ref SESSDATA_PATH: PathBuf = WORKING_DIR.join("Cookies");
-    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(5));
+    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(2));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref CURRENT_DOWNLOADS: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
+    static ref DOWNLOAD_COMPLETED_NOTIFY: Notify = Notify::new();
 }
 
 fn init_headers() -> HeaderMap {
@@ -34,7 +35,6 @@ fn init_headers() -> HeaderMap {
     headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"));
     headers.insert("Accept", HeaderValue::from_static("*/*"));
     headers.insert("Accept-Language", HeaderValue::from_static("en-US,en;q=0.5"));
-    headers.insert("Range", HeaderValue::from_static("bytes=0-"));
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
     headers.insert("Referer", HeaderValue::from_static("https://www.bilibili.com"));
     headers
@@ -70,7 +70,8 @@ struct VideoInfo {
     video_downloaded: bool,
     audio_downloaded: bool,
     finished: bool,
-    tasks: Vec<DownloadTask>
+    tasks: Vec<DownloadTask>,
+    action: String
 }
 
 #[derive(Debug, Clone)]
@@ -94,77 +95,77 @@ impl CookieStore for ThreadSafeCookieStore {
 }
 
 #[tauri::command]
-async fn init_download_only(
-    window: tauri::Window, url: String, cid: String,
-    display_name: String, file_type: String
+async fn push_back_queue(
+    video_url: Option<String>, audio_url: Option<String>,
+    cid: String, display_name: String, action: String
 ) {
-    let path = DOWNLOAD_DIR.join(&display_name);
-    let task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url, path: path.clone(), file_type: file_type.clone() };
-    let download_info = VideoInfo{
-        cid,
-        display_name: display_name.clone(),
-        video_path: if file_type == "video" { path.clone() } else { PathBuf::new() },
-        audio_path: if file_type == "audio" { path.clone() } else { PathBuf::new() },
-        video_downloaded: false,
-        audio_downloaded: false,
-        finished: false,
-        tasks: vec![task],
-    };
-    DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone()); // 插入新info
-    WAITING_QUEUE.lock().await.push_back(download_info.clone()); // 推入等待队列
-    process_queue(window, "only".to_string()).await;
-}
-
-#[tauri::command]
-async fn init_download_multi(
-    window: tauri::Window, video_url: String, audio_url: String,
-    cid: String, display_name: String
-) {
-    let video_path = TEMP_DIR.join(&extract_filename(&video_url));
-    let audio_path = TEMP_DIR.join(&extract_filename(&audio_url));
-    let video_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: video_url, path: video_path.clone(), file_type: "video".to_string() };
-    let audio_task = DownloadTask { cid: cid.clone(), display_name: display_name.clone(), url: audio_url, path: audio_path.clone(), file_type: "audio".to_string() };
+    let mut tasks = vec![];
+    if let Some(v_url) = video_url {
+        let video_path = TEMP_DIR.join(&extract_filename(&v_url));
+        tasks.push(DownloadTask { 
+            cid: cid.clone(), 
+            display_name: display_name.clone(), 
+            url: v_url, 
+            path: video_path, 
+            file_type: "video".to_string() 
+        });
+    }
+    if let Some(a_url) = audio_url {
+        let audio_path = TEMP_DIR.join(&extract_filename(&a_url));
+        tasks.push(DownloadTask { 
+            cid: cid.clone(), 
+            display_name: display_name.clone(), 
+            url: a_url, 
+            path: audio_path, 
+            file_type: "audio".to_string() 
+        });
+    }
     let download_info = VideoInfo {
         cid,
         display_name: display_name.clone(),
-        video_path,
-        audio_path,
+        video_path: tasks.get(0).map_or(PathBuf::new(), |task| task.path.clone()),
+        audio_path: tasks.get(1).map_or(PathBuf::new(), |task| task.path.clone()),
         video_downloaded: false,
         audio_downloaded: false,
         finished: false,
-        tasks: vec![video_task, audio_task]
+        tasks,
+        action,
     };
-    DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone()); // 插入新info
-    WAITING_QUEUE.lock().await.push_back(download_info.clone()); // 推入等待队列
-    process_queue(window, "multi".to_string()).await;
+    DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone());
+    WAITING_QUEUE.lock().await.push_back(download_info.clone());
 }
 
-async fn process_queue(window: tauri::Window, action: String) {
-    let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
-    let mut waiting_queue = WAITING_QUEUE.lock().await;
-    let max_concurrent_downloads = MAX_CONCURRENT_DOWNLOADS.read().await;
-    while current_downloads.len() < *max_concurrent_downloads && !waiting_queue.is_empty() {
-        // 当当前下载数量小于并发限制，同时等候队列有待处理请求
-        if let Some(video_info) = waiting_queue.pop_front() {
-            current_downloads.push_back(video_info.clone());
-            let window_clone = window.clone();
-            let action_clone = action.clone();
-            tokio::spawn(async move {
-                // 放到后台避免堵塞
-                process_download(window_clone, video_info, action_clone.to_string()).await;
-            });
+#[tauri::command]
+async fn process_queue(window: tauri::Window, initial: bool) {
+    let mut init = initial;
+    loop {
+        // 等待下载完成的通知
+        if !init { DOWNLOAD_COMPLETED_NOTIFY.notified().await; }
+        else { init = false; }
+        let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
+        let mut waiting_queue = WAITING_QUEUE.lock().await;
+        let max_concurrent_downloads = MAX_CONCURRENT_DOWNLOADS.read().await;
+        while current_downloads.len() < *max_concurrent_downloads && !waiting_queue.is_empty() {
+            if let Some(video_info) = waiting_queue.pop_front() {
+                current_downloads.push_back(video_info.clone());
+                let window_clone = window.clone();
+                tokio::spawn(async move {
+                    process_download(window_clone, video_info).await;
+                });
+            }
         }
     }
 }
 
-async fn process_download(window: tauri::Window, mut download_info: VideoInfo, action: String) {
+async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
+    let action = download_info.action.clone();
     for task in download_info.tasks.into_iter() {
         if download_info.cid != task.cid {
             continue; 
         }
         match download_file(window.clone(), task.clone(), action.clone()).await {
             Ok(o) => {
-                if action == "only" {
+                if action.clone() == "only" {
                     let _ = window.emit("download-success", o);
                 }
             }
@@ -176,6 +177,9 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo, a
             _ => {}
         }
     }
+    let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
+    current_downloads.retain(|info| info.cid != download_info.cid);
+    DOWNLOAD_COMPLETED_NOTIFY.notify_one();
     if action == "multi"  {
         match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.display_name).await {
             Ok(o) => { let _ = window.emit("download-success", o); }
@@ -183,8 +187,6 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo, a
         }
     }
     download_info.finished = true;
-    let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
-    current_downloads.retain(|info| info.cid != download_info.cid);
 }
 
 async fn download_file(window: tauri::Window, task: DownloadTask, action: String) -> Result<String, String> {
@@ -206,6 +208,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     let start_time = Instant::now();
+    println!();
     while let Some(chunk_result) = stream.next().await {
         match chunk_result {
             Ok(chunk) => {
@@ -233,8 +236,8 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     format!("{}", task.display_name),
                     format!("{}", task.file_type),
                     format!("{}", action)
-                ];
-                print!("\r{:?}", formatted_values);
+                    ];
+                    print!("\r{:?}", formatted_values.join("  "));
                 io::stdout().flush().unwrap();
                 window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
             },
@@ -281,6 +284,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     }
     let mut progress_lines = VecDeque::new();
     let mut last_size: u64 = 0;
+    println!();
     loop {
         let mut printed_keys = HashSet::new();
         let metadata = tokio::fs::metadata(&progress_path).await.unwrap();
@@ -316,7 +320,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
             }
         }
         messages.push(&output_clone);
-        print!("\r{:?}", messages);
+        print!("\r{:?}", messages.join(" "));
         io::stdout().flush().unwrap();
         window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string())?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
@@ -545,7 +549,7 @@ async fn main() {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![init, login, stop_login, init_download_multi, init_download_only, exit])
+        .invoke_handler(tauri::generate_handler![init, login, stop_login, push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

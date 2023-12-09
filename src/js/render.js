@@ -12,32 +12,27 @@ const loadingBox = $('.loading');
 const loginElm = $('.login');
 const userProfileElm = $('.user-profile');
 const downPageElm = $('.down-page');
+const multiNextPage = $('.video-multi-next');
+const multiSelect = $('.multi-select-btn');
+const multiSelectNext = $('.multi-select-next-btn');
+const multiSelectDown = $('.multi-select-next-down-btn');
 
-let getDetailUrl, currentElm = null, currentFocus = null, currentSel = new Array(5);
-let videoData, userData = new Array(2), downVideos = 0, downAudios = 0;
+let currentFocus = null, currentVideoBlock, currentElm = [], currentSel = [];
+let lastChecked = -1, highestZIndex = -1;
+let userData = new Array(2), downVideos = 0, downAudios = 0;
 let bouncing = false;
 
-const viewIcon = `<svg class="icon-small" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20" width="20" height="20">
-<path d="M10 4.040041666666666C7.897383333333334 4.040041666666666 6.061606666666667 4.147 4.765636666666667 4.252088333333334C3.806826666666667 4.32984 3.061106666666667 5.0637316666666665 2.9755000000000003 6.015921666666667C2.8803183333333333 7.074671666666667 2.791666666666667 8.471183333333332 2.791666666666667 9.998333333333333C2.791666666666667 11.525566666666668 2.8803183333333333 12.922083333333333 2.9755000000000003 13.9808C3.061106666666667 14.932983333333334 3.806826666666667 15.666916666666667 4.765636666666667 15.744683333333336C6.061611666666668 15.849716666666666 7.897383333333334 15.956666666666667 10 15.956666666666667C12.10285 15.956666666666667 13.93871666666667 15.849716666666666 15.234766666666667 15.74461666666667C16.193416666666668 15.66685 16.939000000000004 14.933216666666667 17.024583333333336 13.981216666666668C17.11975 12.922916666666667 17.208333333333332 11.526666666666666 17.208333333333332 9.998333333333333C17.208333333333332 8.470083333333333 17.11975 7.073818333333334 17.024583333333336 6.015513333333334C16.939000000000004 5.063538333333333 16.193416666666668 4.329865000000001 15.234766666666667 4.252118333333334C13.93871666666667 4.147016666666667 12.10285 4.040041666666666 10 4.040041666666666zM4.684808333333334 3.255365C6.001155 3.14862 7.864583333333334 3.0400416666666668 10 3.0400416666666668C12.13565 3.0400416666666668 13.999199999999998 3.148636666666667 15.315566666666667 3.2553900000000002C16.753416666666666 3.3720016666666672 17.890833333333333 4.483195 18.020583333333335 5.925965000000001C18.11766666666667 7.005906666666667 18.208333333333336 8.433 18.208333333333336 9.998333333333333C18.208333333333336 11.56375 18.11766666666667 12.990833333333335 18.020583333333335 14.0708C17.890833333333333 15.513533333333331 16.753416666666666 16.624733333333335 15.315566666666667 16.74138333333333C13.999199999999998 16.848116666666666 12.13565 16.95666666666667 10 16.95666666666667C7.864583333333334 16.95666666666667 6.001155 16.848116666666666 4.684808333333334 16.7414C3.2467266666666665 16.624750000000002 2.1092383333333338 15.513266666666667 1.9795200000000002 14.070383333333334C1.8823900000000002 12.990000000000002 1.7916666666666667 11.562683333333334 1.7916666666666667 9.998333333333333C1.7916666666666667 8.434066666666666 1.8823900000000002 7.00672 1.9795200000000002 5.926381666666667C2.1092383333333338 4.483463333333334 3.2467266666666665 3.371976666666667 4.684808333333334 3.255365z" fill="currentColor"></path>
-<path d="M12.23275 9.1962C12.851516666666667 9.553483333333332 12.851516666666667 10.44665 12.232683333333332 10.803866666666666L9.57975 12.335600000000001C8.960983333333335 12.692816666666667 8.1875 12.246250000000002 8.187503333333334 11.531733333333333L8.187503333333334 8.4684C8.187503333333334 7.753871666666667 8.960983333333335 7.307296666666667 9.57975 7.66456L12.23275 9.1962z" fill="currentColor" data-darkreader-inline-fill="" style="--darkreader-inline-fill: currentColor;"></path>
-</svg>`;
-const danmakuIcon = `<svg class="icon-small" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20" width="20" height="20">
-<path d="M10 4.040041666666666C7.897383333333334 4.040041666666666 6.061606666666667 4.147 4.765636666666667 4.252088333333334C3.806826666666667 4.32984 3.061106666666667 5.0637316666666665 2.9755000000000003 6.015921666666667C2.8803183333333333 7.074671666666667 2.791666666666667 8.471183333333332 2.791666666666667 9.998333333333333C2.791666666666667 11.525566666666668 2.8803183333333333 12.922083333333333 2.9755000000000003 13.9808C3.061106666666667 14.932983333333334 3.806826666666667 15.666916666666667 4.765636666666667 15.744683333333336C6.061611666666668 15.849716666666666 7.897383333333334 15.956666666666667 10 15.956666666666667C12.10285 15.956666666666667 13.93871666666667 15.849716666666666 15.234766666666667 15.74461666666667C16.193416666666668 15.66685 16.939000000000004 14.933216666666667 17.024583333333336 13.981216666666668C17.11975 12.922916666666667 17.208333333333332 11.526666666666666 17.208333333333332 9.998333333333333C17.208333333333332 8.470083333333333 17.11975 7.073818333333334 17.024583333333336 6.015513333333334C16.939000000000004 5.063538333333333 16.193416666666668 4.329865000000001 15.234766666666667 4.252118333333334C13.93871666666667 4.147016666666667 12.10285 4.040041666666666 10 4.040041666666666zM4.684808333333334 3.255365C6.001155 3.14862 7.864583333333334 3.0400416666666668 10 3.0400416666666668C12.13565 3.0400416666666668 13.999199999999998 3.148636666666667 15.315566666666667 3.2553900000000002C16.753416666666666 3.3720016666666672 17.890833333333333 4.483195 18.020583333333335 5.925965000000001C18.11766666666667 7.005906666666667 18.208333333333336 8.433 18.208333333333336 9.998333333333333C18.208333333333336 11.56375 18.11766666666667 12.990833333333335 18.020583333333335 14.0708C17.890833333333333 15.513533333333331 16.753416666666666 16.624733333333335 15.315566666666667 16.74138333333333C13.999199999999998 16.848116666666666 12.13565 16.95666666666667 10 16.95666666666667C7.864583333333334 16.95666666666667 6.001155 16.848116666666666 4.684808333333334 16.7414C3.2467266666666665 16.624750000000002 2.1092383333333338 15.513266666666667 1.9795200000000002 14.070383333333334C1.8823900000000002 12.990000000000002 1.7916666666666667 11.562683333333334 1.7916666666666667 9.998333333333333C1.7916666666666667 8.434066666666666 1.8823900000000002 7.00672 1.9795200000000002 5.926381666666667C2.1092383333333338 4.483463333333334 3.2467266666666665 3.371976666666667 4.684808333333334 3.255365z" fill="currentColor"></path>
-<path d="M13.291666666666666 8.833333333333334L8.166666666666668 8.833333333333334C7.890526666666666 8.833333333333334 7.666666666666666 8.609449999999999 7.666666666666666 8.333333333333334C7.666666666666666 8.057193333333334 7.890526666666666 7.833333333333334 8.166666666666668 7.833333333333334L13.291666666666666 7.833333333333334C13.567783333333335 7.833333333333334 13.791666666666668 8.057193333333334 13.791666666666668 8.333333333333334C13.791666666666668 8.609449999999999 13.567783333333335 8.833333333333334 13.291666666666666 8.833333333333334z" fill="currentColor" data-darkreader-inline-fill="" style="--darkreader-inline-fill: currentColor;"></path><path d="M14.541666666666666 12.166666666666666L9.416666666666668 12.166666666666666C9.140550000000001 12.166666666666666 8.916666666666666 11.942783333333333 8.916666666666666 11.666666666666668C8.916666666666666 11.390550000000001 9.140550000000001 11.166666666666668 9.416666666666668 11.166666666666668L14.541666666666666 11.166666666666668C14.817783333333335 11.166666666666668 15.041666666666668 11.390550000000001 15.041666666666668 11.666666666666668C15.041666666666668 11.942783333333333 14.817783333333335 12.166666666666666 14.541666666666666 12.166666666666666z" fill="currentColor" data-darkreader-inline-fill="" style="--darkreader-inline-fill: currentColor;"></path><path d="M6.5 8.333333333333334C6.5 8.609449999999999 6.27614 8.833333333333334 6 8.833333333333334L5.458333333333333 8.833333333333334C5.182193333333334 8.833333333333334 4.958333333333334 8.609449999999999 4.958333333333334 8.333333333333334C4.958333333333334 8.057193333333334 5.182193333333334 7.833333333333334 5.458333333333333 7.833333333333334L6 7.833333333333334C6.27614 7.833333333333334 6.5 8.057193333333334 6.5 8.333333333333334z" fill="currentColor" data-darkreader-inline-fill="" style="--darkreader-inline-fill: currentColor;"></path><path d="M7.750000000000001 11.666666666666668C7.750000000000001 11.942783333333333 7.526140000000001 12.166666666666666 7.25 12.166666666666666L6.708333333333334 12.166666666666666C6.432193333333334 12.166666666666666 6.208333333333334 11.942783333333333 6.208333333333334 11.666666666666668C6.208333333333334 11.390550000000001 6.432193333333334 11.166666666666668 6.708333333333334 11.166666666666668L7.25 11.166666666666668C7.526140000000001 11.166666666666668 7.750000000000001 11.390550000000001 7.750000000000001 11.666666666666668z" fill="currentColor"></path>
-</svg>`;
-const replyIcon = `<i style="margin-right:8px;" class="fa-regular fa-message-dots"></i>`
-const likeIcon = `<svg class="icon-small" width="20" height="20" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M9.77234 30.8573V11.7471H7.54573C5.50932 11.7471 3.85742 13.3931 3.85742 15.425V27.1794C3.85742 29.2112 5.50932 30.8573 7.54573 30.8573H9.77234ZM11.9902 30.8573V11.7054C14.9897 10.627 16.6942 7.8853 17.1055 3.33591C17.2666 1.55463 18.9633 0.814421 20.5803 1.59505C22.1847 2.36964 23.243 4.32583 23.243 6.93947C23.243 8.50265 23.0478 10.1054 22.6582 11.7471H29.7324C31.7739 11.7471 33.4289 13.402 33.4289 15.4435C33.4289 15.7416 33.3928 16.0386 33.3215 16.328L30.9883 25.7957C30.2558 28.7683 27.5894 30.8573 24.528 30.8573H11.9911H11.9902Z" fill="currentColor" data-darkreader-inline-fill="" style="--darkreader-inline-fill: currentColor;"></path>
-</svg>`;
-const coinIcon = `<svg class="icon-small" width="20" height="20" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" >
-<path fill-rule="evenodd" clip-rule="evenodd" d="M14.045 25.5454C7.69377 25.5454 2.54504 20.3967 2.54504 14.0454C2.54504 7.69413 7.69377 2.54541 14.045 2.54541C20.3963 2.54541 25.545 7.69413 25.545 14.0454C25.545 17.0954 24.3334 20.0205 22.1768 22.1771C20.0201 24.3338 17.095 25.5454 14.045 25.5454ZM9.66202 6.81624H18.2761C18.825 6.81624 19.27 7.22183 19.27 7.72216C19.27 8.22248 18.825 8.62807 18.2761 8.62807H14.95V10.2903C17.989 10.4444 20.3766 12.9487 20.3855 15.9916V17.1995C20.3854 17.6997 19.9799 18.1052 19.4796 18.1052C18.9793 18.1052 18.5738 17.6997 18.5737 17.1995V15.9916C18.5667 13.9478 16.9882 12.2535 14.95 12.1022V20.5574C14.95 21.0577 14.5444 21.4633 14.0441 21.4633C13.5437 21.4633 13.1382 21.0577 13.1382 20.5574V12.1022C11.1 12.2535 9.52148 13.9478 9.51448 15.9916V17.1995C9.5144 17.6997 9.10883 18.1052 8.60856 18.1052C8.1083 18.1052 7.70273 17.6997 7.70265 17.1995V15.9916C7.71158 12.9487 10.0992 10.4444 13.1382 10.2903V8.62807H9.66202C9.11309 8.62807 8.66809 8.22248 8.66809 7.72216C8.66809 7.22183 9.11309 6.81624 9.66202 6.81624Z" fill="currentColor"></path>
-</svg>`
-const favoriteIcon = `<svg class="icon-small" width="20" height="20" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M19.8071 9.26152C18.7438 9.09915 17.7624 8.36846 17.3534 7.39421L15.4723 3.4972C14.8998 2.1982 13.1004 2.1982 12.4461 3.4972L10.6468 7.39421C10.1561 8.36846 9.25639 9.09915 8.19315 9.26152L3.94016 9.91102C2.63155 10.0734 2.05904 11.6972 3.04049 12.6714L6.23023 15.9189C6.96632 16.6496 7.29348 17.705 7.1299 18.7605L6.39381 23.307C6.14844 24.6872 7.62063 25.6614 8.84745 25.0119L12.4461 23.0634C13.4276 22.4951 14.6544 22.4951 15.6359 23.0634L19.2345 25.0119C20.4614 25.6614 21.8518 24.6872 21.6882 23.307L20.8703 18.7605C20.7051 17.705 21.0339 16.6496 21.77 15.9189L24.9597 12.6714C25.9412 11.6972 25.3687 10.0734 24.06 9.91102L19.8071 9.26152Z" fill="currentColor"></path>
-</svg>`
-const shareIcon = `<svg class="icon-small" width="20" height="20" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
-<path d="M12.6058 10.3326V5.44359C12.6058 4.64632 13.2718 4 14.0934 4C14.4423 4 14.78 4.11895 15.0476 4.33606L25.3847 12.7221C26.112 13.3121 26.2087 14.3626 25.6007 15.0684C25.5352 15.1443 25.463 15.2144 25.3847 15.2779L15.0476 23.6639C14.4173 24.1753 13.4791 24.094 12.9521 23.4823C12.7283 23.2226 12.6058 22.8949 12.6058 22.5564V18.053C7.59502 18.053 5.37116 19.9116 2.57197 23.5251C2.47607 23.6489 2.00031 23.7769 2.00031 23.2122C2.00031 16.2165 3.90102 10.3326 12.6058 10.3326Z" fill="currentColor"></path>
-</svg>`
+window.videoData = [];
+window.selectedVideos = [];
+window.downUrls = [];
+
+const viewIcon = `<div class="bcc-iconfont bcc-icon-icon_list_player_x1 icon-small"></div>`;
+const danmakuIcon = `<div class="bcc-iconfont bcc-icon-danmuguanli icon-small"></div>`;
+const replyIcon = `<div class="bcc-iconfont bcc-icon-pinglunguanli icon-small"></div>`;
+const likeIcon = `<div class="bcc-iconfont bcc-icon-ic_Likesx icon-small"></div>`;
+const coinIcon = `<div class="bcc-iconfont bcc-icon-icon_action_reward_n_x icon-small"></div>`;
+const favoriteIcon = `<div class="bcc-iconfont bcc-icon-icon_action_collection_n_x icon-small"></div>`;
+const shareIcon = `<div class="bcc-iconfont bcc-icon-icon_action_share_n_x icon-small"></div>`;
 const bigVipIcon = `<svg class="user-vip-icon" width="16" height="16" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
 <path d="M32.0002 61.3333C15.7986 61.3333 2.66667 48.2013 2.66667 32.0002C2.66667 15.7986 15.7986 2.66667 32.0002 2.66667C48.2013 2.66667 61.3333 15.7986 61.3333 32.0002C61.3333 48.2014 48.2014 61.3333 32.0002 61.3333Z" fill="#FF6699" stroke="white" stroke-width="5.33333"/>
 <path d="M46.6262 22.731V22.7199H35.8032C35.8734 21.8558 35.914 20.9807 35.914 20.0982C35.914 19.1122 35.866 18.1337 35.7774 17.1699C35.7811 17.1072 35.7885 17.0444 35.7885 16.9779V16.9669C35.7885 14.9581 34.16 13.3333 32.1549 13.3333C30.1462 13.3333 28.5214 14.9618 28.5214 16.9669V16.9779C28.5214 17.2253 28.5473 17.469 28.5953 17.7017L28.5436 17.7091C28.6174 18.4956 28.6581 19.2895 28.6581 20.0945C28.6581 20.9807 28.6101 21.8558 28.5214 22.7162H17.392V22.731C15.4977 22.8528 13.9948 24.4259 13.9948 26.3534V26.3645C13.9948 28.3733 15.5346 29.9832 17.5397 29.9832C17.6948 29.9832 17.8535 29.9906 18.1046 29.9869L26.6124 29.9685C24.4559 34.9535 20.7153 39.0892 16.0294 41.7441C16.0072 41.7552 15.9888 41.7663 15.9666 41.7811C15.9149 41.8106 15.8669 41.8401 15.8152 41.8697L15.8189 41.8734C14.7961 42.5159 14.1129 43.6532 14.1129 44.9493V44.9604C14.1129 46.9692 15.7414 48.5939 17.7465 48.5939C18.5256 48.5939 19.242 48.3465 19.8328 47.9329C26.6604 43.9892 31.9002 37.6047 34.3631 29.9759H46.0428C46.2311 29.9795 46.5117 29.9685 46.5117 29.9685C48.6941 29.9242 50.1268 28.3807 50.1268 26.3756V26.3645C50.1305 24.3963 48.5722 22.8011 46.6262 22.731Z" fill="white"/>
@@ -59,7 +54,31 @@ iziToast.settings({
     backgroundColor: '#3b3b3b',
     theme: 'dark'
 });
-  
+
+class VideoData {
+    constructor(title, desc, pic, duration, aid, cid, type, index) {
+        this.title = title;
+        this.desc = desc;
+        this.pic = pic;
+        this.duration = duration;
+        this.aid = aid;
+        this.cid = cid;
+        this.type = type;
+        this.index = index;
+    }
+}
+
+class CurrentSel {
+    constructor(dms_id, dms_desc, codec_id, codec_desc, ads_id, ads_desc) {
+        this.dms_id = dms_id;
+        this.dms_desc = dms_desc;
+        this.codec_id = codec_id;
+        this.codec_desc = codec_desc;
+        this.ads_id = ads_id;
+        this.ads_desc = ads_desc;
+    }
+}
+
 function debounce(fn, wait) {
     let bouncing = false;
     return function(...args) {
@@ -93,14 +112,7 @@ async function getVideoFull(aid, cid, type, action) {
                 .removeClass('active').remove();
                 return;
             }
-            currentVideoBlock.next($(`.video-block-${action}`)).find(`.loading-${action}`).removeClass('active');
-            const videoDownBtn = $('<div>').addClass(`video-block-${action}-video-down-btn`).text('下载');
-            const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action}-audio-down-btn`).text('下载'):'';
-            currentVideoBlock.next($(`.video-block-${action}`)).append(videoDownBtn, AudioDownBtn);
-            applyDimensionList(JSON.stringify(details, null, 2), type, action);
-            // applyCodecList(JSON.stringify(details, null, 2), type, action);
-            applyAudioList(JSON.stringify(details, null, 2), type, action);
-            applyDownBtn(details, type, action);
+            return details;
         } else {
             console.error("请求失败");
         }
@@ -110,36 +122,105 @@ async function getVideoFull(aid, cid, type, action) {
 }
 
 async function parseVideo(videoId) {
+    let getDetailUrl;
     if (videoId.includes('BV') || videoId.includes('bv')) {
-        getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/view?bvid=${videoId}`;
+        getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/view/detail?bvid=${videoId}`;
     } else if (videoId.includes('AV') || videoId.includes('av')) {
-        getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/view?aid=${videoId.match(/\d+/)[0]}`;
-    } else {
-        console.error(`Error: ${videoId}不是AV/BV号`); applyVideoList(`Error: ${videoId}不是AV/BV号`);
+        getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/view/detail?aid=${videoId.match(/\d+/)[0]}`;
     }
     const detailData = await fetch(getDetailUrl);
     if (detailData.ok) {
         const details = await detailData.json();
         // if (details.data && details.data.pages)
-        applyVideoList(JSON.stringify(details, null, 2));
+        applyVideoList(details, null, 2);
     }
 }
   
   
 async function parseBangumi(videoId) {
+    let getDetailUrl
     if (videoId.includes('ep') || videoId.includes('EP')) {
         getDetailUrl = `http://127.0.0.1:50808/api/pgc/view/web/season?ep_id=${videoId.match(/\d+/)[0]}`;
     } else if (videoId.includes('ss') || videoId.includes('SS')) {
         getDetailUrl = `http://127.0.0.1:50808/api/pgc/view/web/season?season_id=${videoId.match(/\d+/)[0]}`;
-    } else {
-        console.error(`Error: ${videoId}不是EP/SS号`);  applyVideoList(`Error: ${videoId}不是EP/SS号`);
     }
     const detailData = await fetch(getDetailUrl);
     if (detailData.ok) {
         const details = await detailData.json();
         // if (details.data && details.data.pages)
-        applyVideoList(JSON.stringify(details, null, 2));
+        applyVideoList(details);
     }
+}
+
+async function getDownUrl(details, quality, action, line, fileType, index) {
+    return new Promise((resolve) => {
+        try {
+            let found = [];
+            let downUrl = [];
+            const data = details.data || details.result;
+            const isVideo = fileType === "video";
+            for (let file of isVideo?data.dash.video:data.dash.audio) {
+                if (file.id == isVideo ? quality.dms_id : quality.ads_id
+                && !isVideo || file.codecs == quality.codec_id) {
+                    if (isVideo) {
+                        found[0] = true;
+                        downUrl[0] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
+                    } else {
+                        found[1] = true;
+                        downUrl[1] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
+                    }
+                    break;
+                }
+            }
+            if (action == "multi") {
+                for (let audio of data.dash.audio) {
+                    if (audio.id == quality.ads_id) {
+                        found[1] = true;
+                        downUrl[1] = [audio.baseUrl, ...audio.backupUrl.slice(0, 2)];
+                        break;
+                    }
+                }
+            }
+            if ((isVideo && found[0]) || (!isVideo && found[1]) || (action=="multi" && found[1])) {
+                isVideo ? downVideos++ : downAudios++;
+                if (action=="multi") downAudios++;
+                let qualityStr, ext, displayName;
+                const safeTitle = videoData[index].title.replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
+                if (action == "only") {
+                    qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
+                    ext = isVideo ? "mp4" : "aac";
+                    displayName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}.${ext}`;
+                } else if (action == "multi") {
+                    qualityStr = `${quality.dms_desc}_${quality.ads_desc}`;
+                    ext = "mp4";
+                    displayName = `${downVideos}_${safeTitle}_${qualityStr}.mp4`;
+                }
+                invoke('push_back_queue', {
+                    videoUrl: (downUrl[0] && downUrl[0][line]) || null,
+                    audioUrl: (downUrl[1] && downUrl[1][line]) || null,
+                    displayName, action, 
+                    cid: videoData[index].cid.toString(),
+                });
+                // iziToast.info({
+                //     icon: 'fa-solid fa-circle-info',
+                //     layout: '2',
+                //     title: '下载',
+                //     message: `已添加《${displayName}》至下载页~`,
+                // });
+                appendDownPageBlock(ext, qualityStr, videoData[index]);
+                resolve();
+            } else {
+                iziToast.error({
+                    icon: 'fa-solid fa-circle-info',
+                    layout: '2',
+                    title: '下载',
+                    message: `未找到符合条件的下载地址＞﹏＜`,
+                });
+            }
+        } catch(err) {
+            handleErr(err, null);
+        }
+    })
 }
 
 function handleErr(err, type) {
@@ -148,22 +229,22 @@ function handleErr(err, type) {
         const root = type != "bangumi" ? err.data : err.result;
         if (root.is_preview === 1) {
             if (root.durls && root.durl) {
-                errMsg = '没有本片权限，只有试看权限<br>可能是没有大会员/没有购买本片';
+                errMsg = '没有本片权限, 只有试看权限<br>可能是没有大会员/没有购买本片';
             }
-        }
+        } else if (root.v_voucher) errMsg = '目前请求次数过多, 已被风控, 请等待5分钟或更久后重新尝试请求';
     } else if (err.code === -404) {
-        errMsg = `错误信息：${err.message}<br>错误代码：${err.code}<br>可能是没有大会员/没有购买本片，或是真的没有该资源`;
+        errMsg = `错误信息: ${err.message}<br>错误代码: ${err.code}<br>可能是没有大会员/没有购买本片, 或是真的没有该资源`;
     } else {
-        errMsg = `错误信息：${err.message}<br>错误代码：${err.code}`;
+        errMsg = `错误信息: ${err.message}<br>错误代码: ${err.code}`;
     }
     if (errMsg) {
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
             layout: '2',
             title: `警告`,
-            message: `遇到错误：${errMsg}`,
+            message: `遇到错误: ${errMsg}`,
         });
-        console.error(err);
+        console.error(err, errMsg);
         return true;
     } else {
         return false;
@@ -175,38 +256,39 @@ async function search(input) {
         infoBlock.removeClass('active');
         videoList.removeClass('active');
         videoListTabHead.removeClass('active');
+        multiSelect.click().off('click');
         let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
         if (match) {
             parseVideo(match[0]);
             searchElm.addClass('active').removeClass('back');
             loadingBox.addClass('active');
-            return;
+        } else {
+            match = input.match(/ep(\d+)|ss(\d+)/i);
+            if (match) {
+                parseBangumi(match[0]); 
+                searchElm.addClass('active').removeClass('back');
+                loadingBox.addClass('active');
+            } else {
+                match = input.match(/au(\d+)/i);
+                if (match) {
+                    iziToast.error({
+                        icon: 'fa-regular fa-circle-exclamation',
+                        layout: '2',
+                        title: `警告`,
+                        message: "暂不支持au解析"
+                    });
+                } else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
+                    iziToast.error({
+                        icon: 'fa-regular fa-circle-exclamation',
+                        layout: '2',
+                        title: `警告`,
+                        message: !input ? "请输入链接/AV/BV/SS/EP号" : "输入不合法！请检查格式"
+                    });
+                    loadingBox.removeClass('active');
+                    if (searchElm.attr('class').includes('active')) searchElm.removeClass('active').addClass('back');
+                }
+            }
         }
-        match = input.match(/ep(\d+)|ss(\d+)/i);
-        if (match) {
-            parseBangumi(match[0]);
-            searchElm.addClass('active').removeClass('back');
-            loadingBox.addClass('active');
-            return;
-        }
-        match = input.match(/au(\d+)/i);
-        if (match) {
-            iziToast.error({
-                icon: 'fa-regular fa-circle-exclamation',
-                layout: '2',
-                title: `警告`,
-                message: "暂不支持au解析"
-            });
-            return;
-        }
-        iziToast.error({
-            icon: 'fa-regular fa-circle-exclamation',
-            layout: '2',
-            title: `警告`,
-            message: input ? `输入不合法！请检查格式` : "请输入链接/AV/BV/SS/EP号"
-        });
-        loadingBox.removeClass('active');
-        if (searchElm.attr('class').includes('active')) searchElm.removeClass('active').addClass('back');
     } catch (err) {
         console.error(err);
     }
@@ -222,7 +304,8 @@ function formatStat(num) {
     }
 }
 
-function formatDuration(num) {
+function formatDuration(int) {
+    const num = int % 1000 === 0 ? int / 1000 : int;
     const hs = Math.floor(num / 3600);
     const mins = Math.floor((num % 3600) / 60);
     const secs = Math.round(num % 60);
@@ -316,23 +399,31 @@ async function bilibili() {
 }
 
 async function backward() {
-    if (currentElm == '.login') {
+    const index = currentElm.length - 1;
+    if (currentElm[index] == '.login') {
         invoke('stop_login');
         loginElm.removeClass('active').addClass('back');
-    } else if (currentElm == '.down-page') {
+    } else if (currentElm[index] == '.down-page') {
         downPageElm.removeClass('active').addClass('back');
-        $('.down-page-empty-text').removeClass('active');
-    } else if (currentElm = '.user-profile') {
+    } else if (currentElm[index] == '.user-profile') {
         userProfileElm.removeClass('active').addClass('back');
-        $('.user-profile-empty-text').removeClass('active');
-    } else {
+    } else if (currentElm[index] == '.video-multi-next') {
+        multiNextPage.removeClass('active').addClass('back');
+        multiSelect.addClass('active');
+        multiSelectDown.removeClass('active');
+        $('.video-multi-next-list').removeClass('active')
+        $('.multi-select-box-org').prop('checked', false).trigger('change');
+        lastChecked = -1;
+    } else if (currentElm[index] == '.video-root') {
+        if (searchElm.hasClass('active')) searchElm.removeClass('active').addClass('back');
         infoBlock.removeClass('active');
         videoList.removeClass('active');
         videoListTabHead.removeClass('active');
-        if (searchElm.attr('class').includes('active')) searchElm.removeClass('active').addClass('back');
-        loadingBox.removeClass('active').addClass('back');
+        multiSelect.removeClass('active');
+        multiSelectNext.removeClass('active');
+        $('.video-list').empty();
     }
-    currentElm = undefined;
+    currentElm.pop();
 }
 
 $(document).ready(function () {
@@ -341,25 +432,22 @@ $(document).ready(function () {
     async function handleSearch() {
         await search(searchInput.val());
     };
-    const debouncedSearch = debounce(handleSearch, 500);
-    searchBtn.on('click', debouncedSearch);
+    const debouncedSearch = debounce(handleSearch, 250);
+    searchBtn.on('click', debounce(handleSearch, 250));
     searchInput.on('keydown', (e) => {
         if (e.keyCode === 13) debouncedSearch();
     });
     $('.down-page-bar').on('click', () => {
-        currentElm = '.down-page';
-        downPageElm.addClass('active').removeClass('back');
-        $('.down-page-empty-text').addClass('active');
-    })
-    $('.user-profile-exit').on('click', () => {
-        invoke('exit');
-    })
+        currentElm.push(".down-page");
+        downPageElm.addClass('active').removeClass('back');    
+    });
+    $('.user-profile-exit').on('click', () => invoke('exit'));
     $('.cut').on('click', () => cutText());
     $('.copy').on('click', () => copy());
     $('.paste').on('click', () => paste());
     $('.bilibili').on('click', () => bilibili());
     $('.backward').on('click', () => backward());
-    $(document).on('keydown', async (e) => {
+    $(document).on('keydown', async function(e) {
         if (e.keyCode === 116 || (e.ctrlKey && e.keyCode === 82)) {
             e.preventDefault();
         }
@@ -368,8 +456,16 @@ $(document).ready(function () {
             $('.context-menu').removeClass('active');
             backward();
         }
-    });
-    $(document).on('contextmenu', async (e) => {
+        if (e.ctrlKey && e.keyCode === 65) {
+            if ($('.multi-select-icon').hasClass('checked') && !currentFocus) {
+                e.preventDefault();
+                const checkbox = $('.multi-select-box-org');
+                const isChecked = checkbox.first().prop('checked');
+                checkbox.prop('checked', !isChecked).trigger('change');
+                return;
+            }
+        }
+    }).on('contextmenu', async (e) => {
         e.preventDefault();
         const menuWidth = parseInt($('.context-menu').css("width"));
         const menuHeight = parseInt($('.context-menu').css("height"));
@@ -388,17 +484,19 @@ $(document).ready(function () {
             animation: '',
             opacity: 1,
             display: "flex"
+        }).off('mousedown').on('mousedown', function(e) {
+            e.preventDefault();
         });
         void $('.context-menu')[0].offsetHeight;
         $('.context-menu').css('animation', 'fadeInAnimation 0.2s');
-    });
-    $(document).on('click', async (e) => {
+    }).on('click', async (e) => {
         if (!$('.context-menu').is(e.target) && $('.context-menu').has(e.target).length === 0)
         $('.context-menu').css({ opacity: 0, display: "none" });
-    });
-    $(document).on('focusin', function(event) {
-        currentFocus = event.target;
-    });
+    }).on('focusin', function (e) {
+        currentFocus = e.target;
+    }).on('focusout', function () {
+        currentFocus = null;
+    })
 });
 
 function formatPubdate(timestamp) {
@@ -413,201 +511,339 @@ function formatPubdate(timestamp) {
 }
 
 function initVideoInfo(type, details) {
-    const isVideo = type === "video";
+    const isVideo = (type == "video" || type == "ugc_season");
+    const root = isVideo ? details.data.View : details.result;
     $('.info-cover').attr("src", "").attr("src", 
-    (isVideo ? details.data.pic : details.result.cover).replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0").replace("https", "http"));
-    $('.info-title').html(isVideo ? details.data.title : details.result.season_title);
-    $('.info-desc').html((isVideo ? details.data.desc : details.result.evaluate).replace(/\n/g, '<br>'));
-    if (isVideo ? details.data.owner : details.result.up_info) {
-        $('.info-owner-face').attr("src", (isVideo ? details.data.owner.face : details.result.up_info.avatar).replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0").replace("https", "http"));
-        $('.info-owner-name').html(isVideo ? details.data.owner.name : details.result.up_info.uname);
+    (isVideo ? root.pic : root.cover).replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0").replace("https", "http"));
+    $('.info-title').html(isVideo ? root.title : root.season_title);
+    $('.info-desc').html((isVideo ? root.desc : root.evaluate).replace(/\n/g, '<br>'));
+    if (isVideo ? root.owner : root.up_info) {
+        $('.info-owner-face').attr("src", (isVideo ? root.owner.face : root.up_info.avatar).replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0").replace("https", "http"));
+        $('.info-owner-name').html(isVideo ? root.owner.name : root.up_info.uname);
     } else {
         $('.info-owner-face').css("display", "none");
         $('.info-owner-name').css("display", "none");
     }
     $('.info-title').css('max-width', `calc(100% - ${parseInt($('.info-owner').outerWidth(true))}px)`);
     $('.info-stat').html(
-        `<div class="info-stat-item">${viewIcon + formatStat(isVideo ? details.data.stat.view : details.result.stat.views)}</div>
-        <div class="info-stat-item">${danmakuIcon + formatStat(isVideo ? details.data.stat.danmaku : details.result.stat.danmakus)}</div>
-        <div class="info-stat-item" style="bottom:4px;position:relative;">${replyIcon + formatStat(isVideo ? details.data.stat.reply : details.result.stat.reply)}</div>
-        <div class="info-stat-item">${likeIcon + formatStat(isVideo ? details.data.stat.like : details.result.stat.likes)}</div>
-        <div class="info-stat-item">${coinIcon + formatStat(isVideo ? details.data.stat.coin : details.result.stat.coins)}</div>
-        <div class="info-stat-item">${favoriteIcon + formatStat(isVideo ? details.data.stat.favorite : parseInt(details.result.stat.favorites) + parseInt(details.result.stat.favorite))}</div>
-        <div class="info-stat-item">${shareIcon + formatStat(isVideo ? details.data.stat.share : details.result.stat.share)}</div>`
-        );
-        let stylesText = '';
-        if (isVideo) stylesText = `${getPartition(details.data.tid)}&nbsp;·&nbsp;${details.data.tname}`;
-        else {
-            for (let i = 0; i < details.result.styles.length; i++) {
-                stylesText += details.result.styles[i];
-                if (i < details.result.styles.length - 1) stylesText += " · ";
+        `<div class="info-stat-item">${viewIcon + formatStat(isVideo ? root.stat.view : root.stat.views)}</div>
+        <div class="info-stat-item">${danmakuIcon + formatStat(isVideo ? root.stat.danmaku : root.stat.danmakus)}</div>
+        <div class="info-stat-item">${replyIcon + formatStat(root.stat.reply)}</div>
+        <div class="info-stat-item">${likeIcon + formatStat(isVideo ? root.stat.like : root.stat.likes)}</div>
+        <div class="info-stat-item">${coinIcon + formatStat(isVideo ? root.stat.coin : root.stat.coins)}</div>
+        <div class="info-stat-item">${favoriteIcon + formatStat(isVideo ? root.stat.favorite : parseInt(root.stat.favorites) + parseInt(root.stat.favorite))}</div>
+        <div class="info-stat-item">${shareIcon + formatStat(root.stat.share)}</div>`
+    );
+    let stylesText = '';
+    if (isVideo) stylesText = `${getPartition(root.tid)}&nbsp;·&nbsp;${root.tname}`;
+    else {
+        for (let i = 0; i < root.styles.length; i++) {
+            stylesText += root.styles[i];
+            if (i < root.styles.length - 1) stylesText += "&nbsp;·&nbsp;";
+        }
+    }
+    const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ icon-small');
+    const pubdate = isVideo ? formatPubdate(root.pubdate) : root.publish.pub_time;
+    $('.info-styles').html(stylesText + "&emsp;|&emsp;").append(pubdateElm, pubdate);
+}
+
+function applyVideoList(details) { // 分类填充视频块
+    videoList.empty();
+    loadingBox.removeClass('active');
+    currentElm.push(".video-root");
+    let actualSearchVideo = [];
+    if (details.code == 0) {
+        infoBlock.addClass('active');
+        videoList.addClass('active');
+        videoListTabHead.addClass('active');
+        multiSelect.addClass('active');
+        downUrls = [], videoData = [], selectedVideos = [];
+        if (details.data) {
+            if (details.data.View.ugc_season) {
+                const type = "ugc_season";
+                initVideoInfo(type, details);
+                const ugc_root = details.data.View.ugc_season;
+                for (let i = 0; i < ugc_root.sections[0].episodes.length; i++) {
+                    let episode = ugc_root.sections[0].episodes[i];
+                    videoData[i] = new VideoData(
+                        episode.title, episode.arc.desc, 
+                        episode.arc.pic, episode.arc.duration, 
+                        episode.aid, episode.cid, 
+                        type, i + 1
+                    );
+                    appendVideoBlock(i + 1);
+                    if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.aid))) {
+                        actualSearchVideo = [episode.title, i + 1];
+                    }
+                }
+                if (!actualSearchVideo[0]) {
+                    actualSearchVideo = [ugc_root.sections[0].episodes[0].title, 1];
+                }
+            } else if (!details.data.View.ugc_season) {
+                const type = "video";
+                initVideoInfo(type, details);
+                const data_root = details.data.View;
+                for (let j = 0; j < data_root.pages.length; j++) {
+                    let page = data_root.pages[j];
+                    const title = page.part || data_root.title;
+                    videoData[j] = new VideoData(
+                        title, data_root.desc, 
+                        data_root.pic, page.duration, 
+                        data_root.aid, page.cid, 
+                        type, j + 1
+                    );
+                    appendVideoBlock(j + 1);
+                    if (!actualSearchVideo[0] && title == $('.info-title').text()) {
+                        actualSearchVideo = [title, page.page];
+                    }
+                }
+                if (!actualSearchVideo[0]) {
+                    actualSearchVideo = [data_root.title, 1];
+                }
+            }
+        } else if (details.result) {
+            const type = "bangumi";
+            initVideoInfo(type, details);
+            const eps_root = details.result.episodes;
+            for (let k = 0; k < eps_root.length; k++) {
+                let episode = eps_root[k];
+                videoData[k] = new VideoData(
+                    episode.share_copy, episode.share_copy,
+                    episode.cover, episode.duration,
+                    episode.aid, episode.cid,
+                    type, k + 1
+                );
+                appendVideoBlock(k + 1);
+                if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.ep_id))) {
+                    actualSearchVideo = [episode.share_copy, k + 1];
+                }
+            }
+            if (!actualSearchVideo[0]) {
+                actualSearchVideo = [eps_root[0].share_copy, 1];
             }
         }
-        const pubdate = isVideo ? formatPubdate(details.data.pubdate) : details.result.publish.pub_time
-        $('.info-styles').html(stylesText + " ｜ " + pubdate);
+        const targetVideoBlock = videoList.find('.video-block').filter(function() {
+            const nameText = $(this).find('.video-block-name').text().trim().replace("\u00A0", " ");
+            const pageText = $(this).find('.video-block-page').text().trim();
+            return nameText == actualSearchVideo[0] && pageText == actualSearchVideo[1];
+        }).first();
+        lastChecked = parseInt(actualSearchVideo[1]) - 1;
+        setTimeout(() => {
+            if (targetVideoBlock.length) {
+                videoList.animate({
+                    scrollTop: targetVideoBlock.offset().top - videoList.offset().top + videoList.scrollTop() - (videoList.height() - targetVideoBlock.height())/2
+                }, 500, 'swing');
+                targetVideoBlock.find('.multi-select-box-org').prop('checked', true).trigger('change');
+            }
+        }, 100);
+        multiSelect.on('click', () => {
+            $('.multi-select-icon').toggleClass('fa-regular fa-solid checked');
+            const isChecked = $('.multi-select-icon').hasClass('checked');
+            $('.multi-select-box, .multi-select-box-tab').css("display", isChecked ? "block" : "none");
+            const nameWidth = isChecked ? "calc(32vw - 30px)" : "32vw";
+            $('.video-block-name').css({"min-width": nameWidth, "max-width": nameWidth});
+            $('.video-block-page').css("margin-left", isChecked ? '10px' : '20px');
+            videoList.find('.video-block-only').removeClass('active').addClass('back');
+            videoList.find('.video-block-multi').removeClass('active').addClass('back');
+            setTimeout(() => {
+                videoList.find('.video-block-only').remove();
+                videoList.find('.video-block-multi').remove();
+            }, 500)
+            if (isChecked) {
+                $('.video-block').addClass('multi-select');
+                $('.video-block').css({
+                    "cursor": 'pointer',
+                    "user-select": "none"
+                });
+                multiSelectNext.addClass('active');
+            } else {
+                $('.video-block').removeClass('multi-select');
+                $('.video-block').css({
+                    "cursor": 'default',
+                    "user-select": "text"
+                });
+                multiSelectNext.removeClass('active');
+            }
+        });
+        multiSelectNext.on('click', async function() {
+            if ($('.multi-select-icon').hasClass('checked')) {
+                if (selectedVideos.length > 50) {
+                    iziToast.error({
+                        icon: 'fa-regular fa-circle-exclamation',
+                        layout: '2',
+                        title: `警告`,
+                        message: "单次最多只能下载50个视频, 超出将很大可能触发风控"
+                    })
+                    return;
+                } else if (selectedVideos.length < 1) {
+                    iziToast.error({
+                        icon: 'fa-regular fa-circle-exclamation',
+                        layout: '2',
+                        title: `警告`,
+                        message: "请至少选择一个视频"
+                    });
+                    return;
+                }
+                multiNextPage.find('.video-multi-next-list').remove();
+                videoList.clone().removeClass('video-list').addClass('video-multi-next-list active').appendTo(multiNextPage);
+                multiNextPage.find('.video-block').each(function() {
+                    if (!$(this).find('.multi-select-box-org').prop('checked')) {
+                        $(this).remove();
+                    } else {
+                        $(this).find('.video-block-operates').remove();
+                        $(this).find('.multi-select-box').remove();
+                        const qualityBlock = $('<div>').addClass('video-block-multi-select-quality');
+                        $(this).append(qualityBlock);
+                    }
+                });
+                multiNextPage.removeClass('back').addClass('active');
+                currentElm.push(".video-multi-next");
+                multiSelect.click().removeClass('active');
+                const videoBlocks = multiNextPage.find('.video-block').toArray();
+                let res = [];
+                applyDownBtn(null, null, "multi", true).then(async line => {
+                    for (let i = 0; i < videoBlocks.length; i++) {
+                        $('.video-multi-next-title').text(`正在获取分辨率 - ${i+1} / ${videoBlocks.length}`);
+                        res[i] = await handleVideoClick("multi", $(videoBlocks[i]), selectedVideos[i], true);
+                        $(videoBlocks[i]).find('.video-block-multi-select-quality').html(`${res[i][0].dms_desc} ｜ ${res[i][0].codec_desc} ｜ ${res[i][0].ads_desc}`);
+                        downUrls.push(res[i][1]);
+                        const currentSel = new CurrentSel(res[i][0].dms_id, res[i][0].dms_desc, res[i][0].codec_id, res[i][0].codec_desc, res[i][0].ads_id, res[i][0].ads_desc);
+                        await getDownUrl(downUrls[i], currentSel, "multi", line, "video", selectedVideos[i].index - 1)
+                    }
+                    $('.video-multi-next-title').text('本次获取有效期为120分钟, 请确认分辨率等信息, 随后点击“开始下载”');
+                    multiSelectDown.addClass('active');
+                    multiSelectDown.on('click', () => {
+                        invoke('process_queue', {initial: true});
+                        backward();
+                        currentElm.push(".down-page");
+                        downPageElm.addClass('active').removeClass('back');
+                    });
+                });
+            }
+        });
+    } else {
+        handleErr(details);
+        backward();
     }
-    
-let currentVideoBlock;
-    
-function appendVideoBlock(data, type, index, extra) {
-    let videoPage, videoName, videoDuration;
-    if (type == "ugc_season") {
-        videoPage = $('<div>').addClass('video-block-page').text(index);
-        videoName = $('<div>').addClass('video-block-name').text(data.title);
-        videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data.arc.duration));
-    } else if (type == "video") {
-        videoPage = $('<div>').addClass('video-block-page').text(data.page);
-        videoName = $('<div>').addClass('video-block-name').text(data.part);
-        videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data.duration));
-    } else if (type == "bangumi") {
-        videoPage = $('<div>').addClass('video-block-page').text(index);
-        videoName = $('<div>').addClass('video-block-name').html(data.long_title?`第${index}话&nbsp;${data.long_title}`:data.share_copy);
-        videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data.duration / 1000));
+};
+
+async function handleVideoClick(action, click, data, ms) {
+    if (!$('.multi-select-icon').hasClass('checked')) {
+        const videoBlockAction = $('<div>').addClass(`video-block-${action}`);
+        const videoBlockTitle = $('<div>').addClass('video-block-title').text(action=="multi"?'解析音视频':'仅解析选项');
+        videoBlockAction.addClass('active').append(videoBlockTitle, $('<div>').addClass(`loading-${action} active`));
+        currentVideoBlock = ms ? click : click.closest('.video-block');
+        if (currentVideoBlock.next(`.video-block-multi`).length || currentVideoBlock.next(`.video-block-only`).length) {
+            currentVideoBlock.next().remove();
+        }
+        if (!ms) {
+            currentVideoBlock.after(videoBlockAction);
+            const videoDownBtn = $('<div>').addClass(`video-block-${action}-video-down-btn`).text('下载');
+            const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action}-audio-down-btn`).text('下载'):'';
+            currentVideoBlock.next($(`.video-block-${action}`)).append(videoDownBtn, AudioDownBtn);
+        }
+        const details = await getVideoFull(data.aid, data.cid, data.type, action);
+        currentVideoBlock.next($(`.video-block-${action}`)).find(`.loading-${action}`).removeClass('active');
+        const dms = applyDimensionList(details, data.type, action, ms);
+        const ads = applyAudioList(details, data.type, action, ms);
+        if (ms) {
+            return [new CurrentSel(...dms, ...ads), details];
+        } else applyDownBtn(details, data, action, false);
+    } else {
+        iziToast.error({
+            icon: 'fa-regular fa-circle-exclamation',
+            layout: '2',
+            title: `警告`,
+            message: "多选状态下请点击右下角 “确认/结算” 结算"
+        })
     }
+};
+
+function appendVideoBlock(index) { // 填充视频块
+    const data_root = videoData[index - 1];
+    const videoPage = $('<div>').addClass('video-block-page').text(index);
+    const videoName = $('<div>').addClass('video-block-name').text(data_root.title);
+    const videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data_root.duration));
     const videoBlock = $('<div>').addClass('video-block');
+    const videoMultiSelect = $('<label>').addClass('multi-select-box');
+    const checkBoxLabel = $('<input>').attr('type', 'checkbox').addClass('multi-select-box-org');
+    const checkBoxMark = $('<span>').addClass('multi-select-box-checkmark');
+    videoMultiSelect.append(checkBoxLabel, checkBoxMark);
     const videoOperates = $('<div>').addClass('video-block-operates');
     const videoSplit1 = $('<div>').addClass('video-block-split');
     const videoSplit2 = $('<div>').addClass('video-block-split');
     const videoSplit3 = $('<div>').addClass('video-block-split');
     const getCoverBtn = $('<div>').addClass('video-block-getcover-btn video-block-operates-item').html(`${downCoverIcon}解析封面`);
-    const getVideoBtn = $('<div>').addClass('video-block-getvideo-btn video-block-operates-item').html(`${downVideoIcon}解析音视频`);
+    const getMultiBtn = $('<div>').addClass('video-block-getvideo-btn video-block-operates-item').html(`${downVideoIcon}解析音视频`);
     const getOnlyBtn = $('<div>').addClass('video-block-getaudio-btn video-block-operates-item').html(`${downAudioIcon}仅解析选项`);
-    const videoBlockMulti = $('<div>').addClass('video-block-multi');
-    const videoBlockOnly = $('<div>').addClass('video-block-only');
-    videoBlock.append(videoPage, videoSplit1, videoName, videoSplit2, videoDuration, videoSplit3, videoOperates).appendTo(videoList);
-    videoOperates.append(getCoverBtn, getVideoBtn, getOnlyBtn).appendTo(videoBlock);
-    function handleCoverClick() {
-        let options = {
-            title: '选择下载线路',
-            background: "#2b2b2b",
-            color: "#c4c4c4",
-            html: `<button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>`,
-            showConfirmButton: false,
-        };
-        Swal.fire(options);
-        $('.swal-btn-main').on('click', () => {
-            let coverUrl;
-            if (type == "video") {
-                coverUrl = extra[1];
-            } else if (type == "ugc_season") {
-                coverUrl = data.arc.pic;
-            } else if (type == "bangumi") {
-                coverUrl = data.cover;
+    videoBlock.append(videoMultiSelect, videoPage, videoSplit1, videoName, videoSplit2, videoDuration, videoSplit3, videoOperates).appendTo(videoList);
+    videoOperates.append(getCoverBtn, getMultiBtn, getOnlyBtn).appendTo(videoBlock);
+    checkBoxLabel.on('change', function() {
+        const isChecked = $(this).prop('checked');
+        handleSelect(isChecked ? "add" : "remove");
+        videoBlock.css("background-color", isChecked ? "#414141" : "#3b3b3b9b");
+    });
+    videoBlock.on('click', function(e) {
+        if ($('.multi-select-icon').hasClass('checked')) {
+            const checkBoxes = $('.multi-select-box-org');
+            const currentIndex = parseInt(videoBlock.find('.video-block-page').text()) - 1;
+            if (e.shiftKey && lastChecked !== -1) {
+                const start = Math.min(currentIndex, lastChecked);
+                const end = Math.max(currentIndex, lastChecked);
+                checkBoxes.slice(start, end + 1).prop('checked', true).trigger('change');
+            } else {
+                const isChecked = $(this).find('.multi-select-box-org').prop('checked');
+                $(this).find('.multi-select-box-org').prop('checked', !isChecked).trigger('change');
             }
-            open(coverUrl.replace(/http/g, 'https'));
-            Swal.close();
-        })
-    };
-    function handleVideoClick() {
-        const videoBlockTitle = $('<div>').addClass('video-block-title').text('解析音视频');
-        currentVideoBlock = $(this).closest('.video-block');
-        currentVideoBlock.next('.video-block-multi').empty();
-        currentVideoBlock.after(videoBlockMulti);
-        videoBlockMulti.addClass('active').append(videoBlockTitle, $('<div>').addClass('loading-multi active'));
-        if (type == "video") {
-            videoData = [data.part, extra[0], extra[1], data.cid];
-            getVideoFull(index, data.cid, type, "multi");
-        } else if (type == "ugc_season") {
-            videoData = [data.title, data.arc.desc, data.arc.pic, data.cid];
-            getVideoFull(data.aid, data.cid, type, "multi");
-        } else if (type == "bangumi") {
-            videoData = [data.share_copy, data.share_copy, data.cover, data.cid];
-            getVideoFull(data.aid, data.cid, type, "multi");
+            lastChecked = currentIndex;
         }
-    };
-    function handleOnlyClick() {
-        const videoBlockTitle = $('<div>').addClass('video-block-title').text('仅解析选项');
-        currentVideoBlock = $(this).closest('.video-block');
-        currentVideoBlock.next('.video-block-only').empty();
-        currentVideoBlock.after(videoBlockOnly);
-        videoBlockOnly.addClass('active').append(videoBlockTitle, $('<div>').addClass('loading-only active'));
-        if (type == "video") {
-            videoData = [data.part, extra[0], extra[1], data.cid];
-            getVideoFull(index, data.cid, type, "only");
-        } else if (type == "ugc_season") {
-            videoData = [data.title, data.arc.desc, data.arc.pic, data.cid];
-            getVideoFull(data.aid, data.cid, type, "only");
-        } else if (type == "bangumi") {
-            videoData = [data.share_copy, data.share_copy, data.cover, data.cid];
-            getVideoFull(data.aid, data.cid, type, "only");
+    });
+    function handleSelect(action) {
+        if (action === "add") {
+            if (!selectedVideos.some(video => video.cid === data_root.cid)) {
+                selectedVideos.push(data_root);
+            }
+        } else if (action === "remove") {
+            selectedVideos = selectedVideos.filter(video => video.aid !== data_root.aid);
         }
-    };
-    getCoverBtn.on('click', debounce(handleCoverClick, 500));
-    getVideoBtn.on('click', debounce(handleVideoClick, 500));
-    getOnlyBtn.on('click', debounce(handleOnlyClick, 500));
+    }
+    getCoverBtn.on('click', () => {
+        if (!$('.multi-select-icon').hasClass('checked')) {
+            let options = {
+                title: '选择下载线路',
+                background: "#2b2b2b",
+                color: "#c4c4c4",
+                html: `<button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>`,
+                showConfirmButton: false,
+            };
+            Swal.fire(options);
+            $('.swal-btn-main').on('click', () => {
+                open(data_root.pic.replace(/http/g, 'https'));
+                Swal.close();
+            })
+        } else {
+            iziToast.error({
+                icon: 'fa-regular fa-circle-exclamation',
+                layout: '2',
+                title: `警告`,
+                message: "多选状态下请点击右下角 “确认/结算” 结算"
+            })
+        }
+    });
+    getMultiBtn.on('click', (e) => handleVideoClick("multi", $(e.currentTarget), data_root, false));
+    getOnlyBtn.on('click', (e) => handleVideoClick("only", $(e.currentTarget), data_root, false));
 }
 
-function getDownUrl(data, quality, action, extra, fileType) {
-    let found = [];
-    let downUrl = [];
-    const isVideo = fileType === "video";
-    for (let file of isVideo?data.dash.video:data.dash.audio) {
-        if (file.id == isVideo ? quality[0] : quality[2]
-        && !isVideo || file.codecs == quality[2]) {
-            found[0] = true;
-            downUrl[0] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
-            break;
-        }
-    }
-    if (action == "multi") {
-        for (let audio of data.dash.audio) {
-            if (audio.id == quality[3]) {
-                found[1] = true;
-                downUrl[1] = [audio.baseUrl, ...audio.backupUrl.slice(0, 2)];
-                break;
-            }
-        }
-    }
-    if (found[0]&&(action=="multi"?found[1]:found[0])) {
-        isVideo ? downVideos++ : downAudios++;
-        if (action=="multi") downAudios++;
-        let qualityStr, ext, safeTitle, displayName;
-        safeTitle = videoData[0].replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
-        if (action == "only") {
-            qualityStr = isVideo ? quality[1] : quality[4];
-            ext = isVideo ? "mp4" : "aac";
-            displayName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}.${ext}`;
-            invoke('init_download_only', {
-                url: downUrl[0][extra], 
-                displayName, fileType,
-                cid: videoData[3].toString()
-            });
-        } else if (action == "multi") {
-            qualityStr = `${quality[1]}_${quality[4]}`;
-            ext = "mp4";
-            displayName = `${downVideos}_${safeTitle}_${qualityStr}.mp4`;
-            invoke('init_download_multi', {
-                videoUrl: downUrl[0][extra],
-                audioUrl: downUrl[1][extra],
-                displayName, cid: videoData[3].toString(),
-            });
-        }
-        iziToast.info({
-            icon: 'fa-solid fa-circle-info',
-            layout: '2',
-            title: '下载',
-            message: `已添加《${displayName}》至下载页~`,
-        });
-        appendDownPageBlock(ext, qualityStr);
-    } else {
-        iziToast.error({
-            icon: 'fa-solid fa-circle-info',
-            layout: '2',
-            title: '下载',
-            message: `未找到符合条件的下载地址＞﹏＜`,
-        });
-    }
-}
-
-async function appendDownPageBlock(type, quality) {
-    const title = videoData[0].replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
-    const desc = videoData[1];
-    const pic = videoData[2];
-    const cid = videoData[3];
+async function appendDownPageBlock(type, quality, data) { // 填充下载块
+    const title = data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
+    const desc = data.desc;
+    const pic = data.pic;
+    const cid = data.cid;
     const downPage = $('.down-page');
     if (downPage.find('.down-page-empty-text')) {
         downPage.find('.down-page-empty-text').remove();
     }
+    downPage.css("justify-content", `${downPage.children().length < 5 ? "center" : "flex-start"}`);
     const infoBlock = $('<div>').addClass('down-page-info')
     const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace(/http:/g, 'https:'))
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
@@ -620,9 +856,204 @@ async function appendDownPageBlock(type, quality) {
     infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, infoProgressText, infoProgress)).appendTo(downPage);
 }
 
+function applyDimensionList(details, type, action, ms) { // 填充分辨率
+    if (details.code == 0) {
+        const root = type == "bangumi" ? details.result : details.data;
+        const dms = $('<div>').addClass("video-block-dimension-dms");
+        const dm = $('<div>').addClass("video-block-dimension-dm").text("分辨率/画质");
+        const split = $('<div>').addClass("video-block-dimension-split");
+        const dmsOpt = $('<div>').addClass("video-block-dimension-dms-opt");
+        dms.append(dm, split, dmsOpt);
+        if (currentVideoBlock.next(`.video-block-${action}`).length) {
+            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
+        } else {
+            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
+        }
+        currentVideoBlock.next(`.video-block-${action}`).append(dms);
+        const maxQuality = Math.max(...root.dash.video.map(v => v.id));
+        const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
+        for (let i = 0; i < qualityList.length; i++) {
+            const quality = qualityList[i];
+            const qualityItem = root.support_formats.find(format => format.quality === quality);
+            const description = qualityItem.display_desc + (qualityItem.superscript ? `_${qualityItem.superscript}` : '');
+            const currentBtn = $('<div>').addClass(`video-block-dimension-dms-${quality} video-block-dimension-dms-item`);
+            const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
+            currentBtn.append(currentIcon, description);
+            dmsOpt.append(currentBtn);
+            if (quality == maxQuality) {
+                currentBtn.addClass('checked');
+                currentSel[0] = quality;
+                currentSel[1] = description;
+                const codec = applyCodecList(qualityItem, type, action, "init", ms);
+                if (ms) return [quality, description, ...codec];
+            }
+            currentBtn.on('click', function() {
+                if (currentVideoBlock.next(`.video-block-${action}`).length) {
+                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms-item').removeClass('checked');
+                } else {
+                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms-item').removeClass('checked');
+                }
+                $(this).addClass('checked');
+                currentSel[0] = quality;
+                currentSel[1] = qualityItem.display_desc;
+                applyCodecList(qualityItem, type, action, "update", ms);
+            });
+        }
+    } else {
+        handleErr(details, type);
+    }
+};
+
+function applyCodecList(details, type, action, extra, ms) { // 填充编码格式
+    if (details.codecs) {
+        const cds = $('<div>').addClass("video-block-codec-cds");
+        const cd = $('<div>').addClass("video-block-codec-cd").text("编码格式");
+        const split = $('<div>').addClass("video-block-codec-split");
+        const cdsOpt = $('<div>').addClass("video-block-codec-cds-opt");
+        const crossSplit = $('<div>').addClass('video-block-cross-split');
+        if (extra == "init") {
+            cds.append(cd, split, cdsOpt);
+            if (currentVideoBlock.next(`.video-block-${action}`).length) {
+                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
+                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-cross-split').remove();
+            } else {
+                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
+                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-cross-split').remove();
+            }
+            currentVideoBlock.next(`.video-block-${action}`).append(cds).append(action=="only"?crossSplit:'');
+        } else $('.video-block-codec-cds-opt').empty();
+        const codecsList = details.codecs.map(codec => ({
+            codec, 
+            priority: (codec.includes('avc') ? 1 : codec.includes('hev') ? 2 : 3)
+        }))
+        .sort((a, b) => a.priority - b.priority);
+        for (let i = 0; i < codecsList.length; i++) {
+            const codec = codecsList[i].codec;
+            const description = describeCodec(codec);
+            const currentBtn = $('<div>').addClass(`video-block-codec-cds-${codec} video-block-codec-cds-item`);
+            const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
+            currentBtn.append(currentIcon, description);
+            if (extra == "init") cdsOpt.append(currentBtn);
+            else $('.video-block-codec-cds-opt').append(currentBtn)
+            if (i === 0) {
+                currentBtn.addClass('checked');
+                currentSel[2] = codec;
+                currentSel[3] = description;
+                if (ms) return [codec, description];
+            }
+            currentBtn.on('click', function() {
+                if (currentVideoBlock.next(`.video-block-${action}`).length) {
+                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds-item').removeClass('checked');
+                } else {
+                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds-item').removeClass('checked');
+                }
+                $(this).addClass('checked');
+                currentSel[2] = codec;
+                currentSel[3] = description
+            });
+        }
+
+    } else {
+        handleErr(details, type);
+    }
+}
+
+function applyAudioList(details, type, action, ms) { // 填充音频
+    if (details.code == 0) {
+        const root = type == "bangumi" ? details.result : details.data;
+        const ads = $('<div>').addClass("video-block-audio-ads");
+        const ad = $('<div>').addClass("video-block-audio-ad").text("比特率/音质");
+        const split = $('<div>').addClass("video-block-audio-split");
+        const adsOpt = $('<div>').addClass("video-block-audio-ads-opt");
+        ads.append(ad, split, adsOpt);
+        const qualityDesc = {
+            30216: "64K",
+            30232: "132K",
+            30280: "192K"
+        }
+        if (currentVideoBlock.next(`.video-block-${action}`).length) {
+            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
+        } else {
+            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
+        }
+        currentVideoBlock.next(`.video-block-${action}`).append(ads);
+        const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
+        for (let i = 0; i < qualityList.length; i++) {
+            const quality = qualityList[i];
+            const description = qualityDesc[quality];
+            const currentBtn = $('<div>').addClass(`video-block-audio-ads-${quality} video-block-audio-ads-item`);
+            const currentIcon = $('<i>').addClass(`fa-solid fa-audio-description icon-small`);
+            currentBtn.append(currentIcon, description);
+            adsOpt.append(currentBtn);
+            if (i === 0) {
+                currentBtn.addClass('checked');
+                currentSel[4] = quality;
+                currentSel[5] = description;
+                if (ms) return [quality, description];
+            }
+            currentBtn.on('click', function() {
+                if (currentVideoBlock.next(`.video-block-${action}`).length) {
+                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
+                } else {
+                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
+                }
+                $(this).addClass('checked');
+                currentSel[4] = quality;
+                currentSel[5] = description;
+            });
+        }
+    } else {
+        handleErr(details, type);
+    }
+}
+
+function applyDownBtn(details, data, action, ms) { // 监听下载按钮
+    return new Promise((resolve) => {
+        if (!ms) currentSel = new CurrentSel(...currentSel);
+        const quality = currentSel;
+        let options = {
+            title: '选择下载线路',
+            background: "#2b2b2b",
+            color: "#c4c4c4",
+            html: `
+            <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
+            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
+            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
+            `,
+            showConfirmButton: false,
+        };
+        function handleDown(fileType) {
+            Swal.fire(options);
+            $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
+            $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2',async  function() {
+                Swal.close();
+                const line = $(this).hasClass('swal-btn-backup1') ? 1 : ($(this).hasClass('swal-btn-backup2') ? 2 : 0);
+                if (!ms) {
+                    downUrls.push(details);
+                    await getDownUrl(details, quality, action, line, fileType, data.index - 1);
+                    invoke('process_queue', {initial: true});
+                    backward();
+                    currentElm.push(".down-page");
+                    downPageElm.addClass('active').removeClass('back');
+                }
+                resolve(line);
+            });
+        }
+        if (ms) handleDown("video");
+        else {
+            const videoDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-video-down-btn`);
+            videoDownBtn.on('click', () => handleDown("video"));
+            if (action == "only") {
+                const audioDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-audio-down-btn`);
+                audioDownBtn.on('click', () => handleDown("audio"));
+            }
+        }
+    });
+}
+
 async function userProfile() {
     if ($('.user-name').text() == "登录") return;
-    currentElm = '.user-profile';
+    currentElm.push(".user-profile");
     userProfileElm.addClass('active').removeClass('back');
     const getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/card?mid=${userData[0]}&photo=true`;
     const detailData = await fetch(getDetailUrl);
@@ -648,8 +1079,8 @@ async function userProfile() {
 async function login() {
     if ($('.user-name').text() != "登录") return;
     try {
-        currentElm = '.login';
-        $('.login-status').html('当前状态：正在与服务器通信...<br>若长时间未成功可尝试重启应用');
+        currentElm.push(".login")
+        $('.login-status').html('当前状态: 正在与服务器通信...<br>若长时间未成功可尝试重启应用');
         loginElm.addClass('active').removeClass('back');
         const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
         const qrData = await response.json();
@@ -672,47 +1103,11 @@ async function login() {
             icon: 'fa-solid fa-circle-info',
             layout: '2',
             title: '下载',
-            message: `登录时出现错误：${error}`,
+            message: `登录时出现错误: ${error}`,
         });
     }
 }
   
-function applyVideoList(detailData) {
-    const details = JSON.parse(detailData);
-    videoList.empty();
-    loadingBox.removeClass('active');
-    if (details.code == 0) {
-        infoBlock.addClass('active');
-        videoList.addClass('active');
-        videoListTabHead.addClass('active');
-        if (details.data) {
-            initVideoInfo("video", details);
-            if (details.data.ugc_season) {
-                let index = 1;
-                for (let episode of details.data.ugc_season.sections[0].episodes) {
-                    appendVideoBlock(episode, "ugc_season", index);
-                    index++;
-                }
-            } else if (details.data.videos >= 1) {
-                for (let page of details.data.pages) {
-                    appendVideoBlock(page, "video", details.data.aid, [details.data.desc, details.data.pic]);
-                }
-            }
-        } else if (details.result) {
-            initVideoInfo("bangumi", details);
-            let index = 1;
-            for (let episode of details.result.episodes) {
-                appendVideoBlock(episode, "bangumi", index);
-                index++;
-            }
-        }
-    } else {
-        handleErr(details);
-        loadingBox.removeClass('active');
-        if (searchElm.attr('class').includes('active')) searchElm.removeClass('active').addClass('back');
-    }
-};
-
 function describeCodec(codecString) {
     const parts = codecString.split('.');
     const codecType = parts[0];
@@ -770,184 +1165,6 @@ function describeCodec(codecString) {
     return '未知编码格式';
 }
 
-function applyDimensionList(detailData, type, action) {
-    const details = JSON.parse(detailData);
-    if (details.code == 0) {
-        const root = type == "bangumi" ? details.result : details.data;
-        const dms = $('<div>').addClass("video-block-dimension-dms");
-        const dm = $('<div>').addClass("video-block-dimension-dm").text("分辨率/画质");
-        const split = $('<div>').addClass("video-block-dimension-split");
-        const dmsOpt = $('<div>').addClass("video-block-dimension-dms-opt");
-        dms.append(dm, split, dmsOpt);
-        if (currentVideoBlock.next(`.video-block-${action}`).length) {
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
-        } else {
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
-        }
-        currentVideoBlock.next(`.video-block-${action}`).append(dms);
-        const maxQuality = Math.max(...root.dash.video.map(v => v.id));
-        const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
-        for (let i = 0; i < qualityList.length; i++) {
-            const quality = qualityList[i];
-            const qualityItem = root.support_formats.find(format => format.quality === quality);
-            const description = qualityItem.new_description;
-            const currentBtn = $('<div>').addClass(`video-block-dimension-dms-${quality} video-block-dimension-dms-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
-            currentBtn.append(currentIcon, description);
-            dmsOpt.append(currentBtn);
-            if (quality == maxQuality) {
-                currentBtn.addClass('checked');
-                currentSel[0] = quality;
-                currentSel[1] = qualityItem.display_desc;
-                applyCodecList(qualityItem, type, action, "init");
-            }
-            currentBtn.on('click', function() {
-                if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms-item').removeClass('checked');
-                } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms-item').removeClass('checked');
-                }
-                $(this).addClass('checked');
-                currentSel[0] = quality;
-                currentSel[1] = qualityItem.display_desc;
-                applyCodecList(qualityItem, type, action);
-            });
-        }
-    } else {
-        handleErr(details, type);
-    }
-};
-
-function applyCodecList(details, type, action, extra) {
-    console.log(details);
-    if (details.codecs) {
-        const cds = $('<div>').addClass("video-block-codec-cds");
-        const cd = $('<div>').addClass("video-block-codec-cd").text("编码格式");
-        const split = $('<div>').addClass("video-block-codec-split");
-        const cdsOpt = $('<div>').addClass("video-block-codec-cds-opt");
-        const crossSplit = $('<div>').addClass('video-block-cross-split');
-        if (extra == "init") {
-            cds.append(cd, split, cdsOpt);
-            if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
-                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-cross-split').remove();
-            } else {
-                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
-                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-cross-split').remove();
-            }
-            currentVideoBlock.next(`.video-block-${action}`).append(cds).append(action=="only"?crossSplit:'');
-        } else $('.video-block-codec-cds-opt').empty();
-        const codecsList = details.codecs.map(codec => ({
-            codec, 
-            priority: (codec.includes('avc') ? 1 : codec.includes('hev') ? 2 : 3)
-        }))
-        .sort((a, b) => a.priority - b.priority);
-        for (let i = 0; i < codecsList.length; i++) {
-            const codec = codecsList[i].codec;
-            const description = describeCodec(codec);
-            const currentBtn = $('<div>').addClass(`video-block-codec-cds-${codec} video-block-codec-cds-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
-            currentBtn.append(currentIcon, description);
-            if (extra == "init") cdsOpt.append(currentBtn);
-            else $('.video-block-codec-cds-opt').append(currentBtn)
-            if (i === 0) {
-                currentBtn.addClass('checked');
-                currentSel[2] = codec;
-            }
-            currentBtn.on('click', function() {
-                if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds-item').removeClass('checked');
-                } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds-item').removeClass('checked');
-                }
-                $(this).addClass('checked');
-                currentSel[2] = codec;
-            });
-        }
-
-    } else {
-        handleErr(details, type);
-    }
-}
-
-function applyAudioList(detailData, type, action) {
-    const details = JSON.parse(detailData);
-    if (details.code == 0) {
-        const root = type == "bangumi" ? details.result : details.data;
-        const ads = $('<div>').addClass("video-block-audio-ads");
-        const ad = $('<div>').addClass("video-block-audio-ad").text("比特率/音质");
-        const split = $('<div>').addClass("video-block-audio-split");
-        const adsOpt = $('<div>').addClass("video-block-audio-ads-opt");
-        ads.append(ad, split, adsOpt);
-        const qualityDesc = {
-            30216: "64K",
-            30232: "132K",
-            30280: "192K"
-        }
-        if (currentVideoBlock.next(`.video-block-${action}`).length) {
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
-        } else {
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
-        }
-        currentVideoBlock.next(`.video-block-${action}`).append(ads);
-        const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
-        for (let i = 0; i < qualityList.length; i++) {
-            const quality = qualityList[i];
-            const description = qualityDesc[quality];
-            const currentBtn = $('<div>').addClass(`video-block-audio-ads-${quality} video-block-audio-ads-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-audio-description icon-small`);
-            currentBtn.append(currentIcon, description);
-            adsOpt.append(currentBtn);
-            if (i === 0) {
-                currentBtn.addClass('checked');
-                currentSel[3] = quality;
-                currentSel[4] = description;
-            }
-            currentBtn.on('click', function() {
-                if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
-                } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
-                }
-                $(this).addClass('checked');
-                currentSel[3] = quality;
-                currentSel[4] = description;
-            });
-        }
-    } else {
-        handleErr(details, type);
-    }
-}
-
-function applyDownBtn(detailData, type, action) {
-    const videoDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-video-down-btn`);
-    let options = {
-        title: '选择下载线路',
-        background: "#2b2b2b",
-        color: "#c4c4c4",
-        html: `
-        <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
-            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
-            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
-        `,
-        showConfirmButton: false,
-    };
-    function handleDown(fileType) {
-        Swal.fire(options);
-        $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
-        $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2', function() {
-            let line = $(this).hasClass('swal-btn-backup1') ? 1 : ($(this).hasClass('swal-btn-backup2') ? 2 : 0);
-            getDownUrl((type != "bangumi" ? detailData.data : detailData.result), currentSel, action, line, fileType);
-            Swal.close();
-        });
-    }
-    videoDownBtn.on('click', () => handleDown("video"));
-    if (action == "only") {
-        const audioDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-audio-down-btn`);
-        audioDownBtn.on('click', () => handleDown("audio"));
-    }
-}
-
 async function getUserProfile(mid, action) {
     const getDetailUrl = `http://127.0.0.1:50808/api/x/space/wbi/acc/info?mid=${mid}`;
     const detailData = await fetch(getDetailUrl);
@@ -965,10 +1182,10 @@ async function getUserProfile(mid, action) {
                 $('.user-vip-icon').css('display', 'block');
             }
         } else if (action == "login") {
-            $('.login-status').html(`当前状态：成功同步数据<br><i>将在3秒后跳转至首页</i>`);
+            $('.login-status').html(`当前状态: 成功同步数据<br><i>将在3秒后跳转至首页</i>`);
             let i = 2;
             const countdown = setInterval(() => {
-                $('.login-status').html(`当前状态：成功同步数据<br><i>将在${i}秒后跳转至首页</i>`);
+                $('.login-status').html(`当前状态: 成功同步数据<br><i>将在${i}秒后跳转至首页</i>`);
                 i--;
                 if (i < 0) {
                     clearInterval(countdown);
@@ -1013,7 +1230,7 @@ listen("exit-success", async (event) => {
 })
 
 listen("login-status", async (event) => {
-    $('.login-status').html(`当前状态：${event.payload}`);
+    $('.login-status').html(`当前状态: ${event.payload}`);
 })
 
 listen("download-progress", async (event) => {
@@ -1078,6 +1295,6 @@ listen("download-failed", async (event) => {
         icon: 'fa-solid fa-circle-info',
         layout: '2',
         title: '下载',
-        message: `《${event.payload[0]}》下载失败<br>错误原因：${event.payload[1]}`,
+        message: `《${event.payload[0]}》下载失败<br>错误原因: ${event.payload[1]}`,
     });
 })
