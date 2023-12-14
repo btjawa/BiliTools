@@ -1,6 +1,7 @@
 const { invoke } = window.__TAURI__.tauri;
 const { listen } = window.__TAURI__.event;
-const { open } = window.__TAURI__.shell;
+const { open: openShell } = window.__TAURI__.shell;
+const { open: openDialog } = window.__TAURI__.dialog;
 
 const searchBtn = $('.search-btn');
 const searchInput = $('input[name="search-input"]');
@@ -12,10 +13,17 @@ const loadingBox = $('.loading');
 const loginElm = $('.login');
 const userProfileElm = $('.user-profile');
 const downPageElm = $('.down-page');
+const settingsElm = $('.settings');
 const multiNextPage = $('.video-multi-next');
 const multiSelect = $('.multi-select-btn');
 const multiSelectNext = $('.multi-select-next-btn');
 const multiSelectDown = $('.multi-select-next-down-btn');
+const generalBg = $('.settings-side-general-bar-background');
+const advancedBg = $('.settings-side-advanced-bar-background');
+const generalPage = $('.settings-general-page');
+const advancedPage = $('.settings-advanced-page');
+const downDirPath = $('input[name="down-dir-path"]');
+const tempDirPath = $('input[name="temp-dir-path"]');
 
 let currentFocus = null, currentVideoBlock, currentElm = [], currentSel = [];
 let lastChecked = -1, highestZIndex = -1;
@@ -98,6 +106,23 @@ function debounce(fn, wait) {
         }, wait);
         fn.apply(this, args);
     };
+}
+
+async function selFile(type, multiple = false, filters = []) {
+    try {
+        const options = {
+            multiple,
+            directory: type === 'directory'
+        };
+        if (type !== 'directory') {
+            options.filters = filters;
+        }
+        const selected = await openDialog(options);
+        return selected;
+    } catch (error) {
+        console.error(error)
+        return null;
+    }
 }
 
 async function getVideoFull(aid, cid, type, action) {
@@ -259,6 +284,7 @@ async function search(input) {
         videoList.removeClass('active');
         videoListTabHead.removeClass('active');
         multiSelect.off('click');
+        currentElm.push(".video-root");
         if ($('.multi-select-icon').hasClass('checked')) multiSelect.click();
         let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
         if (match) {
@@ -287,8 +313,7 @@ async function search(input) {
                         title: `警告`,
                         message: !input ? "请输入链接/AV/BV/SS/EP号" : "输入不合法！请检查格式"
                     });
-                    loadingBox.removeClass('active');
-                    if (searchElm.attr('class').includes('active')) searchElm.removeClass('active').addClass('back');
+                    backward();
                 }
             }
         }
@@ -366,14 +391,14 @@ async function bilibili() {
             let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
             if (match) {
                 let url = 'https://www.bilibili.com/video/' + match[0];
-                open(url);
+                openShell(url);
                 $('.context-menu').css({ opacity: 0, display: "none" });
                 return;
             }
             match = input.match(/ep(\d+)|ss(\d+)/i);
             if (match) {
                 let url = 'https://www.bilibili.com/bangumi/play/' + match[0];
-                open(url);
+                openShell(url);
                 $('.context-menu').css({ opacity: 0, display: "none" });
                 return;
             }
@@ -423,6 +448,10 @@ async function backward() {
         videoListTabHead.removeClass('active');
         multiSelect.removeClass('active');
         $('.video-list').empty();
+    } else if (currentElm[index] == '.settings') {
+        settingsElm.removeClass('active').addClass('back');
+        generalPage.removeClass('active');
+        advancedPage.removeClass('active');
     }
     currentElm.pop();
 }
@@ -438,9 +467,12 @@ $(document).ready(function () {
     searchInput.on('keydown', (e) => {
         if (e.keyCode === 13) debouncedSearch();
     });
-    $('.down-page-bar').on('click', () => {
+    $('.down-page-bar-background').on('click', () => {
         currentElm.push(".down-page");
         downPageElm.addClass('active').removeClass('back');    
+    });
+    $('.settings-page-bar-background').on('click', () => {
+        settings();
     });
     $('.user-profile-exit').on('click', () => invoke('exit'));
     $('.cut').on('click', () => cutText());
@@ -543,15 +575,15 @@ function initVideoInfo(type, details) {
             if (i < root.styles.length - 1) stylesText += "&nbsp;·&nbsp;";
         }
     }
+    const contrElm = $('<a>').addClass('bcc-iconfont bcc-icon-ic_contributionx icon-small');
     const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ icon-small');
     const pubdate = isVideo ? formatPubdate(root.pubdate) : root.publish.pub_time;
-    $('.info-styles').html(stylesText + "&emsp;|&emsp;").append(pubdateElm, pubdate);
+    $('.info-styles').empty().append(contrElm, stylesText).append("&emsp;|&emsp;").append(pubdateElm, pubdate);
 }
 
 function applyVideoList(details) { // 分类填充视频块
     videoList.empty();
     loadingBox.removeClass('active');
-    currentElm.push(".video-root");
     let actualSearchVideo = [];
     if (details.code == 0) {
         infoBlock.addClass('active');
@@ -819,7 +851,7 @@ function appendVideoBlock(index) { // 填充视频块
             };
             Swal.fire(options);
             $('.swal-btn-main').on('click', () => {
-                open(data_root.pic.replace(/http/g, 'https'));
+                openShell(data_root.pic.replace(/http/g, 'https'));
                 Swal.close();
             })
         } else {
@@ -1080,7 +1112,7 @@ async function userProfile() {
 async function login() {
     if ($('.user-name').text() != "登录") return;
     try {
-        currentElm.push(".login")
+        currentElm.push(".login");
         $('.login-status').html('当前状态: 正在与服务器通信...<br>若长时间未成功可尝试重启应用');
         loginElm.addClass('active').removeClass('back');
         const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
@@ -1108,7 +1140,55 @@ async function login() {
         });
     }
 }
-  
+
+function settings() {
+    settingsElm.removeClass('back').addClass('active');
+    currentElm.push('.settings');
+    const downDirOpenBtn = $('.down-dir-path-openbtn');
+    const tempDirOpenBtn = $('.temp-dir-path-openbtn');
+    function handelSave(set) {
+        invoke('rw_config', {action: "save", sets: {
+            max_conc: 0,
+            default_dms: 0,
+            default_ads: 0,    
+            temp_dir: tempDirPath.val(),
+            down_dir: downDirPath.val()
+        }}).then(save => {
+            console.log(save)
+        })
+        iziToast.info({
+            icon: 'fa-solid fa-circle-info',
+            layout: '2',
+            title: '设置 ',
+            message: `已保存设置 - ${set}`,
+        });
+    }
+    generalBg.on('click', () => {
+        generalBg.addClass('checked');
+        advancedBg.removeClass('checked');
+        generalPage.addClass('active');
+        advancedPage.removeClass('active');
+    });
+    advancedBg.on('click', () => {
+        generalBg.removeClass('checked');
+        advancedBg.addClass('checked');
+        generalPage.removeClass('active');
+        advancedPage.addClass('active')
+        .find('.settings-page-block-title').first().css("margin-right", "10px");
+    });
+    generalBg.click();
+    downDirOpenBtn.on('click', async () => {
+        const selected = await selFile('directory');
+        downDirPath.val(selected);
+        handelSave("存储路径");
+    });
+    tempDirOpenBtn.on('click', async () => {
+        const selected = await selFile('directory');
+        tempDirPath.val(selected);
+        handelSave("临时文件存储路径")
+    });
+}
+
 function describeCodec(codecString) {
     const parts = codecString.split('.');
     const codecType = parts[0];
@@ -1203,6 +1283,11 @@ async function getUserProfile(mid, action) {
         }
     }
 }
+
+listen("settings", async (event) => {
+    downDirPath.val(event.payload.down_dir);
+    tempDirPath.val(event.payload.temp_dir);
+})
 
 listen("user-mid", async (event) => {
     if (event.payload[0] != '0') {

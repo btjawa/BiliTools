@@ -15,6 +15,9 @@
       "all": false,
       "shell": {
         "all": true
+      },
+      "dialog": {
+        "all": true
       }
     },
     "bundle": {

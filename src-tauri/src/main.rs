@@ -2,7 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use lazy_static::lazy_static;
-use serde_json::Value;
+use serde_json::{Value, json};
+use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{CookieStore, Jar}};
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
 use std::{env, fs, path::{Path, PathBuf}, sync::Arc, convert::Infallible, time::Instant, process::Command,
@@ -18,12 +19,13 @@ lazy_static! {
         PathBuf::from(env::var("APPDATA").expect("APPDATA environment variable not found"))
         .join("com.btjawa.biliget")
     };
-    static ref DOWNLOAD_DIR: PathBuf = {
-        PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
-        .join("Desktop")
+    static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = {
+        Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
+        .join("Desktop")))
     };
-    static ref TEMP_DIR: PathBuf = WORKING_DIR.join("Temp");
-    static ref SESSDATA_PATH: PathBuf = WORKING_DIR.join("Cookies");
+    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("Temp")));
+    static ref SESSDATA_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("Cookies")));
+    static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(2));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref CURRENT_DOWNLOADS: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
@@ -84,6 +86,15 @@ struct DownloadTask {
     file_type: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Settings {
+    max_conc: i64,
+    default_dms: i64,
+    default_ads: i64,
+    temp_dir: String,
+    down_dir: String
+}
+
 impl CookieStore for ThreadSafeCookieStore {
     fn set_cookies(&self, cookie_headers: &mut dyn Iterator<Item = &HeaderValue>, url: &Url) {
         let jar = self.0.write().unwrap();
@@ -102,7 +113,7 @@ async fn push_back_queue(
 ) {
     let mut tasks = vec![];
     if let Some(v_url) = video_url {
-        let video_path = TEMP_DIR.join(&extract_filename(&v_url));
+        let video_path = TEMP_DIR.read().await.join(&extract_filename(&v_url));
         tasks.push(DownloadTask { 
             cid: cid.clone(), 
             display_name: display_name.clone(), 
@@ -112,7 +123,7 @@ async fn push_back_queue(
         });
     }
     if let Some(a_url) = audio_url {
-        let audio_path = TEMP_DIR.join(&extract_filename(&a_url));
+        let audio_path = TEMP_DIR.read().await.join(&extract_filename(&a_url));
         tasks.push(DownloadTask { 
             cid: cid.clone(), 
             display_name: display_name.clone(), 
@@ -251,7 +262,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     println!("\nStarting merge process for audio");
     let current_dir = env::current_dir().map_err(|e| e.to_string())?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
-    let ss_dir_path = DOWNLOAD_DIR.join(&ss_dir);
+    let ss_dir_path = DOWNLOAD_DIR.read().await.join(&ss_dir);
     let output_path = ss_dir_path.join(&output);
     if !&ss_dir_path.exists() {
         fs::create_dir_all(&ss_dir_path).map_err(|e| e.to_string())?;
@@ -357,12 +368,10 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
 }
 
 async fn update_cookies(sessdata: &str) -> Result<String, String> {
-    if let Some(dir_path) = SESSDATA_PATH.parent() {
-        if let Err(e) = fs::create_dir_all(dir_path) {
-            return Err(format!("无法创建目录：{}", e));
-        }
+    if let Some(dir_path) = SESSDATA_PATH.read().await.parent() {
+        fs::create_dir_all(dir_path).unwrap();
     }
-    if let Err(e) = fs::write(&*SESSDATA_PATH, sessdata) {
+    if let Err(e) = fs::write(&*SESSDATA_PATH.read().await, sessdata) {
         return Err(format!("无法写入Cookie：{}", e));
     }
     println!("SESSDATA写入成功");
@@ -376,21 +385,13 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 async fn init(window: tauri::Window) -> Result<i64, String> {
-    if !&WORKING_DIR.exists() {
-        fs::create_dir_all(&*WORKING_DIR).map_err(|e| e.to_string())?;
-        println!("成功创建com.btjawa.biliget");
+    rw_config(window.clone(), "read".to_string(), None).await.unwrap();
+    let sessdata_path = &*SESSDATA_PATH.read().await.clone();
+    if let Some(parent) = sessdata_path.parent() { fs::create_dir_all(parent).unwrap(); }
+    if !sessdata_path.exists() {
+        fs::write(sessdata_path, "").map_err(|e| e.to_string())?;
     }
-    if !&TEMP_DIR.exists() {
-        fs::create_dir_all(&*TEMP_DIR).map_err(|e| e.to_string())?;
-        println!("成功创建TEMP_DIR");
-    }
-    if !SESSDATA_PATH.exists() {
-        fs::write(&*SESSDATA_PATH, "").map_err(|e| e.to_string())?;
-        println!("成功创建Cookies");
-        window.emit("user-mid", vec![0.to_string(), "init".to_string()]).unwrap();
-        return Ok(0);
-    }
-    let sessdata = fs::read_to_string(&*SESSDATA_PATH).map_err(|e| e.to_string())?;
+    let sessdata = fs::read_to_string(sessdata_path).map_err(|e| e.to_string())?;
     if sessdata.trim().is_empty() {
         window.emit("user-mid", vec![0.to_string(), "init".to_string()]).unwrap();
         return Ok(0);
@@ -424,12 +425,62 @@ async fn init_mid() -> Result<i64, String> {
 }   
 
 #[tauri::command]
+async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>) -> Result<i64, String> {
+    let config_path = CONFIG_PATH.read().await.clone();
+    let (temp_dir, down_dir) = if let Some(settings) = sets {
+        (settings.temp_dir, settings.down_dir)
+    } else {
+        let current_temp_dir = TEMP_DIR.read().await.to_string_lossy().into_owned();
+        let current_down_dir = DOWNLOAD_DIR.read().await.to_string_lossy().into_owned();
+        (current_temp_dir, current_down_dir)
+    };
+    let new_config = json!({
+        "max_conc": 2,
+        "default_dms": 0,
+        "default_ads": 0,
+        "temp_dir": temp_dir,
+        "down_dir": down_dir,
+    });
+    let new_config_str = serde_json::to_string(&new_config).map_err(|e| e.to_string())?;
+    if action == "save" {
+        fs::write(&config_path, &new_config_str).map_err(|e| e.to_string())?;
+    } else if action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| e.to_string())?.trim().is_empty()) {
+        fs::write(&config_path, &new_config_str).map_err(|e| e.to_string())?;
+    }
+    let config_str = fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
+    let config: serde_json::Value = serde_json::from_str(&config_str).map_err(|e| e.to_string())?;
+    if let Some(max_conc) = config["max_conc"].as_u64() {
+        *MAX_CONCURRENT_DOWNLOADS.write().await = max_conc as usize;
+        println!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
+    }
+    if let Some(temp_dir_str) = config["temp_dir"].as_str() {
+        *TEMP_DIR.write().await = PathBuf::from(temp_dir_str);
+        println!("成功更新TEMP_DIR: {:?}", *TEMP_DIR.read().await);
+    }
+    if let Some(down_dir_str) = config["down_dir"].as_str() {
+        *DOWNLOAD_DIR.write().await = PathBuf::from(down_dir_str);
+        println!("成功更新DOWNLOAD_DIR: {:?}", *DOWNLOAD_DIR.read().await);
+    }
+    let dirs_to_check = vec![TEMP_DIR.read().await.clone(), DOWNLOAD_DIR.read().await.clone()];
+    for dir in &dirs_to_check {
+        if !dir.exists() {
+            fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        }
+    }
+    window.emit("settings", serde_json::json!({
+        "down_dir": *DOWNLOAD_DIR.read().await,
+        "temp_dir": *TEMP_DIR.read().await
+    })).unwrap();
+    Ok(0)
+}
+
+#[tauri::command]
 async fn exit(window: tauri::Window) -> Result<i64, String> {
     {
         let mut cookie_jar = GLOBAL_COOKIE_JAR.write().unwrap();
         *cookie_jar = Jar::default();
     }
-    if let Err(e) = fs::remove_file(&*SESSDATA_PATH) {
+    if let Err(e) = fs::remove_file(&*SESSDATA_PATH.read().await) {
         return Err(format!("Failed to delete store directory: {}", e));
     }
     window.emit("exit-success", 0).unwrap();
@@ -554,7 +605,7 @@ async fn main() {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![init, login, stop_login, push_back_queue, process_queue, exit])
+        .invoke_handler(tauri::generate_handler![init, login, stop_login, rw_config, push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

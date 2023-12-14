@@ -13,7 +13,7 @@
 .backward {
     position: absolute;
     top: 2vh;
-    margin-left: 2vh;
+    margin-left: 28.5px;
     left: 0px;
     height: 50px;
     width: 50px;
@@ -144,6 +144,17 @@ input[name="search-input"] {
 
 input[name="search-input"]:hover {
     font-size: 15px;
+}
+
+input[name="down-dir-path"],
+input[name="temp-dir-path"] {
+    border-radius: 6px;
+    border: 1px solid #5c5c5c;
+    outline: none;
+    background-color: #3b3b3bc0;
+    width: 25vw;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .icon-small {
@@ -403,7 +414,8 @@ input[name="search-input"]:hover {
 
 .down-page-info-title,
 .video-multi-next-title,
-.info-title {
+.info-title,
+.settings-page-title {
     font-size: 18px;
     margin-bottom: 6px;
     min-height: 24px;
@@ -874,7 +886,8 @@ input[name="search-input"]:hover {
 .login,
 .down-page,
 .video-multi-next,
-.user-profile {
+.user-profile,
+.settings {
     width: 100vw;
     min-height: 100vh;
     max-height: 100vh;
@@ -888,6 +901,12 @@ input[name="search-input"]:hover {
     transition: opacity 0.4s, visibility 0.5s;
     z-index: 2;
     overflow: auto;
+}
+
+.settings {
+    z-index: 3;
+    align-items: flex-end;
+    overflow: hidden;
 }
 
 .user-profile,
@@ -908,7 +927,7 @@ input[name="search-input"]:hover {
     overflow: hidden;
 }
 
-@keyframes login-anime {
+@keyframes page-anime {
     0% {
         top: 36px;
     }
@@ -920,13 +939,14 @@ input[name="search-input"]:hover {
 .down-page.active,
 .login.active,
 .video-multi-next.active,
-.user-profile.active {
-    animation: login-anime 0.5s cubic-bezier(0,1,.6,1);
+.user-profile.active,
+.settings.active {
+    animation: page-anime 0.5s cubic-bezier(0,1,.6,1);
     opacity: 1;
     visibility: visible;
 }
 
-@keyframes login-back-anime {
+@keyframes page-back-anime {
     0% {
         top: 0px;
     }
@@ -938,8 +958,9 @@ input[name="search-input"]:hover {
 .down-page.back,
 .login.back,
 .video-multi-next.back,
-.user-profile.back {
-    animation: login-back-anime 0.5s cubic-bezier(0,1,.6,1);
+.user-profile.back,
+.settings.back {
+    animation: page-back-anime 0.5s cubic-bezier(0,1,.6,1);
     opacity: 0;
     visibility: hidden;
 }
@@ -1096,7 +1117,10 @@ input[name="search-input"]:hover {
 }
 
 .profile,
-.down-page-bar {
+.down-page-bar,
+.settings-page-bar,
+.settings-side-general-bar,
+.settings-side-advanced-bar {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1105,6 +1129,11 @@ input[name="search-input"]:hover {
     max-width: 100px;
     margin: 16px;
     min-width: 75px;
+}
+
+.settings-page-bar {
+    position: absolute;
+    bottom: 0;
 }
 
 .user-profile-exit {
@@ -1137,7 +1166,10 @@ input[name="search-input"]:hover {
     user-select: none;
 }
 
-.down-page-bar-background {
+.down-page-bar-background,
+.settings-side-general-bar-background,
+.settings-side-advanced-bar-background,
+.settings-page-bar-background {
     width: 50px;
     height: 50px;
     background-color: #2a2a2a;
@@ -1152,8 +1184,16 @@ input[name="search-input"]:hover {
 }
 
 .user-profile-exit-background:hover,
-.down-page-bar-background:hover {
-    background-color: #3b3b3b;
+.down-page-bar-background:hover,
+.settings-side-advanced-bar-background:hover,
+.settings-side-general-bar-background:hover,
+.settings-page-bar-background:hover {
+    background-color: #3b3b3b !important;
+}
+
+.settings-side-general-bar-background.checked,
+.settings-side-advanced-bar-background.checked {
+    background-color: #4c4c4c;
 }
 
 .user-avatar-placeholder {
@@ -1193,6 +1233,9 @@ input[name="search-input"]:hover {
 }
 
 .down-page-bar-name,
+.settings-side-general-bar-name,
+.settings-side-advanced-bar-name,
+.settings-page-bar-name,
 .user-name {
     font-size: 13px;
     max-width: 110px;
@@ -1205,4 +1248,73 @@ input[name="search-input"]:hover {
     bottom: 0px;
     right: 0px;
     display: none;
+}
+
+.settings-side-bar {
+    height: calc(98vh - 50px);
+    bottom: 0;
+    position: relative;
+}
+
+.settings-general-page,
+.settings-advanced-page {
+    width: calc(100vw - 107px);
+    left: 107px;
+    height: calc(98vh - 12px);
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-general-page.active,
+.settings-advanced-page.active {
+    opacity: 1;
+    visibility: visible;
+    animation: settings-page-anime 0.5s cubic-bezier(0,1,.6,1);
+}
+
+@keyframes settings-page-anime {
+    0% {
+        bottom: -20px;
+    }
+    100% {
+        bottom: 0px;
+    }
+}
+
+.settings-page-block-title { margin-right: 50px; }
+
+.settings-page-block-cont { height: 26px; }
+
+.settings-page-block {
+    display: flex;
+    width: 100%;
+    height: 24px;
+    margin-top: 14px;
+    margin-bottom: 14px;
+    align-items: center;
+}
+
+.down-dir-path-openbtn,
+.temp-dir-path-openbtn {
+    width: 70px;
+    height: 120%;
+    margin-left: 10px;
+    background-color: #2a2a2a;
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition-property: all;
+    transition-duration: 0.3s;
+    position: relative;
+}
+
+.down-dir-path-openbtn:hover,
+.temp-dir-path-openbtn:hover {
+    background-color: #3b3b3b !important;
 }

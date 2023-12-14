@@ -14,7 +14,7 @@ tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
 futures = "0.3"
-tauri = { version = "1.5", features = [ "shell-all"] }
+tauri = { version = "1.5", features = [ "dialog-all", "shell-all"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 reqwest = { version = "0.11.9", features = ["json", "cookies", "stream"] }
