@@ -11,6 +11,8 @@ process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 
+mod logger;
+
 lazy_static! {
     static ref GLOBAL_COOKIE_JAR: Arc<std::sync::RwLock<Jar>> = Arc::new(std::sync::RwLock::new(Jar::default()));
     static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
@@ -149,6 +151,7 @@ async fn push_back_queue(
 #[tauri::command]
 async fn process_queue(window: tauri::Window, initial: bool) {
     let mut init = initial;
+    log::info!("");
     loop {
         // 等待下载完成的通知
         if !init { DOWNLOAD_COMPLETED_NOTIFY.notified().await; }
@@ -201,7 +204,7 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
 }
 
 async fn download_file(window: tauri::Window, task: DownloadTask, action: String) -> Result<String, String> {
-    println!("\nStarting download for: {}", &task.display_name);
+    log::info!("Starting download for: {}", &task.display_name);
     let client = init_client();
     let response = match client.get(&task.url).send().await {
         Ok(res) => res,
@@ -219,7 +222,8 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     let start_time = Instant::now();
-    println!();
+    let mut last_log_time = Instant::now();
+    let log_interval = Duration::from_millis(250);
     while let Some(chunk_result) = stream.next().await {
         match chunk_result {
             Ok(chunk) => {
@@ -232,7 +236,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     (total_size - downloaded) as f64 / (speed * 1048576.0)
                 } else { 0.0 };
                 if let Err(e) = file.write_all(&chunk).await {
-                    eprintln!("{}", e);
+                    log::warn!("{}", e);
                     return Err(e.to_string());
                 }
                 let progress = downloaded as f64 / total_size as f64 * 100.0;
@@ -247,9 +251,12 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     format!("{}", task.display_name),
                     format!("{}", task.file_type),
                     format!("{}", action)
-                    ];
-                    print!("\r{:?}", formatted_values.join("  "));
-                io::stdout().flush().unwrap();
+                ];
+                if last_log_time.elapsed() >= log_interval {
+                    log::info!("{:?}", formatted_values.join(" | "));
+                    io::stdout().flush().unwrap();
+                    last_log_time = Instant::now();
+                }
                 window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
             },
             Err(e) => return Err(e.to_string()),
@@ -259,14 +266,15 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
 }
 
 async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String, ss_dir: &String) -> Result<String, String> {
-    println!("\nStarting merge process for audio");
+    log::info!("");
+    log::info!("Starting merge process for audio");
     let current_dir = env::current_dir().map_err(|e| e.to_string())?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
     let ss_dir_path = DOWNLOAD_DIR.read().await.join(&ss_dir);
     let output_path = ss_dir_path.join(&output);
     if !&ss_dir_path.exists() {
         fs::create_dir_all(&ss_dir_path).map_err(|e| e.to_string())?;
-        println!("成功创建{}", ss_dir);
+        log::info!("成功创建{}", ss_dir);
     }
     let output_clone = output.clone();
     let video_filename = Path::new(&output_path)
@@ -275,9 +283,9 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         .ok_or_else(|| "无法提取视频文件名".to_string())?;
 
     let progress_path = current_dir.join("ffmpeg")
-        .join(format!("{}.progress", video_filename));
+        .join(format!("{}.log", video_filename));
 
-    // println!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
+    // log::info!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
         .creation_flags(0x08000000)
         .arg("-i").arg(video_path)
@@ -300,7 +308,6 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     }
     let mut progress_lines = VecDeque::new();
     let mut last_size: u64 = 0;
-    println!();
     loop {
         let mut printed_keys = HashSet::new();
         let metadata = tokio::fs::metadata(&progress_path).await.unwrap();
@@ -336,7 +343,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
             }
         }
         messages.push(&output_clone);
-        print!("\r{:?}", messages.join(" "));
+        log::info!("{:?}", messages.join(" | "));
         io::stdout().flush().unwrap();
         window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string())?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
@@ -355,7 +362,8 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         return Err(format!("无法删除进度文件: {}", e));
     }
     if status.success() {
-        println!("\nFFmpeg process completed.");
+        log::info!("");
+        log::info!("FFmpeg process completed.");
         window.emit("merge-success", output).map_err(|e| e.to_string())?;
         Ok(output.to_string())
     } else {
@@ -374,7 +382,7 @@ async fn update_cookies(sessdata: &str) -> Result<String, String> {
     if let Err(e) = fs::write(&*SESSDATA_PATH.read().await, sessdata) {
         return Err(format!("无法写入Cookie：{}", e));
     }
-    println!("SESSDATA写入成功");
+    log::info!("SESSDATA写入成功");
     let url = Url::parse("https://www.bilibili.com").unwrap();
     let cookie_str = format!("{}; Domain=.bilibili.com; Path=/", sessdata);
     let jar = GLOBAL_COOKIE_JAR.write().unwrap();
@@ -451,15 +459,15 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
     let config: serde_json::Value = serde_json::from_str(&config_str).map_err(|e| e.to_string())?;
     if let Some(max_conc) = config["max_conc"].as_u64() {
         *MAX_CONCURRENT_DOWNLOADS.write().await = max_conc as usize;
-        println!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
+        log::info!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
     }
     if let Some(temp_dir_str) = config["temp_dir"].as_str() {
         *TEMP_DIR.write().await = PathBuf::from(temp_dir_str);
-        println!("成功更新TEMP_DIR: {:?}", *TEMP_DIR.read().await);
+        log::info!("成功更新TEMP_DIR: {:?}", *TEMP_DIR.read().await);
     }
     if let Some(down_dir_str) = config["down_dir"].as_str() {
         *DOWNLOAD_DIR.write().await = PathBuf::from(down_dir_str);
-        println!("成功更新DOWNLOAD_DIR: {:?}", *DOWNLOAD_DIR.read().await);
+        log::info!("成功更新DOWNLOAD_DIR: {:?}", *DOWNLOAD_DIR.read().await);
     }
     let dirs_to_check = vec![TEMP_DIR.read().await.clone(), DOWNLOAD_DIR.read().await.clone()];
     for dir in &dirs_to_check {
@@ -505,7 +513,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
         if *stop {
             let mut lock = STOP_LOGIN.lock().await;
             *lock = false;
-            eprintln!("{}: \"登录轮询被前端截断\"", cloned_key);
+            log::warn!("{}: \"登录轮询被前端截断\"", cloned_key);
             return Ok("登录过程被终止".to_string());
         }
         let response = client
@@ -516,7 +524,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
 
         if response.status() != reqwest::StatusCode::OK {
             if response.status().to_string() != "412 Precondition Failed" {
-                eprintln!("检查登录状态失败");
+                log::warn!("检查登录状态失败");
                 window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
                 return Err("检查登录状态失败".to_string());
             }
@@ -526,12 +534,12 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
             .map(|s| s.to_string());
 
         let response_data: Value = response.json().await.map_err(|e| {
-            eprintln!("解析响应JSON失败: {}", e);
+            log::warn!("解析响应JSON失败: {}", e);
             "解析响应JSON失败".to_string()}
         )?;
         match response_data["code"].as_i64() {
             Some(-412) => {
-                eprintln!("{}", response_data["message"]);
+                log::warn!("{}", response_data["message"]);
                 window.emit("login-status", response_data["message"].to_string()).map_err(|e| e.to_string())?;
                 return Err(response_data["message"].to_string());
             }
@@ -541,32 +549,32 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
                         if let Some(cookie) = cookie_header {
                             let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
                             .ok_or_else(|| {
-                            eprintln!("找不到SESSDATA");
+                            log::warn!("找不到SESSDATA");
                             "找不到SESSDATA".to_string()
                             })?;
                             update_cookies(sessdata).await.map_err(|e| e.to_string())?;
                             let mid = init_mid().await.map_err(|e| e.to_string())?;
                             window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
-                            println!("{}: \"二维码已扫描\"", cloned_key);
+                            log::info!("{}: \"二维码已扫描\"", cloned_key);
                             return Ok("二维码已扫描".to_string());
                         } else {
-                            eprintln!("Cookie响应头为空");
+                            log::warn!("Cookie响应头为空");
                             return Err("Cookie响应头为空".to_string());
                         }
                     }
                     Some(86038) => return Err("二维码已失效".to_string()),
                     Some(86101) | Some(86090) => {
                         window.emit("login-status", response_data["data"]["message"].to_string()).map_err(|e| e.to_string())?;
-                        println!("{}: {}", cloned_key, response_data["data"]["message"]);
+                        log::info!("{}: {}", cloned_key, response_data["data"]["message"]);
                     }
                     _ => {
-                        eprintln!("未知的响应代码");
+                        log::warn!("未知的响应代码");
                         return Err("未知的响应代码".to_string())
                     },
                 }
             }
             _ => {
-                eprintln!("未知的响应代码");
+                log::warn!("未知的响应代码");
                 return Err("未知的响应代码".to_string())
             }
         }
@@ -576,6 +584,7 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
 
 #[tokio::main]
 async fn main() {
+    logger::init_logger().unwrap();
     let api_route = warp::path("api")
         .and(warp::method())
         .and(warp::path::full())
@@ -624,7 +633,7 @@ async fn proxy_request(args: (Method, FullPath, String, Bytes, String)) -> Resul
         trimmed_path.to_string()
     };
     let target_url = format!("{}{}", base_url, full_path);
-    println!("Request: {}", target_url);
+    log::info!("Request: {}", target_url);
     let client = init_client();
     let res = client.request(method, &target_url).body(body).send().await;
     let mut response_builder = Response::builder();

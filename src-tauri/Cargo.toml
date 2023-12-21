@@ -13,6 +13,9 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
+log4rs = "1.0"
+log = "0.4"
+chrono = "0.4"
 futures = "0.3"
 tauri = { version = "1.5", features = [ "dialog-all", "shell-all"] }
 serde = { version = "1.0", features = ["derive"] }
