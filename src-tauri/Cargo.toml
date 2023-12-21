@@ -1,10 +1,10 @@
 [package]
-name = "biliget"
+name = "bilitools"
 version = "0.1.0"
-description = "BiliGet"
+description = "BiliTools"
 authors = ["btjawa"]
 license = "MIT"
-repository = "git+https://github.com/btjawa/BiliGet.git"
+repository = "git+https://github.com/btjawa/BiliTools.git"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

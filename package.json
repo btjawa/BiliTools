@@ -1,21 +1,21 @@
 {
-  "name": "biliget",
+  "name": "bilitools",
   "version": "0.1.0",
-  "description": "Bilibili Resources Downloader",
+  "description": "Download Videos/Covers/Audios/Danmakus... All in one!",
   "type": "module",
   "scripts": {
     "tauri": "tauri"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/btjawa/BiliGet.git"
+    "url": "git+https://github.com/btjawa/BiliTools.git"
   },
   "author": "btjawa",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/btjawa/BiliGet/issues"
+    "url": "https://github.com/btjawa/BiliTools/issues"
   },
-  "homepage": "https://github.com/btjawa/BiliGet#readme",
+  "homepage": "https://github.com/btjawa/BiliTools#readme",
   "devDependencies": {
     "@tauri-apps/api": "^1.5.1",
     "@tauri-apps/cli": "^1.5.6"

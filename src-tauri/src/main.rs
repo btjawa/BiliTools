@@ -19,7 +19,7 @@ lazy_static! {
     static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref WORKING_DIR: PathBuf = {
         PathBuf::from(env::var("APPDATA").expect("APPDATA environment variable not found"))
-        .join("com.btjawa.biliget")
+        .join("com.btjawa.bilitools")
     };
     static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = {
         Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
