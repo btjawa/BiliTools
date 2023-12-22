@@ -36,7 +36,7 @@ lazy_static! {
 
 fn init_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
-    headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"));
+    headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
     headers.insert("Accept", HeaderValue::from_static("*/*"));
     headers.insert("Accept-Language", HeaderValue::from_static("en-US,en;q=0.5"));
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
@@ -450,6 +450,9 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
         "down_dir": down_dir,
     });
     let new_config_str = serde_json::to_string(&new_config).map_err(|e| e.to_string())?;
+    if !WORKING_DIR.clone().exists() {
+        fs::create_dir_all(WORKING_DIR.clone()).map_err(|e| e.to_string())?;
+    }
     if action == "save" {
         fs::write(&config_path, &new_config_str).map_err(|e| e.to_string())?;
     } else if action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| e.to_string())?.trim().is_empty()) {

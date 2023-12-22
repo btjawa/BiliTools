@@ -126,9 +126,15 @@ async function selFile(type, multiple = false, filters = []) {
 }
 
 async function getVideoFull(aid, cid, type, action) {
+    const params = {
+        avid: aid, cid: cid,
+        fnval: 3088, fnver: 0,
+        fourk: 1
+    }
+    const signature = await wbiSignature(params);
     let getDetailUrl = type !== "bangumi" 
-        ? `http://127.0.0.1:50808/api/x/player/wbi/playurl?avid=${aid}&cid=${cid}&fnval=3088&fnver=0&fourk=1`
-        : `http://127.0.0.1:50808/api/pgc/player/web/playurl?avid=${aid}&cid=${cid}&fnval=3088&fnver=0&fourk=1`;
+        ? `http://127.0.0.1:50808/api/x/player/wbi/playurl?${signature}`
+        : `http://127.0.0.1:50808/api/pgc/player/web/playurl?${signature}`;
         try {
         const detailsData = await fetch(getDetailUrl);
         if (detailsData.ok) {
@@ -541,6 +547,32 @@ function formatPubdate(timestamp) {
     const minutes = date.getMinutes();
     const seconds = date.getSeconds();
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+async function wbiSignature(params) {
+    const mixinKeyEncTab = [
+        46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
+        33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
+        61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
+        36, 20, 34, 44, 52
+    ];
+    const getMixinKey = (orig) => {
+        return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
+    };
+    const res = await fetch('http://127.0.0.1:50808/api/x/web-interface/nav');
+    const { data: { wbi_img: { img_url, sub_url } } } = await res.json();
+    const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
+    const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
+    const mixinKey = getMixinKey(imgKey + subKey);
+    const currTime = Math.round(Date.now() / 1000);
+    const chrFilter = /[!'()*]/g;
+    Object.assign(params, { wts: currTime });
+    const query = Object.keys(params).sort().map(key => {
+        const value = params[key].toString().replace(chrFilter, '');
+        return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }).join('&');
+    const wbiSign = md5(query + mixinKey);
+    return query + '&w_rid=' + wbiSign;
 }
 
 function initVideoInfo(type, details) {
@@ -1247,7 +1279,8 @@ function describeCodec(codecString) {
 }
 
 async function getUserProfile(mid, action) {
-    const getDetailUrl = `http://127.0.0.1:50808/api/x/space/wbi/acc/info?mid=${mid}`;
+    const signature = await wbiSignature({ mid: mid });
+    const getDetailUrl = `http://127.0.0.1:50808/api/x/space/wbi/acc/info?${signature}`;
     const detailData = await fetch(getDetailUrl);
     if (detailData.ok) {
         const details = await detailData.json();
