@@ -128,7 +128,7 @@ async function selFile(type, multiple = false, filters = []) {
 async function getVideoFull(aid, cid, type, action) {
     const params = {
         avid: aid, cid: cid,
-        fnval: 3152, fnver: 0,
+        fnval: 4048, fnver: 0,
         fourk: 1
     }
     const signature = await wbiSignature(params);
@@ -1003,7 +1003,8 @@ function applyCodecList(details, type, action, extra, ms) { // 填充编码格�
             currentBtn.append(currentIcon, description);
             if (extra == "init") cdsOpt.append(currentBtn);
             else $('.video-block-codec-cds-opt').append(currentBtn)
-            if (i === 0) {
+            if (codec == 0) continue;
+            if (!$('.video-block-codec-cds-item').hasClass('checked')) {
                 currentBtn.addClass('checked');
                 currentSel[2] = codec;
                 currentSel[3] = description;
@@ -1037,7 +1038,9 @@ function applyAudioList(details, type, action, ms) { // 填充音频
         const qualityDesc = {
             30216: "64K",
             30232: "132K",
-            30280: "192K"
+            30280: "192K",
+            30250: "杜比全景声",
+            30251: "Hi-Res无损",
         }
         if (currentVideoBlock.next(`.video-block-${action}`).length) {
             currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
@@ -1046,19 +1049,27 @@ function applyAudioList(details, type, action, ms) { // 填充音频
         }
         currentVideoBlock.next(`.video-block-${action}`).append(ads);
         const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
+        if (root.dash.dolby?.audio) {
+            qualityList.unshift(...root.dash.dolby.audio.map(audioItem => audioItem.id).sort((a, b) => b - a))
+        }
+        if (root.dash.flac && root.dash.flac.display) {
+            if (!root.dash.flac.audio) qualityList.unshift(0);
+            else qualityList.unshift(root.dash.flac.audio.id);
+        }
         for (let i = 0; i < qualityList.length; i++) {
             const quality = qualityList[i];
             const description = qualityDesc[quality];
             const currentBtn = $('<div>').addClass(`video-block-audio-ads-${quality} video-block-audio-ads-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-audio-description icon-small`);
+            const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} icon-small`);
             currentBtn.append(currentIcon, description);
             adsOpt.append(currentBtn);
-            if (i === 0) {
+            if (quality == 0) continue;
+            if (!$('.video-block-audio-ads-item').hasClass('checked')) {
                 currentBtn.addClass('checked');
                 currentSel[4] = quality;
                 currentSel[5] = description;
                 if (ms) return [quality, description];
-            }
+            };
             currentBtn.on('click', function() {
                 if (currentVideoBlock.next(`.video-block-${action}`).length) {
                     currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
@@ -1230,7 +1241,7 @@ function describeCodec(codecString) {
     const codecType = parts[0];
     let profileDesc;
     let levelDesc;
-    if (codecType === 'hev1') {
+    if (codecType === 'hev1' || codecType === 'hvc1') {
         const profilePart = parts[1];
         const levelPart = parts[3].slice(1); 
         switch (profilePart) {

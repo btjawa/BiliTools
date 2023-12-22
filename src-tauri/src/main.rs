@@ -649,7 +649,16 @@ async fn main() {
         .map(|method, path, query, body| (method, path, query, body, "https://passport.bilibili.com".to_string()))
         .and_then(proxy_request);
     
-    let routes = i0_route.or(api_route.or(passport_route));
+    let www_route = warp::path("www")
+        .and(warp::method())
+        .and(warp::path::full())
+        .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
+        .and(warp::body::bytes())
+        .map(|method, path, query, body| (method, path, query, body, "https://www.bilibili.com".to_string()))
+        .and_then(proxy_request);
+
+
+    let routes = i0_route.or(api_route.or(passport_route.or(www_route)));
     tokio::task::spawn(async move {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
@@ -666,6 +675,7 @@ async fn proxy_request(args: (Method, FullPath, String, Bytes, String)) -> Resul
         .strip_prefix("/api")
         .or_else(|| path_str.strip_prefix("/passport"))
         .or_else(|| path_str.strip_prefix("/i0"))
+        .or_else(|| path_str.strip_prefix("/www"))
         .unwrap_or(path_str);
     let full_path = if !raw_query.is_empty() {
         format!("{}?{}", trimmed_path, raw_query)
