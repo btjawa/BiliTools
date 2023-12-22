@@ -848,11 +848,10 @@ input[name="temp-dir-path"] {
 .video-block-dimension-dms-opt {
     font-size: 14px;
     position: relative;
-    margin-left: 10px;
     white-space: nowrap;
     text-overflow: ellipsis;
     min-width: 90px;
-    margin-left: 20px;
+    margin-left: 14px;
     display: flex;
 
 }
@@ -863,8 +862,8 @@ input[name="temp-dir-path"] {
     cursor: pointer;
     font-size: 13px !important;
     user-select: none;
-    margin-right: 10px;
-    padding: 7.5px 12px;
+    margin-right: 8px;
+    padding: 7px 10px;
     background-color: #1f1f1f2a;
     border-radius: 8px;
     transition: background-color 0.2s;
@@ -1298,23 +1297,28 @@ input[name="temp-dir-path"] {
 }
 
 .down-dir-path-openbtn,
-.temp-dir-path-openbtn {
-    width: 70px;
-    height: 120%;
+.temp-dir-path-openbtn,
+.down-page-open-dir-btn {
+    padding: 7px 10px;
     margin-left: 10px;
     background-color: #2a2a2a;
     cursor: pointer;
     font-size: 12px;
     border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition-property: all;
     transition-duration: 0.3s;
     position: relative;
+    user-select: none;
+}
+
+.down-page-open-dir-btn {
+    position: absolute;
+    margin-left: 0px;
+    bottom: 18px;
 }
 
 .down-dir-path-openbtn:hover,
-.temp-dir-path-openbtn:hover {
+.temp-dir-path-openbtn:hover,
+.down-page-open-dir-btn:hover {
     background-color: #3b3b3b !important;
 }

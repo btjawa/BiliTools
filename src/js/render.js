@@ -128,7 +128,7 @@ async function selFile(type, multiple = false, filters = []) {
 async function getVideoFull(aid, cid, type, action) {
     const params = {
         avid: aid, cid: cid,
-        fnval: 3088, fnver: 0,
+        fnval: 3152, fnver: 0,
         fourk: 1
     }
     const signature = await wbiSignature(params);
@@ -904,6 +904,7 @@ async function appendDownPageBlock(type, quality, data) { // 填充下载块
     const desc = data.desc;
     const pic = data.pic;
     const cid = data.cid;
+    const finalTitle = `${type=="aac"?downAudios:downVideos}_${title}_${quality}.${type}`;
     const downPage = $('.down-page');
     if (downPage.find('.down-page-empty-text')) {
         downPage.find('.down-page-empty-text').remove();
@@ -915,10 +916,12 @@ async function appendDownPageBlock(type, quality, data) { // 填充下载块
     const infoData = $('<div>').addClass('down-page-info-data');
     const infoId = $('<i>').addClass('down-page-info-id').text(`cid: ${cid}`);
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
-    const infoTitle = $('<div>').addClass('down-page-info-title').html(`${type=="aac"?downAudios:downVideos}_${title}_${quality}.${type}`).css('max-width', `100%`);
+    const infoTitle = $('<div>').addClass('down-page-info-title').html(finalTitle).css('max-width', `100%`);
     const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载`);
     const infoProgress = $('<div>').addClass('down-page-info-progress').html($('<div>').addClass('down-page-info-progress-bar'));
-    infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, infoProgressText, infoProgress)).appendTo(downPage);
+    const openDirBtn = $('<div>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${type=="aac"?'audio':'video'} icon-small"></i>打开文件`);
+    infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, openDirBtn, infoProgressText, infoProgress)).appendTo(downPage);
+    openDirBtn.on('click', () => invoke('open_select', { displayName: finalTitle, cid: cid.toString() }));
 }
 
 function applyDimensionList(details, type, action, ms) { // 填充分辨率
@@ -943,7 +946,7 @@ function applyDimensionList(details, type, action, ms) { // 填充分辨率
             const description = qualityItem.display_desc + (qualityItem.superscript ? `_${qualityItem.superscript}` : '');
             const currentBtn = $('<div>').addClass(`video-block-dimension-dms-${quality} video-block-dimension-dms-item`);
             const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
-            currentBtn.append(currentIcon, description);
+            currentBtn.append(currentIcon, qualityItem.new_description);
             dmsOpt.append(currentBtn);
             if (quality == maxQuality) {
                 currentBtn.addClass('checked');
@@ -1074,8 +1077,7 @@ function applyAudioList(details, type, action, ms) { // 填充音频
 
 function applyDownBtn(details, data, action, ms) { // 监听下载按钮
     return new Promise((resolve) => {
-        if (!ms) currentSel = new CurrentSel(...currentSel);
-        const quality = currentSel;
+        const quality = new CurrentSel(...currentSel);
         let options = {
             title: '选择下载线路',
             background: "#2b2b2b",
@@ -1185,9 +1187,7 @@ function settings() {
             default_ads: 0,    
             temp_dir: tempDirPath.val(),
             down_dir: downDirPath.val()
-        }}).then(save => {
-            console.log(save)
-        })
+        }})
         iziToast.info({
             icon: 'fa-solid fa-circle-info',
             layout: '2',
@@ -1211,13 +1211,17 @@ function settings() {
     generalBg.click();
     downDirOpenBtn.on('click', async () => {
         const selected = await selFile('directory');
-        downDirPath.val(selected);
-        handelSave("存储路径");
+        if (selected) {
+            downDirPath.val(selected);
+            handelSave("存储路径");
+        }
     });
     tempDirOpenBtn.on('click', async () => {
         const selected = await selFile('directory');
-        tempDirPath.val(selected);
-        handelSave("临时文件存储路径")
+        if (selected) {
+            tempDirPath.val(selected);
+            handelSave("临时文件存储路径");
+        }
     });
 }
 
@@ -1354,16 +1358,17 @@ listen("login-status", async (event) => {
 
 listen("download-progress", async (event) => {
     const infoBlock = $('.down-page-info');
+    const p = event.payload;
     infoBlock.children().each(function() {
         const id = $(this).find('.down-page-info-id');
         const title = $(this).find('.down-page-info-title');
-        if (id.text() == `cid: ${event.payload[0]}` && title.text() == event.payload[6]) {
-            $(this).find('.down-page-info-progress-bar').css('width', event.payload[1]);
+        if (id.text() == `cid: ${p.cid}` && title.text() == p.display_name) {
+            $(this).find('.down-page-info-progress-bar').css('width', p.progress);
             $(this).find('.down-page-info-progress-text')
-            .html(`${event.payload[7]=="audio"?"音频":"视频"} - 总进度: ${event.payload[1]}&emsp;剩余时间: ${event.payload[2]}&emsp;当前速度: ${event.payload[4]}`);
-            if (parseFloat(event.payload[1]) >= 100) {
+            .html(`${p.file_type=="audio"?"音频":"视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${formatDuration(parseFloat(p.remaining), "progress")}&emsp;当前速度: ${p.speed}`);
+            if (parseFloat(p.progress) >= 100) {
                 $(this).find('.down-page-info-progress-text')
-                .html(`${event.payload[7]=="audio"?"音频":"视频"}下载成功`);
+                .html(`${p.fileType=="audio"?"音频":"视频"}下载成功`);
             }
         }
     });

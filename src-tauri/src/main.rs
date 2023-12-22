@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{CookieStore, Jar}};
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
-use std::{env, fs, path::{Path, PathBuf}, sync::Arc, convert::Infallible, time::Instant, process::Command,
+use std::{env, fs, path::PathBuf, sync::Arc, convert::Infallible, time::Instant, process::Command,
 process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
@@ -71,12 +71,12 @@ struct VideoInfo {
     display_name: String,
     video_path: PathBuf,
     audio_path: PathBuf,
+    output_path: PathBuf,
     video_downloaded: bool,
     audio_downloaded: bool,
     finished: bool,
     tasks: Vec<DownloadTask>,
     action: String,
-    ss_dir: String
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +95,28 @@ struct Settings {
     default_ads: i64,
     temp_dir: String,
     down_dir: String
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct DownloadProgress {
+    cid: String,
+    progress: String,
+    remaining: String,
+    downloaded: String,
+    speed: String,
+    elapsed_time: String,
+    display_name: String,
+    file_type: String,
+    action: String
+}
+
+impl DownloadProgress {
+    fn print(&self) -> String {
+        format!(
+            "{} | {} | {} | {} | {} | {} | {} | {} | {}",
+            self.cid, self.progress, self.remaining, self.downloaded, self.speed, self.elapsed_time, self.display_name, self.file_type, self.action
+        )
+    }
 }
 
 impl CookieStore for ThreadSafeCookieStore {
@@ -117,7 +139,7 @@ async fn push_back_queue(
     if let Some(v_url) = video_url {
         let video_path = TEMP_DIR.read().await.join(&extract_filename(&v_url));
         tasks.push(DownloadTask { 
-            cid: cid.clone(), 
+            cid: cid.clone(),
             display_name: display_name.clone(), 
             url: v_url, 
             path: video_path, 
@@ -126,7 +148,7 @@ async fn push_back_queue(
     }
     if let Some(a_url) = audio_url {
         let audio_path = TEMP_DIR.read().await.join(&extract_filename(&a_url));
-        tasks.push(DownloadTask { 
+        tasks.push(DownloadTask {
             cid: cid.clone(), 
             display_name: display_name.clone(), 
             url: a_url, 
@@ -139,10 +161,11 @@ async fn push_back_queue(
         display_name: display_name.clone(),
         video_path: tasks.get(0).map_or(PathBuf::new(), |task| task.path.clone()),
         audio_path: tasks.get(1).map_or(PathBuf::new(), |task| task.path.clone()),
+        output_path: DOWNLOAD_DIR.read().await.join(ss_dir).join(display_name.clone()),
         video_downloaded: false,
         audio_downloaded: false,
         finished: false,
-        tasks, action, ss_dir
+        tasks, action
     };
     DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone());
     WAITING_QUEUE.lock().await.push_back(download_info.clone());
@@ -195,7 +218,7 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
     current_downloads.retain(|info| info.cid != download_info.cid);
     DOWNLOAD_COMPLETED_NOTIFY.notify_one();
     if action == "multi"  {
-        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.display_name, &download_info.ss_dir).await {
+        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.output_path).await {
             Ok(o) => { let _ = window.emit("download-success", o); }
             Err(e) => { let _ = window.emit("download-failed", vec![download_info.display_name, e]); }
         }
@@ -232,7 +255,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                 let speed = if elapsed_time > 0 {
                     (downloaded as f64 / elapsed_time as f64) * 1000.0 / 1048576.0
                 } else { 0.0 };
-                let remaining_time = if speed > 0.0 {
+                let remaining = if speed > 0.0 {
                     (total_size - downloaded) as f64 / (speed * 1048576.0)
                 } else { 0.0 };
                 if let Err(e) = file.write_all(&chunk).await {
@@ -240,21 +263,20 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     return Err(e.to_string());
                 }
                 let progress = downloaded as f64 / total_size as f64 * 100.0;
-                let downloaded_mb = downloaded as f64 / 1048576.0;
-                let formatted_values = vec![
-                    format!("{}", task.cid),
-                    format!("{:.2}%", progress),
-                    format!("{:.2} s", remaining_time),
-                    format!("{:.2} MB", downloaded_mb),
-                    format!("{:.2} MB/s", speed),
-                    format!("{:.2} ms", elapsed_time),
-                    format!("{}", task.display_name),
-                    format!("{}", task.file_type),
-                    format!("{}", action)
-                ];
+                let downloaded = downloaded as f64 / 1048576.0;
+                let formatted_values = DownloadProgress {
+                    cid: task.cid.clone(),
+                    remaining: format!("{:.2} s", remaining),
+                    downloaded: format!("{:.2} MB", downloaded),
+                    speed: format!("{:.2} MB/s", speed),
+                    progress: format!("{:.2}%", progress),
+                    elapsed_time: format!("{:.2} ms", elapsed_time),
+                    display_name: task.display_name.clone(),
+                    file_type: task.file_type.clone(),
+                    action: action.clone()
+                };
                 if last_log_time.elapsed() >= log_interval {
-                    log::info!("{:?}", formatted_values.join(" | "));
-                    io::stdout().flush().unwrap();
+                    log::info!("{}", formatted_values.print());
                     last_log_time = Instant::now();
                 }
                 window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
@@ -265,20 +287,20 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
     Ok(task.display_name.to_string())
 }
 
-async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &String, ss_dir: &String) -> Result<String, String> {
+async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &PathBuf) -> Result<String, String> {
     log::info!("");
     log::info!("Starting merge process for audio");
     let current_dir = env::current_dir().map_err(|e| e.to_string())?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
-    let ss_dir_path = DOWNLOAD_DIR.read().await.join(&ss_dir);
-    let output_path = ss_dir_path.join(&output);
-    if !&ss_dir_path.exists() {
-        fs::create_dir_all(&ss_dir_path).map_err(|e| e.to_string())?;
-        log::info!("成功创建{}", ss_dir);
+    let output_path = output.to_string_lossy();
+    if let Some(ss_dir_path) = output.parent() {
+        if !ss_dir_path.exists() {
+            fs::create_dir_all(&ss_dir_path).map_err(|e| e.to_string())?;
+            log::info!("成功创建{}", ss_dir_path.to_string_lossy());
+        }
     }
-    let output_clone = output.clone();
-    let video_filename = Path::new(&output_path)
-        .file_name()
+    let output_clone = output_path.clone();
+    let video_filename = &output.file_name()
         .and_then(|f| f.to_str())
         .ok_or_else(|| "无法提取视频文件名".to_string())?;
 
@@ -292,7 +314,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         .arg("-i").arg(audio_path)
         .arg("-c:v").arg("copy")
         .arg("-c:a").arg("aac")
-        .arg(&output_path).arg("-progress")
+        .arg(&*output_path).arg("-progress")
         .arg(&progress_path).arg("-y")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -365,9 +387,9 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         log::info!("");
         log::info!("FFmpeg process completed.");
         window.emit("merge-success", output).map_err(|e| e.to_string())?;
-        Ok(output.to_string())
+        Ok(output_path.to_string())
     } else {
-        if let Err(e) = tokio::fs::remove_file(output_path.clone()).await {
+        if let Err(e) = tokio::fs::remove_file(&*output_path.clone()).await {
             return Err(format!("无法删除合并失败视频文件: {}", e));
         }
         window.emit("merge-failed", output).map_err(|e| e.to_string())?;
@@ -483,6 +505,21 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
         "temp_dir": *TEMP_DIR.read().await
     })).unwrap();
     Ok(0)
+}
+
+#[tauri::command]
+async fn open_select(_window: tauri::Window, display_name: String, cid: String) {
+    let download_info_map = DOWNLOAD_INFO_MAP.lock().await;
+    if let Some(video_info) = download_info_map.get(&display_name) {
+        if video_info.cid == cid {
+            let _ = Command::new("C:\\Windows\\explorer.exe")
+                .arg(format!("/select,{}", video_info.output_path.to_string_lossy()))
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("Failed to open Windows Explorer");
+        }
+    }
 }
 
 #[tauri::command]
@@ -617,7 +654,7 @@ async fn main() {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![init, login, stop_login, rw_config, push_back_queue, process_queue, exit])
+        .invoke_handler(tauri::generate_handler![init, login, stop_login, open_select, rw_config, push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
