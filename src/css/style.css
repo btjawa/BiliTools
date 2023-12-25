@@ -305,7 +305,7 @@ input[name="temp-dir-path"] {
     margin-bottom: 5px;
     transition-property: all;
     transition-duration: 0.4s;
-    background-color: #3b3b3b9b;
+    background-color: #303030;
     border-radius: 5px;
     border-left: none;
     border-right: none;
@@ -329,7 +329,7 @@ input[name="temp-dir-path"] {
     width: 100%;
     transition-property: all;
     transition-duration: 0.2s;
-    background-color: #3b3b3b9b;
+    background-color: #303030;
     border-radius: 5px;
     min-height: 50px;
     border-left: none;
@@ -718,7 +718,7 @@ input[name="temp-dir-path"] {
     width: 97%;
     transition-property: all;
     transition-duration: 0.4s;
-    background-color: #3b3b3b9b;
+    background-color: #303030;
     border-radius: 5px;
     min-height: 230px;
     max-height: 230px;
@@ -1079,21 +1079,276 @@ input[name="temp-dir-path"] {
     min-width: 36px;
 }
 
-#login-qrcode {
+.login-scan-wp,
+.login-pwd-wp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.login-pwd,
+.login-sms {
+    display: none;
+}
+
+.login-pwd.active,
+.login-sms.active {
+    display:block;
+}
+
+.login-scan-title {
+    font-size: 20px;
+    margin-bottom: 25px;
+}
+
+.login-ac-title {
+    font-size: 18px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-desc {
+    font-size: 14px;
+    margin-top: 25px;
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-tab-pwd,
+.login-tab-sms {
+    user-select: none;
+    cursor: pointer;
+    color: #c4c4c4 !important;
+}
+
+.login-tab-pwd.checked,
+.login-tab-sms.checked {
+    color: #3086bf !important;
+}
+
+.login-scan-desc {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 25px;
+}
+
+.login-qrcode-box {
+    display: flex;
+    opacity: 1;
+    align-items: center;
+    justify-content: center;
+    width: 190px;
+    height: 190px;
+    border-radius: 8px;
+    background-color: #303030;
+    user-select: none;
+    border: solid #444 2px;
+    opacity: 1;
+    z-index: 4;
+    transition: opacity 0.4s;
+}
+
+.login-scan-tips {
+    opacity: 0;
+    position: absolute;
+    height: 190px;
+    margin-bottom: 30px;
+    z-index: 3;
+    transition: opacity 0.4s;
+}
+
+.login-qrcode-box:hover ~ .login-scan-tips {
+    opacity: 1;
+} 
+
+.login-qrcode-box:hover {
+    opacity: 0;
+}
+
+#login-qrcode img {
+    pointer-events: none;
+}
+
+.login-qrcode-tips {
+    width: 180px;
+    height: 180px;
+    position: absolute;
+    background-color: hsla(0,0%,100%,.9);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    display: none;
+}
+
+.login-qrcode-tips i {
+    color: #3086bf;
+    font-size: 24px;
+    padding: 16px;
+    border-radius: 50%;
+    background-color: #fff;
+    margin-bottom: 10px;
+}
+
+.login-qrcode-tips span { color: #61666d; }
+
+.login-qrcode-tips.active { display: flex; }
+
+.login-split {
+    height: 228px;
+    width: 1px;
+    background-color: #4c4c4c;
+    margin: 0 90px 0 90px;
+}
+
+.login-tab-split,
+.login-sms-item-split {
+    height: 20px;
+    width: 1px;
+    background-color: #4c4c4c;
     margin-right: 20px;
+}
+
+.login-tab-split { margin-left: 20px; }
+
+.login-pwd-wp,
+.login-sms-wp {
+    border: 1px solid #444;
+    border-radius: 8px;
+    width: 400px;
+}
+
+.login-pwd-split,
+.login-sms-split {
+    height: 1px;
+    width: 100%;
+    background-color: #444;
+}
+
+.login-pwd-item,
+.login-sms-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.login-pwd-item input::-ms-reveal,
+.login-sms-item input::-ms-reveal { display: none; }
+
+.login-pwd-item-text,
+.login-sms-item-text { user-select: none; }
+
+.login-sms-item-text { min-width: 48px; }
+
+.login-sms-item-text i {
+    color: #444;
+    font-size: 12px;
+    position: absolute;
+    top: 16.4px;
+    left: 68px;
+    cursor: pointer;
+}
+
+.login-pwd-item input,
+.login-sms-item input {
+    margin-left: 20px;
+    flex-grow: 1;
+    border: none;
+    font-size: 16px;
+    background: none;
+    outline: none;
+    appearance: none;
+}
+
+.login-pwd-item-eye { margin: 0 1px; }
+
+.login-pwd-item-eye:hover {
+    color: #3086bf;
+    cursor: pointer;
+}
+
+.login-pwd-login-btn,
+.login-sms-login-btn {
+    width: 100%;
+    height: 40px;
+    background-color: #3086bf;
+    cursor: pointer;
+    margin-top: 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     user-select: none;
 }
 
-.login-status {
-    margin-top: 20px;
+.login-pwd-login-btn:hover,
+.login-sms-login-btn:hover {
+    background-color: #3094bf;
 }
 
-.login-icon {
-    margin: 2px;
+.login-sms-area-code-list {
+    width: 220px;
+    min-height: 200px;
+    max-height: 200px;
+    flex-direction: column;
+    overflow: auto;
+    position: absolute;
+    border-radius: 8px;
+    background-color: #303030;
+    user-select: none;
+    border: solid #444 2px;
+    transition: opacity 0.4s;
+    z-index: 4;
+    padding: 6px 0;
+    display: none;
+}
+
+.login-sms-area-code-list.active {
+    display: flex;
+}
+
+.login-sms-area-code-list-item {
+    font-size: 14px;
+    padding: 6px 12px;
+    height: 32px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.login-sms-area-code-list-item.checked span {
+    color: #3086bf;
+}
+
+.login-sms-area-code-list-item:hover {
+    background-color: #444444ba;
+}
+
+.login-sms-getcode-btn {
+    font-size: 14px;
+    user-select: none;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 82px;
+    text-align: center;
+}
+
+.login-sms-getcode-btn.disabled {
+    color: #444;
+    cursor: not-allowed;
 }
 
 .login a {
-    color: #6995bf;
+    color: #3086bf;
     text-decoration: none;
 }
 

@@ -118,12 +118,63 @@
             </div>
         </div>
         <div class="login">
-            <div id="login-qrcode" draggable="false"></div>
-            <div class="login-text">
-                <div class="login-title">请使用哔哩哔哩客户端扫码登录<br>
-                    <a href="https://app.bilibili.com/" target="_blank">点击此处<a class="fa-solid fa-arrow-up-right-from-square login-icon"></a></a>跳转至官方APP下载中心<br>
-                    <i>Cookie将会保存在本地</i></div>
-                <div class="login-status"></div>
+            <div class="login-scan-wp">
+                <div class="login-scan-title">扫描二维码登录</div>
+                <div class="login-qrcode-box">
+                    <div id="login-qrcode"></div>
+                    <div class="login-qrcode-tips"></div>
+                </div>
+                <img class="login-scan-tips" src="./img/qr-tips.png">
+                <div class="login-scan-desc">
+                    请使用&nbsp;<a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></a>
+                    <br>扫码登录或扫码下载APP
+                </div>
+            </div>
+            <div class="login-split"></div>
+            <div class="login-ac-wp">
+                <div class="login-ac-title">
+                    <a class="login-tab-pwd">&nbsp;密码登录&nbsp;</a>
+                    <div class="login-tab-split"></div>
+                    <a class="login-tab-sms">&nbsp;短信登录&nbsp;</a>
+                </div>
+                <div class="login-pwd">
+                    <div class="login-pwd-wp">
+                        <div class="login-pwd-item">
+                            <div class="login-pwd-item-text">账号</div>
+                            <input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入账号" type="text" name="account-input">
+                        </div>
+                        <div class="login-pwd-split"></div>
+                        <div class="login-pwd-item">
+                            <div class="login-pwd-item-text">密码</div>
+                            <input autocomplete="new-password" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入密码" type="password" name="password-input">
+                            <i class="fa-solid fa-eye login-pwd-item-eye"></i>
+                        </div>
+                    </div>
+                    <div class="login-pwd-login-btn">登录</div>
+                </div>
+                <div class="login-sms">
+                    <div class="login-sms-wp">
+                        <div class="login-sms-item">
+                            <div class="login-sms-item-text">
+                                +86&nbsp;<i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                            <input autocomplete="off" maxlength="15" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入手机号" type="text" name="tel-input">
+                            <div class="login-sms-item-split"></div>
+                            <div class="login-sms-getcode-btn">获取验证码</div>
+                        </div>
+                        <div class="login-sms-area-code-list"></div>
+                        <div class="login-sms-split"></div>
+                        <div class="login-sms-item">
+                            <div class="login-sms-item-text">验证码</div>
+                            <input autocomplete="new-password" maxlength="6" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入验证码" type="text" name="sms-input">
+                        </div>
+                    </div>
+                    <div class="login-sms-login-btn">登录</div>
+                </div>
+                <div class="login-desc">
+                    成功率：扫码 > 短信 > 密码
+                    <br>Cookie将会保存在本地
+                </div>
             </div>
         </div>
         <div class="loading"></div>
@@ -180,6 +231,8 @@
         <script type="text/javascript" src="./js/sweetalert2.all.min.js"></script>
         <script type="text/javascript" src="./js/qrcode.min.js"></script>
         <script type="text/javascript" src="./js/md5.min.js"></script>
+        <script type="text/javascript" src="./js/jsencript.min.js"></script>
+        <script type="text/javascript" src="./js/gt.0.4.9.js"></script>
         <script type="text/javascript" src="./js/render.js"></script>
     </body>
 </html>

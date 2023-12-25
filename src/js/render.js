@@ -1063,7 +1063,10 @@ function applyAudioList(details, type, action, ms) { // 填充音频
             const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} icon-small`);
             currentBtn.append(currentIcon, description);
             adsOpt.append(currentBtn);
-            if (quality == 0) continue;
+            if (quality == 0) {
+                currentBtn.css('cursor', 'not-allowed');
+                continue;
+            }
             if (!$('.video-block-audio-ads-item').hasClass('checked')) {
                 currentBtn.addClass('checked');
                 currentSel[4] = quality;
@@ -1154,36 +1157,230 @@ async function userProfile() {
     }
 }
 
+async function scanLogin() {
+    $('.login-qrcode-tips').removeClass('active');
+    const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
+    const qrData = await response.json();
+    if (qrData.code !== 0) throw new Error('Failed to get QR Code');
+    const { qrcode_key, url } = qrData.data;
+    $('#login-qrcode').empty();
+    new QRCode("login-qrcode", {
+        text: url,
+        width: 180,
+        height: 180,
+        colorDark: "#c4c4c4",
+        colorLight: "#3b3b3b9b",
+        correctLevel: QRCode.CorrectLevel.H,
+    });
+    $('#login-qrcode').removeAttr("title");
+    invoke('scan_login', {qrcodeKey: qrcode_key});
+}
+
+async function pwdLogin() {
+    const toggleEye = $('.login-pwd-item-eye');
+    const loginBtn = $('.login-pwd-login-btn');
+    const pwdInput = $('input[name="password-input"]');
+    toggleEye.on('click', function() {
+        toggleEye.css("margin", toggleEye.hasClass('fa-eye') ? "0": "0 1px");
+        if (toggleEye.hasClass('fa-eye')) {
+            toggleEye.removeClass('fa-eye').addClass('fa-eye-slash');
+            pwdInput.attr("type", "text");
+        } else {
+            toggleEye.removeClass('fa-eye-slash').addClass('fa-eye');
+            pwdInput.attr("type", "password");
+        }
+    });
+    loginBtn.on('click', async function() {
+        try {
+            const account = $('input[name="account-input"]').val().toString();
+            const password = $('input[name="password-input"]').val().toString();
+            if (!account || !password) {
+                iziToast.info({
+                    icon: 'fa-solid fa-circle-info',
+                    layout: '2',
+                    title: '登录',
+                    message: `请输入账号与密码`,
+                });
+                return;
+            }
+            const rsaKeys = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/key');
+            const { data: { hash, key } } = await rsaKeys.json();
+            const enc = new JSEncrypt();
+            enc.setPublicKey(key);
+            const encedPwd = enc.encrypt(hash + password);
+            const {token, challenge, validate, seccode} = await captcha();
+            await invoke('pwd_login', { account, password: encedPwd, token, challenge, validate, seccode });
+        } catch(err) {
+            console.error(err);
+            iziToast.error({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '登录',
+                message: `登录时出现错误: ${err}<br>推荐使用扫码/短信登录`,
+            });
+        }
+    });
+}
+
+async function smsLogin() {
+    const loginBtn = $('.login-sms-login-btn');
+    const areaCodeResp = await fetch('http://127.0.0.1:50808/passport/web/generic/country/list');
+    const areaCodes = await areaCodeResp.json();
+    const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
+    allCodes.sort((a, b) => a.id - b.id);
+    const codeList = $('.login-sms-area-code-list');
+    $.each(allCodes, (index, code) => {
+        const codeElement = $('<div>').addClass('login-sms-area-code-list-item')
+            .html(`<span style="float:left">${code.cname}</span>
+            <span style="float:right">+${code.country_id}</span>`);
+        codeList.append(codeElement);
+        if (index === 0) codeElement.addClass('checked');
+        codeElement.on('click', () => {
+            codeList.prev().find('.login-sms-item-text').html(codeElement.find('span').last().text()
+            + '&nbsp;<i class="fa-solid fa-chevron-down"></i>');
+            codeList.find('.login-sms-area-code-list-item').removeClass('checked');
+            codeElement.addClass('checked');
+            codeList.removeClass('active');
+        });
+    });
+    codeList.prev().on('click', '.login-sms-item-text i', (e) => {
+        codeList.addClass('active');
+        e.stopPropagation();
+    });
+    loginElm.on('click', () => codeList.removeClass('active'));
+    let key;
+    let canSend = true;
+    $('.login-sms-getcode-btn').on('click', async function() {
+        if (!canSend) return;
+        try {
+            const tel = $('input[name="tel-input"]').val().toString();
+            if ((tel.match(/^1[3456789]\d{9}$/) && $('.login-sms-item-text').text().includes('+86'))
+            || (!$('.login-sms-item-text').text().includes('+86') && tel)) {
+                const {token, challenge, validate, seccode} = await captcha();
+                const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/sms/send?' +
+                    `cid=${encodeURIComponent($('.login-sms-item-text').text().replace(/[^0-9]/g, ''))}` +
+                    `&tel=${encodeURIComponent(tel)}` +
+                    `&source=main_web` +
+                    `&token=${encodeURIComponent(token)}` +
+                    `&challenge=${encodeURIComponent(challenge)}` +
+                    `&validate=${encodeURIComponent(validate)}` +
+                    `&seccode=${encodeURIComponent(seccode)}` +
+                    `&buvid=3`, {
+                    method: 'POST'
+                });
+                const smsResp = await response.json();
+                if (smsResp.code !== 0) {
+                    throw new Error(smsResp.message);
+                } else {
+                    canSend = false;
+                    key = smsResp.data.captcha_key;
+                    let timeout = 60;
+                    $('.login-sms-getcode-btn').text("重新发送(60)")
+                    .addClass("disabled");
+                    const timer = setInterval(() => {
+                        timeout--;
+                        $('.login-sms-getcode-btn').text(`重新发送(${timeout})`);
+                        if (timeout == 0) {
+                            clearInterval(timer);
+                            $('.login-sms-getcode-btn').text(`重新发送`)
+                            .removeClass("disabled");
+                            canSend = true;
+                        }
+                    }, 1000);
+                }
+            }
+        } catch(err) {
+            console.error(err);
+            iziToast.error({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '登录',
+                message: `登录时出现错误: ${err}`,
+            });
+        }
+    })
+    loginBtn.on('click', async function() {
+        try {
+            const tel = $('input[name="tel-input"]').val().toString();
+            const code = $('input[name="sms-input"]').val().toString();
+            if (!tel || !code) {
+                iziToast.info({
+                    icon: 'fa-solid fa-circle-info',
+                    layout: '2',
+                    title: '登录',
+                    message: `请输入手机号与验证码`,
+                });
+                return;
+            }
+            if (!key) {
+                iziToast.info({
+                    icon: 'fa-solid fa-circle-info',
+                    layout: '2',
+                    title: '登录',
+                    message: `请先获取验证码`,
+                });
+                return;
+            }
+            await invoke('sms_login', { tel, code, key, cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, '') });
+        } catch(err) {
+            console.error(err);
+            iziToast.error({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '登录',
+                message: `登录时出现错误: ${err}<br>推荐使用扫码登录`,
+            });
+        }
+    });
+}
+
 async function login() {
     if ($('.user-name').text() != "登录") return;
-    try {
-        currentElm.push(".login");
-        $('.login-status').html('当前状态: 正在与服务器通信...<br>若长时间未成功可尝试重启应用');
-        loginElm.addClass('active').removeClass('back');
-        const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
-        const qrData = await response.json();
-        if (qrData.code !== 0) {
-            throw new Error('Failed to get QR Code');
-        }
-        const { qrcode_key, url } = qrData.data;
-        $('#login-qrcode').empty();
-        new QRCode("login-qrcode", {
-            text: url,
-            width: 200,
-            height: 200,
-            colorDark: "#c4c4c4",
-            colorLight: "#1F1F1F",
-            correctLevel: QRCode.CorrectLevel.H
+    currentElm.push(".login");
+    loginElm.addClass('active').removeClass('back');
+    scanLogin();
+    $('.login-tab-pwd').on('click', async () => {
+        $('.login-tab-sms').removeClass('checked');
+        $('.login-tab-pwd').addClass('checked');
+        $('.login-sms').removeClass('active');
+        $('.login-pwd').addClass('active');
+    });
+    $('.login-tab-sms').on('click', async () => {
+        $('.login-tab-sms').addClass('checked');
+        $('.login-tab-pwd').removeClass('checked');
+        $('.login-sms').addClass('active');
+        $('.login-pwd').removeClass('active');
+    });
+    $('.login-tab-sms').click();
+    pwdLogin();
+    smsLogin();
+}
+
+async function captcha() {
+    return new Promise(async (resolve, reject) => {
+        const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/captcha?source=main_mini');
+        const { data: { token, geetest: { challenge, gt } } } = await response.json();
+        // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
+        await initGeetest({
+            gt: gt,
+            challenge: challenge,
+            offline: false,
+            new_captcha: true,
+            product: "bind",
+            width: "300px",
+            https: true
+        }, function (captchaObj) {
+            captchaObj.onReady(function () {
+                captchaObj.verify();
+            }).onSuccess(function () {
+                const result = captchaObj.getValidate();
+                const validate = result.geetest_validate;
+                const seccode = result.geetest_seccode;
+                return resolve({token, challenge, validate, seccode});
+            })
         });
-        invoke('login', {qrcodeKey: qrcode_key});
-    } catch (error) {
-        iziToast.error({
-            icon: 'fa-solid fa-circle-info',
-            layout: '2',
-            title: '下载',
-            message: `登录时出现错误: ${error}`,
-        });
-    }
+    })
+        
 }
 
 function settings() {
@@ -1202,7 +1399,7 @@ function settings() {
         iziToast.info({
             icon: 'fa-solid fa-circle-info',
             layout: '2',
-            title: '设置 ',
+            title: '设置',
             message: `已保存设置 - ${set}`,
         });
     }
@@ -1311,16 +1508,13 @@ async function getUserProfile(mid, action) {
                 $('.user-vip-icon').css('display', 'block');
             }
         } else if (action == "login") {
-            $('.login-status').html(`当前状态: 成功同步数据<br><i>将在3秒后跳转至首页</i>`);
-            let i = 2;
-            const countdown = setInterval(() => {
-                $('.login-status').html(`当前状态: 成功同步数据<br><i>将在${i}秒后跳转至首页</i>`);
-                i--;
-                if (i < 0) {
-                    clearInterval(countdown);
-                    loginElm.removeClass('active').addClass('back');
-                }
-            }, 1000);
+            iziToast.info({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '登录',
+                message: `登录成功~`,
+            });
+            loginElm.removeClass('active').addClass('back');
             $('.user-avatar').attr('src', details.data.face);
             $('.user-name').text(details.data.name);
             $('.user-avatar-placeholder').attr('data-after', '主页');
@@ -1364,7 +1558,12 @@ listen("exit-success", async (event) => {
 })
 
 listen("login-status", async (event) => {
-    $('.login-status').html(`当前状态: ${event.payload}`);
+    if (event.payload.includes("二维码已扫码未确认")) {
+        $('.login-qrcode-tips').addClass('active')
+        .html(`<i class="fa-solid fa-check"></i>
+        <span>扫码成功</span>
+        <span>请在手机上确认</span>`);
+    }
 })
 
 listen("download-progress", async (event) => {

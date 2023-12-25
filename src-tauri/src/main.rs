@@ -542,7 +542,7 @@ async fn stop_login() {
 }
 
 #[tauri::command]
-async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, String> {
+async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String, String> {
     let client = init_client();
     let mut cloned_key = qrcode_key.clone();
     let mask_range = 8..cloned_key.len()-8;
@@ -622,6 +622,139 @@ async fn login(window: tauri::Window, qrcode_key: String) -> Result<String, Stri
     }
 }
 
+#[tauri::command]
+async fn pwd_login(window: tauri::Window,
+    account: String, password: String,
+    token: String, challenge: String,
+    validate: String, seccode: String
+) -> Result<String, String> {
+    let client = init_client();
+    let response = client
+        .post("https://passport.bilibili.com/x/passport-login/web/login")
+        .query(&[
+            ("username", account),
+            ("password", password),
+            ("keep", "0".to_string()),
+            ("token", token),
+            ("challenge", challenge),
+            ("validate", validate),
+            ("seccode", seccode),
+            ("go_url", "https://www.bilibili.com".to_string()),
+            ("source", "main_web".to_string()),
+            ("buvid", "3".to_string())
+        ])
+        .send().await.map_err(|e| e.to_string())?;
+    if response.status() != reqwest::StatusCode::OK {
+        if response.status().to_string() != "412 Precondition Failed" {
+            log::warn!("检查登录状态失败");
+            window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
+            return Err("检查登录状态失败".to_string());
+        }
+    }
+    let cookie_header = response.headers().clone().get(header::SET_COOKIE)
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    let response_data: Value = response.json().await.map_err(|e| {
+        log::warn!("解析响应JSON失败: {}", e);
+        "解析响应JSON失败".to_string()}
+    )?;
+    match response_data["code"].as_i64() {
+        Some(0) => {
+            match response_data["data"]["status"].as_i64() {
+                Some(0) => {
+                    if let Some(cookie) = cookie_header {
+                        let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
+                        .ok_or_else(|| {
+                        log::warn!("找不到SESSDATA");
+                        "找不到SESSDATA".to_string()
+                        })?;
+                        update_cookies(sessdata).await.map_err(|e| e.to_string())?;
+                        let mid = init_mid().await.map_err(|e| e.to_string())?;
+                        window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
+                        log::info!("密码登录成功");
+                        return Ok("密码登录成功".to_string());
+                    } else {
+                        log::warn!("Cookie响应头为空");
+                        return Err("Cookie响应头为空".to_string());
+                    }
+                },
+                Some(2) => {
+                    log::warn!("{}", response_data["data"]["message"]);
+                    return Err(format!("{}", response_data["data"]["message"]).to_string())
+                },
+                _ => {
+                    log::warn!("未知的响应代码");
+                    return Err("未知的响应代码".to_string())
+                },
+            }
+        }
+        _ => {
+            log::warn!("{}, {}", response_data["code"], response_data["message"]);
+            return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
+        }
+    }
+}
+
+#[tauri::command]
+async fn sms_login(window: tauri::Window,
+    cid: String, tel: String,
+    code: String, key: String,
+) -> Result<String, String> {
+    let client = init_client();
+    let response = client
+        .post("https://passport.bilibili.com/x/passport-login/web/login/sms")
+        .query(&[
+            ("cid", cid),
+            ("tel", tel),
+            ("code", code),
+            ("source", "main_web".to_string()),
+            ("captcha_key", key),
+            ("go_url", "https://www.bilibili.com".to_string()),
+            ("keep", "true".to_string())
+        ])
+        .send().await.map_err(|e| e.to_string())?;
+    if response.status() != reqwest::StatusCode::OK {
+        if response.status().to_string() != "412 Precondition Failed" {
+            log::warn!("检查登录状态失败");
+            window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
+            return Err("检查登录状态失败".to_string());
+        }
+    }
+    let cookie_header = response.headers().clone().get(header::SET_COOKIE)
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    let response_data: Value = response.json().await.map_err(|e| {
+        log::warn!("解析响应JSON失败: {}", e);
+        "解析响应JSON失败".to_string()}
+    )?;
+    println!("{:?}", response_data);
+    match response_data["code"].as_i64() {
+        Some(0) => {
+            if let Some(cookie) = cookie_header {
+                let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
+                .ok_or_else(|| {
+                log::warn!("找不到SESSDATA");
+                "找不到SESSDATA".to_string()
+                })?;
+                update_cookies(sessdata).await.map_err(|e| e.to_string())?;
+                let mid = init_mid().await.map_err(|e| e.to_string())?;
+                window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
+                log::info!("短信登录成功");
+                return Ok("短信登录成功".to_string());
+            } else {
+                log::warn!("Cookie响应头为空");
+                return Err("Cookie响应头为空".to_string());
+            }
+        }
+        _ => {
+            log::warn!("{}, {}", response_data["code"], response_data["message"]);
+            return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     logger::init_logger().unwrap();
@@ -663,7 +796,10 @@ async fn main() {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![init, login, stop_login, open_select, rw_config, push_back_queue, process_queue, exit])
+        .invoke_handler(tauri::generate_handler![init,
+            scan_login, pwd_login, sms_login, stop_login,
+            open_select, rw_config,
+            push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
