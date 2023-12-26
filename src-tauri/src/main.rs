@@ -4,17 +4,18 @@
 use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
-use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url, cookie::{CookieStore, Jar}};
+use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
 use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
 use std::{env, fs, path::PathBuf, sync::Arc, convert::Infallible, time::Instant, process::Command,
 process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
-
+use rusqlite::{Connection, params};
+use regex::Regex;
 mod logger;
 
 lazy_static! {
-    static ref GLOBAL_COOKIE_JAR: Arc<std::sync::RwLock<Jar>> = Arc::new(std::sync::RwLock::new(Jar::default()));
+    static ref GLOBAL_WINDOW: Arc<Mutex<Option<tauri::Window>>> = Arc::new(Mutex::new(None));
     static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref WORKING_DIR: PathBuf = {
@@ -26,7 +27,7 @@ lazy_static! {
         .join("Desktop")))
     };
     static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("Temp")));
-    static ref SESSDATA_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("Cookies")));
+    static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(2));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
@@ -34,11 +35,61 @@ lazy_static! {
     static ref DOWNLOAD_COMPLETED_NOTIFY: Notify = Notify::new();
 }
 
+async fn init_database() -> Connection {
+    if !&COOKIE_PATH.exists() {
+        let _ = fs::write(&*COOKIE_PATH, "").map_err(|e| e.to_string());
+    }
+    let metadata = fs::metadata(&*COOKIE_PATH).unwrap();
+    let conn = Connection::open(&*COOKIE_PATH).unwrap();
+    if metadata.len() == 0 {
+        let _ = conn.execute(
+            "CREATE TABLE IF NOT EXISTS cookies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                value TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                path TEXT,
+                expires TEXT,
+                httponly INTEGER,
+                secure INTEGER
+            )",
+            params![],
+        ).map_err(|e| e.to_string());
+    }
+    conn
+}
+
+fn load_cookies() -> rusqlite::Result<HashMap<String, CookieInfo>> {
+    let conn = Connection::open(&*COOKIE_PATH)?;
+    let mut stmt = conn.prepare("SELECT name, value, path, domain, expires, httponly, secure FROM cookies")?;
+    let cookie_map: Result<HashMap<String, CookieInfo>, rusqlite::Error> = stmt.query_map([], |row| {
+        let cookie_info = CookieInfo {
+            name: row.get(0)?,
+            value: row.get(1)?,
+            path: row.get(2)?,
+            domain: row.get(3)?,
+            expires: row.get(4)?,
+            httponly: row.get(5)?,
+            secure: row.get(6)?,
+        };
+        Ok((cookie_info.name.clone(), cookie_info))
+    })?.collect();
+    cookie_map
+}
+
 fn init_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
     headers.insert("Accept", HeaderValue::from_static("*/*"));
-    headers.insert("Accept-Language", HeaderValue::from_static("en-US,en;q=0.5"));
+    headers.insert("Accept-Language", HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"));
+    let cookies_header = format!("{};", load_cookies()
+        .unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+        HashMap::new() })
+        .values()
+        .map(|cookie_info| format!("{}={}", cookie_info.name, cookie_info.value))
+        .collect::<Vec<_>>()
+        .join("; "));
+    headers.insert("Cookie", HeaderValue::from_str(&cookies_header).unwrap());
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
     headers.insert("Referer", HeaderValue::from_static("https://www.bilibili.com"));
     headers
@@ -47,7 +98,6 @@ fn init_headers() -> HeaderMap {
 fn init_client() -> Client {
     Client::builder()
         .default_headers(init_headers())
-        .cookie_provider(Arc::new(ThreadSafeCookieStore(Arc::clone(&GLOBAL_COOKIE_JAR))))
         .build()
         .unwrap()
 }
@@ -63,7 +113,16 @@ fn extract_filename(url: &str) -> String {
         .unwrap_or_else(|| "default_filename".to_string())
 }
 
-struct ThreadSafeCookieStore(Arc<std::sync::RwLock<Jar>>);
+#[derive(Debug, Clone)]
+struct CookieInfo {
+    name: String,
+    value: String,
+    path: String,
+    domain: String,
+    expires: String,
+    httponly: Option<bool>,
+    secure: Option<bool>,
+}
 
 #[derive(Debug, Clone)]
 struct VideoInfo {
@@ -116,17 +175,6 @@ impl DownloadProgress {
             "{} | {} | {} | {} | {} | {} | {} | {} | {}",
             self.cid, self.progress, self.remaining, self.downloaded, self.speed, self.elapsed_time, self.display_name, self.file_type, self.action
         )
-    }
-}
-
-impl CookieStore for ThreadSafeCookieStore {
-    fn set_cookies(&self, cookie_headers: &mut dyn Iterator<Item = &HeaderValue>, url: &Url) {
-        let jar = self.0.write().unwrap();
-        jar.set_cookies(cookie_headers, url);
-    }
-    fn cookies(&self, url: &Url) -> Option<HeaderValue> {
-        let jar = self.0.read().unwrap();
-        jar.cookies(url)
     }
 }
 
@@ -397,62 +445,75 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     }
 }
 
-async fn update_cookies(sessdata: &str) -> Result<String, String> {
-    if let Some(dir_path) = SESSDATA_PATH.read().await.parent() {
-        fs::create_dir_all(dir_path).unwrap();
+fn parse_cookie_header(cookie_header: &str) -> Result<CookieInfo, &'static str> {
+    let re = Regex::new(r"(?i)(?P<name>\w+)=(?P<value>[^;]+)").unwrap();
+    let captures = re.captures(cookie_header).ok_or("Invalid cookie header")?;
+    let name = captures.name("name").unwrap().as_str();
+    let value = captures.name("value").unwrap().as_str();
+    let mut path = "";
+    let mut domain = "";
+    let mut expires = "Session";
+    let mut httponly = None;
+    let mut secure = None;
+    for part in cookie_header.split(';').skip(1) {
+        let mut iter = part.splitn(2, '=').map(str::trim);
+        if let Some(key) = iter.next() {
+            if let Some(value) = iter.next() {
+                match key.to_lowercase().as_str() {
+                    "path" => path = value,
+                    "domain" => domain = value,
+                    "expires" => expires = value,
+                    "httponly" => httponly = Some(true),
+                    "secure" => secure = Some(true),
+                    _ => {}
+                }
+            }
+        }
     }
-    if let Err(e) = fs::write(&*SESSDATA_PATH.read().await, sessdata) {
-        return Err(format!("无法写入Cookie：{}", e));
-    }
-    log::info!("SESSDATA写入成功");
-    let url = Url::parse("https://www.bilibili.com").unwrap();
-    let cookie_str = format!("{}; Domain=.bilibili.com; Path=/", sessdata);
-    let jar = GLOBAL_COOKIE_JAR.write().unwrap();
-    jar.add_cookie_str(&cookie_str, &url);
-    return Ok("Updated Cookies".to_string());
+    Ok(CookieInfo {
+        name: name.to_string(),
+        value: value.to_string(),
+        path: path.to_string(),
+        domain: domain.to_string(),
+        expires: expires.to_string(),
+        httponly,
+        secure,
+    })
+}
+
+fn insert_cookie(cookie_str: &str) -> rusqlite::Result<()> {
+    let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
+    let conn = Connection::open(&*COOKIE_PATH)?;
+    conn.execute(
+        "INSERT INTO cookies (name, value, path, domain, expires, httponly, secure) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            parsed_cookie.name,
+            parsed_cookie.value,
+            parsed_cookie.path,
+            parsed_cookie.domain,
+            parsed_cookie.expires,
+            parsed_cookie.httponly,
+            parsed_cookie.secure,
+        ],
+    )?;
+    Ok(())
 }
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 async fn init(window: tauri::Window) -> Result<i64, String> {
     rw_config(window.clone(), "read".to_string(), None).await.unwrap();
-    let sessdata_path = &*SESSDATA_PATH.read().await.clone();
-    if let Some(parent) = sessdata_path.parent() { fs::create_dir_all(parent).unwrap(); }
-    if !sessdata_path.exists() {
-        fs::write(sessdata_path, "").map_err(|e| e.to_string())?;
-    }
-    let sessdata = fs::read_to_string(sessdata_path).map_err(|e| e.to_string())?;
-    if sessdata.trim().is_empty() {
-        window.emit("user-mid", vec![0.to_string(), "init".to_string()]).unwrap();
+    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    HashMap::new() });
+    if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
+        let mid = mid_cookie.value.trim_start_matches("DedeUserID").trim();
+        window.emit("user-mid", mid.to_string()).unwrap();
+        return Ok(mid.parse().unwrap());
+    } else {
+        window.emit("user-mid", 0.to_string()).unwrap();
         return Ok(0);
     }
-    update_cookies(&sessdata).await.map_err(|e| e.to_string())?;
-    let mid = match init_mid().await {
-        Ok(mid) => mid,
-        Err(_) => 0
-    };
-    window.emit("user-mid", vec![mid.to_string(), "init".to_string()]).unwrap();
-    return Ok(mid);
 }
-
-async fn init_mid() -> Result<i64, String> {
-    let client = init_client();
-    let mid_response = client
-        .get("https://api.bilibili.com/x/member/web/account")
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;    
-    if mid_response.status().is_success() {
-        let json: serde_json::Value = mid_response.json().await.map_err(|e| e.to_string())?;
-        if let Some(mid) = json["data"]["mid"].as_i64() {
-            return Ok(mid);
-        } else {
-            return Err("找不到Mid".to_string());
-        }    
-    } else {
-        return Err("请求失败".to_string());
-    }    
-}   
 
 #[tauri::command]
 async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>) -> Result<i64, String> {
@@ -524,13 +585,8 @@ async fn open_select(_window: tauri::Window, display_name: String, cid: String) 
 
 #[tauri::command]
 async fn exit(window: tauri::Window) -> Result<i64, String> {
-    {
-        let mut cookie_jar = GLOBAL_COOKIE_JAR.write().unwrap();
-        *cookie_jar = Jar::default();
-    }
-    if let Err(e) = fs::remove_file(&*SESSDATA_PATH.read().await) {
-        return Err(format!("Failed to delete store directory: {}", e));
-    }
+    let conn = Connection::open(&*COOKIE_PATH).map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM cookies", []).map_err(|e| e.to_string())?;
     window.emit("exit-success", 0).unwrap();
     return Ok(0)
 }
@@ -569,14 +625,17 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
                 return Err("检查登录状态失败".to_string());
             }
         }
-        let cookie_header = response.headers().clone().get(header::SET_COOKIE)
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string());
+        let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+            .iter()
+            .flat_map(|h| h.to_str().ok())
+            .map(|s| s.to_string())
+            .collect();
 
         let response_data: Value = response.json().await.map_err(|e| {
             log::warn!("解析响应JSON失败: {}", e);
             "解析响应JSON失败".to_string()}
         )?;
+        println!("{:?}", response_data);
         match response_data["code"].as_i64() {
             Some(-412) => {
                 log::warn!("{}", response_data["message"]);
@@ -586,15 +645,22 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
             Some(0) => {
                 match response_data["data"]["code"].as_i64() {
                     Some(0) => {
-                        if let Some(cookie) = cookie_header {
-                            let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
-                            .ok_or_else(|| {
-                            log::warn!("找不到SESSDATA");
-                            "找不到SESSDATA".to_string()
-                            })?;
-                            update_cookies(sessdata).await.map_err(|e| e.to_string())?;
-                            let mid = init_mid().await.map_err(|e| e.to_string())?;
-                            window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
+                        if !cookie_headers.is_empty() {
+                            for cookie in cookie_headers.clone() {
+                                let _ = insert_cookie(&cookie);
+                                let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+                                if parsed_cookie.name == "DedeUserID" {
+                                    window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                                } else if parsed_cookie.name == "bili_jct" {
+                                    if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                                        let refresh_cookie = format!(
+                                            "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                                            refresh_token, parsed_cookie.expires
+                                        );
+                                        let _ = insert_cookie(&refresh_cookie);
+                                    }
+                                }
+                            }
                             log::info!("{}: \"二维码已扫描\"", cloned_key);
                             return Ok("二维码已扫描".to_string());
                         } else {
@@ -651,27 +717,37 @@ async fn pwd_login(window: tauri::Window,
             return Err("检查登录状态失败".to_string());
         }
     }
-    let cookie_header = response.headers().clone().get(header::SET_COOKIE)
-        .and_then(|h| h.to_str().ok())
-        .map(|s| s.to_string());
+    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
 
     let response_data: Value = response.json().await.map_err(|e| {
         log::warn!("解析响应JSON失败: {}", e);
         "解析响应JSON失败".to_string()}
     )?;
+    println!("{:?}", response_data);
     match response_data["code"].as_i64() {
         Some(0) => {
             match response_data["data"]["status"].as_i64() {
                 Some(0) => {
-                    if let Some(cookie) = cookie_header {
-                        let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
-                        .ok_or_else(|| {
-                        log::warn!("找不到SESSDATA");
-                        "找不到SESSDATA".to_string()
-                        })?;
-                        update_cookies(sessdata).await.map_err(|e| e.to_string())?;
-                        let mid = init_mid().await.map_err(|e| e.to_string())?;
-                        window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
+                    if !cookie_headers.is_empty() {
+                        for cookie in cookie_headers.clone() {
+                            let _ = insert_cookie(&cookie);
+                            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+                            if parsed_cookie.name == "DedeUserID" {
+                                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                            } else if parsed_cookie.name == "bili_jct" {
+                                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                                    let refresh_cookie = format!(
+                                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                                        refresh_token, parsed_cookie.expires
+                                    );
+                                    let _ = insert_cookie(&refresh_cookie);
+                                }
+                            }
+                        }
                         log::info!("密码登录成功");
                         return Ok("密码登录成功".to_string());
                     } else {
@@ -721,9 +797,11 @@ async fn sms_login(window: tauri::Window,
             return Err("检查登录状态失败".to_string());
         }
     }
-    let cookie_header = response.headers().clone().get(header::SET_COOKIE)
-        .and_then(|h| h.to_str().ok())
-        .map(|s| s.to_string());
+    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
 
     let response_data: Value = response.json().await.map_err(|e| {
         log::warn!("解析响应JSON失败: {}", e);
@@ -732,15 +810,22 @@ async fn sms_login(window: tauri::Window,
     println!("{:?}", response_data);
     match response_data["code"].as_i64() {
         Some(0) => {
-            if let Some(cookie) = cookie_header {
-                let sessdata = cookie.split(';').find(|part| part.trim_start().starts_with("SESSDATA"))
-                .ok_or_else(|| {
-                log::warn!("找不到SESSDATA");
-                "找不到SESSDATA".to_string()
-                })?;
-                update_cookies(sessdata).await.map_err(|e| e.to_string())?;
-                let mid = init_mid().await.map_err(|e| e.to_string())?;
-                window.emit("user-mid", [mid.to_string(), "login".to_string()]).map_err(|e| e.to_string())?;
+            if !cookie_headers.is_empty() {
+                for cookie in cookie_headers.clone() {
+                    let _ = insert_cookie(&cookie);
+                    let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+                    if parsed_cookie.name == "DedeUserID" {
+                        window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                    } else if parsed_cookie.name == "bili_jct" {
+                        if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                            let refresh_cookie = format!(
+                                "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                                refresh_token, parsed_cookie.expires
+                            );
+                            let _ = insert_cookie(&refresh_cookie);
+                        }
+                    }
+                }
                 log::info!("短信登录成功");
                 return Ok("短信登录成功".to_string());
             } else {
@@ -758,6 +843,7 @@ async fn sms_login(window: tauri::Window,
 #[tokio::main]
 async fn main() {
     logger::init_logger().unwrap();
+    init_database().await;
     let api_route = warp::path("api")
         .and(warp::method())
         .and(warp::path::full())
@@ -792,7 +878,7 @@ async fn main() {
 
 
     let routes = i0_route.or(api_route.or(passport_route.or(www_route)));
-    tokio::task::spawn(async move {
+    tokio::spawn(async move {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()

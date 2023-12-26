@@ -1,5 +1,5 @@
 const { invoke } = window.__TAURI__.tauri;
-const { listen } = window.__TAURI__.event;
+const { emit, listen } = window.__TAURI__.event;
 const { open: openShell } = window.__TAURI__.shell;
 const { open: openDialog } = window.__TAURI__.dialog;
 
@@ -1490,7 +1490,7 @@ function describeCodec(codecString) {
     return '未知编码格式';
 }
 
-async function getUserProfile(mid, action) {
+async function getUserProfile(mid) {
     const signature = await wbiSignature({ mid: mid });
     const getDetailUrl = `http://127.0.0.1:50808/api/x/space/wbi/acc/info?${signature}`;
     const detailData = await fetch(getDetailUrl);
@@ -1501,27 +1501,22 @@ async function getUserProfile(mid, action) {
         if (details.code != "0"){
             console.error(details);
             return;
-        } else if (action == "init") {
-            $('.user-avatar').attr('src', details.data.face);
-            $('.user-name').text(details.data.name);
-            if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
-                $('.user-vip-icon').css('display', 'block');
-            }
-        } else if (action == "login") {
-            iziToast.info({
-                icon: 'fa-solid fa-circle-info',
-                layout: '2',
-                title: '登录',
-                message: `登录成功~`,
-            });
+        }
+        iziToast.info({
+            icon: 'fa-solid fa-circle-info',
+            layout: '2',
+            title: '登录',
+            message: `登录成功~`,
+        });
+        if (currentElm[currentElm.length - 1] == ".login") {
             loginElm.removeClass('active').addClass('back');
-            $('.user-avatar').attr('src', details.data.face);
-            $('.user-name').text(details.data.name);
-            $('.user-avatar-placeholder').attr('data-after', '主页');
-            $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));    
-            if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
-                $('.user-vip-icon').css('display', 'block');
-            }
+        }
+        $('.user-avatar').attr('src', details.data.face);
+        $('.user-name').text(details.data.name);
+        $('.user-avatar-placeholder').attr('data-after', '主页');
+        $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));    
+        if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
+            $('.user-vip-icon').css('display', 'block');
         }
     }
 }
@@ -1532,8 +1527,8 @@ listen("settings", async (event) => {
 })
 
 listen("user-mid", async (event) => {
-    if (event.payload[0] != '0') {
-        getUserProfile(event.payload[0], event.payload[1]);
+    if (event.payload != '0') {
+        getUserProfile(event.payload);
         $('.user-avatar-placeholder').attr('data-after', '主页');
         $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));
     } else {

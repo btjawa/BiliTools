@@ -16,6 +16,8 @@ tauri-build = { version = "1.5", features = [] }
 log4rs = "1.0"
 log = "0.4"
 chrono = "0.4"
+rusqlite = { version = "0.27.0", features = ["bundled"] }
+regex = "1.10.2"
 futures = "0.3"
 tauri = { version = "1.5", features = [ "dialog-all", "shell-all"] }
 serde = { version = "1.0", features = ["derive"] }
