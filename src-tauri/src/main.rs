@@ -120,8 +120,8 @@ struct CookieInfo {
     path: String,
     domain: String,
     expires: String,
-    httponly: Option<bool>,
-    secure: Option<bool>,
+    httponly: bool,
+    secure: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -452,9 +452,9 @@ fn parse_cookie_header(cookie_header: &str) -> Result<CookieInfo, &'static str> 
     let value = captures.name("value").unwrap().as_str();
     let mut path = "";
     let mut domain = "";
-    let mut expires = "Session";
-    let mut httponly = None;
-    let mut secure = None;
+    let mut expires = "";
+    let mut httponly = false;
+    let mut secure = false;
     for part in cookie_header.split(';').skip(1) {
         let mut iter = part.splitn(2, '=').map(str::trim);
         if let Some(key) = iter.next() {
@@ -463,8 +463,8 @@ fn parse_cookie_header(cookie_header: &str) -> Result<CookieInfo, &'static str> 
                     "path" => path = value,
                     "domain" => domain = value,
                     "expires" => expires = value,
-                    "httponly" => httponly = Some(true),
-                    "secure" => secure = Some(true),
+                    "httponly" => httponly = iter.peekable().peek().is_some(),
+                    "secure" => secure = iter.peekable().peek().is_some(),
                     _ => {}
                 }
             }
@@ -485,7 +485,7 @@ fn insert_cookie(cookie_str: &str) -> rusqlite::Result<()> {
     let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
     let conn = Connection::open(&*COOKIE_PATH)?;
     conn.execute(
-        "INSERT INTO cookies (name, value, path, domain, expires, httponly, secure) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT OR REPLACE INTO cookies (name, value, path, domain, expires, httponly, secure) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             parsed_cookie.name,
             parsed_cookie.value,
@@ -598,6 +598,91 @@ async fn stop_login() {
 }
 
 #[tauri::command]
+async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<String, String> {
+    let client = init_client();
+    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    HashMap::new() });
+    let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
+        &bili_jct.value } else { "" };
+    let refresh_token = if let Some(refresh_token) = cookies.get("refresh_token") {
+        &refresh_token.value } else { "" };
+    let response = client
+        .post("http://127.0.0.1:50808/passport/x/passport-login/web/cookie/refresh")
+        .query(&[
+            ("csrf", bili_jct.to_string()),
+            ("refresh_csrf", refresh_csrf.to_string()),
+            ("source", "main-fe-header".to_string()),
+            ("refresh_token", refresh_token.to_string())
+        ])
+        .send().await.map_err(|e| e.to_string())?;
+    if response.status() != reqwest::StatusCode::OK {
+        if response.status().to_string() != "412 Precondition Failed" {
+            log::warn!("刷新Cookie失败");
+            return Err("刷新Cookie失败".to_string());
+        }
+    }
+    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
+
+    let response_data: Value = response.json().await.map_err(|e| {
+        log::warn!("解析响应JSON失败: {}", e);
+        "解析响应JSON失败".to_string()}
+    )?;
+    if response_data["code"].as_i64() == Some(0) {
+        for cookie in cookie_headers.clone() {
+            let _ = insert_cookie(&cookie);
+            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+            if parsed_cookie.name == "DedeUserID" {
+                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+            } else if parsed_cookie.name == "bili_jct" {
+                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                    let refresh_token = format!(
+                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                        refresh_token, parsed_cookie.expires
+                    );
+                    let _ = insert_cookie(&refresh_token);
+                }
+                let conf_refresh_resp = client
+                .post("http://127.0.0.1:50808/passport/x/passport-login/web/confirm/refresh")
+                .query(&[
+                    ("csrf", parsed_cookie.value.to_string()),
+                    ("refresh_token", refresh_token.to_string())
+                ])
+                .send().await.map_err(|e| e.to_string())?;
+                if conf_refresh_resp.status() != reqwest::StatusCode::OK {
+                    if conf_refresh_resp.status().to_string() != "412 Precondition Failed" {
+                        log::warn!("刷新Cookie失败");
+                        return Err("刷新Cookie失败".to_string());
+                    }
+                }
+                let conf_refresh_resp_data: Value = conf_refresh_resp.json().await.map_err(|e| {
+                    log::warn!("解析响应JSON失败: {}", e);
+                    "解析响应JSON失败".to_string()}
+                )?;
+                match conf_refresh_resp_data["code"].as_i64() {
+                    Some(0) => {
+                        log::info!("刷新Cookie成功");
+                        return Ok("刷新Cookie成功".to_string());
+                    }
+                    _ => {
+                        log::warn!("{}", response_data["data"]["message"]);
+                        return Err(format!("{}", response_data["data"]["message"]).to_string())
+                    },
+                }
+            }
+        }
+        log::warn!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
+        return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
+} else {
+        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
+    }
+}
+
+#[tauri::command]
 async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String, String> {
     let client = init_client();
     let mut cloned_key = qrcode_key.clone();
@@ -614,7 +699,7 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
         }
         let response = client
             .get(format!(
-                "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key={}",
+                "http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/poll?qrcode_key={}",
                 qrcode_key
             )).send().await.map_err(|e| e.to_string())?;
 
@@ -635,54 +720,40 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
             log::warn!("解析响应JSON失败: {}", e);
             "解析响应JSON失败".to_string()}
         )?;
-        println!("{:?}", response_data);
-        match response_data["code"].as_i64() {
-            Some(-412) => {
-                log::warn!("{}", response_data["message"]);
-                window.emit("login-status", response_data["message"].to_string()).map_err(|e| e.to_string())?;
-                return Err(response_data["message"].to_string());
-            }
-            Some(0) => {
-                match response_data["data"]["code"].as_i64() {
-                    Some(0) => {
-                        if !cookie_headers.is_empty() {
-                            for cookie in cookie_headers.clone() {
-                                let _ = insert_cookie(&cookie);
-                                let parsed_cookie = parse_cookie_header(&cookie).unwrap();
-                                if parsed_cookie.name == "DedeUserID" {
-                                    window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
-                                } else if parsed_cookie.name == "bili_jct" {
-                                    if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
-                                        let refresh_cookie = format!(
-                                            "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                                            refresh_token, parsed_cookie.expires
-                                        );
-                                        let _ = insert_cookie(&refresh_cookie);
-                                    }
-                                }
+        if response_data["code"].as_i64() == Some(0) {
+            match response_data["data"]["code"].as_i64() {
+                Some(0) => {
+                    for cookie in cookie_headers.clone() {
+                        let _ = insert_cookie(&cookie);
+                        let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+                        if parsed_cookie.name == "DedeUserID" {
+                            window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                        } else if parsed_cookie.name == "bili_jct" {
+                            if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                                let refresh_token = format!(
+                                    "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                                    refresh_token, parsed_cookie.expires
+                                );
+                                let _ = insert_cookie(&refresh_token);
                             }
-                            log::info!("{}: \"二维码已扫描\"", cloned_key);
-                            return Ok("二维码已扫描".to_string());
-                        } else {
-                            log::warn!("Cookie响应头为空");
-                            return Err("Cookie响应头为空".to_string());
                         }
                     }
-                    Some(86038) => return Err("二维码已失效".to_string()),
-                    Some(86101) | Some(86090) => {
-                        window.emit("login-status", response_data["data"]["message"].to_string()).map_err(|e| e.to_string())?;
-                        log::info!("{}: {}", cloned_key, response_data["data"]["message"]);
-                    }
-                    _ => {
-                        log::warn!("未知的响应代码");
-                        return Err("未知的响应代码".to_string())
-                    },
+                    log::info!("{}: \"二维码已扫描\"", cloned_key);
+                    return Ok("二维码已扫描".to_string());
                 }
+                Some(86038) => return Err("二维码已失效".to_string()),
+                Some(86101) | Some(86090) => {
+                    window.emit("login-status", response_data["data"]["message"].to_string()).map_err(|e| e.to_string())?;
+                    log::info!("{}: {}", cloned_key, response_data["data"]["message"]);
+                }
+                _ => {
+                    log::warn!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
+                    return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
+                },
             }
-            _ => {
-                log::warn!("未知的响应代码");
-                return Err("未知的响应代码".to_string())
-            }
+        } else {
+            log::warn!("{}, {}", response_data["code"], response_data["message"]);
+            return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
         }
         sleep(Duration::from_secs(1)).await;
     }
@@ -696,18 +767,16 @@ async fn pwd_login(window: tauri::Window,
 ) -> Result<String, String> {
     let client = init_client();
     let response = client
-        .post("https://passport.bilibili.com/x/passport-login/web/login")
+        .post("http://127.0.0.1:50808/passport/x/passport-login/web/login")
         .query(&[
             ("username", account),
             ("password", password),
-            ("keep", "0".to_string()),
             ("token", token),
             ("challenge", challenge),
             ("validate", validate),
             ("seccode", seccode),
             ("go_url", "https://www.bilibili.com".to_string()),
-            ("source", "main_web".to_string()),
-            ("buvid", "3".to_string())
+            ("source", "main-fe-header".to_string()),
         ])
         .send().await.map_err(|e| e.to_string())?;
     if response.status() != reqwest::StatusCode::OK {
@@ -727,48 +796,27 @@ async fn pwd_login(window: tauri::Window,
         log::warn!("解析响应JSON失败: {}", e);
         "解析响应JSON失败".to_string()}
     )?;
-    println!("{:?}", response_data);
-    match response_data["code"].as_i64() {
-        Some(0) => {
-            match response_data["data"]["status"].as_i64() {
-                Some(0) => {
-                    if !cookie_headers.is_empty() {
-                        for cookie in cookie_headers.clone() {
-                            let _ = insert_cookie(&cookie);
-                            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
-                            if parsed_cookie.name == "DedeUserID" {
-                                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
-                            } else if parsed_cookie.name == "bili_jct" {
-                                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
-                                    let refresh_cookie = format!(
-                                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                                        refresh_token, parsed_cookie.expires
-                                    );
-                                    let _ = insert_cookie(&refresh_cookie);
-                                }
-                            }
-                        }
-                        log::info!("密码登录成功");
-                        return Ok("密码登录成功".to_string());
-                    } else {
-                        log::warn!("Cookie响应头为空");
-                        return Err("Cookie响应头为空".to_string());
-                    }
-                },
-                Some(2) => {
-                    log::warn!("{}", response_data["data"]["message"]);
-                    return Err(format!("{}", response_data["data"]["message"]).to_string())
-                },
-                _ => {
-                    log::warn!("未知的响应代码");
-                    return Err("未知的响应代码".to_string())
-                },
+    if response_data["code"].as_i64() == Some(0) {
+        for cookie in cookie_headers.clone() {
+            let _ = insert_cookie(&cookie);
+            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+            if parsed_cookie.name == "DedeUserID" {
+                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+            } else if parsed_cookie.name == "bili_jct" {
+                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                    let refresh_token = format!(
+                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                        refresh_token, parsed_cookie.expires
+                    );
+                    let _ = insert_cookie(&refresh_token);
+                }
             }
         }
-        _ => {
-            log::warn!("{}, {}", response_data["code"], response_data["message"]);
-            return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
-        }
+        log::info!("密码登录成功");
+        return Ok("密码登录成功".to_string());
+    } else {
+        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
 }
 
@@ -779,12 +827,12 @@ async fn sms_login(window: tauri::Window,
 ) -> Result<String, String> {
     let client = init_client();
     let response = client
-        .post("https://passport.bilibili.com/x/passport-login/web/login/sms")
+        .post("http://127.0.0.1:50808/passport/x/passport-login/web/login/sms")
         .query(&[
             ("cid", cid),
             ("tel", tel),
             ("code", code),
-            ("source", "main_web".to_string()),
+            ("source", "main-fe-header".to_string()),
             ("captcha_key", key),
             ("go_url", "https://www.bilibili.com".to_string()),
             ("keep", "true".to_string())
@@ -807,36 +855,27 @@ async fn sms_login(window: tauri::Window,
         log::warn!("解析响应JSON失败: {}", e);
         "解析响应JSON失败".to_string()}
     )?;
-    println!("{:?}", response_data);
-    match response_data["code"].as_i64() {
-        Some(0) => {
-            if !cookie_headers.is_empty() {
-                for cookie in cookie_headers.clone() {
-                    let _ = insert_cookie(&cookie);
-                    let parsed_cookie = parse_cookie_header(&cookie).unwrap();
-                    if parsed_cookie.name == "DedeUserID" {
-                        window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
-                    } else if parsed_cookie.name == "bili_jct" {
-                        if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
-                            let refresh_cookie = format!(
-                                "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                                refresh_token, parsed_cookie.expires
-                            );
-                            let _ = insert_cookie(&refresh_cookie);
-                        }
-                    }
+    if response_data["code"].as_i64() == Some(0) {
+        for cookie in cookie_headers.clone() {
+            let _ = insert_cookie(&cookie);
+            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+            if parsed_cookie.name == "DedeUserID" {
+                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+            } else if parsed_cookie.name == "bili_jct" {
+                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                    let refresh_token = format!(
+                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                        refresh_token, parsed_cookie.expires
+                    );
+                    let _ = insert_cookie(&refresh_token);
                 }
-                log::info!("短信登录成功");
-                return Ok("短信登录成功".to_string());
-            } else {
-                log::warn!("Cookie响应头为空");
-                return Err("Cookie响应头为空".to_string());
             }
         }
-        _ => {
-            log::warn!("{}, {}", response_data["code"], response_data["message"]);
-            return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
-        }
+        log::info!("短信登录成功");
+        return Ok("短信登录成功".to_string());
+    } else {
+        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
 }
 
@@ -884,7 +923,7 @@ async fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![init,
             scan_login, pwd_login, sms_login, stop_login,
-            open_select, rw_config,
+            open_select, rw_config, refresh_cookie,
             push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -914,17 +953,8 @@ async fn proxy_request(args: (Method, FullPath, String, Bytes, String)) -> Resul
             response_builder = response_builder.header(key, value);
         }
         response_builder = response_builder.header("Access-Control-Allow-Origin", "*");
-        let content_type = response.headers().get(warp::http::header::CONTENT_TYPE);
-        let body = if let Some(content_type) = content_type {
-            if content_type.to_str().unwrap_or_default().starts_with("text/") {
-                response.text().await.unwrap_or_default().into()
-            } else {
-                response.bytes().await.unwrap_or_default()
-            }
-        } else {
-            response.bytes().await.unwrap_or_default()
-        };
-        Ok(response_builder.body(body).unwrap())
+        let body_bytes = response.bytes().await.unwrap_or_default();
+        Ok(response_builder.body(body_bytes).unwrap())
     } else {
         Ok(response_builder
             .status(warp::http::StatusCode::BAD_GATEWAY)

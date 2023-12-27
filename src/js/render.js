@@ -196,10 +196,12 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 && !isVideo || file.codecs == quality.codec_id) {
                     if (isVideo) {
                         found[0] = true;
-                        downUrl[0] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
+                        downUrl[0] = [file.baseUrl];
+                        if (file.backupUrl) downUrl[0].push(...file.backupUrl)
                     } else {
                         found[1] = true;
                         downUrl[1] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
+                        if (file.backupUrl) downUrl[1].push(...file.backupUrl)
                     }
                     break;
                 }
@@ -208,11 +210,13 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 for (let audio of data.dash.audio) {
                     if (audio.id == quality.ads_id) {
                         found[1] = true;
-                        downUrl[1] = [audio.baseUrl, ...audio.backupUrl.slice(0, 2)];
+                        downUrl[1] = [audio.baseUrl];
+                        if (audio.backupUrl) downUrl[1].push(...audio.backupUrl)
                         break;
                     }
                 }
             }
+            console.log(downUrl);
             if ((isVideo && found[0]) || (!isVideo && found[1]) || (action=="multi" && found[1])) {
                 isVideo ? downVideos++ : downAudios++;
                 if (action=="multi") downAudios++;
@@ -234,12 +238,6 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                     displayName, action, ssDir,
                     cid: videoData[index].cid.toString(),
                 });
-                // iziToast.info({
-                //     icon: 'fa-solid fa-circle-info',
-                //     layout: '2',
-                //     title: '下载',
-                //     message: `已添加《${displayName}》至下载页~`,
-                // });
                 appendDownPageBlock(ext, qualityStr, videoData[index]);
                 resolve();
             } else {
@@ -391,44 +389,48 @@ async function cutText() {
 }
 
 async function bilibili() {
-    if (searchInput.val()){
-        if ($('.info').hasClass('active')) {
-            const input = searchInput.val();
-            let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-            if (match) {
-                let url = 'https://www.bilibili.com/video/' + match[0];
-                openShell(url);
-                $('.context-menu').css({ opacity: 0, display: "none" });
-                return;
+    if (currentElm[currentElm.length - 1] == ".user-profile") {
+        openShell(`https://space.bilibili.com/${userData[0]}`);
+        $('.context-menu').css({ opacity: 0, display: "none" });
+        return;
+    } else {
+        if (searchInput.val()){
+            if ($('.info').hasClass('active')) {
+                const input = searchInput.val();
+                let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
+                if (match) {
+                    openShell('https://www.bilibili.com/video/' + match[0]);
+                    $('.context-menu').css({ opacity: 0, display: "none" });
+                    return;
+                }
+                match = input.match(/ep(\d+)|ss(\d+)/i);
+                if (match) {
+                    openShell('https://www.bilibili.com/bangumi/play/' + match[0]);
+                    $('.context-menu').css({ opacity: 0, display: "none" });
+                    return;
+                }
+                iziToast.error({
+                    icon: 'fa-regular fa-circle-exclamation',
+                    layout: '2',
+                    title: `警告`,
+                    message: `输入不合法！请检查格式`
+                });
+            } else {
+                iziToast.error({
+                    icon: 'fa-regular fa-circle-exclamation',
+                    layout: '2',
+                    title: `警告`,
+                    message: `请先点击搜索按钮或返回到搜索结果页面`
+                });
             }
-            match = input.match(/ep(\d+)|ss(\d+)/i);
-            if (match) {
-                let url = 'https://www.bilibili.com/bangumi/play/' + match[0];
-                openShell(url);
-                $('.context-menu').css({ opacity: 0, display: "none" });
-                return;
-            }
-            iziToast.error({
-                icon: 'fa-regular fa-circle-exclamation',
-                layout: '2',
-                title: `警告`,
-                message: `输入不合法！请检查格式`
-            });
         } else {
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',
                 layout: '2',
                 title: `警告`,
-                message: `请先点击搜索按钮或返回到搜索结果页面`
+                message: "请输入链接/AV/BV/SS/EP号"
             });
         }
-    } else {
-        iziToast.error({
-            icon: 'fa-regular fa-circle-exclamation',
-            layout: '2',
-            title: `警告`,
-            message: "请输入链接/AV/BV/SS/EP号"
-        });
     }
 }
 
@@ -464,6 +466,7 @@ async function backward() {
 
 $(document).ready(function () {
     invoke('init');
+    checkRefresh();
     $('.user-avatar-placeholder').append(bigVipIcon);
     async function handleSearch() {
         await search(searchInput.val());
@@ -560,7 +563,7 @@ async function wbiSignature(params) {
         return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
     };
     const res = await fetch('http://127.0.0.1:50808/api/x/web-interface/nav');
-    const { data: { wbi_img: { img_url, sub_url } } } = await res.json();
+    const { img_url, sub_url } = (await res.json()).data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
     const mixinKey = getMixinKey(imgKey + subKey);
@@ -573,6 +576,34 @@ async function wbiSignature(params) {
     }).join('&');
     const wbiSign = md5(query + mixinKey);
     return query + '&w_rid=' + wbiSign;
+}
+
+async function getCorrespondPath(timestamp) {
+    const publicKey = await crypto.subtle.importKey(
+        "jwk", {
+          kty: "RSA",
+          n: "y4HdjgJHBlbaBN04VERG4qNBIFHP6a3GozCl75AihQloSWCXC5HDNgyinEnhaQ_4-gaMud_GF50elYXLlCToR9se9Z8z433U3KjM-3Yx7ptKkmQNAMggQwAVKgq3zYAoidNEWuxpkY_mAitTSRLnsJW-NCTa0bqBFF6Wm1MxgfE",
+          e: "AQAB",
+        }, { name: "RSA-OAEP", hash: "SHA-256" },
+        true,
+        ["encrypt"],
+    )
+    const data = new TextEncoder().encode(`refresh_${timestamp}`);
+    const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
+    return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
+}
+
+async function checkRefresh() {
+    const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/cookie/info');
+    const { refresh, timestamp } = (await response.json()).data;
+    if (refresh) {
+        const correspondPath = await getCorrespondPath(timestamp);
+        const csrfHtmlResp = await fetch(`http://127.0.0.1:50808/www/correspond/1/${correspondPath}`);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(await csrfHtmlResp.text(), 'text/html');
+        const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
+        invoke("refresh_cookie", { refreshCsrf });
+    } else return refresh;
 }
 
 function initVideoInfo(type, details) {
@@ -1136,8 +1167,7 @@ async function userProfile() {
     if ($('.user-name').text() == "登录") return;
     currentElm.push(".user-profile");
     userProfileElm.addClass('active').removeClass('back');
-    const getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/card?mid=${userData[0]}&photo=true`;
-    const detailData = await fetch(getDetailUrl);
+    const detailData = await fetch(`http://127.0.0.1:50808/api/x/web-interface/card?mid=${userData[0]}&photo=true`);
     if (detailData.ok) {
         const details = await detailData.json();
         $('.user-profile-background').css("background-image", `url(${details.data.space.l_img.replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0")})`);
@@ -1160,9 +1190,7 @@ async function userProfile() {
 async function scanLogin() {
     $('.login-qrcode-tips').removeClass('active');
     const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
-    const qrData = await response.json();
-    if (qrData.code !== 0) throw new Error('Failed to get QR Code');
-    const { qrcode_key, url } = qrData.data;
+    const { qrcode_key, url } = (await response.json()).data;
     $('#login-qrcode').empty();
     new QRCode("login-qrcode", {
         text: url,
@@ -1204,7 +1232,7 @@ async function pwdLogin() {
                 return;
             }
             const rsaKeys = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/key');
-            const { data: { hash, key } } = await rsaKeys.json();
+            const { hash, key } = (await rsaKeys.json()).data;
             const enc = new JSEncrypt();
             enc.setPublicKey(key);
             const encedPwd = enc.encrypt(hash + password);
@@ -1260,7 +1288,7 @@ async function smsLogin() {
                 const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/sms/send?' +
                     `cid=${encodeURIComponent($('.login-sms-item-text').text().replace(/[^0-9]/g, ''))}` +
                     `&tel=${encodeURIComponent(tel)}` +
-                    `&source=main_web` +
+                    `&source=main-fe-header` +
                     `&token=${encodeURIComponent(token)}` +
                     `&challenge=${encodeURIComponent(challenge)}` +
                     `&validate=${encodeURIComponent(validate)}` +
@@ -1358,8 +1386,8 @@ async function login() {
 
 async function captcha() {
     return new Promise(async (resolve, reject) => {
-        const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/captcha?source=main_mini');
-        const { data: { token, geetest: { challenge, gt } } } = await response.json();
+        const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/captcha?source=main-fe-header');
+        const { token, geetest: { challenge, gt } } = (await response.json()).data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
             gt: gt,
@@ -1492,8 +1520,7 @@ function describeCodec(codecString) {
 
 async function getUserProfile(mid) {
     const signature = await wbiSignature({ mid: mid });
-    const getDetailUrl = `http://127.0.0.1:50808/api/x/space/wbi/acc/info?${signature}`;
-    const detailData = await fetch(getDetailUrl);
+    const detailData = await fetch(`http://127.0.0.1:50808/api/x/space/wbi/acc/info?${signature}`);
     if (detailData.ok) {
         const details = await detailData.json();
         userData[0] = mid;
