@@ -44,6 +44,7 @@
         "maxWidth": 1280,
         "maxHeight": 720,
         "title": "BiliTools",
+        "label": "main",
         "width": 1280,
         "height": 720
       }

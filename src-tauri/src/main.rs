@@ -12,6 +12,7 @@ use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBu
 use futures::stream::StreamExt;
 use rusqlite::{Connection, params};
 use regex::Regex;
+use tauri::Manager;
 mod logger;
 
 lazy_static! {
@@ -35,9 +36,14 @@ lazy_static! {
     static ref DOWNLOAD_COMPLETED_NOTIFY: Notify = Notify::new();
 }
 
-async fn init_database() -> Connection {
+fn handle_err(window: tauri::Window, e: String) {
+    log::warn!("{}", e);
+    window.emit("error", e).unwrap();
+}
+
+async fn init_database(window: tauri::Window) -> Connection {
     if !&COOKIE_PATH.exists() {
-        let _ = fs::write(&*COOKIE_PATH, "").map_err(|e| e.to_string());
+        let _ = fs::write(&*COOKIE_PATH, "").map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
     }
     let metadata = fs::metadata(&*COOKIE_PATH).unwrap();
     let conn = Connection::open(&*COOKIE_PATH).unwrap();
@@ -54,7 +60,7 @@ async fn init_database() -> Connection {
                 secure INTEGER
             )",
             params![],
-        ).map_err(|e| e.to_string());
+        ).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
     }
     conn
 }
@@ -175,6 +181,38 @@ impl DownloadProgress {
             "{} | {} | {} | {} | {} | {} | {} | {} | {}",
             self.cid, self.progress, self.remaining, self.downloaded, self.speed, self.elapsed_time, self.display_name, self.file_type, self.action
         )
+    }
+}
+
+async fn get_buvid(window: tauri::Window) -> Result<String, String> {
+    let client = init_client();
+    let buvid3_resp = client
+        .get("http://127.0.0.1:50808/www")
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let cookie_headers: Vec<String> = buvid3_resp.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
+
+    for cookie in cookie_headers.clone() {
+        let _ = insert_cookie(&cookie);
+    }
+    let buvid4_resp = client
+        .get("http://127.0.0.1:50808/api/x/frontend/finger/spi")
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let buvid4_resp_data: Value = buvid4_resp.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    if buvid4_resp_data["code"].as_i64() == Some(0) {
+        if let Some(buvid4) = buvid4_resp_data["data"]["b_4"].as_str() { 
+            let buvid4 = format!(
+                "buvid4={}; Path=/; Domain=bilibili.com", buvid4
+            );
+            let _ = insert_cookie(&buvid4);
+        }
+        return Ok("成功获取buvid".to_string());
+    } else {
+        log::warn!("{}, {}", buvid4_resp_data["code"], buvid4_resp_data["message"]);
+        return Err(format!("{}, {}", buvid4_resp_data["code"], buvid4_resp_data["message"]).to_string())
     }
 }
 
@@ -327,7 +365,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                     log::info!("{}", formatted_values.print());
                     last_log_time = Instant::now();
                 }
-                window.emit("download-progress", formatted_values).map_err(|e| e.to_string())?;
+                window.emit("download-progress", formatted_values).unwrap();
             },
             Err(e) => return Err(e.to_string()),
         }
@@ -338,12 +376,12 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
 async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &PathBuf) -> Result<String, String> {
     log::info!("");
     log::info!("Starting merge process for audio");
-    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
+    let current_dir = env::current_dir().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
     let output_path = output.to_string_lossy();
     if let Some(ss_dir_path) = output.parent() {
         if !ss_dir_path.exists() {
-            fs::create_dir_all(&ss_dir_path).map_err(|e| e.to_string())?;
+            fs::create_dir_all(&ss_dir_path).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
             log::info!("成功创建{}", ss_dir_path.to_string_lossy());
         }
     }
@@ -367,7 +405,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
 
     let audio_path_clone = audio_path.clone();
     let video_path_clone = video_path.clone();
@@ -380,10 +418,10 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     let mut last_size: u64 = 0;
     loop {
         let mut printed_keys = HashSet::new();
-        let metadata = tokio::fs::metadata(&progress_path).await.unwrap();
+        let metadata = tokio::fs::metadata(&progress_path).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         if metadata.len() > last_size {
-            let mut file = File::open(&progress_path).await.unwrap();
-            file.seek(SeekFrom::Start(last_size)).await.unwrap();
+            let mut file = File::open(&progress_path).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+            file.seek(SeekFrom::Start(last_size)).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
             let mut reader = BufReader::new(file);
             let mut line = String::new();
             while reader.read_line(&mut line).await.unwrap() != 0 {
@@ -414,14 +452,14 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
         }
         messages.push(&output_clone);
         log::info!("{:?}", messages.join(" | "));
-        io::stdout().flush().unwrap();
-        window_clone.emit("merge-progress", &messages).map_err(|e| e.to_string())?;
+        io::stdout().flush().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+        window_clone.emit("merge-progress", &messages).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
             break;
         }
         sleep(Duration::from_secs(1)).await;
     }
-    let status = child.wait().unwrap();
+    let status = child.wait().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if let Err(e) = tokio::fs::remove_file(audio_path_clone.clone()).await {
         return Err(format!("无法删除原始音频文件: {}", e));
     }
@@ -434,13 +472,13 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     if status.success() {
         log::info!("");
         log::info!("FFmpeg process completed.");
-        window.emit("merge-success", output).map_err(|e| e.to_string())?;
+        window.emit("merge-success", output).unwrap();
         Ok(output_path.to_string())
     } else {
         if let Err(e) = tokio::fs::remove_file(&*output_path.clone()).await {
             return Err(format!("无法删除合并失败视频文件: {}", e));
         }
-        window.emit("merge-failed", output).map_err(|e| e.to_string())?;
+        window.emit("merge-failed", output).unwrap();
         Err("FFmpeg command failed".to_string())
     }
 }
@@ -502,7 +540,7 @@ fn insert_cookie(cookie_str: &str) -> rusqlite::Result<()> {
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 async fn init(window: tauri::Window) -> Result<i64, String> {
-    rw_config(window.clone(), "read".to_string(), None).await.unwrap();
+    rw_config(window.clone(), "read".to_string(), None).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
     HashMap::new() });
     if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
@@ -532,17 +570,17 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
         "temp_dir": temp_dir,
         "down_dir": down_dir,
     });
-    let new_config_str = serde_json::to_string(&new_config).map_err(|e| e.to_string())?;
+    let new_config_str = serde_json::to_string(&new_config).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if !WORKING_DIR.clone().exists() {
-        fs::create_dir_all(WORKING_DIR.clone()).map_err(|e| e.to_string())?;
+        fs::create_dir_all(WORKING_DIR.clone()).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     }
     if action == "save" {
-        fs::write(&config_path, &new_config_str).map_err(|e| e.to_string())?;
-    } else if action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| e.to_string())?.trim().is_empty()) {
-        fs::write(&config_path, &new_config_str).map_err(|e| e.to_string())?;
+        fs::write(&config_path, &new_config_str).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    } else if action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?.trim().is_empty()) {
+        fs::write(&config_path, &new_config_str).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     }
-    let config_str = fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
-    let config: serde_json::Value = serde_json::from_str(&config_str).map_err(|e| e.to_string())?;
+    let config_str = fs::read_to_string(&config_path).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let config: serde_json::Value = serde_json::from_str(&config_str).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if let Some(max_conc) = config["max_conc"].as_u64() {
         *MAX_CONCURRENT_DOWNLOADS.write().await = max_conc as usize;
         log::info!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
@@ -558,7 +596,7 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
     let dirs_to_check = vec![TEMP_DIR.read().await.clone(), DOWNLOAD_DIR.read().await.clone()];
     for dir in &dirs_to_check {
         if !dir.exists() {
-            fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+            fs::create_dir_all(dir).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         }
     }
     window.emit("settings", serde_json::json!({
@@ -585,9 +623,10 @@ async fn open_select(_window: tauri::Window, display_name: String, cid: String) 
 
 #[tauri::command]
 async fn exit(window: tauri::Window) -> Result<i64, String> {
-    let conn = Connection::open(&*COOKIE_PATH).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM cookies", []).map_err(|e| e.to_string())?;
+    let conn = Connection::open(&*COOKIE_PATH).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    conn.execute("DELETE FROM cookies", []).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     window.emit("exit-success", 0).unwrap();
+    let _ = get_buvid(window).await;
     return Ok(0)
 }
 
@@ -614,29 +653,20 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
             ("source", "main-fe-header".to_string()),
             ("refresh_token", refresh_token.to_string())
         ])
-        .send().await.map_err(|e| e.to_string())?;
-    if response.status() != reqwest::StatusCode::OK {
-        if response.status().to_string() != "412 Precondition Failed" {
-            log::warn!("刷新Cookie失败");
-            return Err("刷新Cookie失败".to_string());
-        }
-    }
-    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+        let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter()
         .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
-    let response_data: Value = response.json().await.map_err(|e| {
-        log::warn!("解析响应JSON失败: {}", e);
-        "解析响应JSON失败".to_string()}
-    )?;
+    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
             let _ = insert_cookie(&cookie);
-            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
             if parsed_cookie.name == "DedeUserID" {
-                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
             } else if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                     let refresh_token = format!(
@@ -651,17 +681,14 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
                     ("csrf", parsed_cookie.value.to_string()),
                     ("refresh_token", refresh_token.to_string())
                 ])
-                .send().await.map_err(|e| e.to_string())?;
+                .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
                 if conf_refresh_resp.status() != reqwest::StatusCode::OK {
                     if conf_refresh_resp.status().to_string() != "412 Precondition Failed" {
                         log::warn!("刷新Cookie失败");
                         return Err("刷新Cookie失败".to_string());
                     }
                 }
-                let conf_refresh_resp_data: Value = conf_refresh_resp.json().await.map_err(|e| {
-                    log::warn!("解析响应JSON失败: {}", e);
-                    "解析响应JSON失败".to_string()}
-                )?;
+                let conf_refresh_resp_data: Value = conf_refresh_resp.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
                 match conf_refresh_resp_data["code"].as_i64() {
                     Some(0) => {
                         log::info!("刷新Cookie成功");
@@ -676,7 +703,7 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
         }
         log::warn!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
         return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
-} else {
+    } else {
         log::warn!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
@@ -701,12 +728,12 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
             .get(format!(
                 "http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/poll?qrcode_key={}",
                 qrcode_key
-            )).send().await.map_err(|e| e.to_string())?;
+            )).send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
 
         if response.status() != reqwest::StatusCode::OK {
             if response.status().to_string() != "412 Precondition Failed" {
                 log::warn!("检查登录状态失败");
-                window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
+                window.emit("login-status", "检查登录状态失败".to_string()).unwrap();
                 return Err("检查登录状态失败".to_string());
             }
         }
@@ -716,18 +743,15 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
             .map(|s| s.to_string())
             .collect();
 
-        let response_data: Value = response.json().await.map_err(|e| {
-            log::warn!("解析响应JSON失败: {}", e);
-            "解析响应JSON失败".to_string()}
-        )?;
+        let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         if response_data["code"].as_i64() == Some(0) {
             match response_data["data"]["code"].as_i64() {
                 Some(0) => {
                     for cookie in cookie_headers.clone() {
                         let _ = insert_cookie(&cookie);
-                        let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+                        let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
                         if parsed_cookie.name == "DedeUserID" {
-                            window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                            window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
                         } else if parsed_cookie.name == "bili_jct" {
                             if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                                 let refresh_token = format!(
@@ -743,7 +767,7 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
                 }
                 Some(86038) => return Err("二维码已失效".to_string()),
                 Some(86101) | Some(86090) => {
-                    window.emit("login-status", response_data["data"]["message"].to_string()).map_err(|e| e.to_string())?;
+                    window.emit("login-status", response_data["data"]["message"].to_string()).unwrap();
                     log::info!("{}: {}", cloned_key, response_data["data"]["message"]);
                 }
                 _ => {
@@ -778,30 +802,21 @@ async fn pwd_login(window: tauri::Window,
             ("go_url", "https://www.bilibili.com".to_string()),
             ("source", "main-fe-header".to_string()),
         ])
-        .send().await.map_err(|e| e.to_string())?;
-    if response.status() != reqwest::StatusCode::OK {
-        if response.status().to_string() != "412 Precondition Failed" {
-            log::warn!("检查登录状态失败");
-            window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
-            return Err("检查登录状态失败".to_string());
-        }
-    }
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter()
         .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
-    let response_data: Value = response.json().await.map_err(|e| {
-        log::warn!("解析响应JSON失败: {}", e);
-        "解析响应JSON失败".to_string()}
-    )?;
+    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
             let _ = insert_cookie(&cookie);
-            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
             if parsed_cookie.name == "DedeUserID" {
-                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                log::info!("密码登录成功: {}", parsed_cookie.value);
+                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
             } else if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                     let refresh_token = format!(
@@ -812,7 +827,6 @@ async fn pwd_login(window: tauri::Window,
                 }
             }
         }
-        log::info!("密码登录成功");
         return Ok("密码登录成功".to_string());
     } else {
         log::warn!("{}, {}", response_data["code"], response_data["message"]);
@@ -837,30 +851,20 @@ async fn sms_login(window: tauri::Window,
             ("go_url", "https://www.bilibili.com".to_string()),
             ("keep", "true".to_string())
         ])
-        .send().await.map_err(|e| e.to_string())?;
-    if response.status() != reqwest::StatusCode::OK {
-        if response.status().to_string() != "412 Precondition Failed" {
-            log::warn!("检查登录状态失败");
-            window.emit("login-status", "检查登录状态失败".to_string()).map_err(|e| e.to_string())?;
-            return Err("检查登录状态失败".to_string());
-        }
-    }
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter()
         .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
-    let response_data: Value = response.json().await.map_err(|e| {
-        log::warn!("解析响应JSON失败: {}", e);
-        "解析响应JSON失败".to_string()}
-    )?;
+    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
             let _ = insert_cookie(&cookie);
-            let parsed_cookie = parse_cookie_header(&cookie).unwrap();
+            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
             if parsed_cookie.name == "DedeUserID" {
-                window.emit("user-mid", parsed_cookie.value.to_string()).map_err(|e| e.to_string())?;
+                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
             } else if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                     let refresh_token = format!(
@@ -881,39 +885,38 @@ async fn sms_login(window: tauri::Window,
 
 #[tokio::main]
 async fn main() {
-    logger::init_logger().unwrap();
-    init_database().await;
+    let _ = logger::init_logger().map_err(|e| e.to_string());
     let api_route = warp::path("api")
-        .and(warp::method())
-        .and(warp::path::full())
-        .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-        .and(warp::body::bytes())
-        .map(|method, path, query, body| (method, path, query, body, "https://api.bilibili.com".to_string()))
-        .and_then(proxy_request);
+    .and(warp::method())
+    .and(warp::path::full())
+    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
+    .and(warp::body::bytes())
+    .map(|method, path, query, body| (method, path, query, body, "https://api.bilibili.com".to_string()))
+    .and_then(proxy_request);
 
     let i0_route = warp::path("i0")
-        .and(warp::method())
-        .and(warp::path::full())
-        .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-        .and(warp::body::bytes())
-        .map(|method, path, query, body| (method, path, query, body, "https://i0.hdslb.com".to_string()))
-        .and_then(proxy_request);
+    .and(warp::method())
+    .and(warp::path::full())
+    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
+    .and(warp::body::bytes())
+    .map(|method, path, query, body| (method, path, query, body, "https://i0.hdslb.com".to_string()))
+    .and_then(proxy_request);
 
     let passport_route = warp::path("passport")
-        .and(warp::method())
-        .and(warp::path::full())
-        .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-        .and(warp::body::bytes())
-        .map(|method, path, query, body| (method, path, query, body, "https://passport.bilibili.com".to_string()))
-        .and_then(proxy_request);
-    
+    .and(warp::method())
+    .and(warp::path::full())
+    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
+    .and(warp::body::bytes())
+    .map(|method, path, query, body| (method, path, query, body, "https://passport.bilibili.com".to_string()))
+    .and_then(proxy_request);
+
     let www_route = warp::path("www")
-        .and(warp::method())
-        .and(warp::path::full())
-        .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-        .and(warp::body::bytes())
-        .map(|method, path, query, body| (method, path, query, body, "https://www.bilibili.com".to_string()))
-        .and_then(proxy_request);
+    .and(warp::method())
+    .and(warp::path::full())
+    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
+    .and(warp::body::bytes())
+    .map(|method, path, query, body| (method, path, query, body, "https://www.bilibili.com".to_string()))
+    .and_then(proxy_request);
 
 
     let routes = i0_route.or(api_route.or(passport_route.or(www_route)));
@@ -921,6 +924,14 @@ async fn main() {
         warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
     });
     tauri::Builder::default()
+    .setup(|app| {
+        let window = app.get_window("main").unwrap();
+        tokio::spawn(async move {
+            init_database(window.clone()).await;
+            let _ = get_buvid(window.clone()).await;
+        });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![init,
             scan_login, pwd_login, sms_login, stop_login,
             open_select, rw_config, refresh_cookie,

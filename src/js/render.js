@@ -466,7 +466,6 @@ async function backward() {
 
 $(document).ready(function () {
     invoke('init');
-    checkRefresh();
     $('.user-avatar-placeholder').append(bigVipIcon);
     async function handleSearch() {
         await search(searchInput.val());
@@ -1208,6 +1207,8 @@ async function pwdLogin() {
     const toggleEye = $('.login-pwd-item-eye');
     const loginBtn = $('.login-pwd-login-btn');
     const pwdInput = $('input[name="password-input"]');
+    toggleEye.off('click');
+    loginBtn.off('click');
     toggleEye.on('click', function() {
         toggleEye.css("margin", toggleEye.hasClass('fa-eye') ? "0": "0 1px");
         if (toggleEye.hasClass('fa-eye')) {
@@ -1257,6 +1258,10 @@ async function smsLogin() {
     const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
     allCodes.sort((a, b) => a.id - b.id);
     const codeList = $('.login-sms-area-code-list');
+    codeList.prev().off('click');
+    loginElm.off('click');
+    $('.login-sms-getcode-btn').off('click');
+    loginBtn.off('click');
     $.each(allCodes, (index, code) => {
         const codeElement = $('<div>').addClass('login-sms-area-code-list-item')
             .html(`<span style="float:left">${code.cname}</span>
@@ -1282,6 +1287,15 @@ async function smsLogin() {
         if (!canSend) return;
         try {
             const tel = $('input[name="tel-input"]').val().toString();
+            if (!tel) {
+                iziToast.info({
+                    icon: 'fa-solid fa-circle-info',
+                    layout: '2',
+                    title: '登录',
+                    message: `请输入手机号`,
+                });
+                return;
+            }
             if ((tel.match(/^1[3456789]\d{9}$/) && $('.login-sms-item-text').text().includes('+86'))
             || (!$('.login-sms-item-text').text().includes('+86') && tel)) {
                 const {token, challenge, validate, seccode} = await captcha();
@@ -1292,8 +1306,7 @@ async function smsLogin() {
                     `&token=${encodeURIComponent(token)}` +
                     `&challenge=${encodeURIComponent(challenge)}` +
                     `&validate=${encodeURIComponent(validate)}` +
-                    `&seccode=${encodeURIComponent(seccode)}` +
-                    `&buvid=3`, {
+                    `&seccode=${encodeURIComponent(seccode)}`, {
                     method: 'POST'
                 });
                 const smsResp = await response.json();
@@ -1379,7 +1392,7 @@ async function login() {
         $('.login-sms').addClass('active');
         $('.login-pwd').removeClass('active');
     });
-    $('.login-tab-sms').click();
+    $('.login-tab-pwd').click();
     pwdLogin();
     smsLogin();
 }
@@ -1536,7 +1549,8 @@ async function getUserProfile(mid) {
             message: `登录成功~`,
         });
         if (currentElm[currentElm.length - 1] == ".login") {
-            loginElm.removeClass('active').addClass('back');
+            backward();
+            invoke('stop_login');
         }
         $('.user-avatar').attr('src', details.data.face);
         $('.user-name').text(details.data.name);
@@ -1545,6 +1559,7 @@ async function getUserProfile(mid) {
         if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
             $('.user-vip-icon').css('display', 'block');
         }
+        checkRefresh();
     }
 }
 
@@ -1561,6 +1576,7 @@ listen("user-mid", async (event) => {
     } else {
         $('.user-avatar-placeholder').attr('data-after', '登录');
         $('.user-avatar-placeholder').on('click', debounce(login, 1000));
+        $('.user-name').text('登录');
     }
 })
 
@@ -1652,5 +1668,14 @@ listen("download-failed", async (event) => {
         layout: '2',
         title: '下载',
         message: `《${event.payload[0]}》下载失败<br>错误原因: ${event.payload[1]}`,
+    });
+})
+
+listen("error", async (event) => {
+    iziToast.error({
+        icon: 'fa-solid fa-circle-info',
+        layout: '2',
+        title: '错误',
+        message: `遇到错误：${event.payload}`,
     });
 })
