@@ -87,7 +87,7 @@ class CurrentSel {
     }
 }
 
-const headers = {};
+let headers = {};
 
 function debounce(fn, wait) {
     let bouncing = false;
@@ -134,12 +134,13 @@ async function getVideoFull(aid, cid, type, action) {
     }
     const signature = await wbiSignature(params);
     let getDetailUrl = type !== "bangumi" 
-        ? `http://127.0.0.1:50808/api/x/player/wbi/playurl?${signature}`
-        : `http://127.0.0.1:50808/api/pgc/player/web/playurl?${signature}`;
+        ? `https://api.bilibili.com/x/player/wbi/playurl?${signature}`
+        : `https://api.bilibili.com/pgc/player/web/playurl?${signature}`;
         try {
-        const detailsData = await fetch(getDetailUrl);
+        const detailsData = await http.fetch(getDetailUrl,
+        { headers });
         if (detailsData.ok) {
-            const details = await detailsData.json();
+            const details = await detailsData.data;
             if (handleErr(details, type)) {
                 currentVideoBlock.next($(`.video-block-${action}`))
                 .removeClass('active').remove();
@@ -157,13 +158,14 @@ async function getVideoFull(aid, cid, type, action) {
 async function parseVideo(videoId) {
     let getDetailUrl;
     if (videoId.includes('BV') || videoId.includes('bv')) {
-        getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/view/detail?bvid=${videoId}`;
+        getDetailUrl = `https://api.bilibili.com/x/web-interface/view/detail?bvid=${videoId}`;
     } else if (videoId.includes('AV') || videoId.includes('av')) {
-        getDetailUrl = `http://127.0.0.1:50808/api/x/web-interface/view/detail?aid=${videoId.match(/\d+/)[0]}`;
+        getDetailUrl = `https://api.bilibili.com/x/web-interface/view/detail?aid=${videoId.match(/\d+/)[0]}`;
     }
-    const detailData = await fetch(getDetailUrl);
+    const detailData = await http.fetch(getDetailUrl,
+    { headers });
     if (detailData.ok) {
-        const details = await detailData.json();
+        const details = await detailData.data;
         // if (details.data && details.data.pages)
         applyVideoList(details, null, 2);
     }
@@ -173,13 +175,14 @@ async function parseVideo(videoId) {
 async function parseBangumi(videoId) {
     let getDetailUrl
     if (videoId.includes('ep') || videoId.includes('EP')) {
-        getDetailUrl = `http://127.0.0.1:50808/api/pgc/view/web/season?ep_id=${videoId.match(/\d+/)[0]}`;
+        getDetailUrl = `https://api.bilibili.com/pgc/view/web/season?ep_id=${videoId.match(/\d+/)[0]}`;
     } else if (videoId.includes('ss') || videoId.includes('SS')) {
-        getDetailUrl = `http://127.0.0.1:50808/api/pgc/view/web/season?season_id=${videoId.match(/\d+/)[0]}`;
+        getDetailUrl = `https://api.bilibili.com/pgc/view/web/season?season_id=${videoId.match(/\d+/)[0]}`;
     }
-    const detailData = await fetch(getDetailUrl);
+    const detailData = await http.fetch(getDetailUrl,
+    { headers });
     if (detailData.ok) {
-        const details = await detailData.json();
+        const details = detailData.data;
         // if (details.data && details.data.pages)
         applyVideoList(details);
     }
@@ -586,8 +589,9 @@ async function wbiSignature(params) {
     const getMixinKey = (orig) => {
         return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
     };
-    const res = await fetch('http://127.0.0.1:50808/api/x/web-interface/nav');
-    const { img_url, sub_url } = (await res.json()).data.wbi_img;
+    const res = (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
+    { headers })).data;
+    const { img_url, sub_url } = res.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
     const mixinKey = getMixinKey(imgKey + subKey);
@@ -647,11 +651,13 @@ async function getCorrespondPath(timestamp) {
 }
 
 async function checkRefresh() {
-    const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/cookie/info');
-    const { refresh, timestamp } = (await response.json()).data;
+    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
+    { headers })).data;
+    const { refresh, timestamp } = response.data;
     if (refresh) {
         const correspondPath = await getCorrespondPath(timestamp);
-        const csrfHtmlResp = await fetch(`http://127.0.0.1:50808/www/correspond/1/${correspondPath}`);
+        const csrfHtmlResp = (await http.fetch(`https://www.bilibili.com/correspond/1/${correspondPath}`),
+        { headers, responseType: http.ResponseType.Text }).data;
         const parser = new DOMParser();
         const doc = parser.parseFromString(await csrfHtmlResp.text(), 'text/html');
         const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
@@ -1220,9 +1226,10 @@ async function userProfile() {
     if ($('.user-name').text() == "登录") return;
     currentElm.push(".user-profile");
     userProfileElm.addClass('active').removeClass('back');
-    const detailData = await fetch(`http://127.0.0.1:50808/api/x/web-interface/card?mid=${userData[0]}&photo=true`);
+    const detailData = await http.fetch(`https://api.bilibili.com/x/web-interface/card?mid=${userData[0]}&photo=true`,
+    { headers });
     if (detailData.ok) {
-        const details = await detailData.json();
+        const details = detailData.data;
         $('.user-profile-background').css("background-image", `url(${details.data.space.l_img.replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0")})`);
         $('.user-profile-avatar').attr("src", details.data.card.face);
         $('.user-profile-name').html(details.data.card.name);
@@ -1243,7 +1250,7 @@ async function userProfile() {
 async function scanLogin() {
     $('.login-qrcode-tips').removeClass('active');
     $('.login-scan-loading').addClass('active');
-    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate')).data;
+    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', { headers })).data;
     const { qrcode_key, url } = response.data;
     $('#login-qrcode').empty();
     new QRCode("login-qrcode", {
@@ -1288,30 +1295,13 @@ async function pwdLogin() {
                 });
                 return;
             }
-            const rsaKeys = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/key')).data;
+            const rsaKeys = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/key', { headers })).data;
             const { hash, key } = rsaKeys.data;
             const enc = new JSEncrypt();
             enc.setPublicKey(key);
             const encedPwd = enc.encrypt(hash + password);
             const {token, challenge, validate, seccode} = await captcha();
-            const params = new URLSearchParams({
-                username, password: encedPwd, token, challenge, validate,
-                seccode, go_url: "https://www.bilibili.com",
-                source: "main-fe-header"
-            })
-            const rawResp = await http.fetch(`https://passport.bilibili.com/x/passport-login/web/login?${params.toString()}`,
-            { method: "POST" });
-            const response = rawResp.data;
-            if (response.code !== 0) throw new Error(response.message);
-            if (response.data?.status === 0) {
-                const cookieHeaders = Array.isArray(rawResp.headers['set-cookie'])
-                ? rawResp.headers['set-cookie'].map(header => header.split(';')[0])
-                : [];
-                const refreshToken = response.data?.refresh_token;
-                await invoke('pwd_login', { cookieHeaders, refreshToken });
-            } else {
-                throw new Error(response.data?.message);
-            }
+            await invoke('pwd_login', { username, password: encedPwd, token, challenge, validate, seccode });
         } catch(err) {
             console.error(err);
             iziToast.error({
@@ -1377,7 +1367,7 @@ async function smsLogin() {
                     challenge, validate, seccode
                 });
                 const response = (await http.fetch(`https://passport.bilibili.com/x/passport-login/web/sms/send?${params.toString()}`,
-                { method: 'POST' })).data;
+                { headers, method: 'POST' })).data;
                 if (response.code !== 0) {
                     throw new Error(response.message);
                 } else {
@@ -1430,25 +1420,7 @@ async function smsLogin() {
                 });
                 return;
             }
-            const params = new URLSearchParams({
-                cid, tel, code, source: "main-fe-header",
-                captcha_key: key, keep: "true",
-                go_url: "https://www.bilibili.com"
-            })
-            const rawResp = await http.fetch(`https://passport.bilibili.com/x/passport-login/web/login/sms?${params.toString()}`,
-            { method: "POST" });
-            const response = rawResp.data;
-            if (response.code !== 0) throw new Error(response.message);
-            if (response.data?.status === 0) {
-                const cookieHeaders = Array.isArray(rawResp.headers['set-cookie'])
-                ? rawResp.headers['set-cookie'].map(header => header.split(';')[0])
-                : [];
-                const refreshToken = response.data?.refresh_token;
-                await invoke('sms_login', { cookieHeaders, refreshToken });
-            } else {
-                throw new Error(response.data?.message);
-            }
-
+            await invoke('sms_login', { tel, code, key, cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, '') });
         } catch(err) {
             console.error(err);
             iziToast.error({
@@ -1485,7 +1457,7 @@ async function login() {
 
 async function captcha() {
     return new Promise(async (resolve, reject) => {
-        const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header')).data;
+        const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header', { headers })).data;
         const { token, geetest: { challenge, gt } } = response.data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
@@ -1619,9 +1591,10 @@ function describeCodec(codecString) {
 
 async function getUserProfile(mid) {
     const signature = await wbiSignature({ mid: mid });
-    const detailData = await fetch(`http://127.0.0.1:50808/api/x/space/wbi/acc/info?${signature}`);
+    const detailData = await http.fetch(`https://api.bilibili.com/x/space/wbi/acc/info?${signature}`,
+    { headers });
     if (detailData.ok) {
-        const details = await detailData.json();
+        const details = detailData.data;
         userData[0] = mid;
         userData[1] = details.data.coins;
         if (details.code != "0"){
@@ -1645,9 +1618,8 @@ async function getUserProfile(mid) {
         if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
             $('.user-vip-icon').css('display', 'block');
         }
-        console.log(await getBiliTicket());
-        const cookieStr = `_uuid=${getUuid()}; Path=/; Domain=bilibili.com`;
-        invoke('insert_cookie', { cookieStr });
+        invoke('insert_cookie', { cookieStr: `_uuid=${getUuid()}; Path=/; Domain=bilibili.com` });
+        invoke('insert_cookie', { cookieStr: `bili_ticket=${(await getBiliTicket()).data.ticket}; Path=/; Domain=bilibili.com` });
         checkRefresh();
     }
 }
@@ -1669,7 +1641,7 @@ listen("user-mid", async (event) => {
     }
 })
 
-listen("headers", async (event) => headers = event.payload);
+listen("headers", async (event) => {headers = event.payload;console.log(headers);});
 
 listen("exit-success", async (event) => {
     backward();

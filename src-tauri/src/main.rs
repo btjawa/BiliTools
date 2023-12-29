@@ -5,14 +5,12 @@ use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
-use warp::{Filter, Reply, http::Response, path::FullPath, hyper::Method, hyper::body::Bytes};
-use std::{env, fs, path::PathBuf, sync::Arc, convert::Infallible, time::Instant, process::Command,
-process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
+use std::{env, fs, path::PathBuf, sync::Arc, time::Instant, process::Command, process::Stdio,
+collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 use rusqlite::{Connection, params};
 use regex::Regex;
-use tauri::Manager;
 mod logger;
 
 lazy_static! {
@@ -62,6 +60,7 @@ async fn init_database(window: tauri::Window) -> Connection {
             params![],
         ).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
     }
+    window.emit("headers", headers_to_json(init_headers())).unwrap();
     conn
 }
 
@@ -97,8 +96,17 @@ fn init_headers() -> HeaderMap {
     }
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
     headers.insert("Referer", HeaderValue::from_static("https://www.bilibili.com"));
-    println!("{:?}", headers);
     headers
+}
+
+fn headers_to_json(headers: HeaderMap) -> HashMap<String, String> {
+    headers.iter().filter_map(|(k, v)| {
+        if let Ok(v_str) = v.to_str() {
+            Some((k.to_string(), v_str.to_string()))
+        } else {
+            None
+        }
+    }).collect()
 }
 
 fn init_client() -> Client {
@@ -187,19 +195,18 @@ impl DownloadProgress {
 async fn get_buvid(window: tauri::Window) -> Result<String, String> {
     let client = init_client();
     let buvid3_resp = client
-        .get("http://127.0.0.1:50808/www")
+        .get("https://www.bilibili.com")
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let cookie_headers: Vec<String> = buvid3_resp.headers().get_all(header::SET_COOKIE)
         .iter()
         .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-
     for cookie in cookie_headers.clone() {
-        let _ = insert_cookie(&cookie);
+        let _ = insert_cookie(window.clone(), &cookie);
     }
     let buvid4_resp = client
-        .get("http://127.0.0.1:50808/api/x/frontend/finger/spi")
+        .get("https://api.bilibili.com/x/frontend/finger/spi")
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let buvid4_resp_data: Value = buvid4_resp.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if buvid4_resp_data["code"].as_i64() == Some(0) {
@@ -207,7 +214,7 @@ async fn get_buvid(window: tauri::Window) -> Result<String, String> {
             let buvid4 = format!(
                 "buvid4={}; Path=/; Domain=bilibili.com", buvid4
             );
-            let _ = insert_cookie(&buvid4);
+            let _ = insert_cookie(window.clone(), &buvid4);
         }
         return Ok("成功获取buvid".to_string());
     } else {
@@ -527,7 +534,7 @@ fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
 }
 
 #[tauri::command]
-fn insert_cookie(cookie_str: &str) -> Result<(), String> {
+fn insert_cookie(window: tauri::Window, cookie_str: &str) -> Result<(), String> {
     let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
     let conn = Connection::open(&*COOKIE_PATH).unwrap();
     conn.execute(
@@ -542,6 +549,7 @@ fn insert_cookie(cookie_str: &str) -> Result<(), String> {
             parsed_cookie.secure,
         ],
     ).unwrap();
+    window.emit("headers", headers_to_json(init_headers())).unwrap();
     Ok(())
 }
 
@@ -549,6 +557,11 @@ fn insert_cookie(cookie_str: &str) -> Result<(), String> {
 #[tauri::command]
 async fn init(window: tauri::Window) -> Result<i64, String> {
     rw_config(window.clone(), "read".to_string(), None).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let window_clone = window.clone();
+    tokio::spawn(async move {
+        init_database(window_clone.clone()).await;
+        let _ = get_buvid(window_clone).await;
+    });
     let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
     HashMap::new() });
     if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
@@ -634,7 +647,8 @@ async fn exit(window: tauri::Window) -> Result<i64, String> {
     let conn = Connection::open(&*COOKIE_PATH).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     conn.execute("DELETE FROM cookies", []).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     window.emit("exit-success", 0).unwrap();
-    let _ = get_buvid(window).await;
+    let _ = get_buvid(window.clone()).await;
+    window.emit("headers", headers_to_json(init_headers())).unwrap();
     return Ok(0)
 }
 
@@ -654,7 +668,7 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
     let refresh_token = if let Some(refresh_token) = cookies.get("refresh_token") {
         &refresh_token.value } else { "" };
     let response = client
-        .post("http://127.0.0.1:50808/passport/x/passport-login/web/cookie/refresh")
+        .post("https://passport.bilibili.com/x/passport-login/web/cookie/refresh")
         .query(&[
             ("csrf", bili_jct.to_string()),
             ("refresh_csrf", refresh_csrf.to_string()),
@@ -671,7 +685,7 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
     let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
-            let _ = insert_cookie(&cookie);
+            let _ = insert_cookie(window.clone(), &cookie);
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
             if parsed_cookie.name == "DedeUserID" {
                 window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
@@ -681,10 +695,10 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
                         "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
                         refresh_token, parsed_cookie.expires
                     );
-                    let _ = insert_cookie(&refresh_token);
+                    let _ = insert_cookie(window.clone(), &refresh_token);
                 }
                 let conf_refresh_resp = client
-                .post("http://127.0.0.1:50808/passport/x/passport-login/web/confirm/refresh")
+                .post("https://passport.bilibili.com/x/passport-login/web/confirm/refresh")
                 .query(&[
                     ("csrf", parsed_cookie.value.to_string()),
                     ("refresh_token", refresh_token.to_string())
@@ -734,7 +748,7 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
         }
         let response = client
             .get(format!(
-                "http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/poll?qrcode_key={}",
+                "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key={}",
                 qrcode_key
             )).send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
 
@@ -756,7 +770,7 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
             match response_data["data"]["code"].as_i64() {
                 Some(0) => {
                     for cookie in cookie_headers.clone() {
-                        let _ = insert_cookie(&cookie);
+                        let _ = insert_cookie(window.clone(), &cookie);
                         let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
                         if parsed_cookie.name == "DedeUserID" {
                             window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
@@ -766,7 +780,7 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
                                     "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
                                     refresh_token, parsed_cookie.expires
                                 );
-                                let _ = insert_cookie(&refresh_token);
+                                let _ = insert_cookie(window.clone(), &refresh_token);
                             }
                         }
                     }
@@ -792,130 +806,113 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
 }
 
 #[tauri::command]
-async fn pwd_login(window: tauri::Window, cookie_headers: Vec<String>, refresh_token: String) -> Result<String, String> {
-    for cookie in cookie_headers.clone() {
-        let _ = insert_cookie(&cookie);
-        let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-        if parsed_cookie.name == "DedeUserID" {
-            log::info!("密码登录成功: {}", parsed_cookie.value);
-            window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
-        } else if parsed_cookie.name == "bili_jct" {
-            let refresh_token = format!(
-                "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                refresh_token, parsed_cookie.expires
-            );
-            let _ = insert_cookie(&refresh_token);
+async fn pwd_login(window: tauri::Window,
+    username: String, password: String,
+    token: String, challenge: String,
+    validate: String, seccode: String
+) -> Result<String, String> {
+    let client = init_client();
+    let response = client
+        .post("https://passport.bilibili.com/x/passport-login/web/login")
+        .query(&[
+            ("username", username),
+            ("password", password),
+            ("token", token),
+            ("challenge", challenge),
+            ("validate", validate),
+            ("seccode", seccode),
+            ("go_url", "https://www.bilibili.com".to_string()),
+            ("source", "main-fe-header".to_string()),
+        ])
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
+
+    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    if response_data["code"].as_i64() == Some(0) {
+        for cookie in cookie_headers.clone() {
+            let _ = insert_cookie(window.clone(), &cookie);
+            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+            if parsed_cookie.name == "DedeUserID" {
+                log::info!("密码登录成功: {}", parsed_cookie.value);
+                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+            } else if parsed_cookie.name == "bili_jct" {
+                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                    let refresh_token = format!(
+                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                        refresh_token, parsed_cookie.expires
+                    );
+                    let _ = insert_cookie(window.clone(), &refresh_token);
+                }
+            }
         }
+        return Ok("密码登录成功".to_string());
+    } else {
+        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
-    return Ok("密码登录成功".to_string());
 }
 
 #[tauri::command]
-async fn sms_login(window: tauri::Window, cookie_headers: Vec<String>, refresh_token: String) -> Result<String, String> {
-    for cookie in cookie_headers.clone() {
-        let _ = insert_cookie(&cookie);
-        let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-        if parsed_cookie.name == "DedeUserID" {
-            window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
-        } else if parsed_cookie.name == "bili_jct" {
-            let refresh_token = format!(
-                "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                refresh_token, parsed_cookie.expires
-            );
-            let _ = insert_cookie(&refresh_token);
+async fn sms_login(window: tauri::Window,
+    cid: String, tel: String,
+    code: String, key: String,
+) -> Result<String, String> {
+    let client = init_client();
+    let response = client
+        .post("https://passport.bilibili.com/x/passport-login/web/login/sms")
+        .query(&[
+            ("cid", cid),
+            ("tel", tel),
+            ("code", code),
+            ("source", "main-fe-header".to_string()),
+            ("captcha_key", key),
+            ("go_url", "https://www.bilibili.com".to_string()),
+            ("keep", "true".to_string())
+        ])
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
+
+    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    if response_data["code"].as_i64() == Some(0) {
+        for cookie in cookie_headers.clone() {
+            let _ = insert_cookie(window.clone(), &cookie);
+            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+            if parsed_cookie.name == "DedeUserID" {
+                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+            } else if parsed_cookie.name == "bili_jct" {
+                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
+                    let refresh_token = format!(
+                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                        refresh_token, parsed_cookie.expires
+                    );
+                    let _ = insert_cookie(window.clone(), &refresh_token);
+                }
+            }
         }
+        log::info!("短信登录成功");
+        return Ok("短信登录成功".to_string());
+    } else {
+        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
-    log::info!("短信登录成功");
-    return Ok("短信登录成功".to_string());
 }
 
 #[tokio::main]
 async fn main() {
     let _ = logger::init_logger().map_err(|e| e.to_string());
-    let api_route = warp::path("api")
-    .and(warp::method())
-    .and(warp::path::full())
-    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-    .and(warp::body::bytes())
-    .map(|method, path, query, body| (method, path, query, body, "https://api.bilibili.com".to_string()))
-    .and_then(proxy_request);
-
-    let i0_route = warp::path("i0")
-    .and(warp::method())
-    .and(warp::path::full())
-    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-    .and(warp::body::bytes())
-    .map(|method, path, query, body| (method, path, query, body, "https://i0.hdslb.com".to_string()))
-    .and_then(proxy_request);
-
-    let passport_route = warp::path("passport")
-    .and(warp::method())
-    .and(warp::path::full())
-    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-    .and(warp::body::bytes())
-    .map(|method, path, query, body| (method, path, query, body, "https://passport.bilibili.com".to_string()))
-    .and_then(proxy_request);
-
-    let www_route = warp::path("www")
-    .and(warp::method())
-    .and(warp::path::full())
-    .and(warp::query::raw().or_else(|_| async { Ok::<_, warp::Rejection>(("".to_string(),)) }))
-    .and(warp::body::bytes())
-    .map(|method, path, query, body| (method, path, query, body, "https://www.bilibili.com".to_string()))
-    .and_then(proxy_request);
-
-
-    let routes = i0_route.or(api_route.or(passport_route.or(www_route)));
-    tokio::spawn(async move {
-        warp::serve(routes).run(([127, 0, 0, 1], 50808)).await;
-    });
     tauri::Builder::default()
-    .setup(|app| {
-        let window = app.get_window("main").unwrap();
-        tokio::spawn(async move {
-            init_database(window.clone()).await;
-            let _ = get_buvid(window.clone()).await;
-        });
-            Ok(())
-        })
         .invoke_handler(tauri::generate_handler![init,
             scan_login, pwd_login, sms_login, stop_login, insert_cookie,
             open_select, rw_config, refresh_cookie,
             push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-async fn proxy_request(args: (Method, FullPath, String, Bytes, String)) -> Result<impl Reply, Infallible> {
-    let (method, path, raw_query, body, base_url) = args;
-    let path_str = path.as_str();
-    let trimmed_path = path_str
-        .strip_prefix("/api")
-        .or_else(|| path_str.strip_prefix("/passport"))
-        .or_else(|| path_str.strip_prefix("/i0"))
-        .or_else(|| path_str.strip_prefix("/www"))
-        .unwrap_or(path_str);
-    let full_path = if !raw_query.is_empty() {
-        format!("{}?{}", trimmed_path, raw_query)
-    } else {
-        trimmed_path.to_string()
-    };
-    let target_url = format!("{}{}", base_url, full_path);
-    log::info!("Request: {}", target_url);
-    let client = init_client();
-    let res = client.request(method, &target_url).body(body).send().await;
-    let mut response_builder = Response::builder();
-    if let Ok(response) = res {
-        for (key, value) in response.headers().iter() {
-            response_builder = response_builder.header(key, value);
-        }
-        response_builder = response_builder.header("Access-Control-Allow-Origin", "*");
-        let body_bytes = response.bytes().await.unwrap_or_default();
-        Ok(response_builder.body(body_bytes).unwrap())
-    } else {
-        Ok(response_builder
-            .status(warp::http::StatusCode::BAD_GATEWAY)
-            .body("Error processing the request".into())
-            .unwrap())
-    }
 }
