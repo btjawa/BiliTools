@@ -1174,7 +1174,8 @@ input[name="temp-dir-path"] {
     pointer-events: none;
 }
 
-.login-qrcode-tips {
+.login-qrcode-tips,
+.login-scan-loading {
     width: 180px;
     height: 180px;
     position: absolute;
@@ -1198,6 +1199,15 @@ input[name="temp-dir-path"] {
 .login-qrcode-tips span { color: #61666d; }
 
 .login-qrcode-tips.active { display: flex; }
+
+.login-scan-loading {
+    width: 80px;
+    height: 80px;
+    background: none;
+    filter: invert(100%);
+}
+
+.login-scan-loading.active { display: block; }
 
 .login-split {
     height: 228px;

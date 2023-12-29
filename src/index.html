@@ -104,9 +104,6 @@
                     <input name="down-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" disabled>
                     <div class="down-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
                 </div>
-                <div class="settings-page-block">
-                    <a class="settings-page-block-title">最大并发</a>
-                </div>
             </div>
             <div class="settings-advanced-page">
                 <div class="settings-page-title">高级</div>
@@ -122,7 +119,7 @@
                 <div class="login-scan-title">扫描二维码登录</div>
                 <div class="login-qrcode-box">
                     <div id="login-qrcode"></div>
-                    <div class="login-qrcode-tips"></div>
+                    <img class="login-scan-loading" src="./img/loadTV.gif">
                 </div>
                 <img class="login-scan-tips" src="./img/qr-tips.png">
                 <div class="login-scan-desc">
@@ -141,7 +138,7 @@
                     <div class="login-pwd-wp">
                         <div class="login-pwd-item">
                             <div class="login-pwd-item-text">账号</div>
-                            <input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入账号" type="text" name="account-input">
+                            <input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入账号" type="text" name="username-input">
                         </div>
                         <div class="login-pwd-split"></div>
                         <div class="login-pwd-item">

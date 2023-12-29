@@ -88,16 +88,16 @@ fn init_headers() -> HeaderMap {
     headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
     headers.insert("Accept", HeaderValue::from_static("*/*"));
     headers.insert("Accept-Language", HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"));
-    let cookies_header = format!("{};", load_cookies()
-        .unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
-        HashMap::new() })
-        .values()
-        .map(|cookie_info| format!("{}={}", cookie_info.name, cookie_info.value))
-        .collect::<Vec<_>>()
-        .join("; "));
-    headers.insert("Cookie", HeaderValue::from_str(&cookies_header).unwrap());
+    if let Ok(cookies) = load_cookies() {
+        let cookies_header = cookies.values()
+            .map(|cookie_info| format!("{}={}", cookie_info.name, cookie_info.value))
+            .collect::<Vec<_>>()
+            .join("; ") + ";";
+        headers.insert("Cookie", HeaderValue::from_str(&cookies_header).unwrap());
+    }
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
     headers.insert("Referer", HeaderValue::from_static("https://www.bilibili.com"));
+    println!("{:?}", headers);
     headers
 }
 
@@ -218,12 +218,14 @@ async fn get_buvid(window: tauri::Window) -> Result<String, String> {
 
 #[tauri::command]
 async fn push_back_queue(
-    video_url: Option<String>, audio_url: Option<String>,
+    window: tauri::Window, video_url: Option<String>, audio_url: Option<String>,
     cid: String, display_name: String, action: String, ss_dir: String
 ) {
     let mut tasks = vec![];
     if let Some(v_url) = video_url {
-        let video_path = TEMP_DIR.read().await.join(&extract_filename(&v_url));
+        let video_path = if action == "multi" {
+            TEMP_DIR.read().await.join(&extract_filename(&v_url))
+        } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
         tasks.push(DownloadTask { 
             cid: cid.clone(),
             display_name: display_name.clone(), 
@@ -233,7 +235,9 @@ async fn push_back_queue(
         });
     }
     if let Some(a_url) = audio_url {
-        let audio_path = TEMP_DIR.read().await.join(&extract_filename(&a_url));
+        let audio_path = if action == "multi" {
+            TEMP_DIR.read().await.join(&extract_filename(&a_url))
+        } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
         tasks.push(DownloadTask {
             cid: cid.clone(), 
             display_name: display_name.clone(), 
@@ -247,12 +251,13 @@ async fn push_back_queue(
         display_name: display_name.clone(),
         video_path: tasks.get(0).map_or(PathBuf::new(), |task| task.path.clone()),
         audio_path: tasks.get(1).map_or(PathBuf::new(), |task| task.path.clone()),
-        output_path: DOWNLOAD_DIR.read().await.join(ss_dir).join(display_name.clone()),
+        output_path: DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(display_name.clone()),
         video_downloaded: false,
         audio_downloaded: false,
         finished: false,
         tasks, action
     };
+    let _ = fs::create_dir_all(DOWNLOAD_DIR.read().await.join(ss_dir)).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
     DOWNLOAD_INFO_MAP.lock().await.insert(display_name, download_info.clone());
     WAITING_QUEUE.lock().await.push_back(download_info.clone());
 }
@@ -289,6 +294,7 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
         match download_file(window.clone(), task.clone(), action.clone()).await {
             Ok(o) => {
                 if action.clone() == "only" {
+                    let _ = fs::rename(task.path, download_info.output_path.clone()).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
                     let _ = window.emit("download-success", o);
                 }
             }
@@ -483,9 +489,10 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     }
 }
 
-fn parse_cookie_header(cookie_header: &str) -> Result<CookieInfo, &'static str> {
+#[tauri::command]
+fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
     let re = Regex::new(r"(?i)(?P<name>\w+)=(?P<value>[^;]+)").unwrap();
-    let captures = re.captures(cookie_header).ok_or("Invalid cookie header")?;
+    let captures = re.captures(cookie_str).ok_or("Invalid cookie header")?;
     let name = captures.name("name").unwrap().as_str();
     let value = captures.name("value").unwrap().as_str();
     let mut path = "";
@@ -493,7 +500,7 @@ fn parse_cookie_header(cookie_header: &str) -> Result<CookieInfo, &'static str> 
     let mut expires = "";
     let mut httponly = false;
     let mut secure = false;
-    for part in cookie_header.split(';').skip(1) {
+    for part in cookie_str.split(';').skip(1) {
         let mut iter = part.splitn(2, '=').map(str::trim);
         if let Some(key) = iter.next() {
             if let Some(value) = iter.next() {
@@ -519,9 +526,10 @@ fn parse_cookie_header(cookie_header: &str) -> Result<CookieInfo, &'static str> 
     })
 }
 
-fn insert_cookie(cookie_str: &str) -> rusqlite::Result<()> {
+#[tauri::command]
+fn insert_cookie(cookie_str: &str) -> Result<(), String> {
     let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
-    let conn = Connection::open(&*COOKIE_PATH)?;
+    let conn = Connection::open(&*COOKIE_PATH).unwrap();
     conn.execute(
         "INSERT OR REPLACE INTO cookies (name, value, path, domain, expires, httponly, secure) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
@@ -533,7 +541,7 @@ fn insert_cookie(cookie_str: &str) -> rusqlite::Result<()> {
             parsed_cookie.httponly,
             parsed_cookie.secure,
         ],
-    )?;
+    ).unwrap();
     Ok(())
 }
 
@@ -784,103 +792,41 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
 }
 
 #[tauri::command]
-async fn pwd_login(window: tauri::Window,
-    account: String, password: String,
-    token: String, challenge: String,
-    validate: String, seccode: String
-) -> Result<String, String> {
-    let client = init_client();
-    let response = client
-        .post("http://127.0.0.1:50808/passport/x/passport-login/web/login")
-        .query(&[
-            ("username", account),
-            ("password", password),
-            ("token", token),
-            ("challenge", challenge),
-            ("validate", validate),
-            ("seccode", seccode),
-            ("go_url", "https://www.bilibili.com".to_string()),
-            ("source", "main-fe-header".to_string()),
-        ])
-        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
-        .map(|s| s.to_string())
-        .collect();
-
-    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    if response_data["code"].as_i64() == Some(0) {
-        for cookie in cookie_headers.clone() {
-            let _ = insert_cookie(&cookie);
-            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-            if parsed_cookie.name == "DedeUserID" {
-                log::info!("密码登录成功: {}", parsed_cookie.value);
-                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
-            } else if parsed_cookie.name == "bili_jct" {
-                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
-                    let refresh_token = format!(
-                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                        refresh_token, parsed_cookie.expires
-                    );
-                    let _ = insert_cookie(&refresh_token);
-                }
-            }
+async fn pwd_login(window: tauri::Window, cookie_headers: Vec<String>, refresh_token: String) -> Result<String, String> {
+    for cookie in cookie_headers.clone() {
+        let _ = insert_cookie(&cookie);
+        let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+        if parsed_cookie.name == "DedeUserID" {
+            log::info!("密码登录成功: {}", parsed_cookie.value);
+            window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+        } else if parsed_cookie.name == "bili_jct" {
+            let refresh_token = format!(
+                "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                refresh_token, parsed_cookie.expires
+            );
+            let _ = insert_cookie(&refresh_token);
         }
-        return Ok("密码登录成功".to_string());
-    } else {
-        log::warn!("{}, {}", response_data["code"], response_data["message"]);
-        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
+    return Ok("密码登录成功".to_string());
 }
 
 #[tauri::command]
-async fn sms_login(window: tauri::Window,
-    cid: String, tel: String,
-    code: String, key: String,
-) -> Result<String, String> {
-    let client = init_client();
-    let response = client
-        .post("http://127.0.0.1:50808/passport/x/passport-login/web/login/sms")
-        .query(&[
-            ("cid", cid),
-            ("tel", tel),
-            ("code", code),
-            ("source", "main-fe-header".to_string()),
-            ("captcha_key", key),
-            ("go_url", "https://www.bilibili.com".to_string()),
-            ("keep", "true".to_string())
-        ])
-        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
-        .map(|s| s.to_string())
-        .collect();
-
-    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    if response_data["code"].as_i64() == Some(0) {
-        for cookie in cookie_headers.clone() {
-            let _ = insert_cookie(&cookie);
-            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-            if parsed_cookie.name == "DedeUserID" {
-                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
-            } else if parsed_cookie.name == "bili_jct" {
-                if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
-                    let refresh_token = format!(
-                        "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
-                        refresh_token, parsed_cookie.expires
-                    );
-                    let _ = insert_cookie(&refresh_token);
-                }
-            }
+async fn sms_login(window: tauri::Window, cookie_headers: Vec<String>, refresh_token: String) -> Result<String, String> {
+    for cookie in cookie_headers.clone() {
+        let _ = insert_cookie(&cookie);
+        let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+        if parsed_cookie.name == "DedeUserID" {
+            window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+        } else if parsed_cookie.name == "bili_jct" {
+            let refresh_token = format!(
+                "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
+                refresh_token, parsed_cookie.expires
+            );
+            let _ = insert_cookie(&refresh_token);
         }
-        log::info!("短信登录成功");
-        return Ok("短信登录成功".to_string());
-    } else {
-        log::warn!("{}, {}", response_data["code"], response_data["message"]);
-        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
+    log::info!("短信登录成功");
+    return Ok("短信登录成功".to_string());
 }
 
 #[tokio::main]
@@ -933,7 +879,7 @@ async fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![init,
-            scan_login, pwd_login, sms_login, stop_login,
+            scan_login, pwd_login, sms_login, stop_login, insert_cookie,
             open_select, rw_config, refresh_cookie,
             push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())

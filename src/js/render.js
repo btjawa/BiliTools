@@ -1,7 +1,6 @@
 const { invoke } = window.__TAURI__.tauri;
 const { emit, listen } = window.__TAURI__.event;
-const { open: openShell } = window.__TAURI__.shell;
-const { open: openDialog } = window.__TAURI__.dialog;
+const { shell, dialog, http } = window.__TAURI__;
 
 const searchBtn = $('.search-btn');
 const searchInput = $('input[name="search-input"]');
@@ -88,6 +87,8 @@ class CurrentSel {
     }
 }
 
+const headers = {};
+
 function debounce(fn, wait) {
     let bouncing = false;
     return function(...args) {
@@ -117,7 +118,7 @@ async function selFile(type, multiple = false, filters = []) {
         if (type !== 'directory') {
             options.filters = filters;
         }
-        const selected = await openDialog(options);
+        const selected = await dialog.open(options);
         return selected;
     } catch (error) {
         console.error(error)
@@ -216,7 +217,6 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                     }
                 }
             }
-            console.log(downUrl);
             if ((isVideo && found[0]) || (!isVideo && found[1]) || (action=="multi" && found[1])) {
                 isVideo ? downVideos++ : downAudios++;
                 if (action=="multi") downAudios++;
@@ -390,7 +390,7 @@ async function cutText() {
 
 async function bilibili() {
     if (currentElm[currentElm.length - 1] == ".user-profile") {
-        openShell(`https://space.bilibili.com/${userData[0]}`);
+        shell.open(`https://space.bilibili.com/${userData[0]}`);
         $('.context-menu').css({ opacity: 0, display: "none" });
         return;
     } else {
@@ -399,13 +399,13 @@ async function bilibili() {
                 const input = searchInput.val();
                 let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
                 if (match) {
-                    openShell('https://www.bilibili.com/video/' + match[0]);
+                    shell.open('https://www.bilibili.com/video/' + match[0]);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
                 match = input.match(/ep(\d+)|ss(\d+)/i);
                 if (match) {
-                    openShell('https://www.bilibili.com/bangumi/play/' + match[0]);
+                    shell.open('https://www.bilibili.com/bangumi/play/' + match[0]);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
@@ -551,6 +551,31 @@ function formatPubdate(timestamp) {
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
+async function getBiliTicket() {
+    const key = "XgwSnGZ1p";
+    const message = "ts" + Math.floor(Date.now() / 1000);
+    const encoder = new TextEncoder();
+    const keyBytes = encoder.encode(key);
+    const messageBytes = encoder.encode(message);
+    const cryptoKey = await window.crypto.subtle.importKey(
+        "raw", 
+        keyBytes, 
+        { name: "HMAC", hash: "SHA-256" }, 
+        false, 
+        ["sign"]
+    );
+    const signature = await window.crypto.subtle.sign("HMAC", cryptoKey, messageBytes);
+    const hexSignature =  Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const params = new URLSearchParams({
+        key_id: "ec02",
+        hexsign: hexSignature,
+        "context[ts]": Math.floor(Date.now() / 1000),
+        csrf: ""
+    })
+    return (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
+    { method: 'POST' })).data;
+}
+
 async function wbiSignature(params) {
     const mixinKeyEncTab = [
         46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
@@ -575,6 +600,35 @@ async function wbiSignature(params) {
     }).join('&');
     const wbiSign = md5(query + mixinKey);
     return query + '&w_rid=' + wbiSign;
+}
+
+function getUuid() {
+    function a(e) {
+        let t = "";
+        for (let r = 0; r < e; r++) {
+            t += o(Math.random() * 16);
+        }
+        return s(t, e);
+    }
+    function s(e, t) {
+        let r = "";
+        if (e.length < t) {
+            for (let n = 0; n < t - e.length; n++) {
+                r += "0";
+            }
+        }
+        return r + e;
+    }
+    function o(e) {
+        return Math.ceil(e).toString(16).toUpperCase();
+    }
+    let e = a(8);
+    let t = a(4);
+    let r = a(4);
+    let n = a(4);
+    let i = a(12);
+    let currentTime = (new Date()).getTime();
+    return e + "-" + t + "-" + r + "-" + n + "-" + i + s((currentTime % 100000).toString(), 5) + "infoc";
 }
 
 async function getCorrespondPath(timestamp) {
@@ -706,7 +760,7 @@ function applyVideoList(details) { // 分类填充视频块
                     episode.share_copy, episode.share_copy,
                     episode.cover, episode.duration,
                     episode.aid, episode.cid,
-                    type, k + 1, eps_root.season_title
+                    type, k + 1, details.result.season_title
                 );
                 appendVideoBlock(k + 1);
                 if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.ep_id))) {
@@ -913,7 +967,7 @@ function appendVideoBlock(index) { // 填充视频块
             };
             Swal.fire(options);
             $('.swal-btn-main').on('click', () => {
-                openShell(data_root.pic.replace(/http/g, 'https'));
+                shell.open(data_root.pic.replace(/http/g, 'https'));
                 Swal.close();
             })
         } else {
@@ -1188,8 +1242,9 @@ async function userProfile() {
 
 async function scanLogin() {
     $('.login-qrcode-tips').removeClass('active');
-    const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/qrcode/generate');
-    const { qrcode_key, url } = (await response.json()).data;
+    $('.login-scan-loading').addClass('active');
+    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate')).data;
+    const { qrcode_key, url } = response.data;
     $('#login-qrcode').empty();
     new QRCode("login-qrcode", {
         text: url,
@@ -1199,6 +1254,7 @@ async function scanLogin() {
         colorLight: "#3b3b3b9b",
         correctLevel: QRCode.CorrectLevel.H,
     });
+    $('.login-scan-loading').removeClass('active');
     $('#login-qrcode').removeAttr("title");
     invoke('scan_login', {qrcodeKey: qrcode_key});
 }
@@ -1221,9 +1277,9 @@ async function pwdLogin() {
     });
     loginBtn.on('click', async function() {
         try {
-            const account = $('input[name="account-input"]').val().toString();
+            const username = $('input[name="username-input"]').val().toString();
             const password = $('input[name="password-input"]').val().toString();
-            if (!account || !password) {
+            if (!username || !password) {
                 iziToast.info({
                     icon: 'fa-solid fa-circle-info',
                     layout: '2',
@@ -1232,13 +1288,30 @@ async function pwdLogin() {
                 });
                 return;
             }
-            const rsaKeys = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/key');
-            const { hash, key } = (await rsaKeys.json()).data;
+            const rsaKeys = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/key')).data;
+            const { hash, key } = rsaKeys.data;
             const enc = new JSEncrypt();
             enc.setPublicKey(key);
             const encedPwd = enc.encrypt(hash + password);
             const {token, challenge, validate, seccode} = await captcha();
-            await invoke('pwd_login', { account, password: encedPwd, token, challenge, validate, seccode });
+            const params = new URLSearchParams({
+                username, password: encedPwd, token, challenge, validate,
+                seccode, go_url: "https://www.bilibili.com",
+                source: "main-fe-header"
+            })
+            const rawResp = await http.fetch(`https://passport.bilibili.com/x/passport-login/web/login?${params.toString()}`,
+            { method: "POST" });
+            const response = rawResp.data;
+            if (response.code !== 0) throw new Error(response.message);
+            if (response.data?.status === 0) {
+                const cookieHeaders = Array.isArray(rawResp.headers['set-cookie'])
+                ? rawResp.headers['set-cookie'].map(header => header.split(';')[0])
+                : [];
+                const refreshToken = response.data?.refresh_token;
+                await invoke('pwd_login', { cookieHeaders, refreshToken });
+            } else {
+                throw new Error(response.data?.message);
+            }
         } catch(err) {
             console.error(err);
             iziToast.error({
@@ -1253,8 +1326,7 @@ async function pwdLogin() {
 
 async function smsLogin() {
     const loginBtn = $('.login-sms-login-btn');
-    const areaCodeResp = await fetch('http://127.0.0.1:50808/passport/web/generic/country/list');
-    const areaCodes = await areaCodeResp.json();
+    const areaCodes = (await http.fetch('https://passport.bilibili.com/web/generic/country/list')).data;
     const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
     allCodes.sort((a, b) => a.id - b.id);
     const codeList = $('.login-sms-area-code-list');
@@ -1299,22 +1371,18 @@ async function smsLogin() {
             if ((tel.match(/^1[3456789]\d{9}$/) && $('.login-sms-item-text').text().includes('+86'))
             || (!$('.login-sms-item-text').text().includes('+86') && tel)) {
                 const {token, challenge, validate, seccode} = await captcha();
-                const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/web/sms/send?' +
-                    `cid=${encodeURIComponent($('.login-sms-item-text').text().replace(/[^0-9]/g, ''))}` +
-                    `&tel=${encodeURIComponent(tel)}` +
-                    `&source=main-fe-header` +
-                    `&token=${encodeURIComponent(token)}` +
-                    `&challenge=${encodeURIComponent(challenge)}` +
-                    `&validate=${encodeURIComponent(validate)}` +
-                    `&seccode=${encodeURIComponent(seccode)}`, {
-                    method: 'POST'
+                const params = new URLSearchParams({
+                    cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, ''),
+                    tel, source: 'main-fe-header', token,
+                    challenge, validate, seccode
                 });
-                const smsResp = await response.json();
-                if (smsResp.code !== 0) {
-                    throw new Error(smsResp.message);
+                const response = (await http.fetch(`https://passport.bilibili.com/x/passport-login/web/sms/send?${params.toString()}`,
+                { method: 'POST' })).data;
+                if (response.code !== 0) {
+                    throw new Error(response.message);
                 } else {
                     canSend = false;
-                    key = smsResp.data.captcha_key;
+                    key = response.data.captcha_key;
                     let timeout = 60;
                     $('.login-sms-getcode-btn').text("重新发送(60)")
                     .addClass("disabled");
@@ -1362,7 +1430,25 @@ async function smsLogin() {
                 });
                 return;
             }
-            await invoke('sms_login', { tel, code, key, cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, '') });
+            const params = new URLSearchParams({
+                cid, tel, code, source: "main-fe-header",
+                captcha_key: key, keep: "true",
+                go_url: "https://www.bilibili.com"
+            })
+            const rawResp = await http.fetch(`https://passport.bilibili.com/x/passport-login/web/login/sms?${params.toString()}`,
+            { method: "POST" });
+            const response = rawResp.data;
+            if (response.code !== 0) throw new Error(response.message);
+            if (response.data?.status === 0) {
+                const cookieHeaders = Array.isArray(rawResp.headers['set-cookie'])
+                ? rawResp.headers['set-cookie'].map(header => header.split(';')[0])
+                : [];
+                const refreshToken = response.data?.refresh_token;
+                await invoke('sms_login', { cookieHeaders, refreshToken });
+            } else {
+                throw new Error(response.data?.message);
+            }
+
         } catch(err) {
             console.error(err);
             iziToast.error({
@@ -1399,8 +1485,8 @@ async function login() {
 
 async function captcha() {
     return new Promise(async (resolve, reject) => {
-        const response = await fetch('http://127.0.0.1:50808/passport/x/passport-login/captcha?source=main-fe-header');
-        const { token, geetest: { challenge, gt } } = (await response.json()).data;
+        const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header')).data;
+        const { token, geetest: { challenge, gt } } = response.data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
             gt: gt,
@@ -1559,6 +1645,9 @@ async function getUserProfile(mid) {
         if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
             $('.user-vip-icon').css('display', 'block');
         }
+        console.log(await getBiliTicket());
+        const cookieStr = `_uuid=${getUuid()}; Path=/; Domain=bilibili.com`;
+        invoke('insert_cookie', { cookieStr });
         checkRefresh();
     }
 }
@@ -1579,6 +1668,8 @@ listen("user-mid", async (event) => {
         $('.user-name').text('登录');
     }
 })
+
+listen("headers", async (event) => headers = event.payload);
 
 listen("exit-success", async (event) => {
     backward();

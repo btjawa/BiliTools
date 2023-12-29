@@ -14,10 +14,17 @@
     "allowlist": {
       "all": false,
       "shell": {
-        "all": true
+        "all": false,
+        "open": true
       },
       "dialog": {
-        "all": true
+        "all": false,
+        "open": true
+      },
+      "http": {
+        "all": false,
+        "request": true,
+        "scope": ["https://*.bilibili.com/*"]
       }
     },
     "bundle": {
