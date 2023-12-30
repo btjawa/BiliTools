@@ -30,6 +30,15 @@
     background-color: #3b3b3b;
 }
 
+.version,
+.about {
+    font-size: 18px;
+    margin: 5px 0;
+}
+
+#version,
+.about span { font-family: "HarmonyOS_Bold", sans-serif; }
+
 .loading,
 .loading-only,
 .loading-multi {
@@ -1352,6 +1361,7 @@ input[name="temp-dir-path"] {
     cursor: not-allowed;
 }
 
+.about a, .about span,
 .login a {
     color: #3086bf;
     text-decoration: none;
@@ -1378,8 +1388,7 @@ input[name="temp-dir-path"] {
 .profile,
 .down-page-bar,
 .settings-page-bar,
-.settings-side-general-bar,
-.settings-side-advanced-bar {
+.settings-side-sel-bar {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1426,8 +1435,7 @@ input[name="temp-dir-path"] {
 }
 
 .down-page-bar-background,
-.settings-side-general-bar-background,
-.settings-side-advanced-bar-background,
+.settings-side-bar-background,
 .settings-page-bar-background {
     width: 50px;
     height: 50px;
@@ -1444,14 +1452,12 @@ input[name="temp-dir-path"] {
 
 .user-profile-exit-background:hover,
 .down-page-bar-background:hover,
-.settings-side-advanced-bar-background:hover,
-.settings-side-general-bar-background:hover,
+.settings-side-bar-background:hover,
 .settings-page-bar-background:hover {
     background-color: #3b3b3b !important;
 }
 
-.settings-side-general-bar-background.checked,
-.settings-side-advanced-bar-background.checked {
+.settings-side-bar-background.checked {
     background-color: #4c4c4c;
 }
 
@@ -1492,9 +1498,8 @@ input[name="temp-dir-path"] {
 }
 
 .down-page-bar-name,
-.settings-side-general-bar-name,
-.settings-side-advanced-bar-name,
 .settings-page-bar-name,
+.settings-side-bar-name,
 .user-name {
     font-size: 13px;
     max-width: 110px;
@@ -1515,8 +1520,7 @@ input[name="temp-dir-path"] {
     position: relative;
 }
 
-.settings-general-page,
-.settings-advanced-page {
+.settings-page {
     width: calc(100vw - 107px);
     left: 107px;
     height: calc(98vh - 12px);
@@ -1527,11 +1531,29 @@ input[name="temp-dir-path"] {
     flex-direction: column;
 }
 
-.settings-general-page.active,
-.settings-advanced-page.active {
+.settings-page.active {
     opacity: 1;
     visibility: visible;
     animation: settings-page-anime 0.5s cubic-bezier(0,1,.6,1);
+}
+
+.settings-page._info svg { width: 20%; }
+
+.settings-page._info img {
+    width: 80px;
+    height: 80px;
+    user-select: none;
+    margin-right: 20px;
+}
+
+.settings-page._info icon {
+    display: flex;
+    margin: 40px 0;
+}
+
+.settings-page._info i {
+    margin-top: 40px;
+    font-size: 14px;
 }
 
 @keyframes settings-page-anime {

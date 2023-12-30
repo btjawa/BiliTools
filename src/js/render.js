@@ -1,6 +1,6 @@
 const { invoke } = window.__TAURI__.tauri;
 const { listen } = window.__TAURI__.event;
-const { shell, dialog, http } = window.__TAURI__;
+const { shell, dialog, http, app, os } = window.__TAURI__;
 
 const searchBtn = $('.search-btn');
 const searchInput = $('input[name="search-input"]');
@@ -17,10 +17,6 @@ const multiNextPage = $('.video-multi-next');
 const multiSelect = $('.multi-select-btn');
 const multiSelectNext = $('.multi-select-next-btn');
 const multiSelectDown = $('.multi-select-next-down-btn');
-const generalBg = $('.settings-side-general-bar-background');
-const advancedBg = $('.settings-side-advanced-bar-background');
-const generalPage = $('.settings-general-page');
-const advancedPage = $('.settings-advanced-page');
 const downDirPath = $('input[name="down-dir-path"]');
 const tempDirPath = $('input[name="temp-dir-path"]');
 
@@ -136,21 +132,16 @@ async function getVideoFull(aid, cid, type, action) {
     let getDetailUrl = type !== "bangumi" 
         ? `https://api.bilibili.com/x/player/wbi/playurl?${signature}`
         : `https://api.bilibili.com/pgc/player/web/playurl?${signature}`;
-        try {
-        const detailsData = await http.fetch(getDetailUrl,
-        { headers });
-        if (detailsData.ok) {
-            const details = await detailsData.data;
-            if (handleErr(details, type)) {
-                currentVideoBlock.next($(`.video-block-${action}`))
-                .removeClass('active').remove();
-                return;
-            }
-            return details;
-        } else {
-            console.error("请求失败");
+    const details = (await http.fetch(getDetailUrl,
+    { headers })).data;
+    if (details.code == 0) {
+        if (handleErr(details, type)) {
+            currentVideoBlock.next($(`.video-block-${action}`))
+            .removeClass('active').remove();
+            return;
         }
-    } catch (error) {
+        return details;
+    } else {
         handleErr(error, type);
     }
 }
@@ -286,46 +277,42 @@ function handleErr(err, type) {
 }
 
 async function search(input) {
-    try {
-        infoBlock.removeClass('active');
-        videoList.removeClass('active');
-        videoListTabHead.removeClass('active');
-        multiSelect.off('click');
-        currentElm.push(".video-root");
-        if ($('.multi-select-icon').hasClass('checked')) multiSelect.click();
-        let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
+    infoBlock.removeClass('active');
+    videoList.removeClass('active');
+    videoListTabHead.removeClass('active');
+    multiSelect.off('click');
+    currentElm.push(".video-root");
+    if ($('.multi-select-icon').hasClass('checked')) multiSelect.click();
+    let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
+    if (match) {
+        parseVideo(match[0]);
+        searchElm.addClass('active').removeClass('back');
+        loadingBox.addClass('active');
+    } else {
+        match = input.match(/ep(\d+)|ss(\d+)/i);
         if (match) {
-            parseVideo(match[0]);
+            parseBangumi(match[0]); 
             searchElm.addClass('active').removeClass('back');
             loadingBox.addClass('active');
         } else {
-            match = input.match(/ep(\d+)|ss(\d+)/i);
+            match = input.match(/au(\d+)/i);
             if (match) {
-                parseBangumi(match[0]); 
-                searchElm.addClass('active').removeClass('back');
-                loadingBox.addClass('active');
-            } else {
-                match = input.match(/au(\d+)/i);
-                if (match) {
-                    iziToast.error({
-                        icon: 'fa-regular fa-circle-exclamation',
-                        layout: '2',
-                        title: `警告`,
-                        message: "暂不支持au解析"
-                    });
-                } else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
-                    iziToast.error({
-                        icon: 'fa-regular fa-circle-exclamation',
-                        layout: '2',
-                        title: `警告`,
-                        message: !input ? "请输入链接/AV/BV/SS/EP号" : "输入不合法！请检查格式"
-                    });
-                    backward();
-                }
+                iziToast.error({
+                    icon: 'fa-regular fa-circle-exclamation',
+                    layout: '2',
+                    title: `警告`,
+                    message: "暂不支持au解析"
+                });
+            } else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
+                iziToast.error({
+                    icon: 'fa-regular fa-circle-exclamation',
+                    layout: '2',
+                    title: `警告`,
+                    message: !input ? "请输入链接/AV/BV/SS/EP号" : "输入不合法！请检查格式"
+                });
+                backward();
             }
         }
-    } catch (err) {
-        console.error(err);
     }
 }
 
@@ -461,14 +448,17 @@ async function backward() {
         $('.video-list').empty();
     } else if (currentElm[index] == '.settings') {
         settingsElm.removeClass('active').addClass('back');
-        generalPage.removeClass('active');
-        advancedPage.removeClass('active');
+        $('.settings-page').removeClass('active');
     }
     currentElm.pop();
 }
 
 $(document).ready(function () {
     invoke('init');
+    app.getVersion().then(ver => $('#version').html(ver));
+    os.platform().then(type => $('#platform').html(type));
+    os.arch().then(arch => $('#arch').html(arch));
+    $('#year').html((new Date()).getFullYear())
     $('.user-avatar-placeholder').append(bigVipIcon);
     async function handleSearch() {
         await search(searchInput.val());
@@ -1456,6 +1446,7 @@ async function smsLogin() {
 async function login() {
     if ($('.user-name').text() != "登录") return;
     currentElm.push(".login");
+    $('.login-tab-pwd .login-tab-sms').off('click');
     loginElm.addClass('active').removeClass('back');
     scanLogin();
     $('.login-tab-pwd').on('click', async () => {
@@ -1503,10 +1494,13 @@ async function captcha() {
 }
 
 function settings() {
+    $('.settings-side-bar-background').off('click');
     settingsElm.removeClass('back').addClass('active');
     currentElm.push('.settings');
     const downDirOpenBtn = $('.down-dir-path-openbtn');
     const tempDirOpenBtn = $('.temp-dir-path-openbtn');
+    downDirOpenBtn.off('click');
+    tempDirOpenBtn.off('click');
     function handelSave(set) {
         invoke('rw_config', {action: "save", sets: {
             max_conc: 0,
@@ -1522,20 +1516,19 @@ function settings() {
             message: `已保存设置 - ${set}`,
         });
     }
-    generalBg.on('click', () => {
-        generalBg.addClass('checked');
-        advancedBg.removeClass('checked');
-        generalPage.addClass('active');
-        advancedPage.removeClass('active');
+    $('.settings-side-bar-background').on('click', (event) => {
+        const targetBg = $(event.target).closest('.settings-side-bar-background');
+        const type = targetBg.attr('class').split(/\s+/)[1];
+        $('.settings-side-bar-background').removeClass('checked');
+        $('.settings-page').removeClass('active');
+        targetBg.addClass('checked');
+        $(`.settings-page.${type}`).addClass('active');
+        if (type === "_info") {
+            const svg = $('.settings-page._info').find('svg').css('display', 'none');
+            setTimeout(() => svg.append(svg.find('style').detach()).css('display', 'block'), 1);
+        }
     });
-    advancedBg.on('click', () => {
-        generalBg.removeClass('checked');
-        advancedBg.addClass('checked');
-        generalPage.removeClass('active');
-        advancedPage.addClass('active')
-        .find('.settings-page-block-title').first().css("margin-right", "10px");
-    });
-    generalBg.click();
+    $('.settings-side-bar-background.general').click();
     downDirOpenBtn.on('click', async () => {
         const selected = await selFile('directory');
         if (selected) {
@@ -1618,7 +1611,7 @@ async function getUserProfile(mid) {
         userData[0] = mid;
         userData[1] = details.data.coins;
         if (details.code != "0"){
-            console.error(details);
+            handleErr(details, null);
             return;
         }
         iziToast.info({
@@ -1632,8 +1625,6 @@ async function getUserProfile(mid) {
         }
         $('.user-avatar').attr('src', details.data.face);
         $('.user-name').text(details.data.name);
-        $('.user-avatar-placeholder').attr('data-after', '主页');
-        $('.user-avatar-placeholder').on('click', debounce(userProfile, 500));    
         if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
             $('.user-vip-icon').css('display', 'block');
         }
@@ -1678,7 +1669,6 @@ listen("exit-success", async (event) => {
 })
 
 listen("login-status", async (event) => {
-    console.log(event.payload)
     if (event.payload == 86090) {
         $('.login-qrcode-tips').addClass('active')
         .html(`<i class="fa-solid fa-check"></i>

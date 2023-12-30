@@ -89,16 +89,20 @@
         </div>
         <div class="settings">
             <div class="settings-side-bar">
-                <div class="settings-side-general-bar">
-                    <div class="settings-side-general-bar-background"><div class="bcc-iconfont bcc-icon-ic_Content_"></div></div>
-                    <div class="settings-side-general-bar-name">常规</div>
+                <div class="settings-side-sel-bar">
+                    <div class="settings-side-bar-background general"><div class="bcc-iconfont bcc-icon-ic_Content_"></div></div>
+                    <div class="settings-side-bar-name">常规</div>
                 </div>
-                <div class="settings-side-advanced-bar">
-                    <div class="settings-side-advanced-bar-background"><div class="bcc-iconfont bcc-icon-ic_experiment"></div></div>
-                    <div class="settings-side-advanced-bar-name">高级</div>
+                <div class="settings-side-sel-bar">
+                    <div class="settings-side-bar-background advanced"><div class="bcc-iconfont bcc-icon-ic_experiment"></div></div>
+                    <div class="settings-side-bar-name">高级</div>
+                </div>
+                <div class="settings-side-sel-bar">
+                    <div class="settings-side-bar-background _info"><div class="fa-regular fa-info-circle"></div></div>
+                    <div class="settings-side-bar-name">关于</div>
                 </div>
             </div>
-            <div class="settings-general-page">
+            <div class="settings-page general">
                 <div class="settings-page-title">常规</div>
                 <div class="settings-page-block">
                     <a class="settings-page-block-title">存储路径</a>
@@ -106,13 +110,56 @@
                     <div class="down-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
                 </div>
             </div>
-            <div class="settings-advanced-page">
+            <div class="settings-page advanced">
                 <div class="settings-page-title">高级</div>
                 <div class="settings-page-block">
                     <a class="settings-page-block-title">临时文件存储路径</a>
                     <input name="temp-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" disabled>
                     <div class="temp-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
                 </div>
+            </div>
+            <div class="settings-page _info">
+                <div class="settings-page-title">关于</div>
+                <icon>
+                    <img src="./img/icon.png" draggable="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.68 31.44" overflow="visible">
+                        <defs><style>
+                            @keyframes dash{0%{stroke-dashoffset:var(--len)}100%{stroke-dashoffset:0}}@keyframes fade{0%{opacity:1;fill-opacity:0;stroke-width:.5px;}100%{opacity:1;fill-opacity:1;stroke-width:1px;}}.letter{fill:#ff6989;stroke:#ff6989;stroke-linecap:round;stroke-linejoin:round;stroke-width:1px;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);opacity:0;animation:dash 1.6s cubic-bezier(.6,0,.2,1) forwards,fade 1.6s cubic-bezier(.6,0,.2,1) forwards}.letter1{animation-delay:0s}.letter2{animation-delay:.1s}.letter3{animation-delay:.2s}.letter4{animation-delay:.3s}.letter5{animation-delay:.4s}.letter6{animation-delay:.5s}.letter7{animation-delay:.6s}.letter8{animation-delay:.7s}.letter9{animation-delay:.8s}
+                        </style></defs>
+                        <path class="letter letter1" d="m1.76,31.24c-.51,0-.93-.14-1.26-.42-.33-.28-.5-.66-.5-1.14V1.56c0-.45.15-.83.44-1.12.29-.29.67-.44,1.12-.44h9.72c1.6,0,3.05.34,4.34,1.02,1.29.68,2.32,1.61,3.08,2.78.76,1.17,1.14,2.53,1.14,4.08,0,1.44-.39,2.72-1.16,3.84-.77,1.12-1.79,1.97-3.04,2.56,1.79.48,3.23,1.38,4.32,2.7,1.09,1.32,1.64,2.99,1.64,5.02,0,1.81-.41,3.41-1.24,4.8-.83,1.39-1.97,2.47-3.42,3.26-1.45.79-3.11,1.18-4.98,1.18H1.76Zm1.36-18.2h8.16c1.6,0,2.92-.45,3.96-1.36,1.04-.91,1.56-2.17,1.56-3.8s-.52-2.81-1.56-3.64c-1.04-.83-2.36-1.24-3.96-1.24H3.12v10.04Zm0,15.2h8.84c1.28,0,2.41-.25,3.4-.76.99-.51,1.76-1.23,2.32-2.16s.84-2.04.84-3.32c0-1.2-.28-2.25-.84-3.14-.56-.89-1.33-1.59-2.32-2.08-.99-.49-2.12-.74-3.4-.74H3.12v12.2Z" style="--len: 193.06246948242188px;"/>
+                        <path class="letter letter2" d="m29.56,5.2c-.59,0-1.09-.21-1.52-.64-.43-.43-.64-.95-.64-1.56,0-.67.22-1.19.66-1.58.44-.39.95-.58,1.54-.58s1.06.19,1.5.58c.44.39.66.91.66,1.58,0,.61-.21,1.13-.64,1.56-.43.43-.95.64-1.56.64Zm.04,26.04c-.48,0-.86-.14-1.14-.42-.28-.28-.42-.66-.42-1.14V10.92c0-.48.14-.86.42-1.14.28-.28.66-.42,1.14-.42.45,0,.82.14,1.1.42.28.28.42.66.42,1.14v18.76c0,.48-.14.86-.42,1.14-.28.28-.65.42-1.1.42Z" style="--len: 61.19465637207031px;"/>
+                        <path class="letter letter3" d="m43.68,31.24c-1.07,0-2.02-.29-2.86-.88s-1.49-1.4-1.96-2.44c-.47-1.04-.7-2.24-.7-3.6V1.52c0-.45.14-.82.42-1.1.28-.28.65-.42,1.1-.42s.82.14,1.1.42c.28.28.42.65.42,1.1v22.8c0,1.15.23,2.08.7,2.8.47.72,1.06,1.08,1.78,1.08h1c.4,0,.72.14.96.42.24.28.36.65.36,1.1s-.17.82-.5,1.1c-.33.28-.77.42-1.3.42h-.52Z" style="--len: 71.88196563720703px;"/>
+                        <path class="letter letter4" d="m52.4,5.2c-.59,0-1.09-.21-1.52-.64-.43-.43-.64-.95-.64-1.56,0-.67.22-1.19.66-1.58.44-.39.95-.58,1.54-.58s1.06.19,1.5.58c.44.39.66.91.66,1.58,0,.61-.21,1.13-.64,1.56-.43.43-.95.64-1.56.64Zm.04,26.04c-.48,0-.86-.14-1.14-.42-.28-.28-.42-.66-.42-1.14V10.92c0-.48.14-.86.42-1.14.28-.28.66-.42,1.14-.42.45,0,.82.14,1.1.42.28.28.42.66.42,1.14v18.76c0,.48-.14.86-.42,1.14-.28.28-.65.42-1.1.42Z" style="--len: 61.19468688964844px;"/>
+                        <path class="letter letter5" d="m60.24,2.84c-.43,0-.77-.13-1.04-.4-.27-.27-.4-.6-.4-1,0-.43.13-.77.4-1.04.27-.27.61-.4,1.04-.4h22.12c.43,0,.77.13,1.04.4.27.27.4.61.4,1.04,0,.4-.13.73-.4,1-.27.27-.61.4-1.04.4h-22.12Zm11.04,28.4c-.43,0-.79-.15-1.1-.46-.31-.31-.46-.67-.46-1.1V0h3.12v29.68c0,.43-.15.79-.44,1.1-.29.31-.67.46-1.12.46Z" style="--len: 120.72344970703125px;"/>
+                        <path class="letter letter6" d="m91.96,31.44c-2.13,0-4.04-.48-5.72-1.44s-3-2.28-3.96-3.96-1.44-3.59-1.44-5.72.48-4.08,1.44-5.76c.96-1.68,2.28-3,3.96-3.96s3.59-1.44,5.72-1.44,4.03.48,5.7,1.44c1.67.96,2.98,2.28,3.94,3.96.96,1.68,1.45,3.6,1.48,5.76,0,2.13-.49,4.04-1.46,5.72s-2.29,3-3.96,3.96c-1.67.96-3.57,1.44-5.7,1.44Zm0-2.8c1.55,0,2.93-.36,4.16-1.08,1.23-.72,2.19-1.71,2.88-2.96.69-1.25,1.04-2.68,1.04-4.28s-.35-3.03-1.04-4.3c-.69-1.27-1.65-2.26-2.88-2.98-1.23-.72-2.61-1.08-4.16-1.08s-2.93.36-4.16,1.08c-1.23.72-2.19,1.71-2.9,2.98-.71,1.27-1.06,2.7-1.06,4.3s.35,3.03,1.06,4.28c.71,1.25,1.67,2.24,2.9,2.96,1.23.72,2.61,1.08,4.16,1.08Z" style="--len: 122.48871612548828px;"/>
+                        <path class="letter letter7" d="m119.04,31.44c-2.13,0-4.04-.48-5.72-1.44s-3-2.28-3.96-3.96-1.44-3.59-1.44-5.72.48-4.08,1.44-5.76c.96-1.68,2.28-3,3.96-3.96s3.59-1.44,5.72-1.44,4.03.48,5.7,1.44c1.67.96,2.98,2.28,3.94,3.96.96,1.68,1.45,3.6,1.48,5.76,0,2.13-.49,4.04-1.46,5.72s-2.29,3-3.96,3.96c-1.67.96-3.57,1.44-5.7,1.44Zm0-2.8c1.55,0,2.93-.36,4.16-1.08,1.23-.72,2.19-1.71,2.88-2.96.69-1.25,1.04-2.68,1.04-4.28s-.35-3.03-1.04-4.3c-.69-1.27-1.65-2.26-2.88-2.98-1.23-.72-2.61-1.08-4.16-1.08s-2.93.36-4.16,1.08c-1.23.72-2.19,1.71-2.9,2.98-.71,1.27-1.06,2.7-1.06,4.3s.35,3.03,1.06,4.28c.71,1.25,1.67,2.24,2.9,2.96,1.23.72,2.61,1.08,4.16,1.08Z" style="--len: 122.48882293701172px;"/>
+                        <path class="letter letter8" d="m140.88,31.24c-1.07,0-2.02-.29-2.86-.88s-1.49-1.4-1.96-2.44c-.47-1.04-.7-2.24-.7-3.6V1.52c0-.45.14-.82.42-1.1.28-.28.65-.42,1.1-.42s.82.14,1.1.42c.28.28.42.65.42,1.1v22.8c0,1.15.23,2.08.7,2.8.47.72,1.06,1.08,1.78,1.08h1c.4,0,.72.14.96.42.24.28.36.65.36,1.1s-.17.82-.5,1.1c-.33.28-.77.42-1.3.42h-.52Z" style="--len: 71.88206481933594px;"/>
+                        <path class="letter letter9" d="m155.08,31.44c-1.57,0-3.13-.27-4.68-.8-1.55-.53-2.8-1.33-3.76-2.4-.29-.32-.41-.68-.36-1.08.05-.4.25-.75.6-1.04.37-.27.76-.37,1.16-.32.4.05.73.23,1,.52.64.75,1.49,1.32,2.54,1.72,1.05.4,2.22.6,3.5.6,1.97,0,3.4-.34,4.28-1.02.88-.68,1.33-1.5,1.36-2.46,0-.96-.45-1.75-1.36-2.38s-2.4-1.11-4.48-1.46c-2.69-.43-4.67-1.17-5.92-2.24-1.25-1.07-1.88-2.33-1.88-3.8,0-1.36.36-2.49,1.08-3.4.72-.91,1.68-1.59,2.88-2.04,1.2-.45,2.52-.68,3.96-.68,1.79,0,3.33.31,4.62.92,1.29.61,2.34,1.44,3.14,2.48.27.35.37.71.32,1.08-.05.37-.27.68-.64.92-.32.19-.69.25-1.1.18-.41-.07-.77-.26-1.06-.58-.67-.77-1.44-1.34-2.32-1.7-.88-.36-1.89-.54-3.04-.54-1.47,0-2.64.3-3.52.9-.88.6-1.32,1.35-1.32,2.26,0,.61.17,1.15.5,1.6.33.45.91.85,1.72,1.2.81.35,1.95.64,3.42.88,2,.32,3.58.79,4.74,1.42,1.16.63,1.99,1.36,2.48,2.2s.74,1.75.74,2.74c0,1.25-.37,2.35-1.1,3.3-.73.95-1.75,1.69-3.04,2.22-1.29.53-2.78.8-4.46.8Z" style="--len: 114.1632308959961px;"/>
+                    </svg>
+                </icon>
+                <div class="version">版本:&nbsp;<span id="version"></span>&nbsp;(<span id="platform"></span>;&nbsp;<span id="arch"></span>)</div>
+                <div class="about">
+                    项目地址:&nbsp;<a href="https://github.com/btjawa/BiliTools" target="_blank">
+                        <object><a class="fa-brands fa-github"></a></object>
+                        <span>btjawa/BiliTools</span>
+                        <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object>
+                    </a>
+                </div>
+                <div class="about">
+                    反馈BUG:&nbsp;<a href="https://github.com/btjawa/BiliTools/issues" target="_blank">
+                        <object><a class="fa-brands fa-github"></a></object>
+                        <span>Issues</span>
+                        <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object>
+                    </a>
+                </div>
+                <div class="about">
+                    &emsp;&emsp;&emsp;&emsp;&VeryThinSpace;&ensp;<a href="https://space.bilibili.com/524309471" target="_blank">
+                        <object><a class="fa-brands fa-bilibili"></a></object>
+                        <span>B站私信</span>
+                        <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object>
+                    </a>
+                </div>
+                <i>Copyright&nbsp;&copy;&nbsp;<i id="year"></i>&nbsp;btjawa&nbsp;&&nbsp;MIT&nbsp;License</i>
             </div>
         </div>
         <div class="login">
@@ -125,8 +172,8 @@
                 </div>
                 <img class="login-scan-tips" src="./img/qr-tips.png">
                 <div class="login-scan-desc">
-                    请使用&nbsp;<a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></a>
-                    <br>扫码登录或扫码下载APP
+                    请使用&nbsp;<a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端
+                    <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object></a><br>扫码登录或扫码下载APP
                 </div>
             </div>
             <div class="login-split"></div>

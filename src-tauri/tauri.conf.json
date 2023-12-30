@@ -17,6 +17,9 @@
         "all": false,
         "open": true
       },
+      "os": {
+        "all": true
+      },
       "dialog": {
         "all": false,
         "open": true

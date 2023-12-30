@@ -94,6 +94,9 @@ fn init_headers() -> HeaderMap {
             .join("; ") + ";";
         headers.insert("Cookie", HeaderValue::from_str(&cookies_header).unwrap());
     }
+    headers.insert("Upgrade-Insecure-Requests", HeaderValue::from_static("1"));
+    headers.insert("Sec-Ch-Ua", HeaderValue::from_static("\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\""));
+    headers.insert("Sec-Ch-Ua-Mobile", HeaderValue::from_static("?0"));
     headers.insert("Connection", HeaderValue::from_static("keep-alive"));
     headers.insert("Referer", HeaderValue::from_static("https://www.bilibili.com"));
     headers
