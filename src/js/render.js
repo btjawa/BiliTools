@@ -1,5 +1,5 @@
 const { invoke } = window.__TAURI__.tauri;
-const { emit, listen } = window.__TAURI__.event;
+const { listen } = window.__TAURI__.event;
 const { shell, dialog, http } = window.__TAURI__;
 
 const searchBtn = $('.search-btn');
@@ -669,11 +669,11 @@ function initVideoInfo(type, details) {
     const isVideo = (type == "video" || type == "ugc_season");
     const root = isVideo ? details.data.View : details.result;
     $('.info-cover').attr("src", "").attr("src", 
-    (isVideo ? root.pic : root.cover).replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0").replace("https", "http"));
+    (isVideo ? root.pic : root.cover));
     $('.info-title').html(isVideo ? root.title : root.season_title);
     $('.info-desc').html((isVideo ? root.desc : root.evaluate).replace(/\n/g, '<br>'));
     if (isVideo ? root.owner : root.up_info) {
-        $('.info-owner-face').attr("src", (isVideo ? root.owner.face : root.up_info.avatar).replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0").replace("https", "http"));
+        $('.info-owner-face').attr("src", (isVideo ? root.owner.face : root.up_info.avatar));
         $('.info-owner-name').html(isVideo ? root.owner.name : root.up_info.uname);
     } else {
         $('.info-owner-face').css("display", "none");
@@ -1001,7 +1001,7 @@ async function appendDownPageBlock(type, quality, data) { // 填充下载块
     }
     downPage.css("justify-content", `${downPage.children().length < 5 ? "center" : "flex-start"}`);
     const infoBlock = $('<div>').addClass('down-page-info')
-    const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace(/http:/g, 'https:'))
+    const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace("http:", "https:"))
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
     const infoId = $('<i>').addClass('down-page-info-id').text(`cid: ${cid}`);
@@ -1230,7 +1230,7 @@ async function userProfile() {
     { headers });
     if (detailData.ok) {
         const details = detailData.data;
-        $('.user-profile-background').css("background-image", `url(${details.data.space.l_img.replace(/i[0-2]\.hdslb\.com/g, "127.0.0.1:50808/i0")})`);
+        $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:"));
         $('.user-profile-avatar').attr("src", details.data.card.face);
         $('.user-profile-name').html(details.data.card.name);
         $('.user-profile-desc').html(details.data.card.sign);
@@ -1250,6 +1250,7 @@ async function userProfile() {
 async function scanLogin() {
     $('.login-qrcode-tips').removeClass('active');
     $('.login-scan-loading').addClass('active');
+    $('.login-qrcode-box').off('click');
     const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', { headers })).data;
     const { qrcode_key, url } = response.data;
     $('#login-qrcode').empty();
@@ -1263,7 +1264,26 @@ async function scanLogin() {
     });
     $('.login-scan-loading').removeClass('active');
     $('#login-qrcode').removeAttr("title");
-    invoke('scan_login', {qrcodeKey: qrcode_key});
+    $('.login-qrcode-box').on('mouseenter', function() {
+        if (!$('.login-qrcode-tips').hasClass('active')) {
+            $('.login-scan-tips').css('opacity', '1');
+            $(this).css('opacity', '0');
+        }
+    });
+    $('.login-qrcode-box').on('mouseleave', function() {
+        if (!$('.login-qrcode-tips').hasClass('active')) {
+            $('.login-scan-tips').css('opacity', '0');
+            $(this).css('opacity', '1');
+        }
+    });
+    try {
+        await invoke('scan_login', {qrcodeKey: qrcode_key});
+    } catch(err) {
+        $('.login-qrcode-box').on('click', () => {
+            scanLogin();
+            return;
+        });
+    }
 }
 
 async function pwdLogin() {
@@ -1609,7 +1629,6 @@ async function getUserProfile(mid) {
         });
         if (currentElm[currentElm.length - 1] == ".login") {
             backward();
-            invoke('stop_login');
         }
         $('.user-avatar').attr('src', details.data.face);
         $('.user-name').text(details.data.name);
@@ -1641,7 +1660,7 @@ listen("user-mid", async (event) => {
     }
 })
 
-listen("headers", async (event) => {headers = event.payload;console.log(headers);});
+listen("headers", async (event) => headers = event.payload);
 
 listen("exit-success", async (event) => {
     backward();
@@ -1659,11 +1678,17 @@ listen("exit-success", async (event) => {
 })
 
 listen("login-status", async (event) => {
-    if (event.payload.includes("二维码已扫码未确认")) {
+    console.log(event.payload)
+    if (event.payload == 86090) {
         $('.login-qrcode-tips').addClass('active')
         .html(`<i class="fa-solid fa-check"></i>
         <span>扫码成功</span>
         <span>请在手机上确认</span>`);
+    } else if (event.payload == 86038) {
+        $('.login-qrcode-tips').addClass('active')
+        .html(`<i class="fa-solid fa-rotate-right"></i>
+        <span>二维码已过期</span>
+        <span>请点击刷新</span>`);
     }
 })
 

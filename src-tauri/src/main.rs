@@ -5,8 +5,8 @@ use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
-use std::{env, fs, path::PathBuf, sync::Arc, time::Instant, process::Command, process::Stdio,
-collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
+use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant, process::Command,
+process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 use rusqlite::{Connection, params};
@@ -15,7 +15,7 @@ mod logger;
 
 lazy_static! {
     static ref GLOBAL_WINDOW: Arc<Mutex<Option<tauri::Window>>> = Arc::new(Mutex::new(None));
-    static ref STOP_LOGIN: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref WORKING_DIR: PathBuf = {
         PathBuf::from(env::var("APPDATA").expect("APPDATA environment variable not found"))
@@ -558,6 +558,7 @@ fn insert_cookie(window: tauri::Window, cookie_str: &str) -> Result<(), String> 
 async fn init(window: tauri::Window) -> Result<i64, String> {
     rw_config(window.clone(), "read".to_string(), None).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let window_clone = window.clone();
+    stop_login();
     tokio::spawn(async move {
         init_database(window_clone.clone()).await;
         let _ = get_buvid(window_clone).await;
@@ -653,9 +654,8 @@ async fn exit(window: tauri::Window) -> Result<i64, String> {
 }
 
 #[tauri::command]
-async fn stop_login() {
-    let mut stop = STOP_LOGIN.lock().await;
-    *stop = true;
+fn stop_login() {
+    LOGIN_POLLING.store(false, Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -738,27 +738,14 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
     let mask_range = 8..cloned_key.len()-8;
     let mask = "*".repeat(mask_range.end - mask_range.start);
     cloned_key.replace_range(mask_range, &mask);
-    loop {
-        let stop = STOP_LOGIN.lock().await;
-        if *stop {
-            let mut lock = STOP_LOGIN.lock().await;
-            *lock = false;
-            log::warn!("{}: \"登录轮询被前端截断\"", cloned_key);
-            return Ok("登录过程被终止".to_string());
-        }
+    LOGIN_POLLING.store(true, Ordering::SeqCst);
+    while LOGIN_POLLING.load(Ordering::SeqCst) {
         let response = client
             .get(format!(
                 "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key={}",
                 qrcode_key
             )).send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
 
-        if response.status() != reqwest::StatusCode::OK {
-            if response.status().to_string() != "412 Precondition Failed" {
-                log::warn!("检查登录状态失败");
-                window.emit("login-status", "检查登录状态失败".to_string()).unwrap();
-                return Err("检查登录状态失败".to_string());
-            }
-        }
         let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
             .iter()
             .flat_map(|h| h.to_str().ok())
@@ -767,6 +754,7 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
 
         let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         if response_data["code"].as_i64() == Some(0) {
+            window.emit("login-status", response_data["data"]["code"].to_string()).unwrap();
             match response_data["data"]["code"].as_i64() {
                 Some(0) => {
                     for cookie in cookie_headers.clone() {
@@ -784,25 +772,23 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
                             }
                         }
                     }
-                    log::info!("{}: \"二维码已扫描\"", cloned_key);
-                    return Ok("二维码已扫描".to_string());
+                    log::info!("{}: \"扫码登录成功\"", cloned_key);
+                    return Ok("扫码登录成功".to_string());
                 }
-                Some(86038) => return Err("二维码已失效".to_string()),
-                Some(86101) | Some(86090) => {
-                    window.emit("login-status", response_data["data"]["message"].to_string()).unwrap();
-                    log::info!("{}: {}", cloned_key, response_data["data"]["message"]);
-                }
+                Some(86101) | Some(86090) => log::info!("{}: {}", cloned_key, response_data["data"]["message"]),
                 _ => {
-                    log::warn!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
+                    log::warn!("{}: {}, {}", cloned_key, response_data["data"]["code"], response_data["data"]["message"]);
                     return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
                 },
             }
         } else {
-            log::warn!("{}, {}", response_data["code"], response_data["message"]);
-            return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
+            log::warn!("{}: {}, {}", cloned_key, response_data["data"]["code"], response_data["data"]["message"]);
+            return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
         }
         sleep(Duration::from_secs(1)).await;
     }
+    log::warn!("{}: \"登录轮询被前端截断\"", cloned_key);
+    return Ok("登录过程被终止".to_string());
 }
 
 #[tauri::command]

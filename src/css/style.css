@@ -969,8 +969,8 @@ input[name="temp-dir-path"] {
     display: inline-block;
 }
 
-.user-profile-background {
-    background-size: cover;
+.user-profile-background,
+.user-profile-img {
     width: 1080px;
     height: 169px;
     z-index: -1;
@@ -1162,14 +1162,6 @@ input[name="temp-dir-path"] {
     transition: opacity 0.4s;
 }
 
-.login-qrcode-box:hover ~ .login-scan-tips {
-    opacity: 1;
-} 
-
-.login-qrcode-box:hover {
-    opacity: 0;
-}
-
 #login-qrcode img {
     pointer-events: none;
 }
@@ -1198,7 +1190,10 @@ input[name="temp-dir-path"] {
 
 .login-qrcode-tips span { color: #61666d; }
 
-.login-qrcode-tips.active { display: flex; }
+.login-qrcode-tips.active {
+    display: flex;
+    cursor: pointer;
+}
 
 .login-scan-loading {
     width: 80px;
