@@ -1537,7 +1537,7 @@ input[name="temp-dir-path"] {
     animation: settings-page-anime 0.5s cubic-bezier(0,1,.6,1);
 }
 
-.settings-page._info svg { width: 20%; }
+.settings-page._info svg { width: 235px; }
 
 .settings-page._info img {
     width: 80px;

@@ -216,7 +216,7 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 if (action=="multi") downAudios++;
                 let qualityStr, ext, displayName;
                 const safeTitle = videoData[index].title.replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
-                const ssDir = videoData[index].ss_title;
+                const ssDir = `《${videoData[index].ss_title}》`;
                 if (action == "only") {
                     qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
                     ext = isVideo ? "mp4" : "aac";
@@ -998,10 +998,22 @@ async function appendDownPageBlock(type, quality, data) { // 填充下载块
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
     const infoTitle = $('<div>').addClass('down-page-info-title').html(finalTitle).css('max-width', `100%`);
     const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载`);
-    const infoProgress = $('<div>').addClass('down-page-info-progress').html($('<div>').addClass('down-page-info-progress-bar'));
-    const openDirBtn = $('<div>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${type=="aac"?'audio':'video'} icon-small"></i>打开文件`);
+    const infoProgressBar = $('<div>').addClass('down-page-info-progress-bar');
+    const infoProgress = $('<div>').addClass('down-page-info-progress').html(infoProgressBar);
+    const openDirBtn = $('<div>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${type=="aac"?'audio':'video'} icon-small"></i>定位文件`);
     infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, openDirBtn, infoProgressText, infoProgress)).appendTo(downPage);
-    openDirBtn.on('click', () => invoke('open_select', { displayName: finalTitle, cid: cid.toString() }));
+    openDirBtn.on('click', () => {
+        if (parseFloat(infoProgressBar.css('width')) / parseFloat(infoProgress.css('width')) < 1) {
+            iziToast.error({
+                icon: 'fa-regular fa-circle-exclamation',
+                layout: '2',
+                title: `下载`,
+                message: `请等待下载完毕`
+            });
+        } else {
+            invoke('open_select', { displayName: finalTitle, cid: cid.toString() });
+        } 
+    });
 }
 
 function applyDimensionList(details, type, action, ms) { // 填充分辨率
@@ -1736,7 +1748,8 @@ listen("download-success", async (event) => {
         icon: 'fa-solid fa-circle-info',
         layout: '2',
         title: '下载',
-        message: `《${event.payload}》下载成功~`,
+        timeout: 10000,
+        message: `《${event.payload}》下载成功~<br>可在下载页中点击&nbsp;“定位文件”&nbsp;定位文件`,
     });
 })
 
@@ -1745,6 +1758,7 @@ listen("download-failed", async (event) => {
         icon: 'fa-solid fa-circle-info',
         layout: '2',
         title: '下载',
+        timeout: 10000,
         message: `《${event.payload[0]}》下载失败<br>错误原因: ${event.payload[1]}`,
     });
 })
@@ -1754,6 +1768,7 @@ listen("error", async (event) => {
         icon: 'fa-solid fa-circle-info',
         layout: '2',
         title: '错误',
+        timeout: 10000,
         message: `遇到错误：${event.payload}`,
     });
 })

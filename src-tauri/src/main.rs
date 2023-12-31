@@ -18,14 +18,12 @@ lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref WORKING_DIR: PathBuf = {
-        PathBuf::from(env::var("APPDATA").expect("APPDATA environment variable not found"))
-        .join("com.btjawa.bilitools")
+        PathBuf::from(env::var("APPDATA").unwrap()).join("com.btjawa.bilitools")
     };
     static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = {
-        Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").expect("USERPROFILE environment variable not found"))
-        .join("Desktop")))
+        Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").unwrap()).join("Desktop")))
     };
-    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("Temp")));
+    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(env::current_dir().unwrap().join("Temp")));
     static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(2));
@@ -348,7 +346,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
     let mut downloaded: u64 = 0;
     let start_time = Instant::now();
     let mut last_log_time = Instant::now();
-    let log_interval = Duration::from_millis(250);
+    let log_interval = Duration::from_secs(1);
     while let Some(chunk_result) = stream.next().await {
         match chunk_result {
             Ok(chunk) => {
@@ -392,7 +390,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
 async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &PathBuf) -> Result<String, String> {
     log::info!("");
     log::info!("Starting merge process for audio");
-    let current_dir = env::current_dir().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let current_dir = env::current_dir().unwrap();
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
     let output_path = output.to_string_lossy();
     if let Some(ss_dir_path) = output.parent() {
@@ -401,7 +399,6 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
             log::info!("成功创建{}", ss_dir_path.to_string_lossy());
         }
     }
-    let output_clone = output_path.clone();
     let video_filename = &output.file_name()
         .and_then(|f| f.to_str())
         .ok_or_else(|| "无法提取视频文件名".to_string())?;
@@ -466,7 +463,7 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
                 }
             }
         }
-        messages.push(&output_clone);
+        messages.push(&video_filename);
         log::info!("{:?}", messages.join(" | "));
         io::stdout().flush().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         window_clone.emit("merge-progress", &messages).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
@@ -488,13 +485,13 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     if status.success() {
         log::info!("");
         log::info!("FFmpeg process completed.");
-        window.emit("merge-success", output).unwrap();
-        Ok(output_path.to_string())
+        window.emit("merge-success", video_filename).unwrap();
+        Ok(video_filename.to_string())
     } else {
         if let Err(e) = tokio::fs::remove_file(&*output_path.clone()).await {
             return Err(format!("无法删除合并失败视频文件: {}", e));
         }
-        window.emit("merge-failed", output).unwrap();
+        window.emit("merge-failed", video_filename).unwrap();
         Err("FFmpeg command failed".to_string())
     }
 }
@@ -559,13 +556,10 @@ fn insert_cookie(window: tauri::Window, cookie_str: &str) -> Result<(), String> 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 async fn init(window: tauri::Window) -> Result<i64, String> {
+    init_database(window.clone().clone()).await;
     rw_config(window.clone(), "read".to_string(), None).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    let window_clone = window.clone();
     stop_login();
-    tokio::spawn(async move {
-        init_database(window_clone.clone()).await;
-        let _ = get_buvid(window_clone).await;
-    });
+    let _ = get_buvid(window.clone()).await;
     let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
     HashMap::new() });
     if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
@@ -632,16 +626,20 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
 }
 
 #[tauri::command]
-async fn open_select(_window: tauri::Window, display_name: String, cid: String) {
+async fn open_select(window: tauri::Window, display_name: String, cid: String) {
     let download_info_map = DOWNLOAD_INFO_MAP.lock().await;
     if let Some(video_info) = download_info_map.get(&display_name) {
         if video_info.cid == cid {
-            let _ = Command::new("C:\\Windows\\explorer.exe")
-                .arg(format!("/select,{}", video_info.output_path.to_string_lossy()))
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .expect("Failed to open Windows Explorer");
+            if let Err(e) = fs::metadata(&video_info.output_path) {
+                handle_err(window.clone(), e.to_string());
+            } else {
+                let _ = Command::new("C:\\Windows\\explorer.exe")
+                    .arg(format!("/select,\"{}\"", video_info.output_path.to_string_lossy()))
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
+            }
         }
     }
 }
