@@ -4,7 +4,9 @@
   "description": "Download Videos/Covers/Audios/Danmakus... All in one!",
   "type": "module",
   "scripts": {
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "updater": "node scripts/updater.mjs",
+    "release": "node scripts/release.mjs"
   },
   "repository": {
     "type": "git",
@@ -19,5 +21,9 @@
   "devDependencies": {
     "@tauri-apps/api": "^1.5.1",
     "@tauri-apps/cli": "^1.5.6"
+  },
+  "dependencies": {
+    "@actions/github": "^6.0.0",
+    "node-fetch": "^3.3.2"
   }
 }
