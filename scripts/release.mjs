@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 async function release() {
   const flag = process.argv[2] ?? 'patch';
   const packageJson = require('../package.json');
+  const tauriConfig = require('../src-tauri/tauri.conf.json');
   let [a, b, c] = packageJson.version.split('.').map(Number);
 
   if (flag === 'major') {  // 主版本
@@ -26,16 +27,18 @@ async function release() {
   }
 
   const nextVersion = `${a}.${b}.${c}`;
+  tauriConfig.package.version = nextVersion;
   packageJson.version = nextVersion;
 
   const nextTag = `v${nextVersion}`;
   await updatelog(nextTag, 'release');
 
-  // 将新版本写入 package.json 文件
+  // 将新版本写入 package.json 与 tauri.conf.json 文件
   fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2));
+  fs.writeFileSync('./src-tauri/tauri.conf.json', JSON.stringify(tauriConfig, null, 2));
 
-  // 提交修改的文件，打 tag 标签（tag 标签是为了触发 github action 工作流）并推送到远程
-  execSync('git add ./package.json ./UPDATE_LOG.md');
+  // 提交文件，打 tag 标签（tag 标签是为了触发 github action 工作流）并推送到远程
+  execSync('git add -A');
   execSync(`git commit -m "v${nextVersion}"`);
   execSync(`git tag -a v${nextVersion} -m "v${nextVersion}"`);
   execSync(`git push`);

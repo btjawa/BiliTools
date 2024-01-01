@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "BiliTools",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -27,7 +27,9 @@
       "http": {
         "all": false,
         "request": true,
-        "scope": ["https://*.bilibili.com/*"]
+        "scope": [
+          "https://*.bilibili.com/*"
+        ]
       }
     },
     "bundle": {
@@ -46,7 +48,12 @@
       "active": true,
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQTUzQTQ3NDY3RUZEMjgKUldRby9YNUdSenFsN3JJYklTL0g5RUd2QkhUWklqQUxydVZXdFA4c25ZazI0YjJIbTFFM0JiNjkK",
-      "endpoints": ["https://gh.con.sh/https://github.com/btjawa/BiliTools/blob/gh-pages/install.json"]
+      "endpoints": [
+        "https://gh.con.sh/https://github.com/btjawa/BiliTools/blob/master/install.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     },
     "security": {
       "csp": null

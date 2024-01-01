@@ -1,6 +1,8 @@
 import fetch from 'node-fetch';
 import { getOctokit, context } from '@actions/github';
+import { execSync } from 'child_process';
 import fs from 'fs';
+import path from 'path';
 
 import updatelog from './updatelog.mjs';
 
@@ -43,11 +45,6 @@ async function updater() {
     pub_date: new Date().toISOString(),
     platforms: {
       win64: { signature: '', url: '' }, // compatible with older formats
-      linux: { signature: '', url: '' }, // compatible with older formats
-      darwin: { signature: '', url: '' }, // compatible with older formats
-      'darwin-aarch64': { signature: '', url: '' },
-      'darwin-x86_64': { signature: '', url: '' },
-      'linux-x86_64': { signature: '', url: '' },
       'windows-x86_64': { signature: '', url: '' },
       // 'windows-i686': { signature: '', url: '' }, // no supported
     },
@@ -56,7 +53,7 @@ async function updater() {
   const setAsset = async (asset, reg, platforms) => {
     let sig = '';
     if (/.sig$/.test(asset.name)) {
-      sig = await getSignature(asset.browser_download_url);
+      sig = await getSignature(`https://gh.con.sh/${asset.browser_download_url}`);
     }
     platforms.forEach((platform) => {
       if (reg.test(asset.name)) {
@@ -66,7 +63,7 @@ async function updater() {
           return;
         }
         // 设置下载链接
-        updateData.platforms[platform].url = asset.browser_download_url;
+        updateData.platforms[platform].url = `https://gh.con.sh/${asset.browser_download_url}`;
       }
     });
   };
@@ -74,29 +71,21 @@ async function updater() {
   const promises = latestRelease.assets.map(async (asset) => {
     // windows
     await setAsset(asset, /.msi.zip/, ['win64', 'windows-x86_64']);
-
-    // darwin
-    await setAsset(asset, /.app.tar.gz/, [
-      'darwin',
-      'darwin-x86_64',
-      'darwin-aarch64',
-    ]);
-
-    // linux
-    await setAsset(asset, /.AppImage.tar.gz/, ['linux', 'linux-x86_64']);
   });
   await Promise.allSettled(promises);
 
-  if (!fs.existsSync('updater')) {
-    fs.mkdirSync('updater');
-  }
-
   // 将数据写入文件
   fs.writeFileSync(
-    './updater/install.json',
+    path.join(process.cwd(), 'install.json'),
     JSON.stringify(updateData, null, 2)
   );
-  console.log('Generate updater/install.json');
+  console.log('Generate install.json');
+  execSync('git config user.name github-actions');
+  execSync('git config user.email github-actions@github.com');
+  execSync('git add -A');
+  execSync(`git commit -m "Update install.json"`);
+  execSync(`git push origin HEAD:master`);
+  console.log(`Publish Successfully...`);
 }
 
 updater().catch(console.error);

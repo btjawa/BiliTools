@@ -1,7 +1,7 @@
 {
   "name": "bilitools",
-  "version": "0.1.0",
-  "description": "Download Videos/Covers/Audios/Danmakus... All in one!",
+  "version": "1.0.0",
+  "description": "bilibili工具箱，视频/番剧+音频下载，三种登录方式，仅用作学习用途。",
   "type": "module",
   "scripts": {
     "tauri": "tauri",
