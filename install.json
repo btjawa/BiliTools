@@ -1,0 +1,15 @@
+{
+  "version": "v1.0.0",
+  "notes": "更名为 \"BiliTools\", 全新图标\r\n- 功能: 下载相关\r\n    - 支持 8K & Hi-Res无损 & 杜比视界 + 全景声 & 编码格式\r\n    - 并发下载, 多个视频将会打包在一个文件夹内\r\n- 功能: 登录相关\r\n    - 个人主页\r\n    - 扫码 & 密码 & 短信登录 + 自动刷新登录状态\r\n- 功能: 杂项更新\r\n    - 现在可以设置了 - 引入配置文件\r\n    - 自动检测新版本并更新\r\n- 修复: 提高操作安全性 - 不再使用反代服务器解决CORS",
+  "pub_date": "2024-01-01T12:00:20.209Z",
+  "platforms": {
+    "win64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN21DZ0xuSk9nUHVSeERhckt2MFdnR2oxdE1ueldLT1MwUjVzR3NnOTRxY1NKUDkweUpSY0RyQWhuV3IxRCtmQi9LYWlTSS9nY3FURW95eHpqS3Y2VFEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA0MTEwNDA3CWZpbGU6QmlsaVRvb2xzXzEuMC4wX3g2NF9lbi1VUy5tc2kuemlwCm50OWdGOC8wWVR0bzY2TUFBeHJQUzJOOU1mN3hUMHpWYTU4eUZXYzBHN0V1U2lTbnQwNnhybWd6NjlaUHhUZGdmV2l3OERwN2toYXlmb3RtTjg2cUR3PT0K",
+      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.0.0/BiliTools_1.0.0_x64_en-US.msi.zip"
+    },
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN21DZ0xuSk9nUHVSeERhckt2MFdnR2oxdE1ueldLT1MwUjVzR3NnOTRxY1NKUDkweUpSY0RyQWhuV3IxRCtmQi9LYWlTSS9nY3FURW95eHpqS3Y2VFEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA0MTEwNDA3CWZpbGU6QmlsaVRvb2xzXzEuMC4wX3g2NF9lbi1VUy5tc2kuemlwCm50OWdGOC8wWVR0bzY2TUFBeHJQUzJOOU1mN3hUMHpWYTU4eUZXYzBHN0V1U2lTbnQwNnhybWd6NjlaUHhUZGdmV2l3OERwN2toYXlmb3RtTjg2cUR3PT0K",
+      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.0.0/BiliTools_1.0.0_x64_en-US.msi.zip"
+    }
+  }
+}
