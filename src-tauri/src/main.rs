@@ -18,7 +18,7 @@ lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref WORKING_DIR: PathBuf = {
-        PathBuf::from(env::var("APPDATA").unwrap()).join("com.btjawa.bilitools")
+        PathBuf::from(env::var("LOCALAPPDATA").unwrap()).join("com.btjawa.bilitools")
     };
     static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = {
         Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").unwrap()).join("Desktop")))
@@ -562,14 +562,11 @@ async fn init(window: tauri::Window) -> Result<i64, String> {
     let _ = get_buvid(window.clone()).await;
     let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
     HashMap::new() });
-    if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
-        let mid = mid_cookie.value.trim_start_matches("DedeUserID").trim();
-        window.emit("user-mid", mid.to_string()).unwrap();
-        return Ok(mid.parse().unwrap());
-    } else {
-        window.emit("user-mid", 0.to_string()).unwrap();
-        return Ok(0);
-    }
+    let mid_value = if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
+        mid_cookie.value.parse::<i64>().unwrap_or(0)
+    } else { 0 };
+    window.emit("user-mid", mid_value.to_string()).unwrap();
+    return Ok(mid_value);
 }
 
 #[tauri::command]
@@ -645,13 +642,34 @@ async fn open_select(window: tauri::Window, display_name: String, cid: String) {
 }
 
 #[tauri::command]
-async fn exit(window: tauri::Window) -> Result<i64, String> {
-    let conn = Connection::open(&*COOKIE_PATH).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    conn.execute("DELETE FROM cookies", []).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    window.emit("exit-success", 0).unwrap();
-    let _ = get_buvid(window.clone()).await;
-    window.emit("headers", headers_to_json(init_headers())).unwrap();
-    return Ok(0)
+async fn exit(window: tauri::Window) -> Result<String, String> {
+    let client = init_client();
+    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    HashMap::new() });
+    let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
+        &bili_jct.value } else { "" };
+    let response = client
+        .post("https://passport.bilibili.com/login/exit/v2")
+        .query(&[("biliCSRF", bili_jct.to_string())])
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
+
+    let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    if response_data["code"].as_i64() == Some(0) {
+        for cookie in cookie_headers.clone() {
+            let _ = insert_cookie(window.clone(), &cookie);
+        }
+        let _ = get_buvid(window.clone()).await;
+        window.emit("exit-success", 0).unwrap();
+        return Ok("成功退出登录".to_string());
+    } else {
+        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
+    }
 }
 
 #[tauri::command]

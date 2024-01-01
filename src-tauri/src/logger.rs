@@ -8,7 +8,7 @@ use log::LevelFilter;
 use std::{env, path::PathBuf};
 pub fn init_logger() -> Result<(), Box<dyn std::error::Error>> {
     let logfile = format!("{}/{}.log",
-    PathBuf::from(env::var("APPDATA").unwrap()).join("com.btjawa.bilitools").join("Logs").to_string_lossy(),
+    PathBuf::from(env::var("LOCALAPPDATA").unwrap()).join("com.btjawa.bilitools").join("Logs").to_string_lossy(),
     Local::now().format("%Y-%m-%d_%H-%M-%S"));
     let file_appender = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new("[{l} {d(%Y-%m-%d %H:%M:%S)}] {m}{n}")))
