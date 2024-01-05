@@ -40,8 +40,8 @@
 .about span { font-family: "HarmonyOS_Bold", sans-serif; }
 
 .loading,
-.loading-only,
-.loading-multi {
+.loading-action,
+.loading-audio {
     width: 30px;
     height: 30px;
     border: 2px solid #c4c4c4;
@@ -55,8 +55,8 @@
 }
 
 .loading.active,
-.loading-only.active,
-.loading-multi.active {
+.loading-action.active,
+.loading-audio {
     opacity: 1;
     visibility: visible;
 }
@@ -495,6 +495,11 @@ input[name="temp-dir-path"] {
     overflow: hidden;
 }
 
+@keyframes scroll-line {
+    0% { background-position: 0 0; }
+    100% { background-position: 100px 0; }
+}
+
 .down-page-info-progress-bar {
     position: absolute;
     left: 0;
@@ -502,6 +507,14 @@ input[name="temp-dir-path"] {
     height: 100%;
     background-color: #888888;
     border-radius: 10px;
+}
+
+.down-page-info-progress-bar.scroll {
+    background: repeating-linear-gradient(
+        45deg, #cbcbcb 0px, #cbcbcb 5px,
+        #888 5px, #888 10px
+    );
+    animation: scroll-line 2s linear infinite;
 }
 
 .down-page-empty-text {
@@ -695,6 +708,7 @@ input[name="temp-dir-path"] {
 
 .video-block-duration {
     min-width: 70px;
+    max-width: 70px;
 }
 
 .video-block-operates {
@@ -723,7 +737,8 @@ input[name="temp-dir-path"] {
 }
 
 .video-block-only,
-.video-block-multi {
+.video-block-multi,
+.audio-block {
     width: 97%;
     transition-property: all;
     transition-duration: 0.4s;
@@ -745,19 +760,21 @@ input[name="temp-dir-path"] {
     position: relative;
 }
 
+.audio-block.active,
 .video-block-multi.active,
 .video-block-only.active {
     animation: video-block-anime 0.5s cubic-bezier(0,1,.6,1);
     opacity: 1;
 }
 
+.audio-block.back,
 .video-block-multi.back,
 .video-block-only.back {
     animation: video-block-back-anime 0.5s cubic-bezier(0,1,.6,1);
 }
 
 .video-block-multi-video-down-btn,
-.video-block-only-audio-down-btn,
+.video-block-only-vaudio-down-btn,
 .video-block-only-video-down-btn {
     position: absolute;
     padding: 7.5px 20px;
@@ -772,10 +789,10 @@ input[name="temp-dir-path"] {
 }
 
 .video-block-multi-video-down-btn,
-.video-block-only-audio-down-btn { bottom: 10px; }
+.video-block-only-vaudio-down-btn { bottom: 10px; }
 
 .video-block-multi-video-down-btn:hover,
-.video-block-only-audio-down-btn:hover,
+.video-block-only-vaudio-down-btn:hover,
 .video-block-only-video-down-btn:hover {
     background-color: #1f1f1fa4;
 }
@@ -805,7 +822,7 @@ input[name="temp-dir-path"] {
 }
 
 .video-block-split,
-.video-block-audio-split,
+.video-block-vaudio-split,
 .video-block-codec-split,
 .video-block-dimension-split {
     background-color: #c4c4c433;
@@ -839,7 +856,7 @@ input[name="temp-dir-path"] {
     font-size: 14px;
 }
 
-.video-block-audio-ads,
+.video-block-vaudio-ads,
 .video-block-codec-cds,
 .video-block-dimension-dms {
     display: flex;
@@ -849,10 +866,10 @@ input[name="temp-dir-path"] {
     align-items: center;
 }
 
-.video-block-audio-ad,
+.video-block-vaudio-ad,
 .video-block-codec-cd,
 .video-block-dimension-dm,
-.video-block-audio-ads-opt,
+.video-block-vaudio-ads-opt,
 .video-block-codec-cds-opt,
 .video-block-dimension-dms-opt {
     font-size: 14px;
@@ -865,7 +882,7 @@ input[name="temp-dir-path"] {
 
 }
 
-.video-block-audio-ads-item,
+.video-block-vaudio-ads-item,
 .video-block-codec-cds-item,
 .video-block-dimension-dms-item {
     cursor: pointer;
@@ -878,14 +895,14 @@ input[name="temp-dir-path"] {
     transition: background-color 0.2s;
 }
 
-.video-block-audio-ads-item:hover,
+.video-block-vaudio-ads-item:hover,
 .video-block-codec-cds-item:hover,
 .video-block-dimension-dms-item:hover {
     background-color: #1f1f1fa4;
     transition: background-color 0.1s ease-in-out, border 0.1s ease-in-out;
 }
 
-.video-block-audio-ads-item.checked,
+.video-block-vaudio-ads-item.checked,
 .video-block-codec-cds-item.checked,
 .video-block-dimension-dms-item.checked {
     background-color: #1a1a1aca;
@@ -1248,11 +1265,17 @@ input[name="temp-dir-path"] {
 .login-sms-item {
     display: flex;
     align-items: center;
-    justify-content: center;
     padding: 12px 20px;
     width: 100%;
     box-sizing: border-box;
     position: relative;
+}
+
+.login-pwd-item form,
+.login-sms-item form {
+    display: flex;
+    justify-content: center;
+    flex-grow: 1;
 }
 
 .login-pwd-item input::-ms-reveal,
@@ -1365,13 +1388,6 @@ input[name="temp-dir-path"] {
 .login a {
     color: #3086bf;
     text-decoration: none;
-}
-
-.down-page-info-id {
-    position: absolute;
-    font-size: 12px;
-    right: 20px;
-    top: 0px;
 }
 
 .side-bar {

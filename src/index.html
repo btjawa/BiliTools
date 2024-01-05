@@ -192,7 +192,7 @@
                         <div class="login-pwd-split"></div>
                         <div class="login-pwd-item">
                             <div class="login-pwd-item-text">密码</div>
-                            <input autocomplete="new-password" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入密码" type="password" name="password-input">
+                            <form><input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入密码" type="password" name="password-input"></form>
                             <i class="fa-solid fa-eye login-pwd-item-eye"></i>
                         </div>
                     </div>
@@ -201,9 +201,7 @@
                 <div class="login-sms">
                     <div class="login-sms-wp">
                         <div class="login-sms-item">
-                            <div class="login-sms-item-text">
-                                +86&nbsp;<i class="fa-solid fa-chevron-down"></i>
-                            </div>
+                            <div class="login-sms-item-text"></div>
                             <input autocomplete="off" maxlength="15" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入手机号" type="text" name="tel-input">
                             <div class="login-sms-item-split"></div>
                             <div class="login-sms-getcode-btn">获取验证码</div>
@@ -212,7 +210,7 @@
                         <div class="login-sms-split"></div>
                         <div class="login-sms-item">
                             <div class="login-sms-item-text">验证码</div>
-                            <input autocomplete="new-password" maxlength="6" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入验证码" type="text" name="sms-input">
+                            <input autocomplete="off" maxlength="6" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入验证码" type="text" name="sms-input">
                         </div>
                     </div>
                     <div class="login-sms-login-btn">登录</div>
@@ -254,16 +252,6 @@
                     </div>
                 </div>
             </div>
-            <div class="video-list-tab-head">
-                <div class="multi-select-box-tab">选中</div>
-                <div class="video-block-page">编号</div>
-                <div class="video-block-split"></div>
-                <div class="video-block-name">标题</div>
-                <div class="video-block-split"></div>
-                <div class="video-block-duration">时长</div>
-                <div class="video-block-split"></div>
-                <div class="video-block-operates">下载选项</div>
-            </div>
             <div class="video-list"></div>
         </div>
         <div class="multi-select-next-btn">
@@ -279,6 +267,7 @@
         <script type="text/javascript" src="./js/md5.min.js"></script>
         <script type="text/javascript" src="./js/jsencript.min.js"></script>
         <script type="text/javascript" src="./js/gt.0.4.9.js"></script>
+        <script type="text/javascript" src="./js/pako.min.js"></script>
         <script type="text/javascript" src="./js/render.js"></script>
     </body>
 </html>

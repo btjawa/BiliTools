@@ -7,7 +7,6 @@ const searchInput = $('input[name="search-input"]');
 const searchElm = $('.search');
 const videoList = $('.video-list');
 const infoBlock = $('.info');
-const videoListTabHead = $('.video-list-tab-head');
 const loadingBox = $('.loading');
 const loginElm = $('.login');
 const userProfileElm = $('.user-profile');
@@ -22,10 +21,11 @@ const tempDirPath = $('input[name="temp-dir-path"]');
 
 let currentFocus = null, currentVideoBlock, currentElm = [], currentSel = [];
 let lastChecked = -1, highestZIndex = -1;
-let userData = new Array(2), downVideos = 0, downAudios = 0;
+let userData = new Array(2), totalDown = 0;
 let bouncing = false;
 
 window.videoData = [];
+window.audioData = [];
 window.selectedVideos = [];
 window.downUrls = [];
 
@@ -41,6 +41,16 @@ const bigVipIcon = `<svg class="user-vip-icon" width="16" height="16" viewBox="0
 <path d="M46.6262 22.731V22.7199H35.8032C35.8734 21.8558 35.914 20.9807 35.914 20.0982C35.914 19.1122 35.866 18.1337 35.7774 17.1699C35.7811 17.1072 35.7885 17.0444 35.7885 16.9779V16.9669C35.7885 14.9581 34.16 13.3333 32.1549 13.3333C30.1462 13.3333 28.5214 14.9618 28.5214 16.9669V16.9779C28.5214 17.2253 28.5473 17.469 28.5953 17.7017L28.5436 17.7091C28.6174 18.4956 28.6581 19.2895 28.6581 20.0945C28.6581 20.9807 28.6101 21.8558 28.5214 22.7162H17.392V22.731C15.4977 22.8528 13.9948 24.4259 13.9948 26.3534V26.3645C13.9948 28.3733 15.5346 29.9832 17.5397 29.9832C17.6948 29.9832 17.8535 29.9906 18.1046 29.9869L26.6124 29.9685C24.4559 34.9535 20.7153 39.0892 16.0294 41.7441C16.0072 41.7552 15.9888 41.7663 15.9666 41.7811C15.9149 41.8106 15.8669 41.8401 15.8152 41.8697L15.8189 41.8734C14.7961 42.5159 14.1129 43.6532 14.1129 44.9493V44.9604C14.1129 46.9692 15.7414 48.5939 17.7465 48.5939C18.5256 48.5939 19.242 48.3465 19.8328 47.9329C26.6604 43.9892 31.9002 37.6047 34.3631 29.9759H46.0428C46.2311 29.9795 46.5117 29.9685 46.5117 29.9685C48.6941 29.9242 50.1268 28.3807 50.1268 26.3756V26.3645C50.1305 24.3963 48.5722 22.8011 46.6262 22.731Z" fill="white"/>
 <path d="M49.5283 43.2251C49.5209 43.2104 49.5098 43.1993 49.5024 43.1882C49.3769 42.963 49.2292 42.7562 49.063 42.5642C46.7182 39.2408 43.7678 36.3791 40.3596 34.1524L40.3559 34.1561C39.7614 33.7278 39.0302 33.473 38.2437 33.473C36.2349 33.473 34.6102 35.1014 34.6102 37.1065V37.1176C34.6102 38.4912 35.3746 39.6876 36.5008 40.3043C39.418 42.2318 41.7997 44.44 43.6829 47.3904L43.8786 47.6378C44.5248 48.2286 45.3815 48.5942 46.3268 48.5942C48.3356 48.5942 49.9603 46.9657 49.9603 44.9606V44.9496C49.9566 44.3255 49.8015 43.7384 49.5283 43.2251Z" fill="white"/>
 </svg>`
+const videoListTabHead = $('<div>').addClass('video-list-tab-head active').html(
+    `<div class="multi-select-box-tab">选中</div>
+    <div class="video-block-page">编号</div>
+    <div class="video-block-split"></div>
+    <div class="video-block-name">标题</div>
+    <div class="video-block-split"></div>
+    <div class="video-block-duration">时长</div>
+    <div class="video-block-split"></div>
+    <div class="video-block-operates">下载选项</div>`
+);
 
 const downCoverIcon = `<i class="fa-solid fa-image icon-small"></i>`;
 const downVideoIcon = `<i class="fa-solid fa-file-video icon-small"></i>`;
@@ -68,6 +78,17 @@ class VideoData {
         this.cid = cid;
         this.type = type;
         this.index = index;
+        this.ss_title = ss_title;
+    }
+}
+
+class AudioData {
+    constructor(title, desc, pic, duration, sid, ss_title) {
+        this.title = title;
+        this.desc = desc;
+        this.pic = pic;
+        this.duration = duration;
+        this.sid = sid;
         this.ss_title = ss_title;
     }
 }
@@ -142,8 +163,35 @@ async function getVideoFull(aid, cid, type, action) {
         }
         return details;
     } else {
-        handleErr(error, type);
+        handleErr(details, type);
     }
+}
+
+async function getAudioFull(songid, quality, qualityStr, line, index) {
+    const params = new URLSearchParams({
+        songid, quality, privilege: 2,
+        mid: userData[0] || 0, platform: 'web',
+    });
+    const response = await http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${params.toString()}`,
+    { headers })
+    if (!response.ok) return;
+    const details = response.data;
+    const safeTitle = details.data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+    .split('.').pop().split('?')[0].split('#')[0];
+    const audioUrl = (details.data.cdns[line] || details.data.cdns[0]) || null;
+    const ssDir = `《${safeTitle}》`;
+    const ext = audioUrl.split('.').pop().split('?')[0].split('#')[0];
+    const displayName = `${safeTitle}_(${qualityStr}).${ext}`;
+    totalDown++;
+    invoke('push_back_queue', {
+        videoUrl: null, audioUrl,
+        displayName, action: "only", ssDir,
+        index: totalDown,
+    });
+    appendDownPageBlock(ext, qualityStr, audioData[index], totalDown);
+    invoke('process_queue', {initial: true});
+    currentElm.push(".down-page");
+    downPageElm.addClass('active').removeClass('back');
 }
 
 async function parseVideo(videoId) {
@@ -162,7 +210,6 @@ async function parseVideo(videoId) {
     }
 }
   
-  
 async function parseBangumi(videoId) {
     let getDetailUrl
     if (videoId.includes('ep') || videoId.includes('EP')) {
@@ -179,10 +226,23 @@ async function parseBangumi(videoId) {
     }
 }
 
+async function parseAudio(songId) {
+    const infoResponse = await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/song/info?sid=${songId.match(/\d+/)[0]}`,
+    { headers, responseType: http.ResponseType.Binary });
+    if (infoResponse.ok) {
+        const infoDetails = JSON.parse(pako.inflate(infoResponse.data, { to: 'string' }));
+        const tagsResponse = await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${songId.match(/\d+/)[0]}`,
+        { headers, responseType: http.ResponseType.Binary });
+        if (tagsResponse.ok) {
+            const tagsDetails = JSON.parse(pako.inflate(tagsResponse.data, { to: 'string' }));
+            applyAudioList({info: infoDetails, tags: tagsDetails});
+        }
+    }
+}
+
 async function getDownUrl(details, quality, action, line, fileType, index) {
     return new Promise((resolve) => {
         try {
-            let found = [];
             let downUrl = [];
             const data = details.data || details.result;
             const isVideo = fileType === "video";
@@ -190,11 +250,9 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 if (file.id == isVideo ? quality.dms_id : quality.ads_id
                 && !isVideo || file.codecs == quality.codec_id) {
                     if (isVideo) {
-                        found[0] = true;
                         downUrl[0] = [file.baseUrl];
                         if (file.backupUrl) downUrl[0].push(...file.backupUrl)
                     } else {
-                        found[1] = true;
                         downUrl[1] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
                         if (file.backupUrl) downUrl[1].push(...file.backupUrl)
                     }
@@ -202,37 +260,42 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 }
             }
             if (action == "multi") {
-                for (let audio of data.dash.audio) {
-                    if (audio.id == quality.ads_id) {
-                        found[1] = true;
-                        downUrl[1] = [audio.baseUrl];
-                        if (audio.backupUrl) downUrl[1].push(...audio.backupUrl)
-                        break;
+                const target = quality.ads_id==30250?data.dash.dolby.audio:(quality.ads_id==30251?data.dash.flac.audio:data.dash.audio);
+                if (Array.isArray(target)) {
+                    for (let audio of target) {
+                        if (audio.id == quality.ads_id) {
+                            downUrl[1] = [audio.baseUrl];
+                            if (audio.backupUrl) downUrl[1].push(...audio.backupUrl);
+                            break;
+                        }
                     }
+                } else {
+                    downUrl[1] = [target.baseUrl];
+                    if (target.backupUrl) downUrl[1].push(...target.backupUrl);
                 }
             }
-            if ((isVideo && found[0]) || (!isVideo && found[1]) || (action=="multi" && found[1])) {
-                isVideo ? downVideos++ : downAudios++;
-                if (action=="multi") downAudios++;
+            if ((action == "multi" && downUrl[0] && downUrl[1]) || 
+            (action == "only" && (isVideo ? downUrl[0] : downUrl[1]))) {
                 let qualityStr, ext, displayName;
-                const safeTitle = videoData[index].title.replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
+                const safeTitle = videoData[index].title.replace(/\s*[\\/:*?"<>|]\s*/g, '_');
                 const ssDir = `《${videoData[index].ss_title}》`;
                 if (action == "only") {
                     qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
                     ext = isVideo ? "mp4" : "aac";
-                    displayName = `${isVideo?downVideos:downAudios}_${safeTitle}_${qualityStr}.${ext}`;
+                    displayName = `${safeTitle}_(${qualityStr}).${ext}`;
                 } else if (action == "multi") {
-                    qualityStr = `${quality.dms_desc}_${quality.ads_desc}`;
+                    qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
                     ext = "mp4";
-                    displayName = `${downVideos}_${safeTitle}_${qualityStr}.mp4`;
+                    displayName = `${safeTitle}_(${qualityStr}).mp4`;
                 }
+                totalDown++;
                 invoke('push_back_queue', {
-                    videoUrl: (downUrl[0] && downUrl[0][line]) || null,
-                    audioUrl: (downUrl[1] && downUrl[1][line]) || null,
+                    videoUrl: (downUrl[0] && (downUrl[0][line] || downUrl[0][0])) || null,
+                    audioUrl: (downUrl[1] && (downUrl[1][line] || downUrl[1][0])) || null,
                     displayName, action, ssDir,
-                    cid: videoData[index].cid.toString(),
+                    index: totalDown,
                 });
-                appendDownPageBlock(ext, qualityStr, videoData[index]);
+                appendDownPageBlock(ext, qualityStr, videoData[index], totalDown);
                 resolve();
             } else {
                 iziToast.error({
@@ -254,13 +317,13 @@ function handleErr(err, type) {
         const root = type != "bangumi" ? err.data : err.result;
         if (root.is_preview === 1) {
             if (root.durls && root.durl) {
-                errMsg = '没有本片权限, 只有试看权限<br>可能是没有大会员/没有购买本片';
+                errMsg = '没有本片权限, 只有试看权限<br>可能是没有大会员/没有购买本片<br>或是地区受限';
             }
         } else if (root.v_voucher) errMsg = '目前请求次数过多, 已被风控, 请等待5分钟或更久后重新尝试请求';
     } else if (err.code === -404) {
-        errMsg = `错误信息: ${err.message}<br>错误代码: ${err.code}<br>可能是没有大会员/没有购买本片, 或是真的没有该资源`;
+        errMsg = `${err.message || err.msg}<br>错误代码: ${err.code}<br>可能是没有大会员/没有购买本片<br>或是地区受限<br>或是真的没有该资源`;
     } else {
-        errMsg = `错误信息: ${err.message}<br>错误代码: ${err.code}`;
+        errMsg = `${err.message || err.msg || err}<br>错误代码: ${err.code}`;
     }
     if (errMsg) {
         iziToast.error({
@@ -279,40 +342,40 @@ function handleErr(err, type) {
 async function search(input) {
     infoBlock.removeClass('active');
     videoList.removeClass('active');
-    videoListTabHead.removeClass('active');
+    $('.video-list-tab-head').removeClass('active');
     multiSelect.off('click');
     currentElm.push(".video-root");
     if ($('.multi-select-icon').hasClass('checked')) multiSelect.click();
     let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
+    $('.video-block-operates-item').off('click');
     if (match) {
         parseVideo(match[0]);
         searchElm.addClass('active').removeClass('back');
         loadingBox.addClass('active');
-    } else {
-        match = input.match(/ep(\d+)|ss(\d+)/i);
-        if (match) {
-            parseBangumi(match[0]); 
-            searchElm.addClass('active').removeClass('back');
-            loadingBox.addClass('active');
-        } else {
-            match = input.match(/au(\d+)/i);
-            if (match) {
-                iziToast.error({
-                    icon: 'fa-regular fa-circle-exclamation',
-                    layout: '2',
-                    title: `警告`,
-                    message: "暂不支持au解析"
-                });
-            } else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
-                iziToast.error({
-                    icon: 'fa-regular fa-circle-exclamation',
-                    layout: '2',
-                    title: `警告`,
-                    message: !input ? "请输入链接/AV/BV/SS/EP号" : "输入不合法！请检查格式"
-                });
-                backward();
-            }
-        }
+        return;
+    }
+    match = input.match(/ep(\d+)|ss(\d+)/i);
+    if (match) {
+        parseBangumi(match[0]); 
+        searchElm.addClass('active').removeClass('back');
+        loadingBox.addClass('active');
+        return;
+    }
+    match = input.match(/au(\d+)/i);
+    if (match) {
+        parseAudio(match[0]); 
+        searchElm.addClass('active').removeClass('back');
+        loadingBox.addClass('active');
+        return;
+    } else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
+        iziToast.error({
+            icon: 'fa-regular fa-circle-exclamation',
+            layout: '2',
+            title: `警告`,
+            message: !input ? "请输入链接/AV/BV/SS/EP/AU号" : "输入不合法！请检查格式"
+        });
+        backward();
+        return;
     }
 }
 
@@ -399,6 +462,12 @@ async function bilibili() {
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
+                match = input.match(/au(\d+)/i);
+                if (match) {
+                    shell.open('https://www.bilibili.com/audio/' + match[0]);
+                    $('.context-menu').css({ opacity: 0, display: "none" });
+                    return;
+                }
                 iziToast.error({
                     icon: 'fa-regular fa-circle-exclamation',
                     layout: '2',
@@ -418,7 +487,7 @@ async function bilibili() {
                 icon: 'fa-regular fa-circle-exclamation',
                 layout: '2',
                 title: `警告`,
-                message: "请输入链接/AV/BV/SS/EP号"
+                message: "请输入链接/AV/BV/SS/EP/AU号"
             });
         }
     }
@@ -443,7 +512,8 @@ async function backward() {
         if (searchElm.hasClass('active')) searchElm.removeClass('active').addClass('back');
         infoBlock.removeClass('active');
         videoList.removeClass('active');
-        videoListTabHead.removeClass('active');
+        loadingBox.removeClass('active');
+        $('.video-list-tab-head').removeClass('active');
         multiSelect.removeClass('active');
         $('.video-list').empty();
     } else if (currentElm[index] == '.settings') {
@@ -646,12 +716,15 @@ async function checkRefresh() {
     const { refresh, timestamp } = response.data;
     if (refresh) {
         const correspondPath = await getCorrespondPath(timestamp);
-        const csrfHtmlResp = (await http.fetch(`https://www.bilibili.com/correspond/1/${correspondPath}`),
-        { headers, responseType: http.ResponseType.Text }).data;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(await csrfHtmlResp.text(), 'text/html');
-        const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
-        invoke("refresh_cookie", { refreshCsrf });
+        const csrfHtmlResp = await http.fetch(`https://www.bilibili.com/correspond/1/${correspondPath}`,
+        { headers, responseType: http.ResponseType.Binary });
+        if (csrfHtmlResp.ok) {
+            const infoDetails = pako.inflate(csrfHtmlResp.data, { to: 'string' });
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(infoDetails, 'text/html');
+            const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
+            invoke("refresh_cookie", { refreshCsrf });
+        }
     } else return refresh;
 }
 
@@ -693,14 +766,48 @@ function initVideoInfo(type, details) {
     $('.info-styles').empty().append(contrElm, stylesText).append("&emsp;|&emsp;").append(pubdateElm, pubdate);
 }
 
+function initAudioInfo(details) {
+    const root = details.info.data;
+    $('.info-cover').attr("src", "").attr("src", root.cover);
+    $('.info-title').html(root.title);
+    $('.info-desc').html((root.intro).replace(/\n/g, '<br>'));
+    if (root.author) {
+        $('.info-owner-name').html(root.author);
+    } else {
+        $('.info-owner-name').css("display", "none");
+    }
+    $('.info-title').css('max-width', `calc(100% - ${parseInt($('.info-owner').outerWidth(true))}px)`);
+    $('.info-stat').html(
+        `<div class="info-stat-item">${viewIcon + formatStat(root.statistic.play)}</div>
+        <div class="info-stat-item">${replyIcon + formatStat(root.statistic.comment)}</div>
+        <div class="info-stat-item">${coinIcon + formatStat(root.coin_num)}</div>
+        <div class="info-stat-item">${favoriteIcon + formatStat(parseInt(root.statistic.collect))}</div>
+        <div class="info-stat-item">${shareIcon + formatStat(root.statistic.share)}</div>`
+    );
+    let stylesText = '';
+    const tagsRoot = details.tags.data;
+    for (let i = 0; i < tagsRoot.length; i++) {
+        stylesText += tagsRoot[i].info;
+        if (i < tagsRoot.length - 1) stylesText += "&nbsp;·&nbsp;";
+    }
+    const contrElm = $('<a>').addClass('bcc-iconfont bcc-icon-ic_contributionx icon-small');
+    const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ icon-small');
+    const pubdate = formatPubdate(root.passtime);
+    $('.info-styles').empty().append(contrElm, stylesText).append("&emsp;|&emsp;").append(pubdateElm, pubdate);
+}
+
 function applyVideoList(details) { // 分类填充视频块
     videoList.empty();
     loadingBox.removeClass('active');
     let actualSearchVideo = [];
+    multiSelect.off('click');
+    multiSelectNext.off('click');
+    multiSelectDown.off('click');
     if (details.code == 0) {
         infoBlock.addClass('active');
         videoList.addClass('active');
-        videoListTabHead.addClass('active');
+        $('.video-list-tab-head').addClass('active');
+        infoBlock.after(videoListTabHead);
         multiSelect.addClass('active');
         downUrls = [], videoData = [], selectedVideos = [];
         if (details.data) {
@@ -872,11 +979,49 @@ function applyVideoList(details) { // 分类填充视频块
     }
 };
 
+function applyAudioList(details) { //填充音频块
+    videoList.empty();
+    if (details.info.code == 0) {
+        infoBlock.addClass('active');
+        videoList.addClass('active');
+        $('.video-list-tab-head').addClass('active');
+        infoBlock.after(videoListTabHead);
+        $('.video-list-tab-head').find('.video-block-name').text('音质')
+        .find('.video-block-page').text('等级');
+        multiSelect.removeClass('active');
+        downUrls = [], audioData = [], selectedVideos = [];
+        initAudioInfo(details);
+        const root = details.info.data;
+        audioData.push(new AudioData(
+            root.title, root.intro, 
+            root.cover, root.duration, 
+            root.id, root.title
+        ));
+        const params = new URLSearchParams({
+            songid: root.id, quality: 3,
+            privilege: 2, mid: userData[0] || 0,
+            platform: 'web',
+        });
+        http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${params.toString()}`,
+        { headers }).then(async response => {
+            if (!response.ok) return;
+            loadingBox.removeClass('active');
+            const details = response.data;
+            details.data.qualities.reverse().forEach(quality => {
+                appendAudioBlock(quality);
+            });
+        });
+    } else {
+        handleErr(details.info);
+        backward();
+    }
+};
+
 async function handleVideoClick(action, click, data, ms) {
     if (!$('.multi-select-icon').hasClass('checked')) {
         const videoBlockAction = $('<div>').addClass(`video-block-${action}`);
         const videoBlockTitle = $('<div>').addClass('video-block-title').text(action=="multi"?'解析音视频':'仅解析选项');
-        videoBlockAction.addClass('active').append(videoBlockTitle, $('<div>').addClass(`loading-${action} active`));
+        videoBlockAction.addClass('active').append(videoBlockTitle, $('<div>').addClass(`loading-action active`));
         currentVideoBlock = ms ? click : click.closest('.video-block');
         if (currentVideoBlock.next(`.video-block-multi`).length || currentVideoBlock.next(`.video-block-only`).length) {
             currentVideoBlock.next().remove();
@@ -884,16 +1029,18 @@ async function handleVideoClick(action, click, data, ms) {
         if (!ms) {
             currentVideoBlock.after(videoBlockAction);
             const videoDownBtn = $('<div>').addClass(`video-block-${action}-video-down-btn`).text('下载');
-            const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action}-audio-down-btn`).text('下载'):'';
+            const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action}-vaudio-down-btn`).text('下载'):'';
             currentVideoBlock.next($(`.video-block-${action}`)).append(videoDownBtn, AudioDownBtn);
         }
         const details = await getVideoFull(data.aid, data.cid, data.type, action);
-        currentVideoBlock.next($(`.video-block-${action}`)).find(`.loading-${action}`).removeClass('active');
-        const dms = applyDimensionList(details, data.type, action, ms);
-        const ads = applyAudioList(details, data.type, action, ms);
+        currentVideoBlock.next($(`.video-block-${action}`)).find(`.loading-action`).removeClass('active');
+        const dms = appendDimensionList(details, data.type, action, ms);
+        const ads = appendAudioList(details, data.type, action, ms);
         if (ms) {
             return [new CurrentSel(...dms, ...ads), details];
-        } else applyDownBtn(details, data, action, false);
+        } else {
+            applyDownBtn(details, data, action, false)
+        };
     } else {
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
@@ -915,13 +1062,11 @@ function appendVideoBlock(index) { // 填充视频块
     const checkBoxMark = $('<span>').addClass('multi-select-box-checkmark');
     videoMultiSelect.append(checkBoxLabel, checkBoxMark);
     const videoOperates = $('<div>').addClass('video-block-operates');
-    const videoSplit1 = $('<div>').addClass('video-block-split');
-    const videoSplit2 = $('<div>').addClass('video-block-split');
-    const videoSplit3 = $('<div>').addClass('video-block-split');
+    const videoSplit = $('<div>').addClass('video-block-split');
     const getCoverBtn = $('<div>').addClass('video-block-getcover-btn video-block-operates-item').html(`${downCoverIcon}解析封面`);
     const getMultiBtn = $('<div>').addClass('video-block-getvideo-btn video-block-operates-item').html(`${downVideoIcon}解析音视频`);
     const getOnlyBtn = $('<div>').addClass('video-block-getaudio-btn video-block-operates-item').html(`${downAudioIcon}仅解析选项`);
-    videoBlock.append(videoMultiSelect, videoPage, videoSplit1, videoName, videoSplit2, videoDuration, videoSplit3, videoOperates).appendTo(videoList);
+    videoBlock.append(videoMultiSelect, videoPage, videoSplit, videoName, videoSplit.clone(), videoDuration, videoSplit.clone(), videoOperates).appendTo(videoList);
     videoOperates.append(getCoverBtn, getMultiBtn, getOnlyBtn).appendTo(videoBlock);
     checkBoxLabel.on('change', function() {
         const isChecked = $(this).prop('checked');
@@ -954,18 +1099,7 @@ function appendVideoBlock(index) { // 填充视频块
     }
     getCoverBtn.on('click', () => {
         if (!$('.multi-select-icon').hasClass('checked')) {
-            let options = {
-                title: '选择下载线路',
-                background: "#2b2b2b",
-                color: "#c4c4c4",
-                html: `<button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>`,
-                showConfirmButton: false,
-            };
-            Swal.fire(options);
-            $('.swal-btn-main').on('click', () => {
-                shell.open(data_root.pic.replace(/http/g, 'https'));
-                Swal.close();
-            })
+            shell.open(data_root.pic.replace(/http/g, 'https'));
         } else {
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',
@@ -979,29 +1113,65 @@ function appendVideoBlock(index) { // 填充视频块
     getOnlyBtn.on('click', (e) => handleVideoClick("only", $(e.currentTarget), data_root, false));
 }
 
-async function appendDownPageBlock(type, quality, data) { // 填充下载块
-    const title = data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_').replace(/\s/g, '_');
+function appendAudioBlock(details) { // 填充音频块
+    const index = audioData.length - 1;
+    const data_root = audioData[index];
+    const videoPage = $('<div>').addClass('video-block-page').text(details.type + 1);
+    const videoName = $('<div>').addClass('video-block-name').html(details.desc + "&emsp;|&emsp;" + details.bps);
+    const videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data_root.duration, null));
+    const videoBlock = $('<div>').addClass('video-block');
+    const videoMultiSelect = $('<label>').addClass('multi-select-box');
+    const checkBoxLabel = $('<input>').attr('type', 'checkbox').addClass('multi-select-box-org');
+    const checkBoxMark = $('<span>').addClass('multi-select-box-checkmark');
+    videoMultiSelect.append(checkBoxLabel, checkBoxMark);
+    const videoOperates = $('<div>').addClass('video-block-operates');
+    const videoSplit = $('<div>').addClass('video-block-split');
+    const getCoverBtn = $('<div>').addClass('video-block-getcover-btn video-block-operates-item').html(`${downCoverIcon}解析封面`);
+    const getAudioBtn = $('<div>').addClass('video-block-getaudio-btn video-block-operates-item').html(`${downAudioIcon}解析音频`);
+    videoBlock.append(videoMultiSelect, videoPage, videoSplit, videoName, videoSplit.clone(), videoDuration, videoSplit.clone(), videoOperates).appendTo(videoList);
+    videoOperates.append(getCoverBtn, getAudioBtn).appendTo(videoBlock);
+    getCoverBtn.on('click', () => shell.open(data_root.pic.replace(/http/g, 'https')));
+    getAudioBtn.on('click', () => {
+        let options = {
+            title: '选择下载线路',
+            background: "#2b2b2b",
+            color: "#c4c4c4",
+            html: `
+            <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
+            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路</button>
+            `,
+            showConfirmButton: false,
+        };
+        Swal.fire(options);
+        $('.swal-btn-main').on('click', () => {
+            const line = $(this).hasClass('swal-btn-backup1') ? 1 : 0;
+            Swal.close();
+            getAudioFull(data_root.sid, details.type, details.bps.replace("kbit/s", "K"), line, index)
+        })
+    });
+}
+
+async function appendDownPageBlock(type, quality, data, index) { // 填充下载块
+    const title = data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_');
     const desc = data.desc;
     const pic = data.pic;
-    const cid = data.cid;
-    const finalTitle = `${type=="aac"?downAudios:downVideos}_${title}_${quality}.${type}`;
+    const finalTitle = `${title}_(${quality}).${type}`;
     const downPage = $('.down-page');
     if (downPage.find('.down-page-empty-text')) {
         downPage.find('.down-page-empty-text').remove();
     }
     downPage.css("justify-content", `${downPage.children().length < 5 ? "center" : "flex-start"}`);
-    const infoBlock = $('<div>').addClass('down-page-info')
+    const infoBlock = $(`<div id="${totalDown}">`).addClass('down-page-info')
     const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace("http:", "https:"))
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
-    const infoId = $('<i>').addClass('down-page-info-id').text(`cid: ${cid}`);
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
     const infoTitle = $('<div>').addClass('down-page-info-title').html(finalTitle).css('max-width', `100%`);
     const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载`);
     const infoProgressBar = $('<div>').addClass('down-page-info-progress-bar');
     const infoProgress = $('<div>').addClass('down-page-info-progress').html(infoProgressBar);
     const openDirBtn = $('<div>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${type=="aac"?'audio':'video'} icon-small"></i>定位文件`);
-    infoBlock.append(infoCover, infoData.append(infoId, infoTitle, infoDesc, openDirBtn, infoProgressText, infoProgress)).appendTo(downPage);
+    infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, openDirBtn, infoProgressText, infoProgress)).appendTo(downPage);
     openDirBtn.on('click', () => {
         if (parseFloat(infoProgressBar.css('width')) / parseFloat(infoProgress.css('width')) < 1) {
             iziToast.error({
@@ -1011,12 +1181,12 @@ async function appendDownPageBlock(type, quality, data) { // 填充下载块
                 message: `请等待下载完毕`
             });
         } else {
-            invoke('open_select', { displayName: finalTitle, cid: cid.toString() });
+            invoke('open_select', { displayName: finalTitle, index });
         } 
     });
 }
 
-function applyDimensionList(details, type, action, ms) { // 填充分辨率
+function appendDimensionList(details, type, action, ms) { // 填充分辨率
     if (details.code == 0) {
         const root = type == "bangumi" ? details.result : details.data;
         const dms = $('<div>').addClass("video-block-dimension-dms");
@@ -1035,7 +1205,7 @@ function applyDimensionList(details, type, action, ms) { // 填充分辨率
         for (let i = 0; i < qualityList.length; i++) {
             const quality = qualityList[i];
             const qualityItem = root.support_formats.find(format => format.quality === quality);
-            const description = qualityItem.display_desc + (qualityItem.superscript ? `_${qualityItem.superscript}` : '');
+            const description = qualityItem.display_desc + (qualityItem.superscript ? `-${qualityItem.superscript}` : '');
             const currentBtn = $('<div>').addClass(`video-block-dimension-dms-${quality} video-block-dimension-dms-item`);
             const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
             currentBtn.append(currentIcon, qualityItem.new_description);
@@ -1044,7 +1214,7 @@ function applyDimensionList(details, type, action, ms) { // 填充分辨率
                 currentBtn.addClass('checked');
                 currentSel[0] = quality;
                 currentSel[1] = description;
-                const codec = applyCodecList(qualityItem, type, action, "init", ms);
+                const codec = appendCodecList(qualityItem, type, action, "init", ms);
                 if (ms) return [quality, description, ...codec];
             }
             currentBtn.on('click', function() {
@@ -1056,7 +1226,7 @@ function applyDimensionList(details, type, action, ms) { // 填充分辨率
                 $(this).addClass('checked');
                 currentSel[0] = quality;
                 currentSel[1] = qualityItem.display_desc;
-                applyCodecList(qualityItem, type, action, "update", ms);
+                appendCodecList(qualityItem, type, action, "update", ms);
             });
         }
     } else {
@@ -1064,7 +1234,7 @@ function applyDimensionList(details, type, action, ms) { // 填充分辨率
     }
 };
 
-function applyCodecList(details, type, action, extra, ms) { // 填充编码格式
+function appendCodecList(details, type, action, extra, ms) { // 填充编码格式
     if (details.codecs) {
         const cds = $('<div>').addClass("video-block-codec-cds");
         const cd = $('<div>').addClass("video-block-codec-cd").text("编码格式");
@@ -1119,13 +1289,13 @@ function applyCodecList(details, type, action, extra, ms) { // 填充编码格�
     }
 }
 
-function applyAudioList(details, type, action, ms) { // 填充音频
+function appendAudioList(details, type, action, ms) { // 填充音频
     if (details.code == 0) {
         const root = type == "bangumi" ? details.result : details.data;
-        const ads = $('<div>').addClass("video-block-audio-ads");
-        const ad = $('<div>').addClass("video-block-audio-ad").text("比特率/音质");
-        const split = $('<div>').addClass("video-block-audio-split");
-        const adsOpt = $('<div>').addClass("video-block-audio-ads-opt");
+        const ads = $('<div>').addClass("video-block-vaudio-ads");
+        const ad = $('<div>').addClass("video-block-vaudio-ad").text("比特率/音质");
+        const split = $('<div>').addClass("video-block-vaudio-split");
+        const adsOpt = $('<div>').addClass("video-block-vaudio-ads-opt");
         ads.append(ad, split, adsOpt);
         const qualityDesc = {
             30216: "64K",
@@ -1135,9 +1305,9 @@ function applyAudioList(details, type, action, ms) { // 填充音频
             30251: "Hi-Res无损",
         }
         if (currentVideoBlock.next(`.video-block-${action}`).length) {
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
+            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-vaudio-ads').remove();
         } else {
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads').remove();
+            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-vaudio-ads').remove();
         }
         currentVideoBlock.next(`.video-block-${action}`).append(ads);
         const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
@@ -1151,7 +1321,7 @@ function applyAudioList(details, type, action, ms) { // 填充音频
         for (let i = 0; i < qualityList.length; i++) {
             const quality = qualityList[i];
             const description = qualityDesc[quality];
-            const currentBtn = $('<div>').addClass(`video-block-audio-ads-${quality} video-block-audio-ads-item`);
+            const currentBtn = $('<div>').addClass(`video-block-vaudio-ads-${quality} video-block-vaudio-ads-item`);
             const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} icon-small`);
             currentBtn.append(currentIcon, description);
             adsOpt.append(currentBtn);
@@ -1159,7 +1329,7 @@ function applyAudioList(details, type, action, ms) { // 填充音频
                 currentBtn.css('cursor', 'not-allowed');
                 continue;
             }
-            if (!$('.video-block-audio-ads-item').hasClass('checked')) {
+            if (!$('.video-block-vaudio-ads-item').hasClass('checked')) {
                 currentBtn.addClass('checked');
                 currentSel[4] = quality;
                 currentSel[5] = description;
@@ -1167,9 +1337,9 @@ function applyAudioList(details, type, action, ms) { // 填充音频
             };
             currentBtn.on('click', function() {
                 if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
+                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-vaudio-ads-item').removeClass('checked');
                 } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-audio-ads-item').removeClass('checked');
+                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-vaudio-ads-item').removeClass('checked');
                 }
                 $(this).addClass('checked');
                 currentSel[4] = quality;
@@ -1197,29 +1367,26 @@ function applyDownBtn(details, data, action, ms) { // 监听下载按钮
         };
         function handleDown(fileType) {
             Swal.fire(options);
-            $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
-            $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2',async  function() {
+            $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2', async function() {
                 Swal.close();
                 const line = $(this).hasClass('swal-btn-backup1') ? 1 : ($(this).hasClass('swal-btn-backup2') ? 2 : 0);
                 if (!ms) {
                     downUrls.push(details);
                     await getDownUrl(details, quality, action, line, fileType, data.index - 1);
                     invoke('process_queue', {initial: true});
-                    backward();
                     currentElm.push(".down-page");
                     downPageElm.addClass('active').removeClass('back');
                 }
-                resolve(line);
+                $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
+                return resolve(line);
             });
         }
         if (ms) handleDown("video");
         else {
             const videoDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-video-down-btn`);
-            videoDownBtn.on('click', () => handleDown("video"));
-            if (action == "only") {
-                const audioDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-audio-down-btn`);
-                audioDownBtn.on('click', () => handleDown("audio"));
-            }
+            const audioDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-vaudio-down-btn`);    
+            if (action == "only") audioDownBtn.on('click', () => handleDown("audio"));
+            else videoDownBtn.on('click', () => handleDown("video"));
         }
     });
 }
@@ -1294,6 +1461,7 @@ async function pwdLogin() {
     const pwdInput = $('input[name="password-input"]');
     toggleEye.off('click');
     loginBtn.off('click');
+    pwdInput.off('keydown');
     toggleEye.on('click', function() {
         toggleEye.css("margin", toggleEye.hasClass('fa-eye') ? "0": "0 1px");
         if (toggleEye.hasClass('fa-eye')) {
@@ -1334,10 +1502,15 @@ async function pwdLogin() {
             });
         }
     });
+    pwdInput.on('keydown', e => {
+        if (e.keyCode === 13) loginBtn.click();
+    })
 }
 
 async function smsLogin() {
     const loginBtn = $('.login-sms-login-btn');
+    const prefix = (await http.fetch('https://api.bilibili.com/x/web-interface/zone', { headers }))
+    .data.data.country_code || 86;
     const areaCodes = (await http.fetch('https://passport.bilibili.com/web/generic/country/list')).data;
     const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
     allCodes.sort((a, b) => a.id - b.id);
@@ -1351,7 +1524,6 @@ async function smsLogin() {
             .html(`<span style="float:left">${code.cname}</span>
             <span style="float:right">+${code.country_id}</span>`);
         codeList.append(codeElement);
-        if (index === 0) codeElement.addClass('checked');
         codeElement.on('click', () => {
             codeList.prev().find('.login-sms-item-text').html(codeElement.find('span').last().text()
             + '&nbsp;<i class="fa-solid fa-chevron-down"></i>');
@@ -1359,6 +1531,7 @@ async function smsLogin() {
             codeElement.addClass('checked');
             codeList.removeClass('active');
         });
+        if (code.country_id == prefix) codeElement.click();
     });
     codeList.prev().on('click', '.login-sms-item-text i', (e) => {
         codeList.addClass('active');
@@ -1453,6 +1626,9 @@ async function smsLogin() {
             });
         }
     });
+    pwdInput.on('keydown', e => {
+        if (e.keyCode === 13) loginBtn.click();
+    })
 }
 
 async function login() {
@@ -1513,7 +1689,7 @@ function settings() {
     const tempDirOpenBtn = $('.temp-dir-path-openbtn');
     downDirOpenBtn.off('click');
     tempDirOpenBtn.off('click');
-    function handelSave(set) {
+    function handleSave(set) {
         invoke('rw_config', {action: "save", sets: {
             max_conc: 0,
             default_dms: 0,
@@ -1545,14 +1721,14 @@ function settings() {
         const selected = await selFile('directory');
         if (selected) {
             downDirPath.val(selected);
-            handelSave("存储路径");
+            handleSave("存储路径");
         }
     });
     tempDirOpenBtn.on('click', async () => {
         const selected = await selFile('directory');
         if (selected) {
             tempDirPath.val(selected);
-            handelSave("临时文件存储路径");
+            handleSave("临时文件存储路径");
         }
     });
 }
@@ -1652,6 +1828,7 @@ listen("settings", async (event) => {
 })
 
 listen("user-mid", async (event) => {
+    $('.user-avatar-placeholder').off('click');
     if (event.payload != '0') {
         getUserProfile(event.payload);
         $('.user-avatar-placeholder').attr('data-after', '主页');
@@ -1666,6 +1843,7 @@ listen("user-mid", async (event) => {
 listen("headers", async (event) => headers = event.payload);
 
 listen("exit-success", async (event) => {
+    $('.user-avatar-placeholder').off('click');
     backward();
     $('.user-avatar').attr('src', './icon/default.jpg');
     $('.user-name').text("登录");
@@ -1695,49 +1873,50 @@ listen("login-status", async (event) => {
 })
 
 listen("download-progress", async (event) => {
-    const infoBlock = $('.down-page-info');
     const p = event.payload;
-    infoBlock.children().each(function() {
-        const id = $(this).find('.down-page-info-id');
+    downPageElm.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (id.text() == `cid: ${p.cid}` && title.text() == p.display_name) {
+        if ($(this).attr('id') == (p.index) && title.text() == p.display_name) {
             $(this).find('.down-page-info-progress-bar').css('width', p.progress);
             $(this).find('.down-page-info-progress-text')
             .html(`${p.file_type=="audio"?"音频":"视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${formatDuration(parseFloat(p.remaining), "progress")}&emsp;当前速度: ${p.speed}`);
             if (parseFloat(p.progress) >= 100) {
                 $(this).find('.down-page-info-progress-text')
-                .html(`${p.fileType=="audio"?"音频":"视频"}下载成功`);
+                .html(`${p.file_type=="audio"?"音频":"视频"}下载成功`);
             }
         }
     });
 })
 
 listen("merge-progress", async (event) => {
-    const infoBlock = $('.down-page-info');
-    infoBlock.children().each(function() {
+    const p = event.payload;
+    downPageElm.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (title.text() == event.payload[4]) {
+        if ($(this).attr('id') == (p.index) && title.text() == p.display_name) {
+            $(this).find('.down-page-info-progress-bar').addClass('scroll');
             $(this).find('.down-page-info-progress-text')
-            .html(`合并音视频 - 已合并帧: ${event.payload[0]}&emsp;fps: ${event.payload[1]}&emsp;已合并至: ${event.payload[2]}&emsp;速度: ${event.payload[3]}`);
+            .html(`合并音视频 - 已合并帧: ${p.frame}&emsp;fps: ${p.fps}&emsp;已合并至: ${p.out_time}&emsp;速度: ${p.speed}`);
         }
     });
 })
 
 listen("merge-success", async (event) => {
-    const infoBlock = $('.down-page-info');
-    infoBlock.children().each(function() {
+    const p = event.payload;
+    downPageElm.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (title.text() == event.payload) {
+        $(this).find('.down-page-info-progress-bar').removeClass('scroll');
+        if ($(this).attr('id') == (p.index) && title.text() == p.display_name) {
             $(this).find('.down-page-info-progress-text').html(`合并成功 - 音视频下载成功`);
         }
     });
 })
 
 listen("merge-failed", async (event) => {
-    const infoBlock = $('.down-page-info');
-    infoBlock.children().each(function() {
+    const p = event.payload;
+    downPageElm.children().each(function() {
         const title = $(this).find('.down-page-info-title');
-        if (title.text() == event.payload) {
+        $(this).find('.down-page-info-progress-bar').removeClass('scroll');
+        if ($(this).attr('id') == (p.index) && title.text() == p.display_name) {
             $(this).find('.down-page-info-progress-text').html(`合并失败 - 音视频下载失败`);
         }
     });

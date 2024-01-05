@@ -24,6 +24,3 @@ dist-ssr
 *.sw?
 assets/*
 !assets/preview.png
-
-png_to_ico.exe
-test.txt

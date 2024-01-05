@@ -5,8 +5,8 @@ use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
-use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant, process::Command,
-process::Stdio, collections::{VecDeque, HashSet, HashMap}, io::{self, Write}, os::windows::process::CommandExt};
+use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant,
+process::{Command, Stdio}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncWriteExt, AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use futures::stream::StreamExt;
 use rusqlite::{Connection, params};
@@ -141,7 +141,7 @@ struct CookieInfo {
 
 #[derive(Debug, Clone)]
 struct VideoInfo {
-    cid: String,
+    index: i64,
     display_name: String,
     video_path: PathBuf,
     audio_path: PathBuf,
@@ -155,7 +155,7 @@ struct VideoInfo {
 
 #[derive(Debug, Clone)]
 struct DownloadTask {
-    cid: String,
+    index: i64,
     display_name: String,
     url: String,
     path: PathBuf,
@@ -171,36 +171,13 @@ struct Settings {
     down_dir: String
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct DownloadProgress {
-    cid: String,
-    progress: String,
-    remaining: String,
-    downloaded: String,
-    speed: String,
-    elapsed_time: String,
-    display_name: String,
-    file_type: String,
-    action: String
-}
-
-impl DownloadProgress {
-    fn print(&self) -> String {
-        format!(
-            "{} | {} | {} | {} | {} | {} | {} | {} | {}",
-            self.cid, self.progress, self.remaining, self.downloaded, self.speed, self.elapsed_time, self.display_name, self.file_type, self.action
-        )
-    }
-}
-
 async fn get_buvid(window: tauri::Window) -> Result<String, String> {
     let client = init_client();
     let buvid3_resp = client
         .get("https://www.bilibili.com")
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let cookie_headers: Vec<String> = buvid3_resp.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
+        .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
     for cookie in cookie_headers.clone() {
@@ -227,7 +204,7 @@ async fn get_buvid(window: tauri::Window) -> Result<String, String> {
 #[tauri::command]
 async fn push_back_queue(
     window: tauri::Window, video_url: Option<String>, audio_url: Option<String>,
-    cid: String, display_name: String, action: String, ss_dir: String
+    index: i64, display_name: String, action: String, ss_dir: String
 ) {
     let mut tasks = vec![];
     if let Some(v_url) = video_url {
@@ -235,7 +212,7 @@ async fn push_back_queue(
             TEMP_DIR.read().await.join(&extract_filename(&v_url))
         } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
         tasks.push(DownloadTask { 
-            cid: cid.clone(),
+            index: index.clone(),
             display_name: display_name.clone(), 
             url: v_url, 
             path: video_path, 
@@ -247,7 +224,7 @@ async fn push_back_queue(
             TEMP_DIR.read().await.join(&extract_filename(&a_url))
         } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
         tasks.push(DownloadTask {
-            cid: cid.clone(), 
+            index: index.clone(), 
             display_name: display_name.clone(), 
             url: a_url, 
             path: audio_path, 
@@ -255,7 +232,7 @@ async fn push_back_queue(
         });
     }
     let download_info = VideoInfo {
-        cid,
+        index,
         display_name: display_name.clone(),
         video_path: tasks.get(0).map_or(PathBuf::new(), |task| task.path.clone()),
         audio_path: tasks.get(1).map_or(PathBuf::new(), |task| task.path.clone()),
@@ -283,11 +260,13 @@ async fn process_queue(window: tauri::Window, initial: bool) {
         let max_concurrent_downloads = MAX_CONCURRENT_DOWNLOADS.read().await;
         while current_downloads.len() < *max_concurrent_downloads && !waiting_queue.is_empty() {
             if let Some(video_info) = waiting_queue.pop_front() {
-                current_downloads.push_back(video_info.clone());
-                let window_clone = window.clone();
-                tokio::spawn(async move {
-                    process_download(window_clone, video_info).await;
-                });
+                if !current_downloads.iter().any(|existing_info| existing_info.display_name == video_info.display_name && !existing_info.finished) {
+                    current_downloads.push_back(video_info.clone());
+                    let window_clone = window.clone();
+                    tokio::spawn(async move {
+                        process_download(window_clone, video_info).await;
+                    });
+                }
             }
         }
     }
@@ -295,14 +274,14 @@ async fn process_queue(window: tauri::Window, initial: bool) {
 
 async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
     let action = download_info.action.clone();
-    for task in download_info.tasks.into_iter() {
-        if download_info.cid != task.cid {
-            continue; 
+    for task in &download_info.tasks {
+        if download_info.index != task.index {
+            continue;
         }
         match download_file(window.clone(), task.clone(), action.clone()).await {
             Ok(o) => {
                 if action.clone() == "only" {
-                    let _ = fs::rename(task.path, download_info.output_path.clone()).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
+                    let _ = fs::rename(task.path.clone(), download_info.output_path.clone()).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
                     let _ = window.emit("download-success", o);
                 }
             }
@@ -315,10 +294,11 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
         }
     }
     let mut current_downloads = CURRENT_DOWNLOADS.lock().await;
-    current_downloads.retain(|info| info.cid != download_info.cid);
+    current_downloads.retain(|info| info.index != download_info.index);
     DOWNLOAD_COMPLETED_NOTIFY.notify_one();
+    let index = download_info.index.to_string();
     if action == "multi"  {
-        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.output_path).await {
+        match merge_video_audio(window.clone(), &download_info.audio_path, &download_info.video_path, &download_info.output_path, &index).await {
             Ok(o) => { let _ = window.emit("download-success", o); }
             Err(e) => { let _ = window.emit("download-failed", vec![download_info.display_name, e]); }
         }
@@ -364,19 +344,24 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
                 }
                 let progress = downloaded as f64 / total_size as f64 * 100.0;
                 let downloaded = downloaded as f64 / 1048576.0;
-                let formatted_values = DownloadProgress {
-                    cid: task.cid.clone(),
-                    remaining: format!("{:.2} s", remaining),
-                    downloaded: format!("{:.2} MB", downloaded),
-                    speed: format!("{:.2} MB/s", speed),
-                    progress: format!("{:.2}%", progress),
-                    elapsed_time: format!("{:.2} ms", elapsed_time),
-                    display_name: task.display_name.clone(),
-                    file_type: task.file_type.clone(),
-                    action: action.clone()
-                };
+                let formatted_values = json!({
+                    "index": task.index,
+                    "remaining": format!("{:.2} s", remaining),
+                    "downloaded": format!("{:.2} MB", downloaded),
+                    "speed": format!("{:.2} MB/s", speed),
+                    "progress": format!("{:.2}%", progress),
+                    "elapsed_time": format!("{:.2} ms", elapsed_time),
+                    "display_name": task.display_name,
+                    "file_type": task.file_type,
+                    "action": action
+                });
+                let formatted_array: Vec<String> = formatted_values.as_object().unwrap()
+                    .iter().map(|(_key, value)| {
+                        match value { serde_json::Value::String(s) => format!("{}", s),
+                         _ => format!("{}", value) }
+                    }).collect();
                 if last_log_time.elapsed() >= log_interval {
-                    log::info!("{}", formatted_values.print());
+                    log::info!("{:?}", formatted_array.join(" | "));
                     last_log_time = Instant::now();
                 }
                 window.emit("download-progress", formatted_values).unwrap();
@@ -387,7 +372,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
     Ok(task.display_name.to_string())
 }
 
-async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &PathBuf) -> Result<String, String> {
+async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_path: &PathBuf, output: &PathBuf, index: &String) -> Result<String, String> {
     log::info!("");
     log::info!("Starting merge process for audio");
     let current_dir = env::current_dir().unwrap();
@@ -406,11 +391,12 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     let progress_path = current_dir.join("ffmpeg")
         .join(format!("{}.log", video_filename));
 
-    // log::info!("{:?} -i {:?} -i {:?} -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
+    log::info!("{:?} -i {:?} -i {:?} -stats_period 0.1 -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
         .creation_flags(0x08000000)
         .arg("-i").arg(video_path)
         .arg("-i").arg(audio_path)
+        .arg("-stats_period").arg("0.1")
         .arg("-c:v").arg("copy")
         .arg("-c:a").arg("aac")
         .arg(&*output_path).arg("-progress")
@@ -429,6 +415,8 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     }
     let mut progress_lines = VecDeque::new();
     let mut last_size: u64 = 0;
+    let mut last_log_time = Instant::now();
+    let log_interval = Duration::from_secs(1);
     loop {
         let mut printed_keys = HashSet::new();
         let metadata = tokio::fs::metadata(&progress_path).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
@@ -463,14 +451,28 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
                 }
             }
         }
-        messages.push(&video_filename);
-        log::info!("{:?}", messages.join(" | "));
-        io::stdout().flush().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-        window_clone.emit("merge-progress", &messages).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+        let formatted_values = json!({
+            "index": index,
+            "display_name": video_filename,
+            "frame": messages.get(0).unwrap_or(&"").to_string(),
+            "fps": messages.get(1).unwrap_or(&"").to_string(),
+            "out_time": messages.get(2).unwrap_or(&"").to_string(),
+            "speed": messages.get(3).unwrap_or(&"").to_string()
+        });
+        let formatted_array: Vec<String> = formatted_values.as_object().unwrap()
+        .iter().map(|(_key, value)| {
+            match value { serde_json::Value::String(s) => format!("{}", s),
+             _ => format!("{}", value) }
+        }).collect();
+        if last_log_time.elapsed() >= log_interval {
+            log::info!("{:?}", formatted_array.join(" | "));
+            last_log_time = Instant::now();
+        }
+        window_clone.emit("merge-progress", &formatted_values).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
             break;
         }
-        sleep(Duration::from_secs(1)).await;
+        sleep(Duration::from_micros(100)).await;
     }
     let status = child.wait().map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if let Err(e) = tokio::fs::remove_file(audio_path_clone.clone()).await {
@@ -482,16 +484,20 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     if let Err(e) = tokio::fs::remove_file(progress_path_clone).await {
         return Err(format!("无法删除进度文件: {}", e));
     }
+    let formatted_values = json!({
+        "index": index,
+        "display_name": video_filename,
+    });
     if status.success() {
         log::info!("");
         log::info!("FFmpeg process completed.");
-        window.emit("merge-success", video_filename).unwrap();
+        window.emit("merge-success", formatted_values).unwrap();
         Ok(video_filename.to_string())
     } else {
         if let Err(e) = tokio::fs::remove_file(&*output_path.clone()).await {
             return Err(format!("无法删除合并失败视频文件: {}", e));
         }
-        window.emit("merge-failed", video_filename).unwrap();
+        window.emit("merge-failed", formatted_values).unwrap();
         Err("FFmpeg command failed".to_string())
     }
 }
@@ -623,22 +629,24 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
 }
 
 #[tauri::command]
-async fn open_select(window: tauri::Window, display_name: String, cid: String) {
+async fn open_select(window: tauri::Window, display_name: String, index: i64) -> Result<String, String>{
     let download_info_map = DOWNLOAD_INFO_MAP.lock().await;
     if let Some(video_info) = download_info_map.get(&display_name) {
-        if video_info.cid == cid {
+        if video_info.index == index {
             if let Err(e) = fs::metadata(&video_info.output_path) {
-                handle_err(window.clone(), e.to_string());
+                handle_err(window.clone(), format!("{}<br>\n文件可能已被移动或删除。", e.to_string()));
+                Err(format!("{}<br>\n文件可能已被移动或删除。", e.to_string()))
             } else {
                 let _ = Command::new("C:\\Windows\\explorer.exe")
-                    .arg(format!("/select,\"{}\"", video_info.output_path.to_string_lossy()))
+                    .arg("/select,").arg(video_info.output_path.to_string_lossy().to_string())
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
                     .spawn()
                     .map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()});
+                Ok(video_info.output_path.to_string_lossy().to_string())
             }
-        }
-    }
+        } else { Err("".to_string()) }
+    } else { Err("".to_string()) }
 }
 
 #[tauri::command]
@@ -652,18 +660,26 @@ async fn exit(window: tauri::Window) -> Result<String, String> {
         .post("https://passport.bilibili.com/login/exit/v2")
         .query(&[("biliCSRF", bili_jct.to_string())])
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+
+    if response.status() != reqwest::StatusCode::OK {
+        handle_err(window.clone(), response.status().to_string());
+        return Err(response.status().to_string());
+    }
     let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
+        .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
+    let conn = Connection::open(&*COOKIE_PATH).unwrap();
     let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
-            let _ = insert_cookie(window.clone(), &cookie);
+            let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+            conn.execute("DELETE FROM cookies WHERE name = ?",
+            &[&parsed_cookie.name]).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         }
         let _ = get_buvid(window.clone()).await;
+        window.emit("headers", headers_to_json(init_headers())).unwrap();
         window.emit("exit-success", 0).unwrap();
         return Ok("成功退出登录".to_string());
     } else {
@@ -696,11 +712,14 @@ async fn refresh_cookie(window: tauri::Window, refresh_csrf: String) -> Result<S
         ])
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
+        .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
+    if response.status() != reqwest::StatusCode::OK {
+        handle_err(window.clone(), response.status().to_string());
+        return Err(response.status().to_string());
+    }
     let response_data: Value = response.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
@@ -765,9 +784,12 @@ async fn scan_login(window: tauri::Window, qrcode_key: String) -> Result<String,
                 qrcode_key
             )).send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
 
+        if response.status() != reqwest::StatusCode::OK {
+            handle_err(window.clone(), response.status().to_string());
+            return Err(response.status().to_string());
+        }
         let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-            .iter()
-            .flat_map(|h| h.to_str().ok())
+            .iter().flat_map(|h| h.to_str().ok())
             .map(|s| s.to_string())
             .collect();
 
@@ -830,9 +852,13 @@ async fn pwd_login(window: tauri::Window,
             ("source", "main-fe-header".to_string()),
         ])
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+
+    if response.status() != reqwest::StatusCode::OK {
+        handle_err(window.clone(), response.status().to_string());
+        return Err(response.status().to_string());
+    }
     let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
+        .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
@@ -879,9 +905,13 @@ async fn sms_login(window: tauri::Window,
             ("keep", "true".to_string())
         ])
         .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+
+    if response.status() != reqwest::StatusCode::OK {
+        handle_err(window.clone(), response.status().to_string());
+        return Err(response.status().to_string());
+    }
     let cookie_headers: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|h| h.to_str().ok())
+        .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
 
