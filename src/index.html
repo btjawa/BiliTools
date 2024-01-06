@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
     <head>
         <meta charset="utf-8">
-        <meta name="color-scheme" content="dark light">
-        <meta name="referrer" content="no-referrer">
+        <meta id="color-scheme" content="dark light">
+        <meta id="referrer" content="no-referrer">
+        <meta name="theme-color" content="#1f1f1f">
+        <title>BiliTools</title>
         <link rel="stylesheet" href="./css/font-awesome/all.css">
         <link rel="stylesheet" type="text/css" href="./css/bcc-iconfont.css">
         <link rel="stylesheet" href="./css/iziToast.min.css">
         <link rel="stylesheet" type="text/css" href="./css/style.css">
         <link rel="stylesheet" type="text/css" href="./css/context-menu.css">
-        <link rel="stylesheet">
     </head>
     <body>
         <div class="context-menu">
@@ -33,14 +34,14 @@
         </div>
         <div class="search">
             <div class="search-bar">
-                <input name="search-input" type="text" placeholder="链接/AV/BV/SS/EP号..." autocomplete="off" spellcheck="false">
+                <input id="search-input" type="text" placeholder="链接/AV/BV/SS/EP号..." autocomplete="off" spellcheck="false">
                 <i class="fa-solid fa-search search-btn"></i>
             </div>
         </div>
         <div class="side-bar">
             <div class="profile">
                 <div class="user-avatar-placeholder" data-after="初始化">
-                    <img class="user-avatar" src="./icon/default.jpg" draggable="false">
+                    <img alt="头像" class="user-avatar" src="./icon/default.jpg" draggable="false">
                 </div>
                 <div class="user-name">正在初始化</div>
             </div>
@@ -55,15 +56,15 @@
         </div>
         <div class="user-profile">
             <div class="user-profile-background">
-                <img class="user-profile-img">
+                <img alt="主页背景" class="user-profile-img">
                 <div class="user-profile-card">
-                    <img class="user-profile-avatar" src="./icon/default.jpg" draggable="false">
+                    <img alt="主页头像" class="user-profile-avatar" src="./icon/default.jpg" draggable="false">
                     <div class="user-profile-h-basic">
                         <div class="user-profile-head">
                             <div class="user-profile-name">名称</div>
-                            <img class="user-profile-sex icon-small" src="./icon/male.png" draggable="false"></img>
-                            <img class="user-profile-level icon-small" src="./icon/level/level0.svg" draggable="false"></img>
-                            <img class="user-profile-bigvip icon-small" draggable="false"></img>
+                            <img alt="性别" class="user-profile-sex icon-small" src="./icon/male.png" draggable="false">
+                            <img alt="等级" class="user-profile-level icon-small" src="./icon/level/level0.svg" draggable="false">
+                            <img alt="大会员" class="user-profile-bigvip icon-small" draggable="false">
                         </div>
                         <div class="user-profile-h-spacing">
                             <div class="user-profile-desc">简介</div>
@@ -106,22 +107,43 @@
                 <div class="settings-page-title">常规</div>
                 <div class="settings-page-block">
                     <a class="settings-page-block-title">存储路径</a>
-                    <input name="down-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" disabled>
-                    <div class="down-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
+                    <div class="settings-page-options">
+                        <input id="down-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" type="text" disabled>
+                        <div class="down-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
+                    </div>
+                </div>
+                <div class="settings-page-block">
+                    <a class="settings-page-block-title">最大并发下载数</a>
+                    <div class="settings-page-options">
+                        <form>
+                            <input type="radio" id="max-conc-1" name="max-conc">
+                            <label for="max-conc-1">1个</label><br>
+                            <input type="radio" id="max-conc-2" name="max-conc">
+                            <label for="max-conc-2">2个</label><br>
+                            <input type="radio" id="max-conc-3" name="max-conc">
+                            <label for="max-conc-3">3个</label><br>
+                            <input type="radio" id="max-conc-4" name="max-conc">
+                            <label for="max-conc-4">4个</label><br>
+                            <input type="radio" id="max-conc-5" name="max-conc">
+                            <label for="max-conc-5">5个</label>
+                        </form>                        
+                    </div>
                 </div>
             </div>
             <div class="settings-page advanced">
                 <div class="settings-page-title">高级</div>
                 <div class="settings-page-block">
                     <a class="settings-page-block-title">临时文件存储路径</a>
-                    <input name="temp-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" disabled>
-                    <div class="temp-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
+                    <div class="settings-page-options">
+                        <input id="temp-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" type="text" disabled>
+                        <div class="temp-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
+                    </div>
                 </div>
             </div>
             <div class="settings-page _info">
                 <div class="settings-page-title">关于</div>
                 <icon>
-                    <img src="./img/icon.png" draggable="false">
+                    <img alt="应用图标" src="./img/icon.png" draggable="false">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.68 31.44" overflow="visible">
                         <defs><style>
                             @keyframes dash{0%{stroke-dashoffset:var(--len)}100%{stroke-dashoffset:0}}@keyframes fade{0%{opacity:1;fill-opacity:0;stroke-width:.5px;}100%{opacity:1;fill-opacity:1;stroke-width:1px;}}.letter{fill:#ff6989;stroke:#ff6989;stroke-linecap:round;stroke-linejoin:round;stroke-width:1px;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);opacity:0;animation:dash 1.6s cubic-bezier(.6,0,.2,1) forwards,fade 1.6s cubic-bezier(.6,0,.2,1) forwards}.letter1{animation-delay:0s}.letter2{animation-delay:.1s}.letter3{animation-delay:.2s}.letter4{animation-delay:.3s}.letter5{animation-delay:.4s}.letter6{animation-delay:.5s}.letter7{animation-delay:.6s}.letter8{animation-delay:.7s}.letter9{animation-delay:.8s}
@@ -159,7 +181,7 @@
                         <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object>
                     </a>
                 </div>
-                <i>Copyright&nbsp;&copy;&nbsp;<i id="year"></i>&nbsp;btjawa&nbsp;&&nbsp;MIT&nbsp;License</i>
+                <i>Copyright&nbsp;&copy;&nbsp;<i id="year"></i>&nbsp;btjawa&nbsp;&amp;&nbsp;MIT&nbsp;License</i>
             </div>
         </div>
         <div class="login">
@@ -168,9 +190,9 @@
                 <div class="login-qrcode-box">
                     <div id="login-qrcode"></div>
                     <div class="login-qrcode-tips"></div>
-                    <img class="login-scan-loading" src="./img/loadTV.gif">
+                    <img alt="加载中" class="login-scan-loading" src="./img/loadTV.gif">
                 </div>
-                <img class="login-scan-tips" src="./img/qr-tips.png">
+                <img alt="扫描提示" class="login-scan-tips" src="./img/qr-tips.png">
                 <div class="login-scan-desc">
                     请使用&nbsp;<a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端
                     <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object></a><br>扫码登录或扫码下载APP
@@ -187,12 +209,12 @@
                     <div class="login-pwd-wp">
                         <div class="login-pwd-item">
                             <div class="login-pwd-item-text">账号</div>
-                            <input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入账号" type="text" name="username-input">
+                            <input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入账号" type="text" id="username-input">
                         </div>
                         <div class="login-pwd-split"></div>
                         <div class="login-pwd-item">
                             <div class="login-pwd-item-text">密码</div>
-                            <form><input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入密码" type="password" name="password-input"></form>
+                            <form><input autocomplete="off" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入密码" type="password" id="password-input"></form>
                             <i class="fa-solid fa-eye login-pwd-item-eye"></i>
                         </div>
                     </div>
@@ -202,7 +224,7 @@
                     <div class="login-sms-wp">
                         <div class="login-sms-item">
                             <div class="login-sms-item-text"></div>
-                            <input autocomplete="off" maxlength="15" oninput="value=value.replace(/\s+/g, '')"placeholder="请输入手机号" type="text" name="tel-input">
+                            <input autocomplete="off" maxlength="15" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入手机号" type="text" id="tel-input">
                             <div class="login-sms-item-split"></div>
                             <div class="login-sms-getcode-btn">获取验证码</div>
                         </div>
@@ -210,7 +232,7 @@
                         <div class="login-sms-split"></div>
                         <div class="login-sms-item">
                             <div class="login-sms-item-text">验证码</div>
-                            <input autocomplete="off" maxlength="6" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入验证码" type="text" name="sms-input">
+                            <input autocomplete="off" maxlength="6" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入验证码" type="text" id="sms-input">
                         </div>
                     </div>
                     <div class="login-sms-login-btn">登录</div>
@@ -240,14 +262,14 @@
         </div>
         <div class="video-root">
             <div class="info">
-                <img class="info-cover" draggable="false">
+                <img alt="封面" class="info-cover" draggable="false">
                 <div class="info-data">
                     <div class="info-title">标题</div>
                     <div class="info-stat">数据</div>
                     <div class="info-styles">分类</div>
                     <div class="info-desc">简介</div>
                     <div class="info-owner">
-                        <img class="info-owner-face" src="./icon/default.jpg" draggable="false">
+                        <img alt="UP头像" class="info-owner-face" src="./icon/default.jpg" draggable="false">
                         <div class="info-owner-name">UP名称</div>
                     </div>
                 </div>
@@ -260,14 +282,14 @@
                 <div class="multi-select-next-name">确认/结算</div>
             </div>
         </div>
-        <script type="text/javascript" src="./js/jquery-3.6.0.min.js"></script>
-        <script type="text/javascript" src="./js/iziToast.min.js"></script>
-        <script type="text/javascript" src="./js/sweetalert2.all.min.js"></script>
-        <script type="text/javascript" src="./js/qrcode.min.js"></script>
-        <script type="text/javascript" src="./js/md5.min.js"></script>
-        <script type="text/javascript" src="./js/jsencript.min.js"></script>
-        <script type="text/javascript" src="./js/gt.0.4.9.js"></script>
-        <script type="text/javascript" src="./js/pako.min.js"></script>
-        <script type="text/javascript" src="./js/render.js"></script>
+        <script src="./js/jquery-3.6.0.min.js"></script>
+        <script src="./js/iziToast.min.js"></script>
+        <script src="./js/sweetalert2.all.min.js"></script>
+        <script src="./js/qrcode.min.js"></script>
+        <script src="./js/md5.min.js"></script>
+        <script src="./js/jsencript.min.js"></script>
+        <script src="./js/gt.0.4.9.js"></script>
+        <script src="./js/pako.min.js"></script>
+        <script src="./js/render.js"></script>
     </body>
 </html>

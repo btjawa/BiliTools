@@ -578,15 +578,16 @@ async fn init(window: tauri::Window) -> Result<i64, String> {
 #[tauri::command]
 async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>) -> Result<i64, String> {
     let config_path = CONFIG_PATH.read().await.clone();
-    let (temp_dir, down_dir) = if let Some(settings) = sets {
-        (settings.temp_dir, settings.down_dir)
+    let (temp_dir, down_dir, max_conc) = if let Some(settings) = sets {
+        (settings.temp_dir, settings.down_dir, settings.max_conc)
     } else {
         let current_temp_dir = TEMP_DIR.read().await.to_string_lossy().into_owned();
         let current_down_dir = DOWNLOAD_DIR.read().await.to_string_lossy().into_owned();
-        (current_temp_dir, current_down_dir)
+        let current_max_conc = *MAX_CONCURRENT_DOWNLOADS.read().await as i64;
+        (current_temp_dir, current_down_dir, current_max_conc)
     };
     let new_config = json!({
-        "max_conc": 2,
+        "max_conc": max_conc,
         "default_dms": 0,
         "default_ads": 0,
         "temp_dir": temp_dir,
@@ -596,9 +597,7 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
     if !WORKING_DIR.clone().exists() {
         fs::create_dir_all(WORKING_DIR.clone()).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     }
-    if action == "save" {
-        fs::write(&config_path, &new_config_str).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-    } else if action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?.trim().is_empty()) {
+    if action == "save" || (action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?.trim().is_empty())) {
         fs::write(&config_path, &new_config_str).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     }
     let config_str = fs::read_to_string(&config_path).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
@@ -623,7 +622,8 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
     }
     window.emit("settings", serde_json::json!({
         "down_dir": *DOWNLOAD_DIR.read().await,
-        "temp_dir": *TEMP_DIR.read().await
+        "temp_dir": *TEMP_DIR.read().await,
+        "max_conc": *MAX_CONCURRENT_DOWNLOADS.read().await
     })).unwrap();
     Ok(0)
 }

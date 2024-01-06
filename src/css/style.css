@@ -135,7 +135,7 @@ input {
     padding: 0;
 }
 
-input[name="search-input"] {
+#search-input {
     display: inline-block;
     height: 40px;
     width: 100%;
@@ -151,12 +151,12 @@ input[name="search-input"] {
     transition-duration: 0.4s;
 }
 
-input[name="search-input"]:hover {
+#search-input:hover {
     font-size: 15px;
 }
 
-input[name="down-dir-path"],
-input[name="temp-dir-path"] {
+#down-dir-path,
+#temp-dir-path {
     border-radius: 6px;
     border: 1px solid #5c5c5c;
     outline: none;
@@ -210,7 +210,7 @@ input[name="temp-dir-path"] {
     background-color: #c4c4c4;
 }
 
-.search:focus-within input[name="search-input"] {
+.search:focus-within #search-input {
     color: #3b3b3b;
 }
 
@@ -1415,11 +1415,6 @@ input[name="temp-dir-path"] {
     min-width: 75px;
 }
 
-.settings-page-bar {
-    position: absolute;
-    bottom: 0;
-}
-
 .user-profile-exit {
     position: absolute;
     display: flex;
@@ -1581,8 +1576,6 @@ input[name="temp-dir-path"] {
     }
 }
 
-.settings-page-block-title { margin-right: 50px; }
-
 .settings-page-block-cont { height: 26px; }
 
 .settings-page-block {
@@ -1592,6 +1585,66 @@ input[name="temp-dir-path"] {
     margin-top: 14px;
     margin-bottom: 14px;
     align-items: center;
+}
+
+.settings-page-options {
+    position: absolute;
+    display: flex;
+    left: 150px;
+}
+
+.settings-page-options form {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.settings-page-options input[type="radio"] {
+    appearance: none;
+    position: relative;
+    width: 15px;
+    height: 15px;
+    border: none;
+    cursor: pointer;
+}
+
+.settings-page-options input[type="radio"]:before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #888;
+    background-color: #1f1f1f;
+    box-sizing: border-box;
+    top: 0;
+    left: 0;
+}
+
+.settings-page-options input[type="radio"]:after {
+    display: block;
+    content: '';
+    background-color: #888;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transition: all 0.2s ease;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+}
+
+.settings-page-options input[type="radio"]:checked:after {
+    width: 55%;
+    height: 55%;
+}
+
+.settings-page-options label {
+    padding-left: 8px;
+    padding-right: 28px;
+    cursor: pointer;
 }
 
 .down-dir-path-openbtn,

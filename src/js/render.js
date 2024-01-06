@@ -1,9 +1,9 @@
 const { invoke } = window.__TAURI__.tauri;
-const { listen } = window.__TAURI__.event;
+const { listen, once } = window.__TAURI__.event;
 const { shell, dialog, http, app, os } = window.__TAURI__;
 
 const searchBtn = $('.search-btn');
-const searchInput = $('input[name="search-input"]');
+const searchInput = $('#search-input');
 const searchElm = $('.search');
 const videoList = $('.video-list');
 const infoBlock = $('.info');
@@ -16,8 +16,8 @@ const multiNextPage = $('.video-multi-next');
 const multiSelect = $('.multi-select-btn');
 const multiSelectNext = $('.multi-select-next-btn');
 const multiSelectDown = $('.multi-select-next-down-btn');
-const downDirPath = $('input[name="down-dir-path"]');
-const tempDirPath = $('input[name="temp-dir-path"]');
+const downDirPath = $('#down-dir-path');
+const tempDirPath = $('#temp-dir-path');
 
 let currentFocus = null, currentVideoBlock, currentElm = [], currentSel = [];
 let lastChecked = -1, highestZIndex = -1;
@@ -1458,7 +1458,7 @@ async function scanLogin() {
 async function pwdLogin() {
     const toggleEye = $('.login-pwd-item-eye');
     const loginBtn = $('.login-pwd-login-btn');
-    const pwdInput = $('input[name="password-input"]');
+    const pwdInput = $('#password-input');
     toggleEye.off('click');
     loginBtn.off('click');
     pwdInput.off('keydown');
@@ -1474,8 +1474,8 @@ async function pwdLogin() {
     });
     loginBtn.on('click', async function() {
         try {
-            const username = $('input[name="username-input"]').val().toString();
-            const password = $('input[name="password-input"]').val().toString();
+            const username = $('#username-input').val().toString();
+            const password = $('#password-input').val().toString();
             if (!username || !password) {
                 iziToast.info({
                     icon: 'fa-solid fa-circle-info',
@@ -1543,7 +1543,7 @@ async function smsLogin() {
     $('.login-sms-getcode-btn').on('click', async function() {
         if (!canSend) return;
         try {
-            const tel = $('input[name="tel-input"]').val().toString();
+            const tel = $('#tel-input').val().toString();
             if (!tel) {
                 iziToast.info({
                     icon: 'fa-solid fa-circle-info',
@@ -1595,8 +1595,8 @@ async function smsLogin() {
     })
     loginBtn.on('click', async function() {
         try {
-            const tel = $('input[name="tel-input"]').val().toString();
-            const code = $('input[name="sms-input"]').val().toString();
+            const tel = $('#tel-input').val().toString();
+            const code = $('#sms-input').val().toString();
             if (!tel || !code) {
                 iziToast.info({
                     icon: 'fa-solid fa-circle-info',
@@ -1682,7 +1682,7 @@ async function captcha() {
 }
 
 function settings() {
-    $('.settings-side-bar-background').off('click');
+    $('.settings-side-bar-background input[name="max-conc"]').off('click');
     settingsElm.removeClass('back').addClass('active');
     currentElm.push('.settings');
     const downDirOpenBtn = $('.down-dir-path-openbtn');
@@ -1690,31 +1690,34 @@ function settings() {
     downDirOpenBtn.off('click');
     tempDirOpenBtn.off('click');
     function handleSave(set) {
-        invoke('rw_config', {action: "save", sets: {
-            max_conc: 0,
-            default_dms: 0,
-            default_ads: 0,    
-            temp_dir: tempDirPath.val(),
-            down_dir: downDirPath.val()
-        }})
         iziToast.info({
             icon: 'fa-solid fa-circle-info',
             layout: '2',
             title: '设置',
             message: `已保存设置 - ${set}`,
         });
+        invoke('rw_config', {action: "save", sets: {
+            max_conc: parseInt($('.settings-page-options input[name="max-conc"]:checked').attr('id').replace(/[^\d]/g, "")),
+            default_dms: 0,
+            default_ads: 0,    
+            temp_dir: tempDirPath.val(),
+            down_dir: downDirPath.val()
+        }});
     }
     $('.settings-side-bar-background').on('click', (event) => {
-        const targetBg = $(event.target).closest('.settings-side-bar-background');
-        const type = targetBg.attr('class').split(/\s+/)[1];
+        const target = $(event.target).closest('.settings-side-bar-background');
+        const type = target.attr('class').split(/\s+/)[1];
         $('.settings-side-bar-background').removeClass('checked');
         $('.settings-page').removeClass('active');
-        targetBg.addClass('checked');
+        target.addClass('checked');
         $(`.settings-page.${type}`).addClass('active');
         if (type === "_info") {
             const svg = $('.settings-page._info').find('svg').css('display', 'none');
             setTimeout(() => svg.append(svg.find('style').detach()).css('display', 'block'), 1);
         }
+    });
+    $('.settings-page-options input[name="max-conc"]').on('click', () => {
+        handleSave("最大并发下载数");
     });
     $('.settings-side-bar-background.general').click();
     downDirOpenBtn.on('click', async () => {
@@ -1822,9 +1825,11 @@ async function getUserProfile(mid) {
     }
 }
 
-listen("settings", async (event) => {
-    downDirPath.val(event.payload.down_dir);
-    tempDirPath.val(event.payload.temp_dir);
+once("settings", async (event) => {
+    const p = event.payload;
+    downDirPath.val(p.down_dir);
+    tempDirPath.val(p.temp_dir);
+    $(`#max-conc-${p.max_conc}`).click();
 })
 
 listen("user-mid", async (event) => {

@@ -42,7 +42,16 @@
       ],
       "resources": [
         "ffmpeg"
-      ]
+      ],
+      "windows": {
+        "wix": {
+          "language": "zh-CN"
+        },
+        "nsis": {
+          "languages": ["SimpChinese", "English"],
+          "displayLanguageSelector": true
+        }
+      }
     },
     "updater": {
       "active": true,
