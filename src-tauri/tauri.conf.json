@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "BiliTools",
-    "version": "1.0.0"
+    "version": "1.0.2"
   },
   "tauri": {
     "allowlist": {
@@ -48,7 +48,10 @@
           "language": "zh-CN"
         },
         "nsis": {
-          "languages": ["SimpChinese", "English"],
+          "languages": [
+            "SimpChinese",
+            "English"
+          ],
           "displayLanguageSelector": true
         }
       }
