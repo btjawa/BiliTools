@@ -20,9 +20,8 @@ const downDirPath = $('#down-dir-path');
 const tempDirPath = $('#temp-dir-path');
 
 let currentFocus = null, currentVideoBlock, currentElm = [], currentSel = [];
-let lastChecked = -1, highestZIndex = -1;
-let userData = new Array(2), totalDown = 0;
-let bouncing = false;
+let lastChecked = -1;
+let userData = [], totalDown = 0;
 
 window.videoData = [];
 window.audioData = [];
@@ -206,12 +205,12 @@ async function parseVideo(videoId) {
     if (detailData.ok) {
         const details = await detailData.data;
         // if (details.data && details.data.pages)
-        applyVideoList(details, null, 2);
+        handleVideoList(details, null, 2);
     }
 }
   
 async function parseBangumi(videoId) {
-    let getDetailUrl
+    let getDetailUrl;
     if (videoId.includes('ep') || videoId.includes('EP')) {
         getDetailUrl = `https://api.bilibili.com/pgc/view/web/season?ep_id=${videoId.match(/\d+/)[0]}`;
     } else if (videoId.includes('ss') || videoId.includes('SS')) {
@@ -222,7 +221,7 @@ async function parseBangumi(videoId) {
     if (detailData.ok) {
         const details = detailData.data;
         // if (details.data && details.data.pages)
-        applyVideoList(details);
+        handleVideoList(details);
     }
 }
 
@@ -235,7 +234,7 @@ async function parseAudio(songId) {
         { headers, responseType: http.ResponseType.Binary });
         if (tagsResponse.ok) {
             const tagsDetails = JSON.parse(pako.inflate(tagsResponse.data, { to: 'string' }));
-            applyAudioList({info: infoDetails, tags: tagsDetails});
+            handleAudioList({info: infoDetails, tags: tagsDetails});
         }
     }
 }
@@ -344,6 +343,7 @@ async function search(input) {
     videoList.removeClass('active');
     $('.video-list-tab-head').removeClass('active');
     multiSelect.off('click');
+    $('.stein-tree').removeClass('active').find('.stein-tree-node').remove()
     currentElm.push(".video-root");
     if ($('.multi-select-icon').hasClass('checked')) multiSelect.click();
     let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
@@ -390,6 +390,7 @@ function formatStat(num) {
 }
 
 function formatDuration(int, type) {
+    if (typeof int === 'string') return int;
     const num = type == "bangumi" ? Math.round(int / 1000) : int;
     const hs = Math.floor(num / 3600);
     const mins = Math.floor((num % 3600) / 60);
@@ -515,6 +516,7 @@ async function backward() {
         loadingBox.removeClass('active');
         $('.video-list-tab-head').removeClass('active');
         multiSelect.removeClass('active');
+        $('.stein-tree').removeClass('active').find('.stein-tree-node').remove()
         $('.video-list').empty();
     } else if (currentElm[index] == '.settings') {
         settingsElm.removeClass('active').addClass('back');
@@ -796,7 +798,7 @@ function initAudioInfo(details) {
     $('.info-styles').empty().append(contrElm, stylesText).append("&emsp;|&emsp;").append(pubdateElm, pubdate);
 }
 
-function applyVideoList(details) { // 分类填充视频块
+function handleVideoList(details) { // 分类填充视频块
     videoList.empty();
     loadingBox.removeClass('active');
     let actualSearchVideo = [];
@@ -831,27 +833,37 @@ function applyVideoList(details) { // 分类填充视频块
                 if (!actualSearchVideo[0]) {
                     actualSearchVideo = [ugc_root.sections[0].episodes[0].title, 1];
                 }
-            } else if (!details.data.View.ugc_season) {
+            } else {
                 const type = "video";
                 initVideoInfo(type, details);
                 const data_root = details.data.View;
-                for (let j = 0; j < data_root.pages.length; j++) {
-                    let page = data_root.pages[j];
-                    const title = page.part || data_root.title;
-                    videoData[j] = new VideoData(
-                        title, data_root.desc, 
-                        data_root.pic, page.duration, 
-                        data_root.aid, page.cid, 
-                        type, j + 1, data_root.title
-                    );
-                    appendVideoBlock(j + 1);
-                    if (!actualSearchVideo[0] && title == $('.info-title').text()) {
-                        actualSearchVideo = [title, page.page];
+                if (data_root.rights.is_stein_gate) {
+                    multiSelect.removeClass('active');
+                    http.fetch(`https://api.bilibili.com/x/player.so?id=cid:1&aid=${encodeURIComponent(data_root.aid)}`,
+                    { headers, responseType: http.ResponseType.Text }).then(async player => {
+                        const match = player.data.match(/<interaction>(.*?)<\/interaction>/);
+                        const graph_version = JSON.parse(match[1]).graph_version;
+                        appendSteinNode(data_root, graph_version, 1, type);
+                    })
+                } else {
+                    for (let j = 0; j < data_root.pages.length; j++) {
+                        let page = data_root.pages[j];
+                        const title = page.part || data_root.title;
+                        videoData[j] = new VideoData(
+                            title, data_root.desc, 
+                            data_root.pic, page.duration, 
+                            data_root.aid, page.cid, 
+                            type, j + 1, data_root.title
+                        );
+                        appendVideoBlock(j + 1)
+                        if (!actualSearchVideo[0] && title == $('.info-title').text()) {
+                            actualSearchVideo = [title, page.page];
+                        }
                     }
-                }
-                if (!actualSearchVideo[0]) {
-                    actualSearchVideo = [data_root.title, 1];
-                }
+                    if (!actualSearchVideo[0]) {
+                        actualSearchVideo = [data_root.title, 1];
+                    }
+                };
             }
         } else if (details.result) {
             const type = "bangumi";
@@ -953,7 +965,7 @@ function applyVideoList(details) { // 分类填充视频块
                 multiSelect.click().removeClass('active');
                 const videoBlocks = multiNextPage.find('.video-block').toArray();
                 let res = [];
-                applyDownBtn(null, null, "multi", true).then(async line => {
+                handleDownBtn(null, null, "multi", true).then(async line => {
                     for (let i = 0; i < videoBlocks.length; i++) {
                         $('.video-multi-next-title').text(`正在获取分辨率 - ${i+1} / ${videoBlocks.length}`);
                         res[i] = await handleVideoClick("multi", $(videoBlocks[i]), selectedVideos[i], true);
@@ -966,7 +978,6 @@ function applyVideoList(details) { // 分类填充视频块
                     multiSelectDown.addClass('active');
                     multiSelectDown.on('click', () => {
                         invoke('process_queue', {initial: true});
-                        backward();
                         currentElm.push(".down-page");
                         downPageElm.addClass('active').removeClass('back');
                     });
@@ -979,7 +990,7 @@ function applyVideoList(details) { // 分类填充视频块
     }
 };
 
-function applyAudioList(details) { //填充音频块
+function handleAudioList(details) { //填充音频块
     videoList.empty();
     if (details.info.code == 0) {
         infoBlock.addClass('active');
@@ -1017,6 +1028,63 @@ function applyAudioList(details) { //填充音频块
     }
 };
 
+async function appendSteinNode(info, graph_version, edge_id, type) {
+    videoList.removeClass('active');
+    const params = new URLSearchParams({
+        aid: info.aid, graph_version, edge_id
+    });
+    const response = (await http.fetch(`https://api.bilibili.com/x/stein/edgeinfo_v2?${params.toString()}`,
+    { headers })).data;
+    videoList.find('.stein-option').remove();
+    videoList.find('.video-block').remove();
+    videoList.addClass('active');
+    videoList.find('.video-block-only').removeClass('active').remove();
+    videoList.find('.video-block-multi').removeClass('active').remove();
+    $('.stein-tree').addClass('active').find('.stein-tree-node').remove()
+    videoData = [];
+    const current = response.data.story_list.find(item => item.edge_id === edge_id);
+    videoData.push(new VideoData(
+        current.title, info.desc, 
+        info.pic, "未知", 
+        info.aid, current.cid, type,
+        videoData.length + 1, info.title
+    ));
+    appendVideoBlock(videoData.length);
+    for (let story of response.data.story_list) {
+        const nodeElm = $('<div>').addClass('stein-tree-node').html($('<i>').addClass('fa-regular'));
+        if (story.is_current) {
+            nodeElm.addClass('checked');
+            nodeElm.find('i').addClass('fa-check');
+        } else nodeElm.find('i').addClass('fa-location-dot');
+        $('.stein-tree').append(nodeElm);
+        nodeElm.on('click', () => {
+            appendSteinNode(info, graph_version, story.edge_id);
+            return;
+        })
+    }
+    videoList.append($('<div>').addClass('stein-option'));
+    const questions = response.data.edges.questions;
+    const choices_root = questions ? questions[0].choices : null;
+    if (!choices_root) return;
+    for (let choice of choices_root) {
+        const btn = $('<div>').addClass('stein-option-btn').html(choice.option);
+        if (choice.condition) {
+            let vari = response.data.hidden_vars.reduce((acc, item) => {
+                acc[item.id_v2] = item.value;
+                return acc;
+            }, {});
+            let condition = choice.condition.replace(/\$[\w]+/g, (match) => {
+                return vari.hasOwnProperty(match) ? vari[match] : match;
+            });
+            if (eval(condition)) $('.stein-option').append(btn);
+        } else $('.stein-option').append(btn);
+        btn.on('click', () => {
+            appendSteinNode(info, graph_version, choice.id, type);
+            return;
+        })
+    }
+}
+
 async function handleVideoClick(action, click, data, ms) {
     if (!$('.multi-select-icon').hasClass('checked')) {
         const videoBlockAction = $('<div>').addClass(`video-block-${action}`);
@@ -1039,7 +1107,7 @@ async function handleVideoClick(action, click, data, ms) {
         if (ms) {
             return [new CurrentSel(...dms, ...ads), details];
         } else {
-            applyDownBtn(details, data, action, false)
+            handleDownBtn(details, data, action, false)
         };
     } else {
         iziToast.error({
@@ -1351,7 +1419,7 @@ function appendAudioList(details, type, action, ms) { // 填充音频
     }
 }
 
-function applyDownBtn(details, data, action, ms) { // 监听下载按钮
+function handleDownBtn(details, data, action, ms) { // 监听下载按钮
     return new Promise((resolve) => {
         const quality = new CurrentSel(...currentSel);
         let options = {
@@ -1403,8 +1471,8 @@ async function userProfile() {
         $('.user-profile-avatar').attr("src", details.data.card.face);
         $('.user-profile-name').html(details.data.card.name);
         $('.user-profile-desc').html(details.data.card.sign);
-        $('.user-profile-sex').attr("src", `./icon/${details.data.card.sex=="男"?'male':'female'}.png`);
-        $('.user-profile-level').attr("src", `./icon/level/level${details.data.card.level_info.current_level}${details.data.card.is_senior_member?'_hardcore':''}.svg`);
+        $('.user-profile-sex').attr("src", `./assets/${details.data.card.sex=="男"?'male':'female'}.png`);
+        $('.user-profile-level').attr("src", `./assets/level/level${details.data.card.level_info.current_level}${details.data.card.is_senior_member?'_hardcore':''}.svg`);
         if (details.data.card.vip) {
             $('.user-profile-bigvip').css("display", "block");
             $('.user-profile-bigvip').attr("src", details.data.card.vip.label.img_label_uri_hans_static);
@@ -1850,7 +1918,7 @@ listen("headers", async (event) => headers = event.payload);
 listen("exit-success", async (event) => {
     $('.user-avatar-placeholder').off('click');
     backward();
-    $('.user-avatar').attr('src', './icon/default.jpg');
+    $('.user-avatar').attr('src', './assets/default.jpg');
     $('.user-name').text("登录");
     $('.user-vip-icon').css("display", "none")
     $('.user-avatar-placeholder').attr('data-after', '登录');

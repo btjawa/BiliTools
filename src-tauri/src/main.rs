@@ -391,7 +391,6 @@ async fn merge_video_audio(window: tauri::Window, audio_path: &PathBuf, video_pa
     let progress_path = current_dir.join("ffmpeg")
         .join(format!("{}.log", video_filename));
 
-    log::info!("{:?} -i {:?} -i {:?} -stats_period 0.1 -c:v copy -c:a aac {:?} -progress {:?} -y", ffmpeg_path, video_path, audio_path, &output_path, &progress_path);
     let mut child = Command::new(ffmpeg_path)
         .creation_flags(0x08000000)
         .arg("-i").arg(video_path)

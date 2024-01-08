@@ -1,15 +1,3 @@
-@font-face {
-    font-family: "HarmonyOS_Regular";
-    src: url('../font/HarmonyOS_Sans_SC_Regular.woff2') format('woff2');
-    font-display: fallback;
-}
-
-@font-face {
-    font-family: "HarmonyOS_Bold";
-    src: url('../font/HarmonyOS_Sans_SC_Bold.woff2') format('woff2');
-    font-display: fallback;
-}
-
 .backward {
     position: absolute;
     top: 2vh;
@@ -37,7 +25,10 @@
 }
 
 #version,
-.about span { font-family: "HarmonyOS_Bold", sans-serif; }
+.about span {
+    font-family: "HarmonyOS_Sans_SC_Regular", sans-serif;
+    font-weight: 700;
+}
 
 .loading,
 .loading-action,
@@ -82,7 +73,7 @@
 }
 
 * {
-    font-family: "HarmonyOS_Regular", sans-serif;
+    font-family: "HarmonyOS_Sans_SC_Regular", sans-serif;
     color: #c4c4c4;
 }
 
@@ -333,6 +324,61 @@ input {
     display: flex;
 }
 
+.stein-tree.active {
+    display: flex;
+    justify-content: center;
+    margin: 3px 0;
+    min-height: 30px;
+}
+
+.stein-tree-node {
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #c4c4c433;
+    cursor: pointer;
+    border: solid 2px #80808080;
+    transition: all 0.2s;
+    position: relative;
+    margin: 0 5px;
+}
+
+.stein-tree-node i {
+    transform: translate(-50%, -50%);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 14px;
+}
+
+.stein-option {
+    display: flex;
+    margin: 12px 0;
+}
+
+.stein-option-btn {
+    padding: 12.5px 20px;
+    background-color: #3b3b3b;
+    border-radius: 8px;
+    display: flex;
+    width: max-content;
+    font-size: 14px;
+    transition: all 0.2s;
+    cursor: pointer;
+    user-select: none;
+    margin: 0 10px;
+}
+
+.stein-option-btn:hover { background-color: #444; }
+
+.stein-tree-node:hover {
+    background-color: #c4c4c450;
+}
+
+.stein-tree-node.checked {
+    background-color: #c4c4c466;
+}
+
 .video-block,
 .video-multi-next-block {
     width: 100%;
@@ -565,6 +611,8 @@ input {
     opacity: 0;
     visibility: hidden;
 }
+
+.multi-select-next-btn { z-index: 4; }
 
 .multi-select-btn { 
     margin-left: 2vh;
@@ -1077,8 +1125,8 @@ input {
     font-size: 18px;
     vertical-align: middle;
     line-height: 20px;
-    font-family: "HarmonyOS_Bold", sans-serif;
-    font-weight: 500;
+    font-family: "HarmonyOS_Sans_SC_Regular", sans-serif;
+    font-weight: 700;
 }
 
 .user-profile-bigvip {

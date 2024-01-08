@@ -2,10 +2,11 @@
 <html lang="zh-CN">
     <head>
         <meta charset="utf-8">
-        <meta id="color-scheme" content="dark light">
-        <meta id="referrer" content="no-referrer">
+        <meta name="color-scheme" content="dark light">
+        <meta name="referrer" content="no-referrer">
         <meta name="theme-color" content="#1f1f1f">
         <title>BiliTools</title>
+        <link rel="stylesheet" type="text/css" href="./font/HarmonyOS_Sans_SC_Regular/font.min.css">
         <link rel="stylesheet" href="./css/font-awesome/all.css">
         <link rel="stylesheet" type="text/css" href="./css/bcc-iconfont.css">
         <link rel="stylesheet" href="./css/iziToast.min.css">
@@ -41,7 +42,7 @@
         <div class="side-bar">
             <div class="profile">
                 <div class="user-avatar-placeholder" data-after="初始化">
-                    <img alt="头像" class="user-avatar" src="./icon/default.jpg" draggable="false">
+                    <img alt="头像" class="user-avatar" src="./assets/default.jpg" draggable="false">
                 </div>
                 <div class="user-name">正在初始化</div>
             </div>
@@ -58,12 +59,12 @@
             <div class="user-profile-background">
                 <img alt="主页背景" class="user-profile-img">
                 <div class="user-profile-card">
-                    <img alt="主页头像" class="user-profile-avatar" src="./icon/default.jpg" draggable="false">
+                    <img alt="主页头像" class="user-profile-avatar" src="./assets/default.jpg" draggable="false">
                     <div class="user-profile-h-basic">
                         <div class="user-profile-head">
                             <div class="user-profile-name">名称</div>
-                            <img alt="性别" class="user-profile-sex icon-small" src="./icon/male.png" draggable="false">
-                            <img alt="等级" class="user-profile-level icon-small" src="./icon/level/level0.svg" draggable="false">
+                            <img alt="性别" class="user-profile-sex icon-small" src="./assets/male.png" draggable="false">
+                            <img alt="等级" class="user-profile-level icon-small" src="./assets/level/level0.svg" draggable="false">
                             <img alt="大会员" class="user-profile-bigvip icon-small" draggable="false">
                         </div>
                         <div class="user-profile-h-spacing">
@@ -143,7 +144,7 @@
             <div class="settings-page _info">
                 <div class="settings-page-title">关于</div>
                 <icon>
-                    <img alt="应用图标" src="./img/icon.png" draggable="false">
+                    <img alt="应用图标" src="./assets/icon.png" draggable="false">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 163.68 31.44" overflow="visible">
                         <defs><style>
                             @keyframes dash{0%{stroke-dashoffset:var(--len)}100%{stroke-dashoffset:0}}@keyframes fade{0%{opacity:1;fill-opacity:0;stroke-width:.5px;}100%{opacity:1;fill-opacity:1;stroke-width:1px;}}.letter{fill:#ff6989;stroke:#ff6989;stroke-linecap:round;stroke-linejoin:round;stroke-width:1px;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);opacity:0;animation:dash 1.6s cubic-bezier(.6,0,.2,1) forwards,fade 1.6s cubic-bezier(.6,0,.2,1) forwards}.letter1{animation-delay:0s}.letter2{animation-delay:.1s}.letter3{animation-delay:.2s}.letter4{animation-delay:.3s}.letter5{animation-delay:.4s}.letter6{animation-delay:.5s}.letter7{animation-delay:.6s}.letter8{animation-delay:.7s}.letter9{animation-delay:.8s}
@@ -190,9 +191,9 @@
                 <div class="login-qrcode-box">
                     <div id="login-qrcode"></div>
                     <div class="login-qrcode-tips"></div>
-                    <img alt="加载中" class="login-scan-loading" src="./img/loadTV.gif">
+                    <img alt="加载中" class="login-scan-loading" src="./assets/loadTV.gif">
                 </div>
-                <img alt="扫描提示" class="login-scan-tips" src="./img/qr-tips.png">
+                <img alt="扫描提示" class="login-scan-tips" src="./assets/qr-tips.png">
                 <div class="login-scan-desc">
                     请使用&nbsp;<a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端
                     <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object></a><br>扫码登录或扫码下载APP
@@ -269,11 +270,12 @@
                     <div class="info-styles">分类</div>
                     <div class="info-desc">简介</div>
                     <div class="info-owner">
-                        <img alt="UP头像" class="info-owner-face" src="./icon/default.jpg" draggable="false">
+                        <img alt="UP头像" class="info-owner-face" src="./assets/default.jpg" draggable="false">
                         <div class="info-owner-name">UP名称</div>
                     </div>
                 </div>
             </div>
+            <div class="stein-tree"></div>
             <div class="video-list"></div>
         </div>
         <div class="multi-select-next-btn">

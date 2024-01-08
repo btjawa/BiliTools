@@ -1,6 +1,6 @@
 # BiliTools
 
-![preview.png](./assets/preview.png)
+![bilitools.png](https://cdn.jsdelivr.net/gh/btjawa/btjawa/assets/bilitools.png)
 
 # 介绍
 
