@@ -853,9 +853,9 @@ function handleVideoList(details) { // 分类填充视频块
                         episode.aid, episode.cid, 
                         type, index + 1, ugc_root.title
                     );
-                    appendVideoBlock(i + 1);
+                    appendVideoBlock(index + 1);
                     if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.aid))) {
-                        actualSearchVideo = [episode.title, i + 1];
+                        actualSearchVideo = [episode.title, index + 1];
                     }
                 });
                 if (!actualSearchVideo[0]) {
@@ -922,7 +922,7 @@ function handleVideoList(details) { // 分类填充视频块
             if (targetVideoBlock.length) {
                 videoList.animate({
                     scrollTop: targetVideoBlock.offset().top - videoList.offset().top + videoList.scrollTop() - (videoList.height() - targetVideoBlock.height())/2
-                }, 500, 'swing');
+                }, 1000, 'easeOutQuint');
                 targetVideoBlock.find('.multi-select-box-org').prop('checked', true).trigger('change');
             }
         }, 100);
