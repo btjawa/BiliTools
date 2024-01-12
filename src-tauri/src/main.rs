@@ -628,6 +628,16 @@ async fn rw_config(window: tauri::Window, action: String, sets: Option<Settings>
 }
 
 #[tauri::command]
+async fn save_file(window: tauri::Window, content: String, path: String) -> Result<String, String> {
+    if let Err(e) = fs::write(path.clone(), content) {
+        handle_err(window.clone(),  e.to_string());
+        Err(e.to_string())
+    } else {
+        Ok(path)
+    }
+}
+
+#[tauri::command]
 async fn open_select(window: tauri::Window, display_name: String, index: i64) -> Result<String, String>{
     let download_info_map = DOWNLOAD_INFO_MAP.lock().await;
     if let Some(video_info) = download_info_map.get(&display_name) {
@@ -945,7 +955,7 @@ async fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![init,
             scan_login, pwd_login, sms_login, stop_login, insert_cookie,
-            open_select, rw_config, refresh_cookie,
+            open_select, rw_config, refresh_cookie, save_file,
             push_back_queue, process_queue, exit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

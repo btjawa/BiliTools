@@ -20,6 +20,8 @@
     - 互动视频支持：`回溯 / 控制剧情走向 + 下载每一个剧情对应的资源`
 - 音乐下载 - `AU`
     - 音质最高支持：`320K + 无损SQ FLAC`
+- 弹幕获取 - `实时弹幕(Json) / 历史弹幕(Json)`
+- 视频AI总结
 - 三种登录方式 + 自动刷新登录状态
     - 扫码登录
     - 密码登录
@@ -30,3 +32,7 @@
 应用将在每次启动时自动检查并更新
 
 手动更新可移步 [Releases](https://github.com/btjawa/BiliTools/releases/latest)
+
+# 更多信息
+
+可转至 [Blog](https://blog.btjawa.top/posts/bilitools)

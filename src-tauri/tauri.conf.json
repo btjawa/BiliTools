@@ -22,7 +22,8 @@
       },
       "dialog": {
         "all": false,
-        "open": true
+        "open": true,
+        "save": true
       },
       "http": {
         "all": false,
@@ -90,8 +91,6 @@
         "resizable": true,
         "minWidth": 1280,
         "minHeight": 720,
-        "maxWidth": 1280,
-        "maxHeight": 720,
         "title": "BiliTools",
         "label": "main",
         "width": 1280,

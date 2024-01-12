@@ -19,9 +19,11 @@ const multiSelectDown = $('.multi-select-next-down-btn');
 const downDirPath = $('#down-dir-path');
 const tempDirPath = $('#temp-dir-path');
 
-let currentFocus = null, currentVideoBlock, currentElm = [], currentSel = [];
+let currentFocus = null, currentElm = [], currentSel = [];
 let lastChecked = -1;
-let userData = [], totalDown = 0;
+let userData = { mid: null, coins: null, isLogin: false }
+let totalDown = 0;
+let headers = {};
 
 window.videoData = [];
 window.audioData = [];
@@ -103,7 +105,111 @@ class CurrentSel {
     }
 }
 
-let headers = {};
+const verify = {
+    app: {
+        android_1: {
+            appkey: "1d8b6e7d45233436",
+            appsec: "560c52ccd288fed045859ed18bffd973"
+        }
+    },
+    wbi: async function(params) {
+        const mixinKeyEncTab = [
+            46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
+            33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
+            61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
+            36, 20, 34, 44, 52
+        ];
+        const getMixinKey = (orig) => {
+            return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
+        };
+        const res = (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
+        { headers })).data;
+        const { img_url, sub_url } = res.data.wbi_img;
+        const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
+        const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
+        const mixinKey = getMixinKey(imgKey + subKey);
+        const currTime = Math.round(Date.now() / 1000);
+        const chrFilter = /[!'()*]/g;
+        Object.assign(params, { wts: currTime });
+        const query = Object.keys(params).sort().map(key => {
+            const value = params[key].toString().replace(chrFilter, '');
+            return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+        }).join('&');
+        const wbiSign = md5(query + mixinKey);
+        return query + '&w_rid=' + wbiSign;
+    },
+    uuid: function() {
+        function a(e) {
+            let t = "";
+            for (let r = 0; r < e; r++) {
+                t += o(Math.random() * 16);
+            }
+            return s(t, e);
+        }
+        function s(e, t) {
+            let r = "";
+            if (e.length < t) {
+                for (let n = 0; n < t - e.length; n++) {
+                    r += "0";
+                }
+            }
+            return r + e;
+        }
+        function o(e) {
+            return Math.ceil(e).toString(16).toUpperCase();
+        }
+        let e = a(8);
+        let t = a(4);
+        let r = a(4);
+        let n = a(4);
+        let i = a(12);
+        let currentTime = (new Date()).getTime();
+        return e + "-" + t + "-" + r + "-" + n + "-" + i + s((currentTime % 100000).toString(), 5) + "infoc";    
+    },
+    bili_ticket: async function() {
+        const key = "XgwSnGZ1p";
+        const message = "ts" + Math.floor(Date.now() / 1000);
+        const encoder = new TextEncoder();
+        const keyBytes = encoder.encode(key);
+        const messageBytes = encoder.encode(message);
+        const cryptoKey = await crypto.subtle.importKey(
+            "raw", keyBytes, 
+            { name: "HMAC", hash: "SHA-256" }, 
+            false, ["sign"]
+        );
+        const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageBytes);
+        const hexSignature =  Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+        const params = new URLSearchParams({
+            key_id: "ec02",
+            hexsign: hexSignature,
+            "context[ts]": Math.floor(Date.now() / 1000),
+            csrf: ""
+        })
+        return (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
+        { method: 'POST' })).data;
+    },
+    correspondPath: async function(timestamp) {
+        const publicKey = await crypto.subtle.importKey(
+            "jwk", {
+              kty: "RSA",
+              n: "y4HdjgJHBlbaBN04VERG4qNBIFHP6a3GozCl75AihQloSWCXC5HDNgyinEnhaQ_4-gaMud_GF50elYXLlCToR9se9Z8z433U3KjM-3Yx7ptKkmQNAMggQwAVKgq3zYAoidNEWuxpkY_mAitTSRLnsJW-NCTa0bqBFF6Wm1MxgfE",
+              e: "AQAB",
+            }, { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["encrypt"],
+        )
+        const data = new TextEncoder().encode(`refresh_${timestamp}`);
+        const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
+        return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
+    },
+    appSign: function(params, platform) {
+        params.appkey = platform.appkey;
+        const searchParams = new URLSearchParams(params);
+        searchParams.sort();
+        const sign = md5(searchParams.toString() + platform.appsec);
+        return searchParams.toString() + '&sign=' + sign;
+    }
+}
 
 function debounce(fn, wait) {
     let bouncing = false;
@@ -125,51 +231,51 @@ function debounce(fn, wait) {
     };
 }
 
-async function selFile(type, multiple = false, filters = []) {
-    try {
-        const options = {
-            multiple,
-            directory: type === 'directory'
-        };
-        if (type !== 'directory') {
-            options.filters = filters;
+async function openFile(options = {}) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const selected = await dialog.open(options);
+            resolve(selected);
+        } catch (err) {
+            console.error(err)
+            reject(null);
         }
-        const selected = await dialog.open(options);
-        return selected;
-    } catch (error) {
-        console.error(error)
-        return null;
-    }
+    });
 }
 
-async function getVideoFull(aid, cid, type, action) {
+async function saveFile(options = {}) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const selected = await dialog.save(options);
+            resolve(selected);
+        } catch(err) {
+            console.error(err);
+            reject(null);
+        }
+    });
+}
+async function getVideoFull(aid, cid, type, block) {
     const params = {
         avid: aid, cid: cid,
         fnval: 4048, fnver: 0,
         fourk: 1
     }
-    const signature = await wbiSignature(params);
+    const signature = await verify.wbi(params);
     let getDetailUrl = type !== "bangumi" 
         ? `https://api.bilibili.com/x/player/wbi/playurl?${signature}`
         : `https://api.bilibili.com/pgc/player/web/playurl?${signature}`;
     const details = (await http.fetch(getDetailUrl,
     { headers })).data;
-    if (details.code == 0) {
-        if (handleErr(details, type)) {
-            currentVideoBlock.next($(`.video-block-${action}`))
-            .removeClass('active').remove();
-            return;
-        }
-        return details;
-    } else {
-        handleErr(details, type);
+    if (handleErr(details, type)) {
+        block.removeClass('active').remove();
     }
+    return details;
 }
 
 async function getAudioFull(songid, quality, qualityStr, line, index) {
     const params = new URLSearchParams({
         songid, quality, privilege: 2,
-        mid: userData[0] || 0, platform: 'web',
+        mid: userData.mid || 0, platform: 'web',
     });
     const response = await http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${params.toString()}`,
     { headers })
@@ -178,19 +284,29 @@ async function getAudioFull(songid, quality, qualityStr, line, index) {
     const safeTitle = details.data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
     .split('.').pop().split('?')[0].split('#')[0];
     const audioUrl = (details.data.cdns[line] || details.data.cdns[0]) || null;
-    const ssDir = `《${safeTitle}》`;
-    const ext = audioUrl.split('.').pop().split('?')[0].split('#')[0];
-    const displayName = `${safeTitle}_(${qualityStr}).${ext}`;
-    totalDown++;
-    invoke('push_back_queue', {
-        videoUrl: null, audioUrl,
-        displayName, action: "only", ssDir,
-        index: totalDown,
-    });
-    appendDownPageBlock(ext, qualityStr, audioData[index], totalDown);
-    invoke('process_queue', {initial: true});
-    currentElm.push(".down-page");
-    downPageElm.addClass('active').removeClass('back');
+    if (audioUrl) {
+        const ssDir = `《${safeTitle}》`;
+        const ext = audioUrl.split('.').pop().split('?')[0].split('#')[0];
+        const displayName = `${safeTitle}_(${qualityStr}).${ext}`;
+        totalDown++;
+        invoke('push_back_queue', {
+            videoUrl: null, audioUrl,
+            displayName, action: "only", ssDir,
+            index: totalDown,
+        });
+        appendDownPageBlock(ext, qualityStr, audioData[index], totalDown);
+        invoke('process_queue', {initial: true});
+        currentElm.push(".down-page");
+        downPageElm.addClass('active');
+    } else {
+        iziToast.error({
+            icon: 'fa-solid fa-circle-info',
+            layout: '2',
+            title: '下载',
+            message: `未找到符合条件的下载地址＞﹏＜`,
+        });
+        return null;
+    }
 }
 
 async function parseVideo(videoId) {
@@ -227,16 +343,12 @@ async function parseBangumi(videoId) {
 
 async function parseAudio(songId) {
     const infoResponse = await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/song/info?sid=${songId.match(/\d+/)[0]}`,
-    { headers, responseType: http.ResponseType.Binary });
-    if (infoResponse.ok) {
-        const infoDetails = JSON.parse(pako.inflate(infoResponse.data, { to: 'string' }));
-        const tagsResponse = await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${songId.match(/\d+/)[0]}`,
-        { headers, responseType: http.ResponseType.Binary });
-        if (tagsResponse.ok) {
-            const tagsDetails = JSON.parse(pako.inflate(tagsResponse.data, { to: 'string' }));
-            handleAudioList({info: infoDetails, tags: tagsDetails});
-        }
-    }
+    { headers });
+    const info = infoResponse.data;
+    const tagsResponse = await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${songId.match(/\d+/)[0]}`,
+    { headers });
+    const tags = tagsResponse.data;
+    handleAudioList({info, tags});
 }
 
 async function getDownUrl(details, quality, action, line, fileType, index) {
@@ -245,7 +357,7 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
             let downUrl = [];
             const data = details.data || details.result;
             const isVideo = fileType === "video";
-            for (let file of isVideo?data.dash.video:data.dash.audio) {
+            for (const file of isVideo?data.dash.video:data.dash.audio) {
                 if (file.id == isVideo ? quality.dms_id : quality.ads_id
                 && !isVideo || file.codecs == quality.codec_id) {
                     if (isVideo) {
@@ -261,7 +373,7 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
             if (action == "multi") {
                 const target = quality.ads_id==30250?data.dash.dolby.audio:(quality.ads_id==30251?data.dash.flac.audio:data.dash.audio);
                 if (Array.isArray(target)) {
-                    for (let audio of target) {
+                    for (const audio of target) {
                         if (audio.id == quality.ads_id) {
                             downUrl[1] = [audio.baseUrl];
                             if (audio.backupUrl) downUrl[1].push(...audio.backupUrl);
@@ -280,7 +392,7 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 const ssDir = `《${videoData[index].ss_title}》`;
                 if (action == "only") {
                     qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
-                    ext = isVideo ? "mp4" : "aac";
+                    ext = isVideo ? "mp4" : "mp3";
                     displayName = `${safeTitle}_(${qualityStr}).${ext}`;
                 } else if (action == "multi") {
                     qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
@@ -350,21 +462,21 @@ async function search(input) {
     $('.video-block-operates-item').off('click');
     if (match) {
         parseVideo(match[0]);
-        searchElm.addClass('active').removeClass('back');
+        searchElm.addClass('active');
         loadingBox.addClass('active');
         return;
     }
     match = input.match(/ep(\d+)|ss(\d+)/i);
     if (match) {
         parseBangumi(match[0]); 
-        searchElm.addClass('active').removeClass('back');
+        searchElm.addClass('active');
         loadingBox.addClass('active');
         return;
     }
     match = input.match(/au(\d+)/i);
     if (match) {
         parseAudio(match[0]); 
-        searchElm.addClass('active').removeClass('back');
+        searchElm.addClass('active');
         loadingBox.addClass('active');
         return;
     } else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
@@ -399,6 +511,22 @@ function formatDuration(int, type) {
     const finalMins = mins.toString().padStart(2, '0');
     const finalSecs = secs.toString().padStart(2, '0');
     return finalHs + finalMins + ':' + finalSecs;
+}
+
+function formatTimestamp(timestamp) {
+    if (!timestamp) return timestamp;
+    const date = new Date(timestamp * 1000);
+    // const utc8Offset = 8 * 60;
+    // const localDate = new Date(date.getTime() + utc8Offset * 60 * 1000);
+    const localDate = new Date(date.getTime());
+    const year = localDate.getFullYear();
+    const month = localDate.getMonth() + 1;
+    const day = localDate.getDate();
+    const hours = localDate.getHours();
+    const minutes = localDate.getMinutes();
+    const seconds = localDate.getSeconds();
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ` +
+           `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
 function getPartition(cid){switch(cid){case 1:return'动画';case 24:return'动画';case 25:return'动画';case 47:return'动画';case 210:return'动画';case 86:return'动画';case 253:return'动画';case 27:return'动画';case 13:return'番剧';case 51:return'番剧';case 152:return'番剧';case 32:return'番剧';case 33:return'番剧';case 167:return'国创';case 153:return'国创';case 168:return'国创';case 169:return'国创';case 170:return'国创';case 195:return'国创';case 3:return'音乐';case 28:return'音乐';case 31:return'音乐';case 30:return'音乐';case 59:return'音乐';case 193:return'音乐';case 29:return'音乐';case 130:return'音乐';case 243:return'音乐';case 244:return'音乐';case 129:return'舞蹈';case 20:return'舞蹈';case 154:return'舞蹈';case 156:return'舞蹈';case 198:return'舞蹈';case 199:return'舞蹈';case 200:return'舞蹈';case 4:return'游戏';case 17:return'游戏';case 171:return'游戏';case 172:return'游戏';case 65:return'游戏';case 173:return'游戏';case 121:return'游戏';case 136:return'游戏';case 19:return'游戏';case 36:return'知识';case 201:return'知识';case 124:return'知识';case 228:return'知识';case 207:return'知识';case 208:return'知识';case 209:return'知识';case 229:return'知识';case 122:return'知识';case 188:return'科技';case 95:return'科技';case 230:return'科技';case 231:return'科技';case 232:return'科技';case 233:return'科技';case 234:return'运动';case 235:return'运动';case 249:return'运动';case 164:return'运动';case 236:return'运动';case 237:return'运动';case 238:return'运动';case 223:return'汽车';case 245:return'汽车';case 246:return'汽车';case 247:return'汽车';case 248:return'汽车';case 240:return'汽车';case 227:return'汽车';case 176:return'汽车';case 160:return'生活';case 138:return'生活';case 250:return'生活';case 251:return'生活';case 239:return'生活';case 161:return'生活';case 162:return'生活';case 21:return'生活';case 211:return'美食';case 76:return'美食';case 212:return'美食';case 213:return'美食';case 214:return'美食';case 215:return'美食';case 217:return'动物圈';case 218:return'动物圈';case 219:return'动物圈';case 220:return'动物圈';case 221:return'动物圈';case 222:return'动物圈';case 75:return'动物圈';case 119:return'鬼畜';case 22:return'鬼畜';case 26:return'鬼畜';case 126:return'鬼畜';case 216:return'鬼畜';case 127:return'鬼畜';case 155:return'时尚';case 157:return'时尚';case 252:return'时尚';case 158:return'时尚';case 159:return'时尚';case 202:return'资讯';case 203:return'资讯';case 204:return'资讯';case 205:return'资讯';case 206:return'资讯';case 5:return'娱乐';case 71:return'娱乐';case 241:return'娱乐';case 242:return'娱乐';case 137:return'娱乐';case 181:return'影视';case 182:return'影视';case 183:return'影视';case 85:return'影视';case 184:return'影视';case 177:return'纪录片';case 37:return'纪录片';case 178:return'纪录片';case 179:return'纪录片';case 180:return'纪录片';case 23:return'电影';case 147:return'电影';case 145:return'电影';case 146:return'电影';case 83:return'电影';case 11:return'电视剧';case 185:return'电视剧';case 187:return'电视剧';default:return'未知分区'}}
@@ -442,30 +570,30 @@ async function cutText() {
     $('.context-menu').css({ opacity: 0, display: "none" });
 }
 
-async function bilibili() {
+async function bilibili(ts) {
     if (currentElm[currentElm.length - 1] == ".user-profile") {
-        shell.open(`https://space.bilibili.com/${userData[0]}`);
+        shell.open(`https://space.bilibili.com/${userData.mid}`);
         $('.context-menu').css({ opacity: 0, display: "none" });
         return;
     } else {
-        if (searchInput.val()){
+        if (searchInput.val() || ts){
             if ($('.info').hasClass('active')) {
                 const input = searchInput.val();
                 let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
                 if (match) {
-                    shell.open('https://www.bilibili.com/video/' + match[0]);
+                    shell.open(`https://www.bilibili.com/video/${match[0]}?t=${ts??0}`);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
                 match = input.match(/ep(\d+)|ss(\d+)/i);
                 if (match) {
-                    shell.open('https://www.bilibili.com/bangumi/play/' + match[0]);
+                    shell.open(`'https://www.bilibili.com/bangumi/play/${match[0]}?t=${ts??0}`);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
                 match = input.match(/au(\d+)/i);
                 if (match) {
-                    shell.open('https://www.bilibili.com/audio/' + match[0]);
+                    shell.open(`https://www.bilibili.com/audio/${match[0]}?t=${ts??0}`);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
@@ -498,19 +626,19 @@ async function backward() {
     const index = currentElm.length - 1;
     if (currentElm[index] == '.login') {
         invoke('stop_login');
-        loginElm.removeClass('active').addClass('back');
+        loginElm.removeClass('active');
     } else if (currentElm[index] == '.down-page') {
-        downPageElm.removeClass('active').addClass('back');
+        downPageElm.removeClass('active');
     } else if (currentElm[index] == '.user-profile') {
-        userProfileElm.removeClass('active').addClass('back');
+        userProfileElm.removeClass('active');
     } else if (currentElm[index] == '.video-multi-next') {
-        multiNextPage.removeClass('active').addClass('back');
+        multiNextPage.removeClass('active');
         multiSelect.addClass('active');
         $('.video-multi-next-list').removeClass('active')
         $('.multi-select-box-org').prop('checked', false).trigger('change');
         lastChecked = -1;
     } else if (currentElm[index] == '.video-root') {
-        if (searchElm.hasClass('active')) searchElm.removeClass('active').addClass('back');
+        if (searchElm.hasClass('active')) searchElm.removeClass('active');
         infoBlock.removeClass('active');
         videoList.removeClass('active');
         loadingBox.removeClass('active');
@@ -519,7 +647,7 @@ async function backward() {
         $('.stein-tree').removeClass('active').find('.stein-tree-node').remove()
         $('.video-list').empty();
     } else if (currentElm[index] == '.settings') {
-        settingsElm.removeClass('active').addClass('back');
+        settingsElm.removeClass('active');
         $('.settings-page').removeClass('active');
     }
     currentElm.pop();
@@ -542,7 +670,7 @@ $(document).ready(function () {
     });
     $('.down-page-bar-background').on('click', () => {
         currentElm.push(".down-page");
-        downPageElm.addClass('active').removeClass('back');    
+        downPageElm.addClass('active');    
     });
     $('.settings-page-bar-background').on('click', () => {
         settings();
@@ -616,117 +744,18 @@ function formatPubdate(timestamp) {
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-async function getBiliTicket() {
-    const key = "XgwSnGZ1p";
-    const message = "ts" + Math.floor(Date.now() / 1000);
-    const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(key);
-    const messageBytes = encoder.encode(message);
-    const cryptoKey = await window.crypto.subtle.importKey(
-        "raw", 
-        keyBytes, 
-        { name: "HMAC", hash: "SHA-256" }, 
-        false, 
-        ["sign"]
-    );
-    const signature = await window.crypto.subtle.sign("HMAC", cryptoKey, messageBytes);
-    const hexSignature =  Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
-    const params = new URLSearchParams({
-        key_id: "ec02",
-        hexsign: hexSignature,
-        "context[ts]": Math.floor(Date.now() / 1000),
-        csrf: ""
-    })
-    return (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
-    { method: 'POST' })).data;
-}
-
-async function wbiSignature(params) {
-    const mixinKeyEncTab = [
-        46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
-        33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
-        61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
-        36, 20, 34, 44, 52
-    ];
-    const getMixinKey = (orig) => {
-        return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
-    };
-    const res = (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
-    { headers })).data;
-    const { img_url, sub_url } = res.data.wbi_img;
-    const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
-    const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
-    const mixinKey = getMixinKey(imgKey + subKey);
-    const currTime = Math.round(Date.now() / 1000);
-    const chrFilter = /[!'()*]/g;
-    Object.assign(params, { wts: currTime });
-    const query = Object.keys(params).sort().map(key => {
-        const value = params[key].toString().replace(chrFilter, '');
-        return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-    }).join('&');
-    const wbiSign = md5(query + mixinKey);
-    return query + '&w_rid=' + wbiSign;
-}
-
-function getUuid() {
-    function a(e) {
-        let t = "";
-        for (let r = 0; r < e; r++) {
-            t += o(Math.random() * 16);
-        }
-        return s(t, e);
-    }
-    function s(e, t) {
-        let r = "";
-        if (e.length < t) {
-            for (let n = 0; n < t - e.length; n++) {
-                r += "0";
-            }
-        }
-        return r + e;
-    }
-    function o(e) {
-        return Math.ceil(e).toString(16).toUpperCase();
-    }
-    let e = a(8);
-    let t = a(4);
-    let r = a(4);
-    let n = a(4);
-    let i = a(12);
-    let currentTime = (new Date()).getTime();
-    return e + "-" + t + "-" + r + "-" + n + "-" + i + s((currentTime % 100000).toString(), 5) + "infoc";
-}
-
-async function getCorrespondPath(timestamp) {
-    const publicKey = await crypto.subtle.importKey(
-        "jwk", {
-          kty: "RSA",
-          n: "y4HdjgJHBlbaBN04VERG4qNBIFHP6a3GozCl75AihQloSWCXC5HDNgyinEnhaQ_4-gaMud_GF50elYXLlCToR9se9Z8z433U3KjM-3Yx7ptKkmQNAMggQwAVKgq3zYAoidNEWuxpkY_mAitTSRLnsJW-NCTa0bqBFF6Wm1MxgfE",
-          e: "AQAB",
-        }, { name: "RSA-OAEP", hash: "SHA-256" },
-        true,
-        ["encrypt"],
-    )
-    const data = new TextEncoder().encode(`refresh_${timestamp}`);
-    const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
-    return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
-}
-
 async function checkRefresh() {
     const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
     { headers })).data;
     const { refresh, timestamp } = response.data;
     if (refresh) {
-        const correspondPath = await getCorrespondPath(timestamp);
+        const correspondPath = await verify.correspondPath(timestamp);
         const csrfHtmlResp = await http.fetch(`https://www.bilibili.com/correspond/1/${correspondPath}`,
-        { headers, responseType: http.ResponseType.Binary });
-        if (csrfHtmlResp.ok) {
-            const infoDetails = pako.inflate(csrfHtmlResp.data, { to: 'string' });
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(infoDetails, 'text/html');
-            const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
-            invoke("refresh_cookie", { refreshCsrf });
-        }
+        { headers, responseType: http.ResponseType.Text });
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(csrfHtmlResp.data, 'text/html');
+        const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
+        invoke("refresh_cookie", { refreshCsrf });
     } else return refresh;
 }
 
@@ -734,11 +763,11 @@ function initVideoInfo(type, details) {
     const isVideo = (type == "video" || type == "ugc_season");
     const root = isVideo ? details.data.View : details.result;
     $('.info-cover').attr("src", "").attr("src", 
-    (isVideo ? root.pic : root.cover));
+    (isVideo ? root.pic : root.cover) + '@256h');
     $('.info-title').html(isVideo ? root.title : root.season_title);
     $('.info-desc').html((isVideo ? root.desc : root.evaluate).replace(/\n/g, '<br>'));
     if (isVideo ? root.owner : root.up_info) {
-        $('.info-owner-face').attr("src", (isVideo ? root.owner.face : root.up_info.avatar));
+        $('.info-owner-face').attr("src", (isVideo ? root.owner.face : root.up_info.avatar) + '@128h');
         $('.info-owner-name').html(isVideo ? root.owner.name : root.up_info.uname);
     } else {
         $('.info-owner-face').css("display", "none");
@@ -770,7 +799,7 @@ function initVideoInfo(type, details) {
 
 function initAudioInfo(details) {
     const root = details.info.data;
-    $('.info-cover').attr("src", "").attr("src", root.cover);
+    $('.info-cover').attr("src", "").attr("src", root.cover + '@256h');
     $('.info-title').html(root.title);
     $('.info-desc').html((root.intro).replace(/\n/g, '<br>'));
     if (root.author) {
@@ -817,19 +846,18 @@ function handleVideoList(details) { // 分类填充视频块
                 const type = "ugc_season";
                 initVideoInfo(type, details);
                 const ugc_root = details.data.View.ugc_season;
-                for (let i = 0; i < ugc_root.sections[0].episodes.length; i++) {
-                    let episode = ugc_root.sections[0].episodes[i];
-                    videoData[i] = new VideoData(
+                ugc_root.sections[0].episodes.forEach((episode, index) => {
+                    videoData[index] = new VideoData(
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
                         episode.aid, episode.cid, 
-                        type, i + 1, ugc_root.title
+                        type, index + 1, ugc_root.title
                     );
                     appendVideoBlock(i + 1);
                     if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.aid))) {
                         actualSearchVideo = [episode.title, i + 1];
                     }
-                }
+                });
                 if (!actualSearchVideo[0]) {
                     actualSearchVideo = [ugc_root.sections[0].episodes[0].title, 1];
                 }
@@ -846,20 +874,19 @@ function handleVideoList(details) { // 分类填充视频块
                         appendSteinNode(data_root, graph_version, 1, type);
                     })
                 } else {
-                    for (let j = 0; j < data_root.pages.length; j++) {
-                        let page = data_root.pages[j];
+                    data_root.pages.forEach((page, index) => {
                         const title = page.part || data_root.title;
-                        videoData[j] = new VideoData(
+                        videoData[index] = new VideoData(
                             title, data_root.desc, 
                             data_root.pic, page.duration, 
                             data_root.aid, page.cid, 
-                            type, j + 1, data_root.title
+                            type, index + 1, data_root.title
                         );
-                        appendVideoBlock(j + 1)
+                        appendVideoBlock(index + 1)
                         if (!actualSearchVideo[0] && title == $('.info-title').text()) {
                             actualSearchVideo = [title, page.page];
                         }
-                    }
+                    });
                     if (!actualSearchVideo[0]) {
                         actualSearchVideo = [data_root.title, 1];
                     }
@@ -869,19 +896,18 @@ function handleVideoList(details) { // 分类填充视频块
             const type = "bangumi";
             initVideoInfo(type, details);
             const eps_root = details.result.episodes;
-            for (let k = 0; k < eps_root.length; k++) {
-                let episode = eps_root[k];
-                videoData[k] = new VideoData(
+            eps_root.forEach((episode, index) => {
+                videoData[index] = new VideoData(
                     episode.share_copy, episode.share_copy,
                     episode.cover, episode.duration,
                     episode.aid, episode.cid,
-                    type, k + 1, details.result.season_title
+                    type, index + 1, details.result.season_title
                 );
-                appendVideoBlock(k + 1);
+                appendVideoBlock(index + 1);
                 if (!actualSearchVideo[0] && (episode.bvid == searchInput.val() || searchInput.val().includes(episode.ep_id))) {
-                    actualSearchVideo = [episode.share_copy, k + 1];
+                    actualSearchVideo = [episode.share_copy, index + 1];
                 }
-            }
+            });
             if (!actualSearchVideo[0]) {
                 actualSearchVideo = [eps_root[0].share_copy, 1];
             }
@@ -907,8 +933,8 @@ function handleVideoList(details) { // 分类填充视频块
             const nameWidth = isChecked ? "calc(32vw - 30px)" : "32vw";
             $('.video-block-name').css({"min-width": nameWidth, "max-width": nameWidth});
             $('.video-block-page').css("margin-left", isChecked ? '10px' : '20px');
-            videoList.find('.video-block-only').removeClass('active').addClass('back');
-            videoList.find('.video-block-multi').removeClass('active').addClass('back');
+            videoList.find('.video-block-only').removeClass('active');
+            videoList.find('.video-block-multi').removeClass('active');
             setTimeout(() => {
                 videoList.find('.video-block-only').remove();
                 videoList.find('.video-block-multi').remove();
@@ -960,15 +986,15 @@ function handleVideoList(details) { // 分类填充视频块
                         $(this).append(qualityBlock);
                     }
                 });
-                multiNextPage.removeClass('back').addClass('active');
+                multiNextPage.addClass('active');
                 currentElm.push(".video-multi-next");
                 multiSelect.click().removeClass('active');
                 const videoBlocks = multiNextPage.find('.video-block').toArray();
                 let res = [];
-                handleDownBtn(null, null, "multi", true).then(async line => {
+                handleDownBtn(null, null, "multi", null).then(async line => {
                     for (let i = 0; i < videoBlocks.length; i++) {
                         $('.video-multi-next-title').text(`正在获取分辨率 - ${i+1} / ${videoBlocks.length}`);
-                        res[i] = await handleVideoClick("multi", $(videoBlocks[i]), selectedVideos[i], true);
+                        res[i] = await initActionBlock("multi", $(videoBlocks[i]), selectedVideos[i], true);
                         $(videoBlocks[i]).find('.video-block-multi-select-quality').html(`${res[i][0].dms_desc} ｜ ${res[i][0].codec_desc} ｜ ${res[i][0].ads_desc}`);
                         downUrls.push(res[i][1]);
                         const currentSel = new CurrentSel(res[i][0].dms_id, res[i][0].dms_desc, res[i][0].codec_id, res[i][0].codec_desc, res[i][0].ads_id, res[i][0].ads_desc);
@@ -979,7 +1005,7 @@ function handleVideoList(details) { // 分类填充视频块
                     multiSelectDown.on('click', () => {
                         invoke('process_queue', {initial: true});
                         currentElm.push(".down-page");
-                        downPageElm.addClass('active').removeClass('back');
+                        downPageElm.addClass('active');
                     });
                 });
             }
@@ -1010,7 +1036,7 @@ function handleAudioList(details) { //填充音频块
         ));
         const params = new URLSearchParams({
             songid: root.id, quality: 3,
-            privilege: 2, mid: userData[0] || 0,
+            privilege: 2, mid: userData.mid || 0,
             platform: 'web',
         });
         http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${params.toString()}`,
@@ -1085,30 +1111,29 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
     }
 }
 
-async function handleVideoClick(action, click, data, ms) {
+async function initActionBlock(action, click, data, ms) {
     if (!$('.multi-select-icon').hasClass('checked')) {
-        const videoBlockAction = $('<div>').addClass(`video-block-${action}`);
-        const videoBlockTitle = $('<div>').addClass('video-block-title').text(action=="multi"?'解析音视频':'仅解析选项');
-        videoBlockAction.addClass('active').append(videoBlockTitle, $('<div>').addClass(`loading-action active`));
-        currentVideoBlock = ms ? click : click.closest('.video-block');
+        const videoBlockAction = $('<div>').addClass(`video-block-${action} active`);
+        const videoBlockTitle = $('<div>').addClass('video-block-title').text(click.text());
+        const crossSplit = $('<div>').addClass('video-block-cross-split');
+        videoBlockAction.append(videoBlockTitle, $('<div>').addClass(`loading-action active`));
+        const currentVideoBlock = ms ? click : click.closest('.video-block');
         if (currentVideoBlock.next(`.video-block-multi`).length || currentVideoBlock.next(`.video-block-only`).length) {
             currentVideoBlock.next().remove();
         }
-        if (!ms) {
-            currentVideoBlock.after(videoBlockAction);
-            const videoDownBtn = $('<div>').addClass(`video-block-${action}-video-down-btn`).text('下载');
-            const AudioDownBtn = action=="only"?$('<div>').addClass(`video-block-${action}-vaudio-down-btn`).text('下载'):'';
-            currentVideoBlock.next($(`.video-block-${action}`)).append(videoDownBtn, AudioDownBtn);
+        if (!ms) currentVideoBlock.after(videoBlockAction);
+        const details = await getVideoFull(data.aid, data.cid, data.type, videoBlockAction);
+        if (details.code !== 0) return null;
+        videoBlockAction.find(`.loading-action`).removeClass('active');
+        if (action == "only") {
+            appendMoreList(data, videoBlockAction);
+            videoBlockAction.append(crossSplit.clone());
         }
-        const details = await getVideoFull(data.aid, data.cid, data.type, action);
-        currentVideoBlock.next($(`.video-block-${action}`)).find(`.loading-action`).removeClass('active');
-        const dms = appendDimensionList(details, data.type, action, ms);
-        const ads = appendAudioList(details, data.type, action, ms);
-        if (ms) {
-            return [new CurrentSel(...dms, ...ads), details];
-        } else {
-            handleDownBtn(details, data, action, false)
-        };
+        const dms = appendDimensionList(details, data.type, action, ms, videoBlockAction);
+        if (action == "only") videoBlockAction.append(crossSplit);
+        const ads = appendAudioList(details, data.type, action, ms, videoBlockAction);
+        if (ms) return [new CurrentSel(...dms, ...ads), details];
+        else handleDownBtn(details, data, action, videoBlockAction);
     } else {
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
@@ -1133,9 +1158,9 @@ function appendVideoBlock(index) { // 填充视频块
     const videoSplit = $('<div>').addClass('video-block-split');
     const getCoverBtn = $('<div>').addClass('video-block-getcover-btn video-block-operates-item').html(`${downCoverIcon}解析封面`);
     const getMultiBtn = $('<div>').addClass('video-block-getvideo-btn video-block-operates-item').html(`${downVideoIcon}解析音视频`);
-    const getOnlyBtn = $('<div>').addClass('video-block-getaudio-btn video-block-operates-item').html(`${downAudioIcon}仅解析选项`);
+    const getMoreBtn = $('<div>').addClass('video-block-getmore-btn video-block-operates-item').html(`${downAudioIcon}更多解析`);
     videoBlock.append(videoMultiSelect, videoPage, videoSplit, videoName, videoSplit.clone(), videoDuration, videoSplit.clone(), videoOperates).appendTo(videoList);
-    videoOperates.append(getCoverBtn, getMultiBtn, getOnlyBtn).appendTo(videoBlock);
+    videoOperates.append(getCoverBtn, getMultiBtn, getMoreBtn).appendTo(videoBlock);
     checkBoxLabel.on('change', function() {
         const isChecked = $(this).prop('checked');
         handleSelect(isChecked ? "add" : "remove");
@@ -1177,8 +1202,8 @@ function appendVideoBlock(index) { // 填充视频块
             })
         }
     });
-    getMultiBtn.on('click', (e) => handleVideoClick("multi", $(e.currentTarget), data_root, false));
-    getOnlyBtn.on('click', (e) => handleVideoClick("only", $(e.currentTarget), data_root, false));
+    getMultiBtn.on('click', (e) => initActionBlock("multi", $(e.currentTarget), data_root, false));
+    getMoreBtn.on('click', (e) => initActionBlock("only", $(e.currentTarget), data_root, false));
 }
 
 function appendAudioBlock(details) { // 填充音频块
@@ -1188,32 +1213,15 @@ function appendAudioBlock(details) { // 填充音频块
     const videoName = $('<div>').addClass('video-block-name').html(details.desc + "&emsp;|&emsp;" + details.bps);
     const videoDuration = $('<div>').addClass('video-block-duration').text(formatDuration(data_root.duration, null));
     const videoBlock = $('<div>').addClass('video-block');
-    const videoMultiSelect = $('<label>').addClass('multi-select-box');
-    const checkBoxLabel = $('<input>').attr('type', 'checkbox').addClass('multi-select-box-org');
-    const checkBoxMark = $('<span>').addClass('multi-select-box-checkmark');
-    videoMultiSelect.append(checkBoxLabel, checkBoxMark);
     const videoOperates = $('<div>').addClass('video-block-operates');
     const videoSplit = $('<div>').addClass('video-block-split');
     const getCoverBtn = $('<div>').addClass('video-block-getcover-btn video-block-operates-item').html(`${downCoverIcon}解析封面`);
     const getAudioBtn = $('<div>').addClass('video-block-getaudio-btn video-block-operates-item').html(`${downAudioIcon}解析音频`);
-    videoBlock.append(videoMultiSelect, videoPage, videoSplit, videoName, videoSplit.clone(), videoDuration, videoSplit.clone(), videoOperates).appendTo(videoList);
+    videoBlock.append(videoPage, videoSplit, videoName, videoSplit.clone(), videoDuration, videoSplit.clone(), videoOperates).appendTo(videoList);
     videoOperates.append(getCoverBtn, getAudioBtn).appendTo(videoBlock);
     getCoverBtn.on('click', () => shell.open(data_root.pic.replace(/http/g, 'https')));
     getAudioBtn.on('click', () => {
-        let options = {
-            title: '选择下载线路',
-            background: "#2b2b2b",
-            color: "#c4c4c4",
-            html: `
-            <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
-            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路</button>
-            `,
-            showConfirmButton: false,
-        };
-        Swal.fire(options);
-        $('.swal-btn-main').on('click', () => {
-            const line = $(this).hasClass('swal-btn-backup1') ? 1 : 0;
-            Swal.close();
+        handleDownBtn(null, null, "only", null).then(async line => {
             getAudioFull(data_root.sid, details.type, details.bps.replace("kbit/s", "K"), line, index)
         })
     });
@@ -1230,7 +1238,7 @@ async function appendDownPageBlock(type, quality, data, index) { // 填充下载
     }
     downPage.css("justify-content", `${downPage.children().length < 5 ? "center" : "flex-start"}`);
     const infoBlock = $(`<div id="${totalDown}">`).addClass('down-page-info')
-    const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace("http:", "https:"))
+    const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace("http:", "https:") + '@256h')
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
@@ -1238,7 +1246,7 @@ async function appendDownPageBlock(type, quality, data, index) { // 填充下载
     const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(`等待下载`);
     const infoProgressBar = $('<div>').addClass('down-page-info-progress-bar');
     const infoProgress = $('<div>').addClass('down-page-info-progress').html(infoProgressBar);
-    const openDirBtn = $('<div>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${type=="aac"?'audio':'video'} icon-small"></i>定位文件`);
+    const openDirBtn = $('<div>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${type=="mp3"?'audio':'video'} icon-small"></i>定位文件`);
     infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, openDirBtn, infoProgressText, infoProgress)).appendTo(downPage);
     openDirBtn.on('click', () => {
         if (parseFloat(infoProgressBar.css('width')) / parseFloat(infoProgress.css('width')) < 1) {
@@ -1254,175 +1262,283 @@ async function appendDownPageBlock(type, quality, data, index) { // 填充下载
     });
 }
 
-function appendDimensionList(details, type, action, ms) { // 填充分辨率
-    if (details.code == 0) {
-        const root = type == "bangumi" ? details.result : details.data;
-        const dms = $('<div>').addClass("video-block-dimension-dms");
-        const dm = $('<div>').addClass("video-block-dimension-dm").text("分辨率/画质");
-        const split = $('<div>').addClass("video-block-dimension-split");
-        const dmsOpt = $('<div>').addClass("video-block-dimension-dms-opt");
-        dms.append(dm, split, dmsOpt);
-        if (currentVideoBlock.next(`.video-block-${action}`).length) {
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
-        } else {
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms').remove();
-        }
-        currentVideoBlock.next(`.video-block-${action}`).append(dms);
-        const maxQuality = Math.max(...root.dash.video.map(v => v.id));
-        const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
-        for (let i = 0; i < qualityList.length; i++) {
-            const quality = qualityList[i];
-            const qualityItem = root.support_formats.find(format => format.quality === quality);
-            const description = qualityItem.display_desc + (qualityItem.superscript ? `-${qualityItem.superscript}` : '');
-            const currentBtn = $('<div>').addClass(`video-block-dimension-dms-${quality} video-block-dimension-dms-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
-            currentBtn.append(currentIcon, qualityItem.new_description);
-            dmsOpt.append(currentBtn);
-            if (quality == maxQuality) {
-                currentBtn.addClass('checked');
-                currentSel[0] = quality;
-                currentSel[1] = description;
-                const codec = appendCodecList(qualityItem, type, action, "init", ms);
-                if (ms) return [quality, description, ...codec];
+function appendMoreList(data, block) { // 填充更多解析
+    const dms = $('<div>').addClass("video-block-opt-cont more");
+    const text = $('<div>').addClass("video-block-opt-text").text("更多解析");
+    const split = $('<div>').addClass("video-block-split");
+    const opt = $('<div>').addClass("video-block-opt more");
+    const dmhk = $('<div>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor icon-small'></i>历史弹幕");
+    const dmck = $('<div>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor icon-small'></i>实时弹幕");
+    const aism = $('<div>').addClass("video-block-opt-item ai-summary").html("<i class='fa-solid fa-microchip-ai icon-small'></i>视频AI总结");
+    dms.append(text, split, opt).appendTo(block);
+    opt.append(dmck, dmhk, aism);
+    $(document.body).off('click');
+    async function dm(url) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/grpc_api/bilibili/community/service/dm/v1/dm.proto
+                protobuf.load('../proto/dm.proto', async function(err, root) {
+                    const DmSegMobileReply = root.lookupType("bilibili.community.service.dm.v1.DmSegMobileReply");
+                    const response = await http.fetch(url,
+                    { headers, responseType: http.ResponseType.Binary });
+                    const message = DmSegMobileReply.decode(new Uint8Array(response.data));
+                    resolve(message.elems)
+                });
+            } catch(err) {
+                console.error(err);
+                reject(err)
             }
-            currentBtn.on('click', function() {
-                if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-dimension-dms-item').removeClass('checked');
-                } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-dimension-dms-item').removeClass('checked');
-                }
-                $(this).addClass('checked');
-                currentSel[0] = quality;
-                currentSel[1] = qualityItem.display_desc;
-                appendCodecList(qualityItem, type, action, "update", ms);
-            });
-        }
-    } else {
-        handleErr(details, type);
+        })
     }
+    function noLogin() {
+        if (!userData.isLogin) {
+            iziToast.error({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '解析',
+                message: '该模块需要登录',
+            });
+            return true;
+        } else return false;
+    }
+    function saved() {
+        Swal.fire({
+            title: '<strong>数据结构</strong>',
+            icon: 'info',
+            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/posts/bilitools#DanmakuElem" target="_blank">BiliTools#DanmakuElem</a>',
+        }).then(() => {
+            iziToast.info({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '弹幕',
+                message: 'JSON保存成功~',
+            });
+            return;
+        })
+    }
+    function getCurrentDate() {
+        const date = new Date();
+        const year = date.getFullYear();
+        let month = date.getMonth() + 1;
+        let day = date.getDate();
+        month = month < 10 ? '0' + month : month;
+        day = day < 10 ? '0' + day : day;
+        return [year + '-' + month, day];
+    }
+    dmck.on('click', async function() {
+        const params = new URLSearchParams({
+            type: 1, oid: data.cid, pid: data.aid, segment_index: 1
+        });
+        const url = `https://api.bilibili.com/x/v2/dm/web/seg.so?${params.toString()}`;
+        const content = JSON.stringify(await dm(url), null, 2);
+        const selected = await saveFile({
+            filters: [{ name: 'JSON 文件', extensions: ['json'] }],
+            defaultPath: formatTimestamp(Date.now() / 1000).replace(/[:\s]/g, '_') + '_' + data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+        });
+        if (selected) {
+            invoke('save_file', { content, path: selected });
+            saved();
+        }
+    });
+    dmhk.on('click', async function() {
+        if (noLogin()) return;
+        const dateParts = getCurrentDate();
+        const params0 = new URLSearchParams({
+            type: 1, oid: data.cid, month: dateParts[0]
+        });
+        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers })).data;
+        const codeList = $('<div>').addClass('combo-list active');
+        block.append(codeList);
+        (dateList.data).forEach((date, index) => {
+            const codeElement = $('<div>').addClass('combo')
+                .html(`<span>${date}</span>`);
+            codeList.append(codeElement);
+            codeElement.on('click', async () => {                
+                const params1 = new URLSearchParams({
+                    type: 1, oid: data.cid, date: dateParts[0] + '-' + dateParts[1]
+                });
+                const url = `https://api.bilibili.com/x/v2/dm/web/history/seg.so?${params1.toString()}`;
+                const content = JSON.stringify(await dm(url), null, 2);
+                const selected = await saveFile({
+                    filters: [{ name: 'JSON 文件', extensions: ['json'] }],
+                    defaultPath: date + '_' + data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+                });
+                if (selected) {
+                    invoke('save_file', { content, path: selected });
+                    saved();
+                }
+            });
+        });
+        $(document.body).on('click', () => codeList.removeClass('active') );
+    });
+    aism.on('click', async function() {
+        const params = ({
+            aid: data.aid, cid: data.cid, up_mid: userData.mid || 0, 
+        });
+        const signature = await verify.wbi(params);
+        const response = await http.fetch(`https://api.bilibili.com/x/web-interface/view/conclusion/get?${signature}`,
+        { headers });
+        const root = response.data;
+        if (root.data.code !== 0) {
+            iziToast.error({
+                icon: 'fa-solid fa-circle-info',
+                layout: '2',
+                title: '视频AI总结',
+                message: `遇到错误：${root.data.code === 1 ? "未找到可用无摘要" : "本视频不支持AI摘要"}`,
+            });
+            return;
+        }
+        const summary = $('<div>').addClass('ai-summary-cont');
+        const summaryHeader = $('<div>').addClass('ai-summary-header').html(
+        '<img src="../assets/ai-summary-icon.svg" class="icon-small" draggable=false>' + '<span>已为你生成视频总结</span>')
+        .append('<i class="fa-regular fa-xmark"></i>');
+        const summaryBody = $('<div>').addClass('ai-summary-body');
+        const abs = $('<div>').addClass('ai-child-abs').html(root.data.model_result.summary);
+        const outl = $('<div>').addClass('ai-child-outline');
+        const split = $('<div>').addClass('video-block-cross-split');
+        summary.append(summaryHeader, split, summaryBody.append(abs, outl)).appendTo(block);
+        summaryHeader.find('i').on('click', () => summary.remove());
+        for (let outline of root.data.model_result.outline) {
+            const title = $('<div>').addClass('ai-child-title').html(outline.title);
+            const section = $('<div>').addClass('ai-child-section').append(title);
+            title.on('click', () => bilibili(outline.timestamp));
+            for (let part of outline.part_outline) {
+                const bullet = $('<div>').addClass('ai-child-section-bullet')
+                .append($('<span>').html(formatDuration(part.timestamp))).append(part.content);
+                section.append(bullet);
+                bullet.on('click', () => bilibili(part.timestamp))
+            }
+            outl.append(section);
+        }
+    })
+}
+
+function appendDimensionList(details, type, action, ms, block) { // 填充分辨率
+    const root = type == "bangumi" ? details.result : details.data;
+    const dms = $('<div>').addClass("video-block-opt-cont dimension");
+    const text = $('<div>').addClass("video-block-opt-text").text("分辨率/画质");
+    const split = $('<div>').addClass("video-block-split");
+    const opt = $('<div>').addClass("video-block-opt dimension");
+    dms.append(text, split, opt).appendTo(block);
+    const maxQuality = Math.max(...root.dash.video.map(v => v.id));
+    const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
+    qualityList.forEach((quality, index) => {
+        const qualityItem = root.support_formats.find(format => format.quality === quality);
+        const description = qualityItem.display_desc + (qualityItem.superscript ? `-${qualityItem.superscript}` : '');
+        const currentBtn = $('<div>').addClass(`video-block-opt-item dimension`);
+        const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
+        currentBtn.append(currentIcon, qualityItem.new_description);
+        opt.append(currentBtn);
+        if (quality == maxQuality) {
+            currentBtn.addClass('checked');
+            currentSel[0] = quality;
+            currentSel[1] = description;
+            const codec = appendCodecList(qualityItem, "init", action, ms, block);
+            if (ms) return [quality, description, ...codec];
+        }
+        currentBtn.on('click', function() {
+            block.find('.video-block-opt-item.dimension').removeClass('checked');
+            $(this).addClass('checked');
+            currentSel[0] = quality;
+            currentSel[1] = qualityItem.display_desc;
+            appendCodecList(qualityItem, "update", action, ms, block);
+        });
+    })
 };
 
-function appendCodecList(details, type, action, extra, ms) { // 填充编码格式
-    if (details.codecs) {
-        const cds = $('<div>').addClass("video-block-codec-cds");
-        const cd = $('<div>').addClass("video-block-codec-cd").text("编码格式");
-        const split = $('<div>').addClass("video-block-codec-split");
-        const cdsOpt = $('<div>').addClass("video-block-codec-cds-opt");
-        const crossSplit = $('<div>').addClass('video-block-cross-split');
-        if (extra == "init") {
-            cds.append(cd, split, cdsOpt);
-            if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
-                currentVideoBlock.next(`.video-block-${action}`).find('.video-block-cross-split').remove();
-            } else {
-                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds').remove();
-                currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-cross-split').remove();
-            }
-            currentVideoBlock.next(`.video-block-${action}`).append(cds).append(action=="only"?crossSplit:'');
-        } else $('.video-block-codec-cds-opt').empty();
-        const codecsList = details.codecs.map(codec => ({
-            codec, 
-            priority: (codec.includes('avc') ? 1 : codec.includes('hev') ? 2 : 3)
-        }))
-        .sort((a, b) => a.priority - b.priority);
-        for (let i = 0; i < codecsList.length; i++) {
-            const codec = codecsList[i].codec;
-            const description = describeCodec(codec);
-            const currentBtn = $('<div>').addClass(`video-block-codec-cds-${codec} video-block-codec-cds-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
-            currentBtn.append(currentIcon, description);
-            if (extra == "init") cdsOpt.append(currentBtn);
-            else $('.video-block-codec-cds-opt').append(currentBtn)
-            if (codec == 0) continue;
-            if (!$('.video-block-codec-cds-item').hasClass('checked')) {
-                currentBtn.addClass('checked');
-                currentSel[2] = codec;
-                currentSel[3] = description;
-                if (ms) return [codec, description];
-            }
-            currentBtn.on('click', function() {
-                if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-codec-cds-item').removeClass('checked');
-                } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-codec-cds-item').removeClass('checked');
-                }
-                $(this).addClass('checked');
-                currentSel[2] = codec;
-                currentSel[3] = description
-            });
+function appendCodecList(details, extra, action, ms, block) { // 填充编码格式
+    if (!details.codecs) return null;
+    const dms = $('<div>').addClass("video-block-opt-cont codec");
+    const text = $('<div>').addClass("video-block-opt-text").text("编码格式");
+    const split = $('<div>').addClass("video-block-split");
+    const opt = $('<div>').addClass("video-block-opt codec");
+    const downBtn = $('<div>').addClass(`video-block-video-down-btn ${action}`).text('下载');
+    block.find('.video-block-opt.codec').remove();
+    if (extra == "init") dms.append(text, split, opt).appendTo(block);
+    else $('.video-block-opt-cont.codec').append(opt)
+    const codecsList = details.codecs.map(codec => ({
+        codec, 
+        priority: (codec.includes('avc') ? 1 : codec.includes('hev') ? 2 : 3)
+    }))
+    .sort((a, b) => a.priority - b.priority);
+    for (let i = 0; i < codecsList.length; i++) {
+        const codec = codecsList[i].codec;
+        const description = describeCodec(codec);
+        const currentBtn = $('<div>').addClass(`video-block-opt-item codec`);
+        const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
+        currentBtn.append(currentIcon, description);
+        opt.append(currentBtn);
+        if (codec == 0) continue;
+        if (i === 0) {
+            currentBtn.addClass('checked');
+            currentSel[2] = codec;
+            currentSel[3] = description;
+            if (ms) return [codec, description];
         }
-
-    } else {
-        handleErr(details, type);
+        currentBtn.on('click', function() {
+            block.find('.video-block-opt-item.codec').removeClass('checked');
+            $(this).addClass('checked');
+            currentSel[2] = codec;
+            currentSel[3] = description
+        });
     }
+    if (action == "only") opt.append(downBtn)
 }
 
-function appendAudioList(details, type, action, ms) { // 填充音频
-    if (details.code == 0) {
-        const root = type == "bangumi" ? details.result : details.data;
-        const ads = $('<div>').addClass("video-block-vaudio-ads");
-        const ad = $('<div>').addClass("video-block-vaudio-ad").text("比特率/音质");
-        const split = $('<div>').addClass("video-block-vaudio-split");
-        const adsOpt = $('<div>').addClass("video-block-vaudio-ads-opt");
-        ads.append(ad, split, adsOpt);
-        const qualityDesc = {
-            30216: "64K",
-            30232: "132K",
-            30280: "192K",
-            30250: "杜比全景声",
-            30251: "Hi-Res无损",
-        }
-        if (currentVideoBlock.next(`.video-block-${action}`).length) {
-            currentVideoBlock.next(`.video-block-${action}`).find('.video-block-vaudio-ads').remove();
-        } else {
-            currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-vaudio-ads').remove();
-        }
-        currentVideoBlock.next(`.video-block-${action}`).append(ads);
-        const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
-        if (root.dash.dolby?.audio) {
-            qualityList.unshift(...root.dash.dolby.audio.map(audioItem => audioItem.id).sort((a, b) => b - a))
-        }
-        if (root.dash.flac && root.dash.flac.display) {
-            if (!root.dash.flac.audio) qualityList.unshift(0);
-            else qualityList.unshift(root.dash.flac.audio.id);
-        }
-        for (let i = 0; i < qualityList.length; i++) {
-            const quality = qualityList[i];
-            const description = qualityDesc[quality];
-            const currentBtn = $('<div>').addClass(`video-block-vaudio-ads-${quality} video-block-vaudio-ads-item`);
-            const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} icon-small`);
-            currentBtn.append(currentIcon, description);
-            adsOpt.append(currentBtn);
-            if (quality == 0) {
-                currentBtn.css('cursor', 'not-allowed');
-                continue;
-            }
-            if (!$('.video-block-vaudio-ads-item').hasClass('checked')) {
-                currentBtn.addClass('checked');
-                currentSel[4] = quality;
-                currentSel[5] = description;
-                if (ms) return [quality, description];
-            };
-            currentBtn.on('click', function() {
-                if (currentVideoBlock.next(`.video-block-${action}`).length) {
-                    currentVideoBlock.next(`.video-block-${action}`).find('.video-block-vaudio-ads-item').removeClass('checked');
-                } else {
-                    currentVideoBlock.next().next(`.video-block-${action}`).find('.video-block-vaudio-ads-item').removeClass('checked');
-                }
-                $(this).addClass('checked');
-                currentSel[4] = quality;
-                currentSel[5] = description;
-            });
-        }
-    } else {
-        handleErr(details, type);
+function appendAudioList(details, type, action, ms, block) { // 填充音频
+    const root = type == "bangumi" ? details.result : details.data;
+    const dms = $('<div>').addClass("video-block-opt-cont audio");
+    const text = $('<div>').addClass("video-block-opt-text").text("分辨率/画质");
+    const split = $('<div>').addClass("video-block-split");
+    const opt = $('<div>').addClass("video-block-opt audio");
+    const downBtn = $('<div>').addClass(`video-block-${action=="multi"?'video':'vaudio'}-down-btn ${action}`).text('下载');
+    dms.append(text, split, opt).appendTo(block);
+    const qualityDesc = {
+        30216: "64K",
+        30232: "132K",
+        30280: "192K",
+        30250: "杜比全景声",
+        30251: "Hi-Res无损",
     }
+    const qualityList = root.dash.audio.map(audioItem => audioItem.id).sort((a, b) => b - a);
+    if (root.dash.dolby?.audio) {
+        qualityList.unshift(...root.dash.dolby.audio.map(audioItem => audioItem.id).sort((a, b) => b - a))
+    }
+    if (root.dash.flac && root.dash.flac.display) {
+        if (!root.dash.flac.audio) qualityList.unshift(0);
+        else qualityList.unshift(root.dash.flac.audio.id);
+    }
+    for (let i = 0; i < qualityList.length; i++) {
+        const quality = qualityList[i];
+        const description = qualityDesc[quality];
+        const currentBtn = $('<div>').addClass(`video-block-opt-item audio`);
+        const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} icon-small`);
+        currentBtn.append(currentIcon, description);
+        opt.append(currentBtn);
+        if (quality == 0) {
+            currentBtn.css('cursor', 'not-allowed');
+            continue;
+        }
+        if (i === 0) {
+            currentBtn.addClass('checked');
+            currentSel[4] = quality;
+            currentSel[5] = description;
+            if (ms) return [quality, description];
+        };
+        currentBtn.on('click', function() {
+            block.find('.video-block-opt-item.audio').removeClass('checked');
+            $(this).addClass('checked');
+            currentSel[4] = quality;
+            currentSel[5] = description;
+        });
+    }
+    opt.append(downBtn)
 }
 
-function handleDownBtn(details, data, action, ms) { // 监听下载按钮
+function handleDownBtn(details, data, action, block) { // 监听下载按钮
     return new Promise((resolve) => {
         const quality = new CurrentSel(...currentSel);
-        let options = {
+        const options = {
             title: '选择下载线路',
             background: "#2b2b2b",
             color: "#c4c4c4",
@@ -1438,37 +1554,37 @@ function handleDownBtn(details, data, action, ms) { // 监听下载按钮
             $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2', async function() {
                 Swal.close();
                 const line = $(this).hasClass('swal-btn-backup1') ? 1 : ($(this).hasClass('swal-btn-backup2') ? 2 : 0);
-                if (!ms) {
+                if (block) {
                     downUrls.push(details);
                     await getDownUrl(details, quality, action, line, fileType, data.index - 1);
                     invoke('process_queue', {initial: true});
                     currentElm.push(".down-page");
-                    downPageElm.addClass('active').removeClass('back');
+                    downPageElm.addClass('active');
                 }
                 $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
                 return resolve(line);
             });
         }
-        if (ms) handleDown("video");
+        if (!block) handleDown("video");
         else {
-            const videoDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-video-down-btn`);
-            const audioDownBtn = currentVideoBlock.next(`.video-block-${action}`).find(`.video-block-${action}-vaudio-down-btn`);    
+            const videoDownBtn = block.find(`.video-block-video-down-btn.${action}`);
+            const audioDownBtn = block.find(`.video-block-vaudio-down-btn.${action}`);
             if (action == "only") audioDownBtn.on('click', () => handleDown("audio"));
-            else videoDownBtn.on('click', () => handleDown("video"));
+            videoDownBtn.on('click', () => handleDown("video"));
         }
     });
 }
 
 async function userProfile() {
-    if ($('.user-name').text() == "登录") return;
+    if (!userData.isLogin) return;
     currentElm.push(".user-profile");
-    userProfileElm.addClass('active').removeClass('back');
-    const detailData = await http.fetch(`https://api.bilibili.com/x/web-interface/card?mid=${userData[0]}&photo=true`,
+    userProfileElm.addClass('active');
+    const detailData = await http.fetch(`https://api.bilibili.com/x/web-interface/card?mid=${userData.mid}&photo=true`,
     { headers });
     if (detailData.ok) {
         const details = detailData.data;
-        $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:"));
-        $('.user-profile-avatar').attr("src", details.data.card.face);
+        $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:") + '@200h');
+        $('.user-profile-avatar').attr("src", details.data.card.face + '@256h');
         $('.user-profile-name').html(details.data.card.name);
         $('.user-profile-desc').html(details.data.card.sign);
         $('.user-profile-sex').attr("src", `./assets/${details.data.card.sex=="男"?'male':'female'}.png`);
@@ -1477,7 +1593,7 @@ async function userProfile() {
             $('.user-profile-bigvip').css("display", "block");
             $('.user-profile-bigvip').attr("src", details.data.card.vip.label.img_label_uri_hans_static);
         }
-        $('.user-profile-coins').html('<a>硬币</a><br>' + userData[1]);
+        $('.user-profile-coins').html('<a>硬币</a><br>' + userData.coins);
         $('.user-profile-subs').html('<a>关注数</a><br>' + formatStat(details.data.card.friend));
         $('.user-profile-fans').html('<a>粉丝数</a><br>' + formatStat(details.data.card.fans));
         $('.user-profile-likes').html('<a>获赞数</a><br>' + formatStat(details.data.like_num));
@@ -1570,9 +1686,6 @@ async function pwdLogin() {
             });
         }
     });
-    pwdInput.on('keydown', e => {
-        if (e.keyCode === 13) loginBtn.click();
-    })
 }
 
 async function smsLogin() {
@@ -1582,20 +1695,20 @@ async function smsLogin() {
     const areaCodes = (await http.fetch('https://passport.bilibili.com/web/generic/country/list')).data;
     const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
     allCodes.sort((a, b) => a.id - b.id);
-    const codeList = $('.login-sms-area-code-list');
+    const codeList = $('.combo-list');
     codeList.prev().off('click');
-    loginElm.off('click');
+    $(document.body).off('click');
     $('.login-sms-getcode-btn').off('click');
     loginBtn.off('click');
     $.each(allCodes, (index, code) => {
-        const codeElement = $('<div>').addClass('login-sms-area-code-list-item')
+        const codeElement = $('<div>').addClass('combo')
             .html(`<span style="float:left">${code.cname}</span>
             <span style="float:right">+${code.country_id}</span>`);
         codeList.append(codeElement);
         codeElement.on('click', () => {
             codeList.prev().find('.login-sms-item-text').html(codeElement.find('span').last().text()
             + '&nbsp;<i class="fa-solid fa-chevron-down"></i>');
-            codeList.find('.login-sms-area-code-list-item').removeClass('checked');
+            codeList.find('.combo').removeClass('checked');
             codeElement.addClass('checked');
             codeList.removeClass('active');
         });
@@ -1605,7 +1718,7 @@ async function smsLogin() {
         codeList.addClass('active');
         e.stopPropagation();
     });
-    loginElm.on('click', () => codeList.removeClass('active'));
+    $(document.body).on('click', () => codeList.removeClass('active'));
     let key;
     let canSend = true;
     $('.login-sms-getcode-btn').on('click', async function() {
@@ -1694,16 +1807,13 @@ async function smsLogin() {
             });
         }
     });
-    pwdInput.on('keydown', e => {
-        if (e.keyCode === 13) loginBtn.click();
-    })
 }
 
 async function login() {
-    if ($('.user-name').text() != "登录") return;
+    if (userData.isLogin) return;
     currentElm.push(".login");
     $('.login-tab-pwd .login-tab-sms').off('click');
-    loginElm.addClass('active').removeClass('back');
+    loginElm.addClass('active');
     scanLogin();
     $('.login-tab-pwd').on('click', async () => {
         $('.login-tab-sms').removeClass('checked');
@@ -1751,7 +1861,7 @@ async function captcha() {
 
 function settings() {
     $('.settings-side-bar-background input[name="max-conc"]').off('click');
-    settingsElm.removeClass('back').addClass('active');
+    settingsElm.addClass('active');
     currentElm.push('.settings');
     const downDirOpenBtn = $('.down-dir-path-openbtn');
     const tempDirOpenBtn = $('.temp-dir-path-openbtn');
@@ -1789,14 +1899,14 @@ function settings() {
     });
     $('.settings-side-bar-background.general').click();
     downDirOpenBtn.on('click', async () => {
-        const selected = await selFile('directory');
+        const selected = await openFile({ directory: true });
         if (selected) {
             downDirPath.val(selected);
             handleSave("存储路径");
         }
     });
     tempDirOpenBtn.on('click', async () => {
-        const selected = await selFile('directory');
+        const selected = await openFile({ directory: true });
         if (selected) {
             tempDirPath.val(selected);
             handleSave("临时文件存储路径");
@@ -1862,13 +1972,12 @@ function describeCodec(codecString) {
 }
 
 async function getUserProfile(mid) {
-    const signature = await wbiSignature({ mid: mid });
+    const signature = await verify.wbi({ mid: mid });
     const detailData = await http.fetch(`https://api.bilibili.com/x/space/wbi/acc/info?${signature}`,
     { headers });
     if (detailData.ok) {
         const details = detailData.data;
-        userData[0] = mid;
-        userData[1] = details.data.coins;
+        userData = { mid, coins: details.data.coins, isLogin: true };
         if (details.code != "0"){
             handleErr(details, null);
             return;
@@ -1887,8 +1996,8 @@ async function getUserProfile(mid) {
         if (details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
             $('.user-vip-icon').css('display', 'block');
         }
-        invoke('insert_cookie', { cookieStr: `_uuid=${getUuid()}; Path=/; Domain=bilibili.com` });
-        invoke('insert_cookie', { cookieStr: `bili_ticket=${(await getBiliTicket()).data.ticket}; Path=/; Domain=bilibili.com` });
+        invoke('insert_cookie', { cookieStr: `_uuid=${verify.uuid()}; Path=/; Domain=bilibili.com` });
+        invoke('insert_cookie', { cookieStr: `bili_ticket=${(await verify.bili_ticket()).data.ticket}; Path=/; Domain=bilibili.com` });
         checkRefresh();
     }
 }
@@ -1923,6 +2032,7 @@ listen("exit-success", async (event) => {
     $('.user-vip-icon').css("display", "none")
     $('.user-avatar-placeholder').attr('data-after', '登录');
     $('.user-avatar-placeholder').on('click', debounce(login, 1000));
+    userData.isLogin = false;
     iziToast.info({
         icon: 'fa-solid fa-circle-info',
         layout: '2',
