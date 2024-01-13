@@ -73,6 +73,7 @@ async fn init_aria2c(window: tauri::Window) -> Result<(), String> {
                 let current_dir = env::current_dir().map_err(|e| e.to_string())?
                     .join("aria2c");
                 let child = Command::new(current_dir.join("aria2c.exe").clone())
+                    .creation_flags(0x08000000)
                     .current_dir(current_dir.clone())
                     .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
                     .arg(format!("--rpc-listen-port={}", port))

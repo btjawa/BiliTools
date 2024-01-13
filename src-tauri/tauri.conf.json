@@ -56,7 +56,8 @@
         "icons/StoreLogo.png"
       ],
       "resources": [
-        "ffmpeg"
+        "ffmpeg",
+        "aria2c"
       ],
       "windows": {
         "wix": {
