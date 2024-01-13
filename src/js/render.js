@@ -276,7 +276,7 @@ async function getVideoFull(aid, cid, type, block) {
     return details;
 }
 
-async function getAudioFull(songid, quality, qualityStr, line, index) {
+async function getAudioFull(songid, quality, qualityStr, index) {
     const params = new URLSearchParams({
         songid, quality, privilege: 2,
         mid: userData.mid || 0, platform: 'web',
@@ -287,10 +287,10 @@ async function getAudioFull(songid, quality, qualityStr, line, index) {
     const details = response.data;
     const safeTitle = safeFileName(details.data.title)
     .split('.').pop().split('?')[0].split('#')[0];
-    const audioUrl = (details.data.cdns[line] || details.data.cdns[0]) || null;
+    const audioUrl = details.data.cdns;
     if (audioUrl) {
         const ssDir = `《${safeTitle}》`;
-        const ext = audioUrl.split('.').pop().split('?')[0].split('#')[0];
+        const ext = audioUrl[0].split('.').pop().split('?')[0].split('#')[0];
         const displayName = `${safeTitle} (${qualityStr}).${ext}`;
         totalDown++;
         invoke('push_back_queue', {
@@ -355,13 +355,13 @@ async function parseAudio(songId) {
     handleAudioList({info, tags});
 }
 
-async function getDownUrl(details, quality, action, line, fileType, index) {
+async function getDownUrl(details, quality, action, fileType, index) {
     return new Promise((resolve) => {
         try {
             let downUrl = [];
             const data = details.data || details.result;
             const isVideo = fileType === "video";
-            for (const file of isVideo?data.dash.video:data.dash.audio) {
+            for (const file of isVideo ? data.dash.video : data.dash.audio) {
                 if (file.id == isVideo ? quality.dms_id : quality.ads_id
                 && !isVideo || file.codecs == quality.codec_id) {
                     if (isVideo) {
@@ -375,7 +375,8 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 }
             }
             if (action == "multi") {
-                const target = quality.ads_id==30250?data.dash.dolby.audio:(quality.ads_id==30251?data.dash.flac.audio:data.dash.audio);
+                const target = quality.ads_id == 30250 ? data.dash.dolby.audio
+                : (quality.ads_id == 30251 ? data.dash.flac.audio : data.dash.audio);
                 if (Array.isArray(target)) {
                     for (const audio of target) {
                         if (audio.id == quality.ads_id) {
@@ -405,8 +406,8 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
                 }
                 totalDown++;
                 invoke('push_back_queue', {
-                    videoUrl: (downUrl[0] && (downUrl[0][line] || downUrl[0][0])) || null,
-                    audioUrl: (downUrl[1] && (downUrl[1][line] || downUrl[1][0])) || null,
+                    videoUrl: downUrl[0] || null,
+                    audioUrl: downUrl[1] || null,
                     displayName, action, ssDir,
                     index: totalDown,
                 });
@@ -585,19 +586,19 @@ async function bilibili(ts) {
                 const input = searchInput.val();
                 let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
                 if (match) {
-                    shell.open(`https://www.bilibili.com/video/${match[0]}?t=${ts??0}`);
+                    shell.open(`https://www.bilibili.com/video/${match[0]}?t=${ts||0}`);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
                 match = input.match(/ep(\d+)|ss(\d+)/i);
                 if (match) {
-                    shell.open(`'https://www.bilibili.com/bangumi/play/${match[0]}?t=${ts??0}`);
+                    shell.open(`'https://www.bilibili.com/bangumi/play/${match[0]}?t=${ts||0}`);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
                 match = input.match(/au(\d+)/i);
                 if (match) {
-                    shell.open(`https://www.bilibili.com/audio/${match[0]}?t=${ts??0}`);
+                    shell.open(`https://www.bilibili.com/audio/${match[0]}?t=${ts||0}`);
                     $('.context-menu').css({ opacity: 0, display: "none" });
                     return;
                 }
@@ -995,22 +996,20 @@ function handleVideoList(details) { // 分类填充视频块
                 multiSelect.click().removeClass('active');
                 const videoBlocks = multiNextPage.find('.video-block').toArray();
                 let res = [];
-                handleDownBtn(null, null, "multi", null).then(async line => {
-                    for (let i = 0; i < videoBlocks.length; i++) {
-                        $('.video-multi-next-title').text(`正在获取分辨率 - ${i+1} / ${videoBlocks.length}`);
-                        res[i] = await initActionBlock("multi", $(videoBlocks[i]), selectedVideos[i], true);
-                        $(videoBlocks[i]).find('.video-block-multi-select-quality').html(`${res[i][0].dms_desc} ｜ ${res[i][0].codec_desc} ｜ ${res[i][0].ads_desc}`);
-                        downUrls.push(res[i][1]);
-                        const currentSel = new CurrentSel(res[i][0].dms_id, res[i][0].dms_desc, res[i][0].codec_id, res[i][0].codec_desc, res[i][0].ads_id, res[i][0].ads_desc);
-                        await getDownUrl(downUrls[i], currentSel, "multi", line, "video", selectedVideos[i].index - 1);
-                    }
-                    $('.video-multi-next-title').text('本次获取有效期为120分钟, 请确认分辨率等信息, 随后点击“开始下载”');
-                    multiSelectDown.addClass('active');
-                    multiSelectDown.on('click', () => {
-                        invoke('process_queue', {initial: true});
-                        currentElm.push(".down-page");
-                        downPageElm.addClass('active');
-                    });
+                for (let i = 0; i < videoBlocks.length; i++) {
+                    $('.video-multi-next-title').text(`正在获取分辨率 - ${i+1} / ${videoBlocks.length}`);
+                    res[i] = await initActionBlock("multi", $(videoBlocks[i]), selectedVideos[i], true);
+                    $(videoBlocks[i]).find('.video-block-multi-select-quality').html(`${res[i][0].dms_desc} ｜ ${res[i][0].codec_desc} ｜ ${res[i][0].ads_desc}`);
+                    downUrls.push(res[i][1]);
+                    const currentSel = new CurrentSel(res[i][0].dms_id, res[i][0].dms_desc, res[i][0].codec_id, res[i][0].codec_desc, res[i][0].ads_id, res[i][0].ads_desc);
+                    await getDownUrl(downUrls[i], currentSel, "multi", "video", selectedVideos[i].index - 1);
+                }
+                $('.video-multi-next-title').text('本次获取有效期为120分钟, 请确认分辨率等信息, 随后点击“开始下载”');
+                multiSelectDown.addClass('active');
+                multiSelectDown.on('click', () => {
+                    invoke('process_queue', {initial: true});
+                    currentElm.push(".down-page");
+                    downPageElm.addClass('active');
                 });
             }
         });
@@ -1080,7 +1079,7 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
         videoData.length + 1, info.title
     ));
     appendVideoBlock(videoData.length);
-    for (let story of response.data.story_list) {
+    for (const story of response.data.story_list) {
         const nodeElm = $('<div>').addClass('stein-tree-node').html($('<i>').addClass('fa-regular'));
         if (story.is_current) {
             nodeElm.addClass('checked');
@@ -1096,7 +1095,7 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
     const questions = response.data.edges.questions;
     const choices_root = questions ? questions[0].choices : null;
     if (!choices_root) return;
-    for (let choice of choices_root) {
+    for (const choice of choices_root) {
         const btn = $('<div>').addClass('stein-option-btn').html(choice.option);
         if (choice.condition) {
             let vari = response.data.hidden_vars.reduce((acc, item) => {
@@ -1136,8 +1135,21 @@ async function initActionBlock(action, click, data, ms) {
         const dms = appendDimensionList(details, data.type, action, ms, videoBlockAction);
         if (action == "only") videoBlockAction.append(crossSplit);
         const ads = appendAudioList(details, data.type, action, ms, videoBlockAction);
-        if (ms) return [new CurrentSel(...dms, ...ads), details];
-        else handleDownBtn(details, data, action, videoBlockAction);
+        if (ms) { return [new CurrentSel(...dms, ...ads), details];
+        } else {
+            const quality = new CurrentSel(...currentSel);
+            async function handleDown(fileType) {
+                downUrls.push(details);
+                await getDownUrl(details, quality, action, fileType, data.index - 1);
+                invoke('process_queue', {initial: true});
+                currentElm.push(".down-page");
+                downPageElm.addClass('active');
+            }
+            const videoDownBtn = videoBlockAction.find(`.video-block-video-down-btn.${action}`);
+            const audioDownBtn = videoBlockAction.find(`.video-block-vaudio-down-btn.${action}`);
+            audioDownBtn.on('click', () => handleDown("audio"));
+            videoDownBtn.on('click', () => handleDown("video"));
+        }
     } else {
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
@@ -1225,9 +1237,7 @@ function appendAudioBlock(details) { // 填充音频块
     videoOperates.append(getCoverBtn, getAudioBtn).appendTo(videoBlock);
     getCoverBtn.on('click', () => shell.open(data_root.pic.replace(/http/g, 'https')));
     getAudioBtn.on('click', () => {
-        handleDownBtn(null, null, "only", null).then(async line => {
-            getAudioFull(data_root.sid, details.type, details.bps.replace("kbit/s", "K"), line, index)
-        })
+        getAudioFull(data_root.sid, details.type, details.bps.replace("kbit/s", "K"), index)
     });
 }
 
@@ -1309,16 +1319,15 @@ function appendMoreList(data, block) { // 填充更多解析
         Swal.fire({
             title: '<strong>数据结构</strong>',
             icon: 'info',
-            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/posts/bilitools#DanmakuElem" target="_blank">BiliTools#DanmakuElem</a>',
-        }).then(() => {
-            iziToast.info({
-                icon: 'fa-solid fa-circle-info',
-                layout: '2',
-                title: '弹幕',
-                message: 'JSON保存成功~',
-            });
-            return;
+            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/posts/bilitools#danmakuelem" target="_blank">BiliTools#DanmakuElem</a>',
         })
+        iziToast.info({
+            icon: 'fa-solid fa-circle-info',
+            layout: '2',
+            title: '弹幕',
+            message: 'JSON保存成功~',
+        });
+        return;
     }
     function getCurrentDate() {
         const date = new Date();
@@ -1327,7 +1336,7 @@ function appendMoreList(data, block) { // 填充更多解析
         let day = date.getDate();
         month = month < 10 ? '0' + month : month;
         day = day < 10 ? '0' + day : day;
-        return [year + '-' + month, day];
+        return [year, month, day];
     }
     dmck.on('click', async function() {
         const params = new URLSearchParams({
@@ -1346,34 +1355,73 @@ function appendMoreList(data, block) { // 填充更多解析
     });
     dmhk.on('click', async function() {
         if (noLogin()) return;
-        const dateParts = getCurrentDate();
-        const params0 = new URLSearchParams({
-            type: 1, oid: data.cid, month: dateParts[0]
-        });
-        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers })).data;
-        const codeList = $('<div>').addClass('combo-list active');
-        block.append(codeList);
-        (dateList.data).forEach((date, index) => {
-            const codeElement = $('<div>').addClass('combo')
-                .html(`<span>${date}</span>`);
-            codeList.append(codeElement);
-            codeElement.on('click', async () => {
-                const params1 = new URLSearchParams({
-                    type: 1, oid: data.cid, date: dateParts[0] + '-' + dateParts[1]
-                });
-                const url = `https://api.bilibili.com/x/v2/dm/web/history/seg.so?${params1.toString()}`;
-                const content = JSON.stringify(await dm(url), null, 2);
-                const selected = await saveFile({
-                    filters: [{ name: 'JSON 文件', extensions: ['json'] }],
-                    defaultPath: date + '_' + safeFileName(data.title)
-                });
-                if (selected) {
-                    invoke('save_file', { content, path: selected });
-                    saved();
-                }
+        async function refresh(month) {
+            const params0 = new URLSearchParams({
+                type: 1, oid: data.cid, month
             });
+            const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers })).data;
+            dms.find('.history-date-cont').remove();
+            const dateCont = $('<div>').addClass('history-date-cont active');
+            const dtm = month.split("-");
+            const dateHeader = $('<div>').addClass('history-date-header')
+            .append(`<i class="fa-solid fa-chevron-left"></i>
+            <span>${dtm[0]}年&nbsp;${dtm[1]}月</span>
+            <i class="fa-solid fa-chevron-right"></i>`);
+            const split = $('<div>').addClass('video-block-cross-split');
+            const dateBody = $('<div>').addClass('history-date-body');
+            dateCont.empty().append(dateHeader, split, dateBody).appendTo(dms);
+            let lastRow;
+            let year = parseInt(dtm[0]);
+            let monthIndex = parseInt(dtm[1]);
+            dateHeader.find('.fa-chevron-left').on('click', async () => {
+                if (!dateList.data) return;
+                if (monthIndex === 1) {
+                    year--;
+                    monthIndex = 12;
+                } else { monthIndex--; }
+                refresh(`${year}-${String(monthIndex).padStart(2, '0')}`);
+                return;
+            });
+            dateHeader.find('.fa-chevron-right').on('click', async () => {
+                if (!dateList.data) return;
+                if (monthIndex === 12) {
+                    year++;
+                    monthIndex = 1;
+                } else { monthIndex++; }
+                refresh(`${year}-${String(monthIndex).padStart(2, '0')}`);
+                return;
+            });
+            if (dateList.data) {
+                dateList.data.forEach((date, index) => {
+                    if (index % 7 === 0) {
+                        lastRow = $('<div>').addClass('history-date-body-row');
+                        dateBody.append(lastRow);
+                    }
+                    const col = $('<div>').addClass('history-date-body-col').html(date.split("-")[2]);
+                    lastRow.append(col);
+                    col.on('click', async () => {
+                        const params1 = new URLSearchParams({
+                            type: 1, oid: data.cid, date
+                        });
+                        const url = `https://api.bilibili.com/x/v2/dm/web/history/seg.so?${params1.toString()}`;
+                        const content = JSON.stringify(await dm(url), null, 2);
+                        const selected = await saveFile({
+                            filters: [{ name: 'JSON 文件', extensions: ['json'] }],
+                            defaultPath: date + '_' + safeFileName(data.title)
+                        });
+                        if (selected) {
+                            invoke('save_file', { content, path: selected });
+                            saved();
+                        }
+                    })
+                });
+            }
+        }
+        const dateParts = getCurrentDate();
+        refresh(dateParts[0] + '-' + dateParts[1]);
+        $(document.body).on('click', (e) => {
+            if (!$(e.target).closest(".history-date-cont").length && !$(e.target).hasClass('swal2-confirm')) dms.find('.history-date-cont').removeClass('active');
         });
-        $(document.body).on('click', () => codeList.removeClass('active') );
     });
     aism.on('click', async function() {
         const params = ({
@@ -1400,13 +1448,13 @@ function appendMoreList(data, block) { // 填充更多解析
         const abs = $('<div>').addClass('ai-child-abs').html(root.data.model_result.summary);
         const outl = $('<div>').addClass('ai-child-outline');
         const split = $('<div>').addClass('video-block-cross-split');
-        summary.append(summaryHeader, split, summaryBody.append(abs, outl)).appendTo(block);
+        summary.append(summaryHeader, split, summaryBody.append(abs, outl)).appendTo(dms);
         summaryHeader.find('i').on('click', () => summary.remove());
-        for (let outline of root.data.model_result.outline) {
+        for (const outline of root.data.model_result.outline) {
             const title = $('<div>').addClass('ai-child-title').html(outline.title);
             const section = $('<div>').addClass('ai-child-section').append(title);
             title.on('click', () => bilibili(outline.timestamp));
-            for (let part of outline.part_outline) {
+            for (const part of outline.part_outline) {
                 const bullet = $('<div>').addClass('ai-child-section-bullet')
                 .append($('<span>').html(formatDuration(part.timestamp))).append(part.content);
                 section.append(bullet);
@@ -1426,7 +1474,7 @@ function appendDimensionList(details, type, action, ms, block) { // 填充分辨
     dms.append(text, split, opt).appendTo(block);
     const maxQuality = Math.max(...root.dash.video.map(v => v.id));
     const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
-    qualityList.forEach((quality, index) => {
+    for (const quality of qualityList) {
         const qualityItem = root.support_formats.find(format => format.quality === quality);
         const description = qualityItem.display_desc + (qualityItem.superscript ? `-${qualityItem.superscript}` : '');
         const currentBtn = $('<div>').addClass(`video-block-opt-item dimension`);
@@ -1447,7 +1495,7 @@ function appendDimensionList(details, type, action, ms, block) { // 填充分辨
             currentSel[1] = qualityItem.display_desc;
             appendCodecList(qualityItem, "update", action, ms, block);
         });
-    })
+    }
 };
 
 function appendCodecList(details, extra, action, ms, block) { // 填充编码格式
@@ -1537,50 +1585,6 @@ function appendAudioList(details, type, action, ms, block) { // 填充音频
         });
     }
     opt.append(downBtn)
-}
-
-function handleDownBtn(details, data, action, block) { // 监听下载按钮
-    return new Promise((resolve, reject) => {
-        const quality = new CurrentSel(...currentSel);
-        const options = {
-            title: '选择下载线路',
-            background: "#2b2b2b",
-            color: "#c4c4c4",
-            html: `
-            <button class="swal2-cancel swal2-styled swal-btn-main">主线路</button>
-            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路1</button>
-            <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
-            `,
-            showConfirmButton: false,
-            willClose: () => {
-                $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
-                return reject();
-            }
-        };
-        function handleDown(fileType) {
-            Swal.fire(options);
-            $(document).on('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2', async function() {
-                Swal.close();
-                const line = $(this).hasClass('swal-btn-backup1') ? 1 : ($(this).hasClass('swal-btn-backup2') ? 2 : 0);
-                if (block) {
-                    downUrls.push(details);
-                    await getDownUrl(details, quality, action, line, fileType, data.index - 1);
-                    invoke('process_queue', {initial: true});
-                    currentElm.push(".down-page");
-                    downPageElm.addClass('active');
-                }
-                $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
-                return resolve(line);
-            });
-        }
-        if (!block) handleDown("video");
-        else {
-            const videoDownBtn = block.find(`.video-block-video-down-btn.${action}`);
-            const audioDownBtn = block.find(`.video-block-vaudio-down-btn.${action}`);
-            audioDownBtn.on('click', () => handleDown("audio"));
-            videoDownBtn.on('click', () => handleDown("video"));
-        }
-    });
 }
 
 async function userProfile() {
@@ -1703,30 +1707,31 @@ async function smsLogin() {
     const areaCodes = (await http.fetch('https://passport.bilibili.com/web/generic/country/list')).data;
     const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
     allCodes.sort((a, b) => a.id - b.id);
-    const codeList = $('.combo-list');
-    codeList.prev().off('click');
+    const codeList = $('.login-sms-area-code-list');
     $(document.body).off('click');
     $('.login-sms-getcode-btn').off('click');
     loginBtn.off('click');
     $.each(allCodes, (index, code) => {
-        const codeElement = $('<div>').addClass('combo')
+        const codeElement = $('<div>').addClass('login-sms-item-code-item')
             .html(`<span style="float:left">${code.cname}</span>
             <span style="float:right">+${code.country_id}</span>`);
         codeList.append(codeElement);
         codeElement.on('click', () => {
             codeList.prev().find('.login-sms-item-text').html(codeElement.find('span').last().text()
             + '&nbsp;<i class="fa-solid fa-chevron-down"></i>');
-            codeList.find('.combo').removeClass('checked');
+            codeList.find('.login-sms-item-code-item').removeClass('checked');
             codeElement.addClass('checked');
             codeList.removeClass('active');
         });
         if (code.country_id == prefix) codeElement.click();
     });
-    codeList.prev().on('click', '.login-sms-item-text i', (e) => {
+    codeList.prev().find('.login-sms-item-text').on('click', (e) => {
         codeList.addClass('active');
         e.stopPropagation();
     });
-    $(document.body).on('click', () => codeList.removeClass('active'));
+    $(document.body).on('click', (e) => {
+        if (!$(e.target).closest(".login-sms-area-code-list").length) codeList.removeClass('active');
+    });
     let key;
     let canSend = true;
     $('.login-sms-getcode-btn').on('click', async function() {
@@ -2068,6 +2073,7 @@ listen("download-progress", async (event) => {
     downPageElm.children().each(function() {
         const title = $(this).find('.down-page-info-title');
         if ($(this).attr('id') == (p.index) && title.text() == p.display_name) {
+            $(this).attr('gid', p.gid);
             $(this).find('.down-page-info-progress-bar').css('width', p.progress);
             $(this).find('.down-page-info-progress-text')
             .html(`${p.file_type=="audio"?"音频":"视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${formatDuration(parseFloat(p.remaining), "progress")}&emsp;当前速度: ${p.speed}`);

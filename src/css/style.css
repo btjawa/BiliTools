@@ -119,43 +119,6 @@ body input {
     color: #c4c4c4;
 }
 
-.combo {
-    font-size: 14px;
-    padding: 6px 12px;
-    height: 32px;
-    cursor: pointer;
-    transition: all 0.1s;
-}
-
-.combo.checked span {
-    color: #3086bf;
-}
-
-.combo:hover {
-    background-color: #444444ba;
-}
-
-.combo-list {
-    width: 220px;
-    min-height: 200px;
-    max-height: 200px;
-    flex-direction: column;
-    overflow: auto;
-    position: absolute;
-    border-radius: 8px;
-    background-color: #303030;
-    user-select: none;
-    border: solid #444 2px;
-    transition: all 0.4s;
-    z-index: 4;
-    padding: 6px 0;
-    display: none;
-}
-
-.combo-list.active {
-    display: flex;
-}
-
 #search-input {
     display: inline-block;
     height: 40px;
@@ -363,7 +326,6 @@ body input {
     width: max-content;
     font-size: 14px;
     transition: all 0.2s;
-    min-height: 45px;
     cursor: pointer;
     user-select: none;
     margin: 0 10px;
@@ -985,12 +947,13 @@ body input {
 .ai-summary-cont {
     position: absolute;
     width: 400px;
-    height: 300px;
-    right: 0;
+    max-height: 300px;
     background-color: #414141;
     border-radius: 8px;
     font-size: 14px;
-    
+    z-index: 4;
+    top: 10px;
+    right: 0;
 }
 
 .ai-summary-cont * { transition: all 0.2s; }
@@ -1289,7 +1252,7 @@ body input {
     margin-bottom: 10px;
 }
 
-.login-qrcode-tips span { color: #61666d; }
+.login-qrcode-tips span { color: #888; }
 
 .login-qrcode-tips.active {
     display: flex;
@@ -1359,15 +1322,22 @@ body input {
 .login-pwd-item-text,
 .login-sms-item-text { user-select: none; }
 
-.login-sms-item-text { min-width: 48px; }
+.login-sms-item-text {
+    min-width: 48px;
+    cursor: pointer;
+}
+
+.login-sms-item-text i,
+.history-date-header i {
+    font-size: 12px;
+    color: #888;
+    cursor: pointer;
+}
 
 .login-sms-item-text i {
-    color: #444;
-    font-size: 12px;
     position: absolute;
     top: 16.4px;
     left: 68px;
-    cursor: pointer;
 }
 
 .login-pwd-item input,
@@ -1386,6 +1356,99 @@ body input {
 .login-pwd-item-eye:hover {
     color: #3086bf;
     cursor: pointer;
+}
+
+.login-sms-item-code-item {
+    font-size: 14px;
+    padding: 6px 12px;
+    height: 20px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+.login-sms-item-code-item.checked span {
+    color: #3086bf;
+}
+
+.login-sms-item-code-item:hover {
+    background-color: #444444ba;
+}
+
+.login-sms-area-code-list,
+.history-date-cont {
+    flex-direction: column;
+    overflow: auto;
+    position: absolute;
+    border-radius: 8px;
+    background-color: #303030;
+    user-select: none;
+    border: solid #444 2px;
+    transition: all 0.4s;
+    z-index: 4;
+    padding: 6px 0;
+    display: none;
+}
+
+.login-sms-area-code-list {
+    width: 220px;
+    max-height: 200px;
+}
+
+.history-date-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 24px;
+}
+
+.history-date-body {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.history-date-body-row {
+    display: flex;
+    flex-basis: 100%;
+    flex-shrink: 0;
+    justify-content: left;
+}
+
+.history-date-body-col {
+    display: block;
+    flex-direction: column;
+    font-size: 12px;
+    height: 24px;
+    width: 24px;
+    display: flex;
+    margin: 0px 4px;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    border-radius: 4px;
+    border: solid #444 1px;
+    cursor: pointer;
+}
+
+.history-date-body-col.desc {
+    color: #c4c4c4;
+}
+
+.history-date-header span {
+    margin: 2px 48px;
+    font-size: 14px;
+}
+
+.login-sms-area-code-list.active,
+.history-date-cont.active {
+    display: flex;
+}
+
+.history-date-cont {
+    width: 242px;
+    height: 212px;
+    top: 0;
+    left: 338px;
+    box-sizing: border-box;
 }
 
 .login-pwd-login-btn,
