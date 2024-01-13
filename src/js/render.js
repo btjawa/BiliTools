@@ -211,6 +211,10 @@ const verify = {
     }
 }
 
+function safeFileName(title) {
+    return title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+}
+
 function debounce(fn, wait) {
     let bouncing = false;
     return function(...args) {
@@ -281,13 +285,13 @@ async function getAudioFull(songid, quality, qualityStr, line, index) {
     { headers })
     if (!response.ok) return;
     const details = response.data;
-    const safeTitle = details.data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+    const safeTitle = safeFileName(details.data.title)
     .split('.').pop().split('?')[0].split('#')[0];
     const audioUrl = (details.data.cdns[line] || details.data.cdns[0]) || null;
     if (audioUrl) {
         const ssDir = `《${safeTitle}》`;
         const ext = audioUrl.split('.').pop().split('?')[0].split('#')[0];
-        const displayName = `${safeTitle}_(${qualityStr}).${ext}`;
+        const displayName = `${safeTitle} (${qualityStr}).${ext}`;
         totalDown++;
         invoke('push_back_queue', {
             videoUrl: null, audioUrl,
@@ -388,16 +392,16 @@ async function getDownUrl(details, quality, action, line, fileType, index) {
             if ((action == "multi" && downUrl[0] && downUrl[1]) || 
             (action == "only" && (isVideo ? downUrl[0] : downUrl[1]))) {
                 let qualityStr, ext, displayName;
-                const safeTitle = videoData[index].title.replace(/\s*[\\/:*?"<>|]\s*/g, '_');
+                const safeTitle = safeFileName(videoData[index].title);
                 const ssDir = `《${videoData[index].ss_title}》`;
                 if (action == "only") {
                     qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
                     ext = isVideo ? "mp4" : "mp3";
-                    displayName = `${safeTitle}_(${qualityStr}).${ext}`;
+                    displayName = `${safeTitle} (${qualityStr}).${ext}`;
                 } else if (action == "multi") {
                     qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
                     ext = "mp4";
-                    displayName = `${safeTitle}_(${qualityStr}).mp4`;
+                    displayName = `${safeTitle} (${qualityStr}).mp4`;
                 }
                 totalDown++;
                 invoke('push_back_queue', {
@@ -1228,10 +1232,10 @@ function appendAudioBlock(details) { // 填充音频块
 }
 
 async function appendDownPageBlock(type, quality, data, index) { // 填充下载块
-    const title = data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_');
+    const title = safeFileName(data.title);
     const desc = data.desc;
     const pic = data.pic;
-    const finalTitle = `${title}_(${quality}).${type}`;
+    const finalTitle = `${title} (${quality}).${type}`;
     const downPage = $('.down-page');
     if (downPage.find('.down-page-empty-text')) {
         downPage.find('.down-page-empty-text').remove();
@@ -1333,7 +1337,7 @@ function appendMoreList(data, block) { // 填充更多解析
         const content = JSON.stringify(await dm(url), null, 2);
         const selected = await saveFile({
             filters: [{ name: 'JSON 文件', extensions: ['json'] }],
-            defaultPath: formatTimestamp(Date.now() / 1000).replace(/[:\s]/g, '_') + '_' + data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+            defaultPath: formatTimestamp(Date.now() / 1000).replace(/[:\s]/g, '_') + '_' + safeFileName(data.title)
         });
         if (selected) {
             invoke('save_file', { content, path: selected });
@@ -1353,7 +1357,7 @@ function appendMoreList(data, block) { // 填充更多解析
             const codeElement = $('<div>').addClass('combo')
                 .html(`<span>${date}</span>`);
             codeList.append(codeElement);
-            codeElement.on('click', async () => {                
+            codeElement.on('click', async () => {
                 const params1 = new URLSearchParams({
                     type: 1, oid: data.cid, date: dateParts[0] + '-' + dateParts[1]
                 });
@@ -1361,7 +1365,7 @@ function appendMoreList(data, block) { // 填充更多解析
                 const content = JSON.stringify(await dm(url), null, 2);
                 const selected = await saveFile({
                     filters: [{ name: 'JSON 文件', extensions: ['json'] }],
-                    defaultPath: date + '_' + data.title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+                    defaultPath: date + '_' + safeFileName(data.title)
                 });
                 if (selected) {
                     invoke('save_file', { content, path: selected });
@@ -1536,7 +1540,7 @@ function appendAudioList(details, type, action, ms, block) { // 填充音频
 }
 
 function handleDownBtn(details, data, action, block) { // 监听下载按钮
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const quality = new CurrentSel(...currentSel);
         const options = {
             title: '选择下载线路',
@@ -1548,6 +1552,10 @@ function handleDownBtn(details, data, action, block) { // 监听下载按钮
             <button class="swal2-cancel swal2-styled swal-btn-backup1">备用线路2</button>
             `,
             showConfirmButton: false,
+            willClose: () => {
+                $(document).off('click', '.swal-btn-main, .swal-btn-backup1, .swal-btn-backup2');
+                return reject();
+            }
         };
         function handleDown(fileType) {
             Swal.fire(options);
@@ -1569,7 +1577,7 @@ function handleDownBtn(details, data, action, block) { // 监听下载按钮
         else {
             const videoDownBtn = block.find(`.video-block-video-down-btn.${action}`);
             const audioDownBtn = block.find(`.video-block-vaudio-down-btn.${action}`);
-            if (action == "only") audioDownBtn.on('click', () => handleDown("audio"));
+            audioDownBtn.on('click', () => handleDown("audio"));
             videoDownBtn.on('click', () => handleDown("video"));
         }
     });
