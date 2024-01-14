@@ -1,6 +1,6 @@
 [package]
 name = "bilitools"
-version = "1.0.2"
+version = "1.0.3"
 description = "BiliTools"
 authors = ["btjawa"]
 license = "MIT"
