@@ -159,6 +159,7 @@ dependencies = [
  "lazy_static",
  "log",
  "log4rs",
+ "rand 0.8.5",
  "regex",
  "reqwest",
  "rusqlite",

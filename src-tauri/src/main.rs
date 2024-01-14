@@ -10,6 +10,7 @@ process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os:
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use rusqlite::{Connection, params};
 use regex::Regex;
+use rand::{distributions::Alphanumeric, Rng};
 mod logger;
 
 lazy_static! {
@@ -22,12 +23,13 @@ lazy_static! {
     static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = {
         Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").unwrap()).join("Desktop")))
     };
-    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(env::current_dir().unwrap().join("Temp")));
+    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::var("TEMP").unwrap())));
     static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(2));
     static ref ARIA2C_PORT: Arc<RwLock<usize>> = Arc::new(RwLock::new(0));
     static ref ARIA2C_PROCESS: std::sync::Mutex<Option<Child>> = std::sync::Mutex::new(None);
+    static ref ARIA2C_SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref CURRENT_DOWNLOADS: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref DOWNLOAD_COMPLETED_NOTIFY: Notify = Notify::new();
@@ -72,11 +74,18 @@ async fn init_aria2c(window: tauri::Window) -> Result<(), String> {
                 *ARIA2C_PORT.write().await = port as usize;
                 let current_dir = env::current_dir().map_err(|e| e.to_string())?
                     .join("aria2c");
+                let secret: String = rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(10)
+                    .map(char::from)
+                    .collect();
+                *ARIA2C_SECRET.write().await = secret.clone();
                 let child = Command::new(current_dir.join("aria2c.exe").clone())
                     .creation_flags(0x08000000)
                     .current_dir(current_dir.clone())
                     .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
                     .arg(format!("--rpc-listen-port={}", port))
+                    .arg(format!("--rpc-secret={}", secret))
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
                     .spawn()
@@ -337,11 +346,13 @@ async fn process_download(window: tauri::Window, mut download_info: VideoInfo) {
 async fn download_file(window: tauri::Window, task: DownloadTask, action: String) -> Result<String, String> {
     log::info!("Starting download for: {}", &task.display_name);
     let client = init_client();
+    let secret = ARIA2C_SECRET.read().await;
     let init_payload = json!({
         "jsonrpc": "2.0",
         "method": "aria2.addUri",
         "id": "1",
         "params": [
+            format!("token:{}", *secret),
             task.url,
             {"dir": task.path.parent().unwrap().to_str().unwrap(),
             "out": task.path.file_name().unwrap().to_str().unwrap()}
@@ -361,7 +372,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, action: String
             "jsonrpc": "2.0",
             "method": "aria2.tellStatus",
             "id": "1",
-            "params": [gid]
+            "params": [format!("token:{}", *secret), gid]
         });
         let status_resp = client
             .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
@@ -1000,7 +1011,7 @@ async fn main() {
                 log::info!("Killing aria2c...");
                 let mut child = ARIA2C_PROCESS.lock().unwrap();
                 if let Some(ref mut process) = *child {
-                    let _ = process.kill();
+                    process.kill().unwrap();
                 }
             }
             _ => {}

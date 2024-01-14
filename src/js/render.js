@@ -211,8 +211,12 @@ const verify = {
     }
 }
 
-function safeFileName(title) {
-    return title.replace(/\s*[\\/:*?"<>|]\s*/g, '_')
+function safeFileName(filename) {
+    return filename.replace(/\\/g, '_')
+    .replace(/\//g, '_').replace(/:/g, '：')
+    .replace(/\*/g, '^').replace(/\?/g, '？')
+    .replace(/"/g, '“').replace(/</g, '《')
+    .replace(/>/g, '》').replace(/\|/g, '_');
 }
 
 function debounce(fn, wait) {
@@ -1697,6 +1701,9 @@ async function pwdLogin() {
                 message: `登录时出现错误: ${err}<br>推荐使用扫码/短信登录`,
             });
         }
+    });
+    pwdInput.on('keydown', (e) => {
+        if (e.keyCode === 13) loginBtn.click();
     });
 }
 
