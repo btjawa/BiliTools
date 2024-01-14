@@ -1,15 +1,15 @@
 {
-  "version": "v1.0.2",
-  "notes": "包含逻辑/BUG更新，以及新功能\r\n- 功能: 下载相关\r\n    - 支持设置\"最大下载并发数\"\r\n    - 音乐/AU号解析 & 最高无损SQ FLAC\r\n    - 文件命名支持空格/特殊字符\r\n- 修复: 下载相关\r\n    - 修正Dolby/Hi-Res下载链接获取方式\r\n    - 优化多次下载同一视频的体验\r\n- 杂项更新: 功能 & 修复\r\n    - 优化退出登录逻辑\r\n    - 修改“定位文件”定位方式\r\n    - 前端正确解包gzip\r\n    - 短信登录自动根据地区选择国家区号\r\n    - 大幅减小ffmpeg体积\r\n    - ffmpeg改为使用COPYING许可",
-  "pub_date": "2024-01-06T15:49:14.686Z",
+  "version": "v1.0.3",
+  "notes": "包含逻辑/BUG更新，以及新功能\r\n- 功能: 下载相关\r\n    - aria2c RPC, 支持多线程下载/断点续传\r\n    - 支持互动视频: 回溯 + 控制剧情走向 + 下载每一个剧情对应的资源\r\n    - 弹幕历史 + 实时弹幕 + 视频AI总结\r\n    - 自动选择下载线路\r\n- 修复: 下载相关\r\n    - 修正Dolby/Hi-Res下载链接获取方式\r\n    - 优化多次下载同一视频的体验\r\n- 杂项更新: 功能 & 修复\r\n    - 修复登录时在密码栏按下Enter会导致崩溃的问题\r\n    - 大幅减小应用体积 (本体 42M ~ 23M)\r\n    - 临时文件夹默认改为 %TEMP%\r\n    - 重构繁琐代码",
+  "pub_date": "2024-01-14T11:18:40.748Z",
   "platforms": {
     "win64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2owYkJMckpPTHdtT0prUEwvVVZCRC8zOWwwVXMwM1hGTHU3MW1zU2RxZ2FMWThCMWM2WnpLL3Q1cUJ1U2tNTEoxVnExNzBuOXpLTkYyUC91OEN4S2c4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA0NTU2MTQ3CWZpbGU6QmlsaVRvb2xzXzEuMC4yX3g2NF96aC1DTi5tc2kuemlwCktYS0dKQXVxeVdSN1JUeFlmYjNiYnA3Qmk2NXNwckMwUTk2N1UxZGdKZDFzbllSbk12ZGJwMzBiK0dZb01jdjQ4ZGptMFkrM2gyR0tRMjlVYmdoZkJBPT0K",
-      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.0.2/BiliTools_1.0.2_x64_zh-CN.msi.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3NuZ0M2WEdVMHpzZ1p1WVdSZWtNL0ZjR1RsMHpkMzZscnZCWFdZYjhCdGMyN3BWVWJxWXRESVVVREtqa2VTaTFXMkF2amJmaWhDWFV4dFJDdjlTOVFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA1MjMxMTExCWZpbGU6QmlsaVRvb2xzXzEuMC4zX3g2NF96aC1DTi5tc2kuemlwCmd6ZjczcW1UcnhwT2dRa2dvMkt4OXUvUFI4R244YmJzYjF0cGVPVVZpTThQNUNqZ1dqeE0vVmM3dkRZcmw0NldIYjBaWDVzcGhrOEc5VlZ4ZDRqWUJ3PT0K",
+      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.0.3/BiliTools_1.0.3_x64_zh-CN.msi.zip"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2owYkJMckpPTHdtT0prUEwvVVZCRC8zOWwwVXMwM1hGTHU3MW1zU2RxZ2FMWThCMWM2WnpLL3Q1cUJ1U2tNTEoxVnExNzBuOXpLTkYyUC91OEN4S2c4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA0NTU2MTQ3CWZpbGU6QmlsaVRvb2xzXzEuMC4yX3g2NF96aC1DTi5tc2kuemlwCktYS0dKQXVxeVdSN1JUeFlmYjNiYnA3Qmk2NXNwckMwUTk2N1UxZGdKZDFzbllSbk12ZGJwMzBiK0dZb01jdjQ4ZGptMFkrM2gyR0tRMjlVYmdoZkJBPT0K",
-      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.0.2/BiliTools_1.0.2_x64_zh-CN.msi.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3NuZ0M2WEdVMHpzZ1p1WVdSZWtNL0ZjR1RsMHpkMzZscnZCWFdZYjhCdGMyN3BWVWJxWXRESVVVREtqa2VTaTFXMkF2amJmaWhDWFV4dFJDdjlTOVFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA1MjMxMTExCWZpbGU6QmlsaVRvb2xzXzEuMC4zX3g2NF96aC1DTi5tc2kuemlwCmd6ZjczcW1UcnhwT2dRa2dvMkt4OXUvUFI4R244YmJzYjF0cGVPVVZpTThQNUNqZ1dqeE0vVmM3dkRZcmw0NldIYjBaWDVzcGhrOEc5VlZ4ZDRqWUJ3PT0K",
+      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.0.3/BiliTools_1.0.3_x64_zh-CN.msi.zip"
     }
   }
 }
