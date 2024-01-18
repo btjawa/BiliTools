@@ -31,6 +31,9 @@
         "scope": [
           "https://*.bilibili.com/*"
         ]
+      },
+      "clipboard": {
+        "all": true
       }
     },
     "bundle": {

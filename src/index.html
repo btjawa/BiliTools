@@ -35,15 +35,15 @@
         </div>
         <div class="search">
             <div class="search-bar">
-                <input id="search-input" type="text" placeholder="链接/AV/BV/SS/EP号..." autocomplete="off" spellcheck="false">
+                <input id="search-input" type="text" placeholder="链接/AV/BV/SS/EP/AU号..." autocomplete="off" spellcheck="false">
                 <i class="fa-solid fa-search search-btn"></i>
             </div>
         </div>
         <div class="side-bar">
             <div class="profile">
-                <div class="user-avatar-placeholder" data-after="初始化">
+                <button class="user-avatar-placeholder" data-after="初始化">
                     <img alt="头像" class="user-avatar" src="./assets/default.jpg" draggable="false">
-                </div>
+                </button>
                 <div class="user-name">正在初始化</div>
             </div>
             <div class="down-page-bar">
@@ -87,7 +87,36 @@
             </div>
         </div>
         <div class="down-page">
-            <a class="down-page-empty-text">空空如也 (゜-゜)つロ</a>
+            <div class="down-page-sels">
+                <a class="down-page-sel waiting">&nbsp;等待列表&nbsp;<span></span></a>
+                <div class="login-tab-split"></div>
+                <a class="down-page-sel doing">&nbsp;下载/处理中&nbsp;<span></span></a>
+                <div class="login-tab-split"></div>
+                <a class="down-page-sel complete">&nbsp;完成列表&nbsp;<span></span></a>
+            </div>
+            <div class="video-block-cross-split"></div>
+            <div class="down-page-child waiting">
+                <a class="down-page-empty active">
+                    <img src="./assets/nodata.png" draggable="false">
+                    <span>空空如也 (゜-゜)つロ</span>
+                </a>
+                <button class="down-page-start-process">
+                    <i class="fa-regular fa-arrow-right"></i>
+                    <div class="down-page-start-process-name">开始下载</div>
+                </button>        
+            </div>
+            <div class="down-page-child doing">
+                <a class="down-page-empty active">
+                    <img src="./assets/nodata.png" draggable="false">
+                    <span>空空如也 (゜-゜)つロ</span>
+                </a>
+            </div>
+            <div class="down-page-child complete">
+                <a class="down-page-empty active">
+                    <img src="./assets/nodata.png" draggable="false">
+                    <span>空空如也 (゜-゜)つロ</span>
+                </a>
+            </div>
         </div>
         <div class="settings">
             <div class="settings-side-bar">
@@ -110,7 +139,7 @@
                     <a class="settings-page-block-title">存储路径</a>
                     <div class="settings-page-options">
                         <input id="down-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" type="text" disabled>
-                        <div class="down-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
+                        <button class="down-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</button>
                     </div>
                 </div>
                 <div class="settings-page-block">
@@ -137,7 +166,7 @@
                     <a class="settings-page-block-title">临时文件存储路径</a>
                     <div class="settings-page-options">
                         <input id="temp-dir-path" class="settings-page-block-cont" autocomplete="off" spellcheck="false" type="text" disabled>
-                        <div class="temp-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</div>
+                        <button class="temp-dir-path-openbtn"><i class="fa-regular fa-folder-open icon-small"></i>浏览</button>
                     </div>
                 </div>
             </div>
@@ -182,6 +211,13 @@
                         <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object>
                     </a>
                 </div>
+                <div class="about">
+                    文档:&nbsp;<a href="https://blog.btjawa.top/posts/bilitools" target="_blank">
+                        <object><a class="fa-solid fa-blog"></a></object>
+                        <span>Blog</span>
+                        <object><a class="fa-solid fa-arrow-up-right-from-square"></a></object>
+                    </a>
+                </div>
                 <i>Copyright&nbsp;&copy;&nbsp;<i id="year"></i>&nbsp;btjawa&nbsp;&amp;&nbsp;MIT&nbsp;License</i>
             </div>
         </div>
@@ -219,7 +255,7 @@
                             <i class="fa-solid fa-eye login-pwd-item-eye"></i>
                         </div>
                     </div>
-                    <div class="login-pwd-login-btn">登录</div>
+                    <button class="login-pwd-login-btn">登录</button>
                 </div>
                 <div class="login-sms">
                     <div class="login-sms-wp">
@@ -236,7 +272,7 @@
                             <input autocomplete="off" maxlength="6" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入验证码" type="text" id="sms-input">
                         </div>
                     </div>
-                    <div class="login-sms-login-btn">登录</div>
+                    <button class="login-sms-login-btn">登录</button>
                 </div>
                 <div class="login-desc">
                     Cookie将仅保存在本地
@@ -245,22 +281,15 @@
             </div>
         </div>
         <div class="loading"></div>
-        <div class="backward"><i class="fa-solid fa-chevron-left"></i></div>
-        <div class="multi-select-btn">
-            <div class="multi-select-background">
-                <i class="fa-regular fa-square-check multi-select-icon"></i>
-                <div class="multi-select-name">启用多选</div>
-            </div>
-        </div>
-        <div class="video-multi-next">
-            <div class="video-multi-next-title">等待选择线路</div>
-            <div class="multi-select-next-down-btn">
-                <div class="multi-select-next-down-background">
-                    <i class="fa-solid fa-down multi-select-next-down-icon"></i>
-                    <div class="multi-select-next-down-name">开始下载</div>
-                </div>
-            </div>
-        </div>
+        <button class="backward"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="multi-select-btn">
+            <i class="fa-regular fa-square-check multi-select-icon"></i>
+            <div class="multi-select-name">启用多选</div>
+        </button>
+        <button class="multi-select-next-btn">
+            <i class="fa-regular fa-arrow-right"></i>
+            <div class="multi-select-next-name">下一步</div>
+        </button>
         <div class="video-root">
             <div class="info">
                 <img alt="封面" class="info-cover" draggable="false">
@@ -276,13 +305,17 @@
                 </div>
             </div>
             <div class="stein-tree"></div>
-            <div class="video-list"></div>
-        </div>
-        <div class="multi-select-next-btn">
-            <div class="multi-select-next-background">
-                <i class="fa-solid fa-arrow-right multi-select-next-icon"></i>
-                <div class="multi-select-next-name">确认/结算</div>
+            <div class="video-list-tab-head">
+                <div class="multi-select-box-tab">选中</div>
+                <div class="video-block-page">编号</div>
+                <div class="video-block-split"></div>
+                <div class="video-block-name">标题</div>
+                <div class="video-block-split"></div>
+                <div class="video-block-duration">时长</div>
+                <div class="video-block-split"></div>
+                <div class="video-block-operates">下载选项</div>
             </div>
+            <div class="video-list"></div>
         </div>
         <script src="./js/jquery-3.6.0.min.js"></script>
         <script src="./js/jquery.easing.min.js"></script>
