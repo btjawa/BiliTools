@@ -27,7 +27,7 @@ lazy_static! {
     static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::var("TEMP").unwrap())));
     static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
-    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(2));
+    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(3));
     static ref ARIA2C_PORT: Arc<RwLock<usize>> = Arc::new(RwLock::new(0));
     static ref ARIA2C_PROCESS: std::sync::Mutex<Option<Child>> = std::sync::Mutex::new(None);
     static ref ARIA2C_SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
@@ -328,7 +328,6 @@ async fn process_download(window: tauri::Window, download_info: VideoInfo) {
             }
         }
     }
-    DOWNLOAD_COMPLETED_NOTIFY.notify_one();
     if *action == "multi" {
         let _ = merge_video_audio(window.clone(), download_info.clone()).await;
     }
@@ -351,12 +350,14 @@ async fn update_queue(window: &tauri::Window, action: &str, info: Option<VideoIn
         "waiting" => {
             if let Some(info) = waiting_queue.pop_front() {
                 doing_queue.push_back(info.clone());
+                DOWNLOAD_COMPLETED_NOTIFY.notify_one();
                 result_info = Some(info);
             }
         },
         "doing" => {
             if let Some(info) = doing_queue.pop_front() {
                 complete_queue.push_back(info.clone());
+                DOWNLOAD_COMPLETED_NOTIFY.notify_one();
                 result_info = Some(info);
             }
         },
@@ -398,7 +399,7 @@ async fn download_file(window: tauri::Window, task: DownloadTask, info: VideoInf
         let status_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.tellStatus",
-            "id": "1",
+            "id": format!("{}", info.index_id),
             "params": [format!("token:{}", *secret), gid]
         });
         let status_resp = client
@@ -425,14 +426,16 @@ async fn download_file(window: tauri::Window, task: DownloadTask, info: VideoInf
         let remaining = if download_speed > 0.0 {
             (total_length - completed_length) as f64 / download_speed as f64
         } else { 0.0 };
+        let status = status_resp_data["result"]["status"].as_str();
+        let is_paused = status == Some("paused");
         let formatted_values = json!({
-            "remaining": format!("{:.2} s", remaining),
-            "downloaded": format!("{:.2} MB", downloaded),
-            "speed": format!("{:.2} MB/s", speed),
+            "remaining": if is_paused { "已暂停".to_string() } else { format!("{:.2} s", remaining) },
+            "downloaded": if is_paused { "已暂停".to_string() } else { format!("{:.2} MB", downloaded) },
+            "speed": if is_paused { "已暂停".to_string() } else { format!("{:.2} MB/s", speed) },
             "progress": format!("{:.2}%", progress),
             "display_name": task.display_name,
             "gid": gid,
-            "index_id": info.index_id,
+            "index_id": info.index_id.to_string(),
             "file_type": task.file_type,
             "type": "download".to_string()
         });
@@ -446,10 +449,8 @@ async fn download_file(window: tauri::Window, task: DownloadTask, info: VideoInf
             last_log_time = Instant::now();
         }
         window.emit("progress", &formatted_values).unwrap();
-        if status_resp_data["result"]["status"].as_str() == Some("complete") {
-            break;
-        }
-        sleep(Duration::from_millis(250)).await;
+        if status == Some("complete") { break; }
+        sleep(Duration::from_secs(1)).await;
     }
     Ok(task.display_name.to_string())
 }
@@ -568,6 +569,28 @@ async fn merge_video_audio(window: tauri::Window, info: VideoInfo) -> Result<Vid
         tokio::fs::remove_file(&*output_path.clone()).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         Err("FFmpeg command failed".to_string())
     }
+}
+
+#[tauri::command]
+async fn handle_download(window: tauri::Window, gid: String, index_id: i64, action: String) -> Result<Value, String> {
+    let client = init_client();
+    let secret = ARIA2C_SECRET.read().await;
+    let method = if action == "stop" { "pause" }
+    else if action == "start" { "unpause" }
+    else { "unknown" };
+    let payload = json!({
+        "jsonrpc": "2.0",
+        "method": format!("aria2.{}", method),
+        "id": index_id.to_string(),
+        "params": [format!("token:{}", *secret), gid]
+    });
+    let resp = client
+        .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
+        .json(&payload)
+        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+
+    let resp_data: Value = resp.json().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+    Ok(json!(resp_data))
 }
 
 #[tauri::command]
@@ -704,9 +727,7 @@ async fn save_file(window: tauri::Window, content: String, path: String) -> Resu
     if let Err(e) = fs::write(path.clone(), content) {
         handle_err(window.clone(),  e.to_string());
         Err(e.to_string())
-    } else {
-        Ok(path)
-    }
+    } else { Ok(path) }
 }
 
 #[tauri::command]
@@ -1029,7 +1050,7 @@ async fn main() {
         }))
         .invoke_handler(tauri::generate_handler![init,
             scan_login, pwd_login, sms_login, stop_login, insert_cookie,
-            open_select, rw_config, refresh_cookie, save_file,
+            open_select, rw_config, refresh_cookie, save_file, handle_download,
             push_back_queue, process_queue, exit])
         .on_window_event(move |event| match event.event() {
             tauri::WindowEvent::Destroyed => {

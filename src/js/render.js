@@ -208,9 +208,9 @@ const format = {
             return (num / 10000).toFixed(1) + '万';
         } else return num.toString();
     },
-    duration: function(int, type) {
-        if (typeof int === 'string') return int;
-        const num = type == "bangumi" ? Math.round(int / 1000) : int;
+    duration: function(n, type) {
+        if (isNaN(parseFloat(n))) return n;
+        const num = parseFloat(type == "bangumi" ? Math.round(n / 1000) : n);
         const hs = Math.floor(num / 3600);
         const mins = Math.floor((num % 3600) / 60);
         const secs = Math.round(num % 60);
@@ -386,68 +386,66 @@ async function getMusicUrl(songid, quality) {
     else return details;
 }
 
-async function handleDown(details, quality, action, fileType, data) {
-    return new Promise((resolve, reject) => {
-        let downUrl = [];
-        const isVideo = fileType === "video";
-        for (const file of isVideo ? details.dash.video : details.dash.audio) {
-            if (action == "music") downUrl[1] = details.dash.audio
-            else if (file.id == isVideo ? quality.dms_id : quality.ads_id
-            && !isVideo || file.codecs == quality.codec_id) {
-                if (isVideo) {
-                    downUrl[0] = [file.baseUrl];
-                    if (file.backupUrl) downUrl[0].push(...file.backupUrl)
-                } else {
-                    downUrl[1] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
-                    if (file.backupUrl) downUrl[1].push(...file.backupUrl)
-                }
-                break;
-            }
-        }
-        if (action == "multi") {
-            const target = quality.ads_id == 30250 ? details.dash.dolby.audio
-            : (quality.ads_id == 30251 ? details.dash.flac.audio : details.dash.audio);
-            if (Array.isArray(target)) {
-                for (const audio of target) {
-                    if (audio.id == quality.ads_id) {
-                        downUrl[1] = [audio.baseUrl];
-                        if (audio.backupUrl) downUrl[1].push(...audio.backupUrl);
-                        break;
-                    }
-                }
+function matchDownUrl(details, quality, action, fileType) {
+    let downUrl = [];
+    const isVideo = fileType === "video";
+    for (const file of isVideo ? details.dash.video : details.dash.audio) {
+        if (action == "music") downUrl[1] = details.dash.audio
+        else if (file.id == isVideo ? quality.dms_id : quality.ads_id
+        && !isVideo || file.codecs == quality.codec_id) {
+            if (isVideo) {
+                downUrl[0] = [file.baseUrl];
+                if (file.backupUrl) downUrl[0].push(...file.backupUrl)
             } else {
-                downUrl[1] = [target.baseUrl];
-                if (target.backupUrl) downUrl[1].push(...target.backupUrl);
+                downUrl[1] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
+                if (file.backupUrl) downUrl[1].push(...file.backupUrl)
             }
+            break;
         }
-        if ((action == "multi" && downUrl[0] && downUrl[1]) ||
-        (action == "only" && (isVideo ? downUrl[0] : downUrl[1])) || action == "music") {
-            let qualityStr, displayName;
-            const ext = isVideo ? "mp4" : "mp3";
-            const safeTitle = format.filename(data.title);
-            if (action == "only") {
-                qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
-                displayName = `${safeTitle} (${qualityStr}).${ext}`;
-            } else if (action == "multi") {
-                qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
-                displayName = `${safeTitle} (${qualityStr}).mp4`;
-            } else if (action == "music") {
-                const ext = downUrl[1][0].split('.').pop().split('?')[0].split('#')[0];
-                displayName = `${safeTitle} (${quality}).${ext}`;
+    }
+    if (action == "multi") {
+        const target = quality.ads_id == 30250 ? details.dash.dolby.audio
+        : (quality.ads_id == 30251 ? details.dash.flac.audio : details.dash.audio);
+        if (Array.isArray(target)) {
+            for (const audio of target) {
+                if (audio.id == quality.ads_id) {
+                    downUrl[1] = [audio.baseUrl];
+                    if (audio.backupUrl) downUrl[1].push(...audio.backupUrl);
+                    break;
+                }
             }
-            data.display_name = displayName;
-            totalDown++;
-            invoke('push_back_queue', {
-                videoUrl: downUrl[0] || null,
-                audioUrl: downUrl[1] || null,
-                action, indexId: totalDown, mediaData: data
-            });
-            resolve();
         } else {
-            emit('error', "未找到符合条件的下载地址＞﹏＜");
-            reject();
+            downUrl[1] = [target.baseUrl];
+            if (target.backupUrl) downUrl[1].push(...target.backupUrl);
         }
-    })
+    }
+    return [isVideo, downUrl, quality, action]
+}
+
+function handleDown(isVideo, downUrl, quality, action, data) {
+    if ((action == "multi" && downUrl[0] && downUrl[1]) ||
+    (action == "only" && (isVideo ? downUrl[0] : downUrl[1])) || action == "music") {
+        let qualityStr, displayName;
+        const ext = isVideo ? "mp4" : "mp3";
+        const safeTitle = format.filename(data.title);
+        if (action == "only") {
+            qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
+            displayName = `${safeTitle} (${qualityStr}).${ext}`;
+        } else if (action == "multi") {
+            qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
+            displayName = `${safeTitle} (${qualityStr}).mp4`;
+        } else if (action == "music") {
+            const ext = downUrl[1][0].split('.').pop().split('?')[0].split('#')[0];
+            displayName = `${safeTitle} (${quality}).${ext}`;
+        }
+        data.display_name = displayName;
+        totalDown++;
+        invoke('push_back_queue', {
+            videoUrl: downUrl[0] || null,
+            audioUrl: downUrl[1] || null,
+            action, indexId: totalDown, mediaData: data
+        });
+    } else emit('error', "未找到符合条件的下载地址＞﹏＜");
 }
 
 function handleErr(err, type) {
@@ -681,7 +679,7 @@ function handleMediaList(details, type) {
     let actualSearch = 0;
     mediaData = [], selectedMedia = [];
     const root = details.info;
-    function date(title) { return title + "_" + format.pubdate(new Date(), true) }
+    function date(title) { return format.filename(title) + "_" + format.pubdate(new Date(), true) }
     if (Object.values(root).length) {
         infoBlock.addClass('active');
         videoList.addClass('active');
@@ -808,7 +806,8 @@ function handleMultiSelect() {
             const dms = appendDimensionList(details, data.type, "multi", true, null);
             const ads = appendAudioList(details, data.type, "multi", true, null);
             const quality = new CurrentSel(...dms, ...ads);
-            await handleDown(details.data || details.result, quality, "multi", "video", data);
+            const res = matchDownUrl(details.data || details.result, quality, "multi", "video");
+            handleDown(...res, data);
             if (i === 0) sidebar.downPage.click();
         }
     });
@@ -898,7 +897,9 @@ async function initActionBlock(action, block, data) {
     if (action == "only") videoBlockAction.append(crossSplit);
     appendAudioList(details, data.type, action, false, videoBlockAction);
     async function down(fileType) {
-        await handleDown(details.data || details.result, new CurrentSel(...currentSel), action, fileType, data);
+        const quality = new CurrentSel(...currentSel);
+        const res = matchDownUrl(details.data || details.result, quality, action, fileType, data);
+        handleDown(...res, data);
         sidebar.downPage.click();
     }
     const videoDownBtn = videoBlockAction.find(`.video-block-video-down-btn.${action}`);
@@ -963,7 +964,8 @@ function appendMediaBlock(root, audio) { // 填充视频块
     getMoreBtn.on('click', () => initActionBlock("only", block, root));
     getAudioBtn.on('click', async () => {
         const details = await getMusicUrl(root.id, audio.type);
-        await handleDown({dash:{audio:details.data.cdns}}, audio.bps.replace("kbit/s", "K"), "music", "audio", root)
+        const res = matchDownUrl({dash:{audio:details.data.cdns}}, audio.bps.replace("kbit/s", "K"), "music", "audio");
+        handleDown(...res, root);
         sidebar.downPage.click();
 });
 }
@@ -972,19 +974,23 @@ async function appendDownPageBlock(data, indexId, target, action) { // 填充下
     const desc = data.desc;
     const pic = data.pic;
     const displayName = data.title;
-    const infoBlock = $(`<div id="${indexId}">`).addClass('down-page-info');
+    const infoBlock = $('<div>').attr("id", indexId).addClass('down-page-info');
     const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace("http:", "https:") + '@256h')
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
     const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
     const infoTitle = $('<div>').addClass('down-page-info-title').html(displayName).css('max-width', `100%`);
-    const infoProgressText = $('<div>').addClass('down-page-info-progress-text').html(function() {
+    const infoProgCont = $('<div>').addClass('down-page-info-progress-cont');
+    const infoProgText = $('<div>').addClass('down-page-info-progress-text').html(function() {
         switch(action) { case "doing": return "等待同步"; case "complete": return "下载完毕"; default: return "等待下载"; }
     });
+    const openDirBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-file-${displayName.includes("mp3")?'audio':'video'} icon-small"></i>定位文件`);
+    const stopBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-circle-stop icon-small"></i>暂停`);
+    const playBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-play icon-small"></i>继续`);
+    infoProgCont.append(openDirBtn, stopBtn, playBtn, infoProgText);
     const infoProgressBar = $('<div>').addClass('down-page-info-progress-bar').css("width", action == "complete" ? "100%" : 0);
     const infoProgress = $('<div>').addClass('down-page-info-progress').html(infoProgressBar);
-    const openDirBtn = $('<button>').addClass('down-page-open-dir-btn').html(`<i class="fa-solid fa-file-${displayName.includes("mp3")?'audio':'video'} icon-small"></i>定位文件`);
-    infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, openDirBtn, infoProgressText, infoProgress)).appendTo(target);
+    infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, infoProgCont, infoProgress)).appendTo(target);
     openDirBtn.on('click', () => {
         if (action == "complete") {
             invoke('open_select', { indexId: infoBlock.attr("id") });
@@ -994,6 +1000,14 @@ async function appendDownPageBlock(data, indexId, target, action) { // 填充下
             message: `请等待下载完毕`
         });
     });
+    function handleAction(type) {
+        if (action == "doing" && infoBlock.attr("gid")) {
+            invoke(`handle_download`, { gid: infoBlock.attr("gid"), indexId, action: type })
+            .then(data => console.log(data));
+        }
+    }
+    stopBtn.on('click', () => handleAction("stop"));
+    playBtn.on('click', () => handleAction("start"));
 }
 
 function appendMoreList(data, block) { // 填充更多解析
@@ -1627,11 +1641,13 @@ listen("download-queue", async (event) => {
 listen("progress", async (event) => {
     const p = event.payload;
     doingList.children().each(function() {
+        console.log($(this).attr('id'), p.index_id)
         if ($(this).attr('id') == p.index_id) {
             $(this).find('.down-page-info-progress-bar').css('width', p.progress);
             if (p.type == "download") {
-                $(this).attr('gid', p.gid).find('.down-page-info-progress-text')
-                .html(`${p.file_type=="audio"?"音频":"视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${format.duration(parseFloat(p.remaining), "progress")}&emsp;当前速度: ${p.speed}`);
+                if (p.gid) $(this).attr('gid', p.gid);
+                $(this).find('.down-page-info-progress-text')
+                .html(`${p.file_type=="audio"?"音频":"视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${format.duration(p.remaining, "progress")}&emsp;当前速度: ${p.speed}`);
                 if (parseFloat(p.progress) >= 100) {
                     $(this).find('.down-page-info-progress-text')
                     .html(`${p.file_type=="audio"?"音频":"视频"}下载成功`);
@@ -1642,7 +1658,6 @@ listen("progress", async (event) => {
             }
         }
     });
-    console.log(p)
 });
 
 listen("error", async (event) => {

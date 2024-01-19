@@ -478,11 +478,19 @@ button:hover { background-color: #3b3b3b; }
 
 .down-page-info-desc { max-height: 40px; }
 
+.down-page-info-progress-cont {
+    position: absolute;
+    bottom: 18px;
+    font-size: 14px;
+    width: 98%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
 .down-page-info-progress-text {
     position: absolute;
-    bottom: 20px;
-    right: 20px;
-    font-size: 14px;
+    right: 0;
 }
 
 .down-page-info-progress {
@@ -1711,8 +1719,4 @@ button:hover { background-color: #3b3b3b; }
     cursor: pointer;
 }
 
-.down-page-open-dir-btn {
-    position: absolute;
-    margin-left: 0px;
-    bottom: 18px;
-}
+.down-page-info-btn { margin-right: 10px; }
