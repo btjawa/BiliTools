@@ -601,6 +601,8 @@ $(document).ready(function () {
         $('.settings-side-bar-background.general').click();
     });
     $('.backward').on('click', () => backward());
+    $(".login, .settings, .down-page, .user-profile").append(`<button class="help link"t="https://blog.btjawa.top/posts/bilitools/#qa"><span>遇到问题?&nbsp;前往文档</span>&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></button>`);
+    $('.link').on('click', function() {shell.open($(this).attr("t"))});
     $(document).on('keydown', async function(e) {
         if (e.keyCode === 116 || (e.ctrlKey && e.keyCode === 82) || (e.ctrlKey && e.shiftKey && e.keyCode === 80)) {
             e.preventDefault();

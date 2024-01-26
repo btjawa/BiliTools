@@ -18,9 +18,11 @@
     "url": "https://github.com/btjawa/BiliTools/issues"
   },
   "homepage": "https://github.com/btjawa/BiliTools#readme",
+  "dependencies": {
+    "@tauri-apps/api": "^1.5.2"
+  },
   "devDependencies": {
-    "@tauri-apps/api": "^1.5.1",
-    "@tauri-apps/cli": "^1.5.6",
+    "@tauri-apps/cli": "^1.5.8",
     "@actions/github": "^6.0.0",
     "node-fetch": "^3.3.2"
   }

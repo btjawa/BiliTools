@@ -1,25 +1,39 @@
-.backward {
+.backward, .help {
     position: absolute;
-    top: 0px;
+    top: 0;
     margin: 16px;
-    left: 0px;
+    z-index: 5;
+}
+
+.backward {
     height: 50px;
     width: 50px;
     border-radius: 25px;
-    z-index: 5;
     background: none;
+    left: 0;
+}
+
+.help {
+    width: fit-content;
+    right: 0;
 }
 
 .version,
 .about {
     font-size: 18px;
     margin: 5px 0;
+    display: inline-flex;
+    align-items: center;
 }
 
 #version,
-.about span {
-    font-family: "HarmonyOS_Sans_SC_Regular", sans-serif;
-    font-weight: 700;
+.about span { font-weight: 700; }
+
+.link, .link * {
+    color: #3086bf !important;
+    user-select: none;
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .loading {
@@ -158,9 +172,7 @@ button i { font-size: 13px; }
 
 button:hover { background-color: #3b3b3b; }
 
-.icon-small {
-    margin-right: 6px;
-}
+.icon-small { margin-right: 6px; }
 
 .search-bar {
     transition: all 0.4s;
@@ -211,13 +223,9 @@ button:hover { background-color: #3b3b3b; }
     transition: all 0.5s cubic-bezier(0,1,.6,1);
 }
 
-.search.active {
-    top: 2vh;
-}
+.search.active { top: 2vh; }
 
-.search.back {
-    top: calc(50vh - 21.5px);
-}
+.search.back { top: calc(50vh - 21.5px); }
 
 .video-root {
     display: flex;
@@ -1451,12 +1459,6 @@ button:hover { background-color: #3b3b3b; }
     cursor: not-allowed;
 }
 
-.about a, .about span,
-.login a {
-    color: #3086bf;
-    text-decoration: none;
-}
-
 .side-bar {
     position: absolute;
     right: 0px;
@@ -1638,7 +1640,7 @@ button:hover { background-color: #3b3b3b; }
     margin: 40px 0;
 }
 
-.settings-page._info i {
+.settings-page._info .copyright {
     margin-top: 40px;
     font-size: 14px;
 }
