@@ -688,7 +688,16 @@ button:hover { background-color: #3b3b3b; }
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}    
+}
+
+.video-block-badge {
+    font-size: 12px;
+    padding: 0 3px;
+    border-radius: 6px;
+    user-select: none;
+    line-height: 19px;
+    margin-right: 10px;
+}
 
 .video-block-title {
     position: absolute;
@@ -706,6 +715,8 @@ button:hover { background-color: #3b3b3b; }
 .video-block-name {
     max-width: 32vw;
     min-width: 32vw;
+    display: inline-flex;
+    justify-content: space-between;
 }
 
 .video-block-duration {

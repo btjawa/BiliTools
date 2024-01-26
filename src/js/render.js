@@ -55,7 +55,7 @@ iziToast.settings({
 });
 
 class MediaData {
-    constructor(title, desc, pic, duration, id, cid, type, rank, ss_title, display_name) {
+    constructor(title, desc, pic, duration, id, cid, type, rank, ss_title, display_name, badge) {
         this.title = title;
         this.desc = desc;
         this.pic = pic;
@@ -66,6 +66,7 @@ class MediaData {
         this.rank = rank;
         this.ss_title = ss_title;
         this.display_name = display_name;
+        this.badge = badge;
     }
 }
 
@@ -369,7 +370,7 @@ async function getPlayUrl(aid, cid, type, block) {
     { headers })).data;
     loadingBox.removeClass('active');
     if (handleErr(details, type)) block.remove();
-    else return details;
+    return details;
 }
 
 async function getMusicUrl(songid, quality) {
@@ -700,8 +701,8 @@ function handleMediaList(details, type) {
                     mediaData[rank] = new MediaData(
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
-                        episode.aid, episode.cid, type,
-                        rank + 1, date(ugc_root.title), null
+                        episode.aid, episode.cid, type, rank + 1,
+                        date(ugc_root.title), null, null
                     );
                     appendMediaBlock(mediaData[rank]);
                     Object.values(episode).forEach(id => {
@@ -722,9 +723,9 @@ function handleMediaList(details, type) {
                     root.pages.forEach((page, rank) => {
                         const title = page.part || root.title;
                         mediaData[rank] = new MediaData(
-                            title, root.desc, root.pic,
-                            page.duration, root.aid, page.cid,
-                            type, rank + 1, date(root.title), null
+                            title, root.desc, root.pic, page.duration,
+                            root.aid, page.cid, type, rank + 1,
+                            date(root.title), null, null
                         );
                         appendMediaBlock(mediaData[rank])
                         Object.values(page).forEach(id => {
@@ -739,7 +740,8 @@ function handleMediaList(details, type) {
                     episode.share_copy, episode.share_copy,
                     episode.cover, episode.duration,
                     episode.aid, episode.cid, type,
-                    rank + 1, date(root.season_title), null
+                    rank + 1, date(root.season_title), null,
+                    episode.badge_info
                 );
                 appendMediaBlock(mediaData[rank])
                 Object.values(episode).forEach(id => {
@@ -913,7 +915,8 @@ async function initActionBlock(action, block, data) {
 function appendMediaBlock(root, audio) { // 填充视频块
     const isVideo = root.type != "audio";
     const page = $('<div>').addClass('video-block-page').text(isVideo ? root.rank : audio.type + 1);
-    const name = $('<div>').addClass('video-block-name').html(isVideo ? root.title : audio.desc + "&emsp;|&emsp;" + audio.bps);
+    const badge = root.badge?.text ? $('<div>').addClass('video-block-badge').html(root.badge.text).css("background", root.badge.bg_color_night) : ""; 
+    const name = $('<div>').addClass('video-block-name').html(isVideo ? root.title : audio.desc + "&emsp;|&emsp;" + audio.bps).append(badge);
     const duration = $('<div>').addClass('video-block-duration').text(format.duration(root.duration, root.type));
     const block = $('<div>').addClass('video-block');
     const checkLabel = $('<label>').addClass('multi-select-box');
@@ -1005,7 +1008,6 @@ async function appendDownPageBlock(data, indexId, target, action) { // 填充下
     function handleAction(type) {
         if (action == "doing" && infoBlock.attr("gid")) {
             invoke(`handle_download`, { gid: infoBlock.attr("gid"), indexId, action: type })
-            .then(data => console.log(data));
         }
     }
     stopBtn.on('click', () => handleAction("stop"));
@@ -1643,7 +1645,6 @@ listen("download-queue", async (event) => {
 listen("progress", async (event) => {
     const p = event.payload;
     doingList.children().each(function() {
-        console.log($(this).attr('id'), p.index_id)
         if ($(this).attr('id') == p.index_id) {
             $(this).find('.down-page-info-progress-bar').css('width', p.progress);
             if (p.type == "download") {
