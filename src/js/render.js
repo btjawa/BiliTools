@@ -55,13 +55,14 @@ iziToast.settings({
 });
 
 class MediaData {
-    constructor(title, desc, pic, duration, id, cid, type, rank, ss_title, display_name, badge) {
+    constructor(title, desc, pic, duration, id, cid, eid, type, rank, ss_title, display_name, badge) {
         this.title = title;
         this.desc = desc;
         this.pic = pic;
         this.duration = duration;
         this.id = id;
         this.cid = cid;
+        this.eid = eid;
         this.type = type;
         this.rank = rank;
         this.ss_title = ss_title;
@@ -348,28 +349,35 @@ async function getMediaInfo(rawId, type) {
             tags = (await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`,
             { headers })).data.data.map(item => item.info);
         }
-        handleMediaList ({ info, tags }, type)
+        handleMediaList({ info, tags }, type);
+        return basicResp;
     } else {
+        if (basicResp.code == -404 && type == "bangumi") {
+            basicUrl = `https://api.bilibili.com/pugv/view/web/season?${id.startsWith('ep') ? 'ep_id' : 'season_id'}=${id.match(/\d+/)[0]}`;
+            const lssnResp = (await http.fetch(basicUrl, { headers })).data;
+            if (lssnResp.code === 0) {
+                handleMediaList({ info: lssnResp.data }, "lesson");
+                return lssnResp;
+            }
+        }
         handleErr(basicResp, null);
         backward();
         return null;
     }
 }
 
-async function getPlayUrl(aid, cid, type, block) {
+async function getPlayUrl(data,) {
     const params = {
-        avid: aid, cid, fourk: 1,
+        avid: data.id, cid: data.cid, fourk: 1,
         fnval: 4048, fnver: 0
     }
     const signature = await verify.wbi(params);
-    let getDetailUrl = type !== "bangumi" 
-        ? `https://api.bilibili.com/x/player/wbi/playurl?${signature}`
-        : `https://api.bilibili.com/pgc/player/web/playurl?${signature}`;
+    const key = data.type == "bangumi" ? "pgc/player/web" : (data.type == "lesson" ? "pugv/player/web" : "x/player/wbi");
     loadingBox.addClass('active');
-    const details = (await http.fetch(getDetailUrl,
+    const details = (await http.fetch(`https://api.bilibili.com/${key}/playurl?${signature}${data.type == "lesson" ? `&ep_id=${data.eid}` : ""}`,
     { headers })).data;
     loadingBox.removeClass('active');
-    if (handleErr(details, type)) block.remove();
+    handleErr(details, data.type);
     return details;
 }
 
@@ -389,18 +397,14 @@ async function getMusicUrl(songid, quality) {
 
 function matchDownUrl(details, quality, action, fileType) {
     let downUrl = [];
-    const isVideo = fileType === "video";
-    for (const file of isVideo ? details.dash.video : details.dash.audio) {
+    const isV = fileType === "video";
+    console.log(arguments)
+    for (const file of isV ? details.dash.video : details.dash.audio) {
         if (action == "music") downUrl[1] = details.dash.audio
-        else if (file.id == isVideo ? quality.dms_id : quality.ads_id
-        && !isVideo || file.codecs == quality.codec_id) {
-            if (isVideo) {
-                downUrl[0] = [file.baseUrl];
-                if (file.backupUrl) downUrl[0].push(...file.backupUrl)
-            } else {
-                downUrl[1] = [file.baseUrl, ...file.backupUrl.slice(0, 2)];
-                if (file.backupUrl) downUrl[1].push(...file.backupUrl)
-            }
+        else if (file.id == isV ? quality.dms_id : quality.ads_id
+        && !isV || file.codecs == quality.codec_id) {
+            downUrl[isV ? 0 : 1] = [file.base_url];
+            if (file.backup_url) downUrl[isV ? 0 : 1].push(...file.backup_url)
             break;
         }
     }
@@ -410,27 +414,26 @@ function matchDownUrl(details, quality, action, fileType) {
         if (Array.isArray(target)) {
             for (const audio of target) {
                 if (audio.id == quality.ads_id) {
-                    downUrl[1] = [audio.baseUrl];
-                    if (audio.backupUrl) downUrl[1].push(...audio.backupUrl);
+                    downUrl[1] = [audio.base_url];
+                    if (audio.backup_url) downUrl[1].push(...audio.backup_url);
                     break;
                 }
             }
         } else {
-            downUrl[1] = [target.baseUrl];
-            if (target.backupUrl) downUrl[1].push(...target.backupUrl);
+            downUrl[1] = [target.base_url];
+            if (target.backup_url) downUrl[1].push(...target.backup_url);
         }
     }
-    return [isVideo, downUrl, quality, action]
+    return [isV, downUrl, quality, action]
 }
 
-function handleDown(isVideo, downUrl, quality, action, data) {
-    if ((action == "multi" && downUrl[0] && downUrl[1]) ||
-    (action == "only" && (isVideo ? downUrl[0] : downUrl[1])) || action == "music") {
+function handleDown(isV, downUrl, quality, action, data) {
+    if (isV ? downUrl[0][0] : downUrl[1][0] && action == "multi" ? downUrl[1][0] : true) {
         let qualityStr, displayName;
-        const ext = isVideo ? "mp4" : "mp3";
+        const ext = isV ? "mp4" : "mp3";
         const safeTitle = format.filename(data.title);
         if (action == "only") {
-            qualityStr = isVideo ? quality.dms_desc : quality.ads_desc;
+            qualityStr = isV ? quality.dms_desc : quality.ads_desc;
             displayName = `${safeTitle} (${qualityStr}).${ext}`;
         } else if (action == "multi") {
             qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
@@ -640,11 +643,13 @@ async function checkRefresh() {
 function ShowMediaInfo(details, type) {
     const isV = (type == "video" || type == "ugc_season");
     const isA = type == "audio";
+    const isL = type == "lesson";
     const root = details.info;
     $('.info-cover').attr("src", "").attr("src", 
     (isV ? root.pic : root.cover) + '@256h');
-    $('.info-title').html(isV || isA ? root.title : root.season_title);
-    $('.info-desc').html((isV ? root.desc : (isA ? root.intro : root.evaluate)).replace(/\n/g, '<br>'));
+    $('.info-title').html(type == "bangumi" ? root.season_title : root.title);
+    const desc = (isV ? root.desc : (isA ? root.intro : isL ? `${root.subtitle}<br>${root.faq.title}<br>${root.faq.content}` : root.evaluate));
+    $('.info-desc').html(desc.replace(/\n/g, '<br>'));
     if (isV ? root.owner : (isA ? root.uname : root.up_info)) {
         if (!isA) $('.info-owner-face').attr("src", (isV ? root.owner.face : root.up_info.avatar) + '@128h');
         $('.info-owner-name').html(isV ? root.owner.name : (isA ? root.uname : root.up_info.uname));
@@ -653,11 +658,11 @@ function ShowMediaInfo(details, type) {
         $('.info-owner-name').css("display", "none");
     }
     $('.info-title').css('max-width', `calc(100% - ${parseInt($('.info-owner').outerWidth(true))}px)`);
-    $('.info-stat').html(`<div class="info-stat-item">${viewIcon + format.stat(isV ? root.stat.view : (isA ? root.statistic.play : root.stat.views))}</div>`)
-    .append(!isA ? `<div class="info-stat-item">${danmakuIcon + format.stat(isV ? root.stat.danmaku : root.stat.danmakus)}</div>` : '')
-    .append(`<div class="info-stat-item">${replyIcon + format.stat(isA ? root.statistic.comment : root.stat.reply)}</div>`)
-    .append(!isA ? `<div class="info-stat-item">${likeIcon + format.stat(isV ? root.stat.like : root.stat.likes)}</div>` : '')
-    $('.info-stat').append(
+    $('.info-stat').html(`<div class="info-stat-item">${viewIcon + format.stat(isV ? root.stat.view : (isA ? root.statistic.play : root.stat.views || root.stat.play))}</div>`)
+    .append(!isA && !isL ? `<div class="info-stat-item">${danmakuIcon + format.stat(isV ? root.stat.danmaku : root.stat.danmakus)}</div>` : '')
+    .append(`<div class="info-stat-item">${isL ? root.release_info : (replyIcon + format.stat(isA ? root.statistic.comment : root.stat.reply))}</div>`)
+    .append(!isA && !isL ? `<div class="info-stat-item">${likeIcon + format.stat(isV ? root.stat.like : root.stat.likes)}</div>` : '')
+    $('.info-stat').append(isL ? '' : 
         `<div class="info-stat-item">${coinIcon + format.stat(isV ? root.stat.coin : (isA ? root.coin_num : root.stat.coins))}</div>
         <div class="info-stat-item">${favoriteIcon + format.stat(isV ? root.stat.favorite : (isA ? root.statistic.collect : (root.stat.favorites + root.stat.favorite)))}</div>
         <div class="info-stat-item">${shareIcon + format.stat(isA ? root.statistic.share : root.stat.share)}</div>`
@@ -665,7 +670,7 @@ function ShowMediaInfo(details, type) {
     let stylesText = '';
     const tagsRoot = details.tags;
     if (isV) stylesText = `${format.partition(root.tid)}&nbsp;·&nbsp;${root.tname}`;
-    else {
+    else if (!isL) {
         for (let i = 0; i < tagsRoot.length; i++) {
             stylesText += tagsRoot[i];
             if (i < tagsRoot.length - 1) stylesText += "&nbsp;·&nbsp;";
@@ -673,8 +678,8 @@ function ShowMediaInfo(details, type) {
     }
     const contrElm = $('<a>').addClass('bcc-iconfont bcc-icon-ic_contributionx icon-small');
     const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ icon-small');
-    const pubdate = isV ? format.pubdate(root.pubdate) : (isA ? format.pubdate(root.passtime) : root.publish.pub_time);
-    $('.info-styles').empty().append(contrElm, stylesText).append("&emsp;|&emsp;").append(pubdateElm, pubdate);
+    const pubdate = !isL ? (isV ? format.pubdate(root.pubdate) : (isA ? format.pubdate(root.passtime) : root.publish.pub_time)) : "";
+    $('.info-styles').empty().append(!isL ? (contrElm, stylesText, "&emsp;|&emsp;", pubdateElm, pubdate) : "");
 }
 
 function handleMediaList(details, type) {
@@ -701,8 +706,8 @@ function handleMediaList(details, type) {
                     mediaData[rank] = new MediaData(
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
-                        episode.aid, episode.cid, type, rank + 1,
-                        date(ugc_root.title), null, null
+                        episode.aid, episode.cid, episode.id,
+                        type, rank + 1, date(ugc_root.title), null, null
                     );
                     appendMediaBlock(mediaData[rank]);
                     Object.values(episode).forEach(id => {
@@ -724,7 +729,7 @@ function handleMediaList(details, type) {
                         const title = page.part || root.title;
                         mediaData[rank] = new MediaData(
                             title, root.desc, root.pic, page.duration,
-                            root.aid, page.cid, type, rank + 1,
+                            root.aid, page.cid, page.bvid, type, rank + 1,
                             date(root.title), null, null
                         );
                         appendMediaBlock(mediaData[rank])
@@ -734,14 +739,17 @@ function handleMediaList(details, type) {
                     });
                 };
             }
-        } else if (type == "bangumi") {
+        } else if (type == "bangumi" || type == "lesson") {
+            const isL = type == "lesson";
             root.episodes.forEach((episode, rank) => {
                 mediaData[rank] = new MediaData(
-                    episode.share_copy, episode.share_copy,
-                    episode.cover, episode.duration,
-                    episode.aid, episode.cid, type,
-                    rank + 1, date(root.season_title), null,
-                    episode.badge_info
+                    isL ? episode.title : episode.share_copy,
+                    isL ? root.subtitle : episode.share_copy,
+                    episode.cover, episode.duration, episode.aid,
+                    episode.cid, episode.id, type, rank + 1,
+                    date(isL ? root.title : root.season_title),
+                    null, episode.badge_info || { text: episode.label,
+                    bg_color_night: "#0BA395" }
                 );
                 appendMediaBlock(mediaData[rank])
                 Object.values(episode).forEach(id => {
@@ -755,8 +763,8 @@ function handleMediaList(details, type) {
             mediaData[0] = new MediaData(
                 root.title, root.intro, 
                 root.cover, root.duration, 
-                root.id, root.cod, type,
-                0, root.title, null
+                root.id, root.cod, root.uid,
+                type, 0, root.title, null
             );
             getMusicUrl(root.id, 3).then(async response => {
                 response.data.qualities.reverse().forEach(quality => {
@@ -806,7 +814,8 @@ function handleMultiSelect() {
         }
         for (let i = 0; i < selectedMedia.length; i++) {
             const data = selectedMedia[i];
-            const details = await getPlayUrl(data.id, data.cid, data.type, null);
+            const details = await getPlayUrl(data);
+            if (details.code !== 0) continue;
             const dms = appendDimensionList(details, data.type, "multi", true, null);
             const ads = appendAudioList(details, data.type, "multi", true, null);
             const quality = new CurrentSel(...dms, ...ads);
@@ -833,9 +842,8 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
     mediaData.push(new MediaData(
         current.title, info.desc, 
         info.pic, "未知", info.aid,
-        current.cid, type,
-        mediaData.length + 1, info.title,
-        null
+        current.cid, edge_id, type,
+        mediaData.length + 1, info.titlem, null
     ));
     appendMediaBlock(mediaData.at(-1));
     for (const story of response.data.story_list) {
@@ -890,9 +898,12 @@ async function initActionBlock(action, block, data) {
     }
     block.after(videoBlockAction);
     loadingBox.addClass('active');
-    const details = await getPlayUrl(data.id, data.cid, data.type, videoBlockAction);
+    const details = await getPlayUrl(data);
     loadingBox.removeClass('active');
-    if (details.code !== 0) return null;
+    if (details.code !== 0) {
+        videoBlockAction.remove();
+        return null;
+    }
     if (action == "only") {
         appendMoreList(data, videoBlockAction);
         videoBlockAction.append(crossSplit.clone());
@@ -913,10 +924,10 @@ async function initActionBlock(action, block, data) {
 };
 
 function appendMediaBlock(root, audio) { // 填充视频块
-    const isVideo = root.type != "audio";
-    const page = $('<div>').addClass('video-block-page').text(isVideo ? root.rank : audio.type + 1);
+    const isV = root.type != "audio";
+    const page = $('<div>').addClass('video-block-page').text(isV ? root.rank : audio.type + 1);
     const badge = root.badge?.text ? $('<div>').addClass('video-block-badge').html(root.badge.text).css("background", root.badge.bg_color_night) : ""; 
-    const name = $('<div>').addClass('video-block-name').html(isVideo ? root.title : audio.desc + "&emsp;|&emsp;" + audio.bps).append(badge);
+    const name = $('<div>').addClass('video-block-name').html(isV ? root.title : audio.desc + "&emsp;|&emsp;" + audio.bps).append(badge);
     const duration = $('<div>').addClass('video-block-duration').text(format.duration(root.duration, root.type));
     const block = $('<div>').addClass('video-block');
     const checkLabel = $('<label>').addClass('multi-select-box');
@@ -933,8 +944,7 @@ function appendMediaBlock(root, audio) { // 填充视频块
     .html(`<i class="fa-solid fa-file-audio icon-small"></i>解析音频`);
     const getMoreBtn = $('<button>').addClass('video-block-getmore-btn video-block-operates-item')
     .html(`<i class="fa-solid fa-anchor icon-small"></i>更多解析`);
-    operates.append(getCoverBtn);
-    isVideo ? operates.append(getMultiBtn, getMoreBtn) : operates.append(getAudioBtn);
+    operates.append(getCoverBtn, ...(isV ? [getMultiBtn, getMoreBtn] : [getAudioBtn]));
     block.append(checkLabel, page, split, name, split.clone(), duration, split.clone(), operates).appendTo(videoList);
     checkBox.on('change', function() {
         const isChecked = $(this).prop('checked');
