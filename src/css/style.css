@@ -1672,6 +1672,8 @@ button:hover { background-color: #3b3b3b; }
     align-items: center;
 }
 
+.settings-page-block button { margin-left: 10px; }
+
 .settings-page-options {
     position: absolute;
     display: flex;

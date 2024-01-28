@@ -444,7 +444,7 @@ function handleDown(isV, downUrl, quality, action, data) {
         }
         data.display_name = displayName;
         totalDown++;
-        invoke('push_back_queue', {
+        return invoke('push_back_queue', {
             videoUrl: downUrl[0] || null,
             audioUrl: downUrl[1] || null,
             action, indexId: totalDown, mediaData: data
@@ -679,7 +679,7 @@ function ShowMediaInfo(details, type) {
     const contrElm = $('<a>').addClass('bcc-iconfont bcc-icon-ic_contributionx icon-small');
     const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ icon-small');
     const pubdate = !isL ? (isV ? format.pubdate(root.pubdate) : (isA ? format.pubdate(root.passtime) : root.publish.pub_time)) : "";
-    $('.info-styles').empty().append(!isL ? (contrElm, stylesText, "&emsp;|&emsp;", pubdateElm, pubdate) : "");
+    $('.info-styles').empty().append(...(!isL ? [contrElm, stylesText, "&emsp;|&emsp;", pubdateElm, pubdate] : []));
 }
 
 function handleMediaList(details, type) {
@@ -985,15 +985,13 @@ function appendMediaBlock(root, audio) { // 填充视频块
 });
 }
 
-async function appendDownPageBlock(data, indexId, target, action) { // 填充下载块
-    const desc = data.desc;
-    const pic = data.pic;
-    const displayName = data.title;
-    const infoBlock = $('<div>').attr("id", indexId).addClass('down-page-info');
-    const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", pic.replace("http:", "https:") + '@256h')
+async function appendDownPageBlock(info, target, action) { // 填充下载块
+    const displayName = info.media_data.title;
+    const infoBlock = $('<div>').attr("vgid", info.gid.vgid).attr("agid", info.gid.agid).attr("path", info.output_path).addClass('down-page-info');
+    const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", info.media_data.pic.replace("http:", "https:") + '@256h')
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
-    const infoDesc = $('<div>').addClass('down-page-info-desc').html(desc.replace(/\n/g, '<br>'));
+    const infoDesc = $('<div>').addClass('down-page-info-desc').html(info.media_data.desc.replace(/\n/g, '<br>'));
     const infoTitle = $('<div>').addClass('down-page-info-title').html(displayName).css('max-width', `100%`);
     const infoProgCont = $('<div>').addClass('down-page-info-progress-cont');
     const infoProgText = $('<div>').addClass('down-page-info-progress-text').html(function() {
@@ -1008,7 +1006,7 @@ async function appendDownPageBlock(data, indexId, target, action) { // 填充下
     infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, infoProgCont, infoProgress)).appendTo(target);
     openDirBtn.on('click', () => {
         if (action == "complete") {
-            invoke('open_select', { indexId: infoBlock.attr("id") });
+            invoke('open_select', { path: infoBlock.attr("path") });
         } else iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
             layout: '2', title: `下载`,
@@ -1016,12 +1014,12 @@ async function appendDownPageBlock(data, indexId, target, action) { // 填充下
         });
     });
     function handleAction(type) {
-        if (action == "doing" && infoBlock.attr("gid")) {
-            invoke(`handle_download`, { gid: infoBlock.attr("gid"), indexId, action: type })
+        if (action == "doing") {
+            invoke(`handle_download`, { gid: infoBlock.attr(infoProgText.text().includes("视频") ? "vgid" : "agid") , action: type });
         }
     }
-    stopBtn.on('click', () => handleAction("stop"));
-    playBtn.on('click', () => handleAction("start"));
+    stopBtn.on('click', () => handleAction("pause"));
+    playBtn.on('click', () => handleAction("unpause"));
 }
 
 function appendMoreList(data, block) { // 填充更多解析
@@ -1639,9 +1637,9 @@ listen("login-status", async (event) => {
 listen("download-queue", async (event) => {
     const p = event.payload;
     $('.down-page-info').remove();
-    p.waiting.forEach(info => appendDownPageBlock(info.media_data, info.index_id, waitingList, "waiting"));
-    p.doing.forEach(info => appendDownPageBlock(info.media_data, info.index_id, doingList, "doing"));
-    p.complete.forEach(info => appendDownPageBlock(info.media_data, info.index_id, completeList, "complete"));
+    p.waiting.forEach(info => appendDownPageBlock(info, waitingList, "waiting"));
+    p.doing.forEach(info => appendDownPageBlock(info, doingList, "doing"));
+    p.complete.forEach(info => appendDownPageBlock(info, completeList, "complete"));
     [waitingList, doingList, completeList].forEach(elm => {
         const type = elm.attr('class').split(/\s+/)[1];
         const len = elm.find('.down-page-info').length;
@@ -1655,20 +1653,16 @@ listen("download-queue", async (event) => {
 listen("progress", async (event) => {
     const p = event.payload;
     doingList.children().each(function() {
-        if ($(this).attr('id') == p.index_id) {
-            $(this).find('.down-page-info-progress-bar').css('width', p.progress);
-            if (p.type == "download") {
-                if (p.gid) $(this).attr('gid', p.gid);
-                $(this).find('.down-page-info-progress-text')
-                .html(`${p.file_type=="audio"?"音频":"视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${format.duration(p.remaining, "progress")}&emsp;当前速度: ${p.speed}`);
-                if (parseFloat(p.progress) >= 100) {
-                    $(this).find('.down-page-info-progress-text')
-                    .html(`${p.file_type=="audio"?"音频":"视频"}下载成功`);
-                }
-            } else if (p.type == "merge") {
-                $(this).find('.down-page-info-progress-text')
-                .html(`合并音视频 - 已合并帧: ${p.frame}&emsp;fps: ${p.fps}&emsp;已合并至: ${p.out_time}&emsp;速度: ${p.speed}`);
+        const block = $(this);
+        if (block.attr('vgid') === p.gid.vgid && block.attr('agid') === p.gid.agid) {
+            block.find('.down-page-info-progress-bar').css('width', p.progress);
+            let pt = p.type === "download" 
+                ? `${p.file_type === "audio" ? "音频" : "视频"} - 总进度: ${p.progress}&emsp;剩余时间: ${format.duration(p.remaining, "progress")}&emsp;当前速度: ${p.speed}`
+                : `合并音视频 - 已合并帧: ${p.frame}&emsp;fps: ${p.fps}&emsp;已合并至: ${p.out_time}&emsp;速度: ${p.speed}`;
+            if (p.type === "download" && parseFloat(p.progress) >= 100) {
+                pt = `${p.file_type === "audio" ? "音频" : "视频"}下载成功`;
             }
+            block.find('.down-page-info-progress-text').html(pt);
         }
     });
 });

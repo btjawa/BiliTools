@@ -17,7 +17,6 @@ mod logger;
 lazy_static! {
     static ref GLOBAL_WINDOW: Arc<Mutex<Option<tauri::Window>>> = Arc::new(Mutex::new(None));
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    static ref DOWNLOAD_INFO_MAP: Mutex<HashMap<String, VideoInfo>> = Mutex::new(HashMap::new());
     static ref WORKING_DIR: PathBuf = {
         PathBuf::from(env::var("LOCALAPPDATA").unwrap()).join("com.btjawa.bilitools")
     };
@@ -181,7 +180,7 @@ struct CookieInfo {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct VideoInfo {
-    index_id: i64,
+    gid: Value,
     display_name: String,
     video_path: PathBuf,
     audio_path: PathBuf,
@@ -193,6 +192,7 @@ struct VideoInfo {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct DownloadTask {
+    gid: String,
     display_name: String,
     url: Vec<String>,
     path: PathBuf,
@@ -241,48 +241,68 @@ async fn get_buvid(window: tauri::Window) -> Result<String, String> {
 #[tauri::command]
 async fn push_back_queue(
     window: tauri::Window, video_url: Option<Vec<String>>, audio_url: Option<Vec<String>>,
-    index_id: i64, action: String, media_data: Value
-) {
+    action: String, media_data: Value
+) -> Result<Value, String> {
     let mut tasks = vec![];
+    let client = init_client();
     let ss_dir = &media_data.get("ss_title").unwrap().as_str().unwrap().to_string();
     let display_name = media_data.get("display_name").unwrap().as_str().unwrap().to_string();
-    if let Some(v_url) = video_url {
-        let video_path = if action == "multi" {
-            TEMP_DIR.read().await.join(&extract_filename(&v_url[0]))
+    for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
+        let path = if action == "multi" {
+            TEMP_DIR.read().await.join(&extract_filename(&url[0]))
         } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
-        tasks.push(DownloadTask { 
-            display_name: display_name.clone(), 
-            url: v_url, 
-            path: video_path, 
-            file_type: "video".to_string()
+        let init_payload = json!({
+            "jsonrpc": "2.0",
+            "method": "aria2.addUri",
+            "id": "1",
+            "params": [
+                format!("token:{}", *ARIA2C_SECRET.read().await),
+                url,
+                {"dir": path.parent().unwrap().to_str().unwrap(), "out": path.file_name().unwrap().to_str().unwrap()}
+            ]
         });
-    }
-    if let Some(a_url) = audio_url {
-        let audio_path = if action == "multi" {
-            TEMP_DIR.read().await.join(&extract_filename(&a_url[0]))
-        } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
+        let init_resp = client
+            .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
+            .json(&init_payload)
+            .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
+
+        let init_resp_data: Value = init_resp.json().await.map_err(|e| e.to_string())?;
+        let gid = init_resp_data["result"].as_str().unwrap().to_string();
+        handle_download(window.clone(), gid.clone(), "pause".to_string()).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
         tasks.push(DownloadTask {
+            gid, url, path,
             display_name: display_name.clone(), 
-            url: a_url, 
-            path: audio_path, 
-            file_type: "audio".to_string() 
+            file_type: file_type.to_string()
         });
     }
+    let vgid = tasks.iter().find(|t| t.file_type == "video").map(|t| t.gid.clone()).unwrap_or_default();
+    let agid = tasks.iter().find(|t| t.file_type == "audio").map(|t| t.gid.clone()).unwrap_or_default();
+    let gid: Value = json!({"vgid": vgid, "agid": agid});
     let info = VideoInfo {
-        index_id,
+        gid: gid.clone(),
         display_name: display_name.clone(),
-        video_path: tasks.get(0).map_or(PathBuf::new(), |task| task.path.clone()),
-        audio_path: tasks.get(1).map_or(PathBuf::new(), |task| task.path.clone()),
+        video_path: tasks.iter().find(|t| t.file_type == "video").map(|t| t.path.clone()).unwrap_or_default(),
+        audio_path: tasks.iter().find(|t| t.file_type == "audio").map(|t| t.path.clone()).unwrap_or_default(),
         output_path: DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(display_name.clone()),
         tasks, action, media_data
     };
     fs::create_dir_all(DOWNLOAD_DIR.read().await.join(ss_dir)).map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()}).unwrap();
     update_queue(&window, "push", Some(info.clone())).await;
+    Ok(gid)
 }
 
 #[tauri::command]
 async fn process_queue(window: tauri::Window) -> Result<(), String> {
     log::info!("Processing queue...");
+    // let mut tasks = { WAITING_QUEUE.lock().await.len() };
+    // while tasks > 0 {
+    // if let Some(video_info) = update_queue(&window, "waiting", None).await {
+    //     let window_clone = window.clone();
+    //     tokio::spawn(async move {
+    //         process_download(window_clone, video_info).await;
+    //     });
+    //     tasks -= 1;
+    // }}
     loop {
         let max_conc = *MAX_CONCURRENT_DOWNLOADS.read().await;
         let doing_len = { DOING_QUEUE.lock().await.len() };
@@ -303,25 +323,10 @@ async fn process_queue(window: tauri::Window) -> Result<(), String> {
     Ok(())
 }
 
-// #[tauri::command]
-// async fn process_queue(window: tauri::Window) -> Result<(), String> {
-//     log::info!("Processing queue...");
-//     let mut tasks = { WAITING_QUEUE.lock().await.len() };
-//     while tasks > 0 {
-//     if let Some(video_info) = update_queue(&window, "waiting", None).await {
-//         let window_clone = window.clone();
-//         tokio::spawn(async move {
-//             process_download(window_clone, video_info).await;
-//         });
-//         tasks -= 1;
-//     }}
-//     Ok(())
-// }
-
 async fn process_download(window: tauri::Window, download_info: VideoInfo) {
     let action = &download_info.action;
     for task in &download_info.tasks {
-        if let Ok(_) = download_file(window.clone(), task.clone(), download_info.clone()).await {
+        if let Ok(_) = download_file(window.clone(), task.clone(), download_info.gid.clone()).await {
             if *action == "only" {
                 fs::rename(task.path.clone(), download_info.output_path.clone())
                 .map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()}).unwrap();
@@ -343,7 +348,6 @@ async fn update_queue(window: &tauri::Window, action: &str, info: Option<VideoIn
         "push" => {
             if let Some(info) = info {
                 waiting_queue.push_back(info.clone());
-                DOWNLOAD_INFO_MAP.lock().await.insert(info.index_id.to_string(), info.clone());
                 result_info = Some(info);
             }
         },
@@ -372,35 +376,17 @@ async fn update_queue(window: &tauri::Window, action: &str, info: Option<VideoIn
     result_info
 }
 
-async fn download_file(window: tauri::Window, task: DownloadTask, info: VideoInfo) -> Result<String, String> {
+async fn download_file(window: tauri::Window, task: DownloadTask, gid: Value) -> Result<String, String> {
     log::info!("Starting download for: {}", &task.display_name);
     let client = init_client();
-    let secret = ARIA2C_SECRET.read().await;
-    let init_payload = json!({
-        "jsonrpc": "2.0",
-        "method": "aria2.addUri",
-        "id": "1",
-        "params": [
-            format!("token:{}", *secret),
-            task.url,
-            {"dir": task.path.parent().unwrap().to_str().unwrap(),
-            "out": task.path.file_name().unwrap().to_str().unwrap()}
-        ]
-    });
-    let init_resp = client
-        .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
-        .json(&init_payload)
-        .send().await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
-
-    let init_resp_data: Value = init_resp.json().await.map_err(|e| e.to_string())?;
-    let gid = init_resp_data["result"].as_str().unwrap().to_string();
+    handle_download(window.clone(), task.gid.clone(), "unpause".to_string()).await.map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()})?;
     let mut last_log_time = Instant::now();
     loop {
         let status_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.tellStatus",
-            "id": format!("{}", info.index_id),
-            "params": [format!("token:{}", *secret), gid]
+            "id": "1",
+            "params": [format!("token:{}", *ARIA2C_SECRET.read().await), task.gid]
         });
         let status_resp = client
             .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
@@ -435,7 +421,6 @@ async fn download_file(window: tauri::Window, task: DownloadTask, info: VideoInf
             "progress": format!("{:.2}%", progress),
             "display_name": task.display_name,
             "gid": gid,
-            "index_id": info.index_id.to_string(),
             "file_type": task.file_type,
             "type": "download".to_string()
         });
@@ -534,7 +519,7 @@ async fn merge_video_audio(window: tauri::Window, info: VideoInfo) -> Result<Vid
             }
         }
         let formatted_values = json!({
-            "index_id": info.index_id,
+            "gid": info.gid,
             "display_name": video_filename,
             "frame": messages.get(0).unwrap_or(&"").to_string(),
             "fps": messages.get(1).unwrap_or(&"").to_string(),
@@ -572,17 +557,13 @@ async fn merge_video_audio(window: tauri::Window, info: VideoInfo) -> Result<Vid
 }
 
 #[tauri::command]
-async fn handle_download(window: tauri::Window, gid: String, index_id: i64, action: String) -> Result<Value, String> {
+async fn handle_download(window: tauri::Window, gid: String, action: String) -> Result<Value, String> {
     let client = init_client();
-    let secret = ARIA2C_SECRET.read().await;
-    let method = if action == "stop" { "pause" }
-    else if action == "start" { "unpause" }
-    else { "unknown" };
     let payload = json!({
         "jsonrpc": "2.0",
-        "method": format!("aria2.{}", method),
-        "id": index_id.to_string(),
-        "params": [format!("token:{}", *secret), gid]
+        "method": format!("aria2.{}", action),
+        "id": "1",
+        "params": [format!("token:{}", *ARIA2C_SECRET.read().await), gid]
     });
     let resp = client
         .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
@@ -731,22 +712,19 @@ async fn save_file(window: tauri::Window, content: String, path: String) -> Resu
 }
 
 #[tauri::command]
-async fn open_select(window: tauri::Window, index_id: String) -> Result<String, String>{
-    let download_info_map = DOWNLOAD_INFO_MAP.lock().await;
-    if let Some(video_info) = download_info_map.get(&index_id) {
-        if let Err(e) = fs::metadata(&video_info.output_path) {
-            handle_err(window.clone(), format!("{}<br>\n文件可能已被移动或删除。", e.to_string()));
-            Err(format!("{}<br>\n文件可能已被移动或删除。", e.to_string()))
-        } else {
-            Command::new("C:\\Windows\\explorer.exe")
-                .arg("/select,").arg(video_info.output_path.to_string_lossy().to_string())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()}).unwrap();
-            Ok(video_info.output_path.to_string_lossy().to_string())
-        }
-    } else { Err("".to_string()) }
+async fn open_select(window: tauri::Window, path: String) -> Result<String, String>{
+    if let Err(e) = fs::metadata(&path) {
+        handle_err(window.clone(), format!("{}<br>\n文件可能已被移动或删除。", e.to_string()));
+        Err(format!("{}<br>\n文件可能已被移动或删除。", e.to_string()))
+    } else {
+        Command::new("C:\\Windows\\explorer.exe")
+            .arg("/select,").arg(path.clone())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| {handle_err(window.clone(), e.to_string()); e.to_string()}).unwrap();
+        Ok(path)
+    }
 }
 
 #[tauri::command]
