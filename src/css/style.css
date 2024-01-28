@@ -26,9 +26,6 @@
     align-items: center;
 }
 
-#version,
-.about span { font-weight: 700; }
-
 .link, .link * {
     color: #3086bf !important;
     user-select: none;
@@ -172,7 +169,7 @@ button i { font-size: 13px; }
 
 button:hover { background-color: #3b3b3b; }
 
-.icon-small { margin-right: 6px; }
+.space { margin-right: 6px; }
 
 .search-bar {
     transition: all 0.4s;
@@ -438,7 +435,7 @@ button:hover { background-color: #3b3b3b; }
 .down-page-info-title,
 .info-title,
 .settings-page-title {
-    font-size: 18px;
+    font-size: 19px;
     margin-bottom: 6px;
     min-height: 24px;
     max-height: 48px;
@@ -448,7 +445,7 @@ button:hover { background-color: #3b3b3b; }
     flex-shrink: 0;
 }
 
-.down-page-info-title { max-height: 24px; }
+.settings-page-title.s { margin-top: 24px; }
 
 .info-stat {
     font-size: 14px;
@@ -471,7 +468,6 @@ button:hover { background-color: #3b3b3b; }
     margin-bottom: 6px;
 }
 
-.down-page-info-desc,
 .info-desc {
     line-height: 20px;
     font-size: 13px;
@@ -483,8 +479,6 @@ button:hover { background-color: #3b3b3b; }
     max-height: 100px;
     overflow-y: auto;
 }
-
-.down-page-info-desc { max-height: 40px; }
 
 .down-page-info-progress-cont {
     position: absolute;
@@ -1085,11 +1079,9 @@ button:hover { background-color: #3b3b3b; }
     display: inline-block;
     height: 24px;
     margin-right: 5px;
-    line-height: 18px;
     font-size: 18px;
     vertical-align: middle;
     line-height: 20px;
-    font-weight: 700;
 }
 
 .user-profile-bigvip {
@@ -1672,12 +1664,18 @@ button:hover { background-color: #3b3b3b; }
     align-items: center;
 }
 
-.settings-page-block button { margin-left: 10px; }
+.settings-page-block button:not(#aria2c-restart-btn) { margin-left: 10px; }
+
+.settings-page i {
+    font-size: 13px;
+    color: #888;
+}
 
 .settings-page-options {
     position: absolute;
     display: flex;
     left: 150px;
+    align-items: center;
 }
 
 .settings-page-options form {

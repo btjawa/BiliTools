@@ -28,6 +28,7 @@ warp = "0.3.6"
 lazy_static = "1.4.0"
 tokio = { version = "1", features = ["full"] }
 rand = "0.8.5"
+async-recursion = "1.0.5"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

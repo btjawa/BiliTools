@@ -29,13 +29,13 @@ let headers = {};
 let mediaData = [];
 let selectedMedia = [];
 
-const viewIcon = `<div class="bcc-iconfont bcc-icon-icon_list_player_x1 icon-small"></div>`;
-const danmakuIcon = `<div class="bcc-iconfont bcc-icon-danmuguanli icon-small"></div>`;
-const replyIcon = `<div class="bcc-iconfont bcc-icon-pinglunguanli icon-small"></div>`;
-const likeIcon = `<div class="bcc-iconfont bcc-icon-ic_Likesx icon-small"></div>`;
-const coinIcon = `<div class="bcc-iconfont bcc-icon-icon_action_reward_n_x icon-small"></div>`;
-const favoriteIcon = `<div class="bcc-iconfont bcc-icon-icon_action_collection_n_x icon-small"></div>`;
-const shareIcon = `<div class="bcc-iconfont bcc-icon-icon_action_share_n_x icon-small"></div>`;
+const viewIcon = `<div class="bcc-iconfont bcc-icon-icon_list_player_x1 space"></div>`;
+const danmakuIcon = `<div class="bcc-iconfont bcc-icon-danmuguanli space"></div>`;
+const replyIcon = `<div class="bcc-iconfont bcc-icon-pinglunguanli space"></div>`;
+const likeIcon = `<div class="bcc-iconfont bcc-icon-ic_Likesx space"></div>`;
+const coinIcon = `<div class="bcc-iconfont bcc-icon-icon_action_reward_n_x space"></div>`;
+const favoriteIcon = `<div class="bcc-iconfont bcc-icon-icon_action_collection_n_x space"></div>`;
+const shareIcon = `<div class="bcc-iconfont bcc-icon-icon_action_share_n_x space"></div>`;
 const bigVipIcon = `<svg class="user-vip-icon" width="16" height="16" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
 <path d="M32.0002 61.3333C15.7986 61.3333 2.66667 48.2013 2.66667 32.0002C2.66667 15.7986 15.7986 2.66667 32.0002 2.66667C48.2013 2.66667 61.3333 15.7986 61.3333 32.0002C61.3333 48.2014 48.2014 61.3333 32.0002 61.3333Z" fill="#FF6699" stroke="white" stroke-width="5.33333"/>
 <path d="M46.6262 22.731V22.7199H35.8032C35.8734 21.8558 35.914 20.9807 35.914 20.0982C35.914 19.1122 35.866 18.1337 35.7774 17.1699C35.7811 17.1072 35.7885 17.0444 35.7885 16.9779V16.9669C35.7885 14.9581 34.16 13.3333 32.1549 13.3333C30.1462 13.3333 28.5214 14.9618 28.5214 16.9669V16.9779C28.5214 17.2253 28.5473 17.469 28.5953 17.7017L28.5436 17.7091C28.6174 18.4956 28.6581 19.2895 28.6581 20.0945C28.6581 20.9807 28.6101 21.8558 28.5214 22.7162H17.392V22.731C15.4977 22.8528 13.9948 24.4259 13.9948 26.3534V26.3645C13.9948 28.3733 15.5346 29.9832 17.5397 29.9832C17.6948 29.9832 17.8535 29.9906 18.1046 29.9869L26.6124 29.9685C24.4559 34.9535 20.7153 39.0892 16.0294 41.7441C16.0072 41.7552 15.9888 41.7663 15.9666 41.7811C15.9149 41.8106 15.8669 41.8401 15.8152 41.8697L15.8189 41.8734C14.7961 42.5159 14.1129 43.6532 14.1129 44.9493V44.9604C14.1129 46.9692 15.7414 48.5939 17.7465 48.5939C18.5256 48.5939 19.242 48.3465 19.8328 47.9329C26.6604 43.9892 31.9002 37.6047 34.3631 29.9759H46.0428C46.2311 29.9795 46.5117 29.9685 46.5117 29.9685C48.6941 29.9242 50.1268 28.3807 50.1268 26.3756V26.3645C50.1305 24.3963 48.5722 22.8011 46.6262 22.731Z" fill="white"/>
@@ -44,7 +44,6 @@ const bigVipIcon = `<svg class="user-vip-icon" width="16" height="16" viewBox="0
 
 iziToast.settings({
     timeout: 4000,
-    icon: 'Fontawesome',
     closeOnEscape: 'true',
     transitionIn: 'bounceInLeft',
     transitionOut: 'fadeOutRight',
@@ -676,8 +675,8 @@ function ShowMediaInfo(details, type) {
             if (i < tagsRoot.length - 1) stylesText += "&nbsp;·&nbsp;";
         }
     }
-    const contrElm = $('<a>').addClass('bcc-iconfont bcc-icon-ic_contributionx icon-small');
-    const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ icon-small');
+    const contrElm = $('<a>').addClass('bcc-iconfont bcc-icon-ic_contributionx space');
+    const pubdateElm = $('<a>').addClass('bcc-iconfont bcc-icon-icon_into_history_gray_ space');
     const pubdate = !isL ? (isV ? format.pubdate(root.pubdate) : (isA ? format.pubdate(root.passtime) : root.publish.pub_time)) : "";
     $('.info-styles').empty().append(...(!isL ? [contrElm, stylesText, "&emsp;|&emsp;", pubdateElm, pubdate] : []));
 }
@@ -937,13 +936,13 @@ function appendMediaBlock(root, audio) { // 填充视频块
     const operates = $('<div>').addClass('video-block-operates');
     const split = $('<div>').addClass('video-block-split');
     const getCoverBtn = $('<button>').addClass('video-block-getcover-btn video-block-operates-item')
-    .html(`<i class="fa-solid fa-image icon-small"></i>解析封面`);
+    .html(`<i class="fa-solid fa-image space"></i>解析封面`);
     const getMultiBtn = $('<button>').addClass('video-block-getvideo-btn video-block-operates-item')
-    .html(`<i class="fa-solid fa-file-video icon-small"></i>解析音视频`);
+    .html(`<i class="fa-solid fa-file-video space"></i>解析音视频`);
     const getAudioBtn = $('<button>').addClass('video-block-getaudio-btn video-block-operates-item')
-    .html(`<i class="fa-solid fa-file-audio icon-small"></i>解析音频`);
+    .html(`<i class="fa-solid fa-file-audio space"></i>解析音频`);
     const getMoreBtn = $('<button>').addClass('video-block-getmore-btn video-block-operates-item')
-    .html(`<i class="fa-solid fa-anchor icon-small"></i>更多解析`);
+    .html(`<i class="fa-solid fa-anchor space"></i>更多解析`);
     operates.append(getCoverBtn, ...(isV ? [getMultiBtn, getMoreBtn] : [getAudioBtn]));
     block.append(checkLabel, page, split, name, split.clone(), duration, split.clone(), operates).appendTo(videoList);
     checkBox.on('change', function() {
@@ -987,26 +986,25 @@ function appendMediaBlock(root, audio) { // 填充视频块
 
 async function appendDownPageBlock(info, target, action) { // 填充下载块
     const displayName = info.media_data.title;
-    const infoBlock = $('<div>').attr("vgid", info.gid.vgid).attr("agid", info.gid.agid).attr("path", info.output_path).addClass('down-page-info');
+    const infoBlock = $('<div>').attr("vgid", info.gid.vgid).attr("agid", info.gid.agid).addClass('down-page-info');
     const infoCover = $('<img>').addClass('down-page-info-cover').attr("src", info.media_data.pic.replace("http:", "https:") + '@256h')
     .attr("referrerPolicy", "no-referrer").attr("draggable", false);
     const infoData = $('<div>').addClass('down-page-info-data');
-    const infoDesc = $('<div>').addClass('down-page-info-desc').html(info.media_data.desc.replace(/\n/g, '<br>'));
     const infoTitle = $('<div>').addClass('down-page-info-title').html(displayName).css('max-width', `100%`);
     const infoProgCont = $('<div>').addClass('down-page-info-progress-cont');
     const infoProgText = $('<div>').addClass('down-page-info-progress-text').html(function() {
         switch(action) { case "doing": return "等待同步"; case "complete": return "下载完毕"; default: return "等待下载"; }
     });
-    const openDirBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-file-${displayName.includes("mp3")?'audio':'video'} icon-small"></i>定位文件`);
-    const stopBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-circle-stop icon-small"></i>暂停`);
-    const playBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-play icon-small"></i>继续`);
+    const openDirBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-file-${displayName.includes("mp3")?'audio':'video'} space"></i>定位文件`);
+    const stopBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-circle-stop space"></i>暂停`);
+    const playBtn = $('<button>').addClass('down-page-info-btn').html(`<i class="fa-solid fa-play space"></i>继续`);
     infoProgCont.append(openDirBtn, stopBtn, playBtn, infoProgText);
     const infoProgressBar = $('<div>').addClass('down-page-info-progress-bar').css("width", action == "complete" ? "100%" : 0);
     const infoProgress = $('<div>').addClass('down-page-info-progress').html(infoProgressBar);
     infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, infoProgCont, infoProgress)).appendTo(target);
     openDirBtn.on('click', () => {
         if (action == "complete") {
-            invoke('open_select', { path: infoBlock.attr("path") });
+            invoke('open_select', { path: info.output_path });
         } else iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
             layout: '2', title: `下载`,
@@ -1027,8 +1025,8 @@ function appendMoreList(data, block) { // 填充更多解析
     const text = $('<div>').addClass("video-block-opt-text").text("更多解析");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt more");
-    const dmhk = $('<button>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor icon-small'></i>历史弹幕");
-    const aism = $('<button>').addClass("video-block-opt-item ai-summary").html("<i class='fa-solid fa-microchip-ai icon-small'></i>视频AI总结");
+    const dmhk = $('<button>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor space'></i>历史弹幕");
+    const aism = $('<button>').addClass("video-block-opt-item ai-summary").html("<i class='fa-solid fa-microchip-ai space'></i>视频AI总结");
     dms.append(text, split, opt).appendTo(block);
     opt.append(dmhk, aism);
     async function dm(url) {
@@ -1158,7 +1156,7 @@ function appendMoreList(data, block) { // 填充更多解析
         }
         const summary = $('<div>').addClass('ai-summary-cont');
         const summaryHeader = $('<div>').addClass('ai-summary-header').html(
-        '<img src="../assets/ai-summary-icon.svg" class="icon-small" draggable=false>' + '<span>已为你生成视频总结</span>')
+        '<img src="../assets/ai-summary-icon.svg" class="space" draggable=false>' + '<span>已为你生成视频总结</span>')
         .append('<i class="fa-regular fa-xmark"></i>');
         const summaryBody = $('<div>').addClass('ai-summary-body');
         const abs = $('<div>').addClass('ai-child-abs').html(root.data.model_result.summary);
@@ -1194,7 +1192,7 @@ function appendDimensionList(details, type, action, ms, block) { // 填充分辨
         const qualityItem = root.support_formats.find(format => format.quality === quality);
         const description = qualityItem.display_desc + (qualityItem.superscript ? `-${qualityItem.superscript}` : '');
         const currentBtn = $('<button>').addClass(`video-block-opt-item dimension`);
-        const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition icon-small`);
+        const currentIcon = $('<i>').addClass(`fa-solid fa-${quality <= 32 ? 'standard':'high'}-definition space`);
         currentBtn.append(currentIcon, qualityItem.new_description);
         opt.append(currentBtn);
         if (quality == maxQuality) {
@@ -1233,7 +1231,7 @@ function appendCodecList(details, type, action, ms, block) { // 填充编码格�
         const codec = codecsList[i].codec;
         const description = format.codec(codec);
         const currentBtn = $('<button>').addClass(`video-block-opt-item codec`);
-        const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code icon-small`);
+        const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code space`);
         currentBtn.append(currentIcon, description);
         opt.append(currentBtn);
         if (codec == 0) continue;
@@ -1280,7 +1278,7 @@ function appendAudioList(details, type, action, ms, block) { // 填充音频
         const quality = qualityList[i];
         const description = qualityDesc[quality];
         const currentBtn = $('<button>').addClass(`video-block-opt-item audio`);
-        const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} icon-small`);
+        const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} space`);
         currentBtn.append(currentIcon, description);
         opt.append(currentBtn);
         if (quality == 0) {
@@ -1571,13 +1569,13 @@ function settings() {
         if (type === "_info") {
             const svg = $('.settings-page._info').find('svg').css('display', 'none');
             setTimeout(() => svg.append(svg.find('style').detach()).css('display', 'block'), 1);
-        }
+        } else if (type == "general") invoke('handle_temp', { action: "calc" }).then(size => $('#temp-dir-size').html(size));
     });
-    $('.settings-page-options input[name="max-conc"]').on('click', () => {
-        handleSave("最大并发下载数");
-    });
-    $('.down-dir-path-openbtn').on('click', () => handleSave("存储路径", downDirPath));
-    $('.temp-dir-path-openbtn').on('click', () => handleSave("临时文件存储路径", tempDirPath));
+    $('.settings-page-options input[name="max-conc"]').on('click', () => handleSave("最大并发下载数"));
+    $('#down-dir-path-openbtn').on('click', () => handleSave("存储路径", downDirPath));
+    $('#temp-dir-path-openbtn').on('click', () => handleSave("临时文件存储路径", tempDirPath));
+    $('#temp-dir-clearbtn').on('click', () => invoke('handle_temp', { action: "clear" }).then(size => $('#temp-dir-size').html(size)));
+    $('#aria2c-restart-btn').on('click', async () => await invoke('handle_aria2c', { action: "restart" }));
 }
 
 async function getUserProfile(mid) {
@@ -1669,7 +1667,7 @@ listen("progress", async (event) => {
 
 listen("error", async (event) => {
     iziToast.error({
-        icon: 'fa-solid fa-circle-info',
+        icon: 'fa-regular fa-circle-exclamation',
         layout: '2', title: '错误',
         timeout: 10000,
         message: `遇到错误：${event.payload}`,
