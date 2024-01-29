@@ -1,4 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use lazy_static::lazy_static;
@@ -29,10 +30,11 @@ lazy_static! {
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(3));
     static ref ARIA2C_PORT: Arc<RwLock<usize>> = Arc::new(RwLock::new(0));
     static ref ARIA2C_PROCESS: std::sync::Mutex<Option<Child>> = std::sync::Mutex::new(None);
-    static ref ARIA2C_SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
+    static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref DOING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref COMPLETE_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
+    static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 }
 
 fn handle_err<E: std::fmt::Display>(window: tWindow, e: E) -> String {
@@ -42,7 +44,7 @@ fn handle_err<E: std::fmt::Display>(window: tWindow, e: E) -> String {
 
 async fn init_database(window: tWindow) -> Result<(), String> {
     if !&COOKIE_PATH.exists() {
-        fs::write(&*COOKIE_PATH, "").map_err(|e| handle_err(window.clone(), e)).unwrap();
+        fs::write(&*COOKIE_PATH, "").map_err(|e| handle_err(window.clone(), e))?;
     }
     let metadata = fs::metadata(&*COOKIE_PATH).unwrap();
     let conn = Connection::open(&*COOKIE_PATH).unwrap();
@@ -54,9 +56,7 @@ async fn init_database(window: tWindow) -> Result<(), String> {
                 value TEXT NOT NULL,
                 domain TEXT NOT NULL,
                 path TEXT,
-                expires TEXT,
-                httponly INTEGER,
-                secure INTEGER
+                expires TEXT
             )",
             params![],
         ).map_err(|e| handle_err(window.clone(), e)).unwrap();
@@ -67,48 +67,38 @@ async fn init_database(window: tWindow) -> Result<(), String> {
 
 #[tauri::command]
 #[async_recursion::async_recursion]
-async fn handle_aria2c(action: String) -> Result<(), String> {
+async fn handle_aria2c(window: tWindow, action: String) -> Result<(), String> {
     match action.as_str() {
         "init" => {
             let start_port = 6800;
             let end_port = 65535;
-            for port in start_port..end_port {
-                match TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))) {
-                    Ok(_listener) => {
-                        *ARIA2C_PORT.write().await = port as usize;
-                        let current_dir = env::current_dir().map_err(|e| e.to_string())?
-                            .join("aria2c");
-                        let secret: String = rand::thread_rng()
-                            .sample_iter(&Alphanumeric)
-                            .take(10)
-                            .map(char::from)
-                            .collect();
-                        *ARIA2C_SECRET.write().await = secret.clone();
-                        let child = Command::new(current_dir.join("aria2c.exe").clone())
-                            .creation_flags(0x08000000)
-                            .current_dir(current_dir.clone())
-                            .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
-                            .arg(format!("--rpc-listen-port={}", port))
-                            .arg(format!("--rpc-secret={}", secret))
-                            .arg(format!("--max-concurrent-downloads={}", MAX_CONCURRENT_DOWNLOADS.read().await))
-                            .stdout(Stdio::piped())
-                            .stderr(Stdio::piped())
-                            .spawn().unwrap();
-                        *ARIA2C_PROCESS.lock().unwrap() = Some(child);
-                        return Ok(());
-                    },
-                    Err(_) => continue,
-                }
-            }
-            Err("No free port found".to_string())
+            let port = (start_port..end_port)
+                .find_map(|port| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).ok())
+                .ok_or("No free port found".to_string())?.local_addr().unwrap().port();
+            *ARIA2C_PORT.write().await = port as usize;
+            let current_dir = env::current_dir().map_err(|e| e.to_string())?
+                .join("aria2c");
+            let child = Command::new(current_dir.join("aria2c.exe").clone())
+                .creation_flags(0x08000000)
+                .current_dir(current_dir.clone())
+                .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
+                .arg(format!("--rpc-listen-port={}", port))
+                .arg(format!("--rpc-secret={}", SECRET.read().await.clone()))
+                .arg(format!("--max-concurrent-downloads={}", MAX_CONCURRENT_DOWNLOADS.read().await))
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn().unwrap();
+            *ARIA2C_PROCESS.lock().unwrap() = Some(child);
+            return Ok(());
         },
         "kill" => {
             if let Some(ref mut p) = *ARIA2C_PROCESS.lock().unwrap() { p.kill().unwrap(); }
             return Ok(());
         },
         "restart" => {
-            handle_aria2c("kill".to_string()).await?;
-            handle_aria2c("init".to_string()).await
+            handle_aria2c(window.clone(), "kill".to_string()).await?;
+            handle_aria2c(window.clone(), "init".to_string()).await?;
+            return Ok(());
         }
         _ => Err(action)
     }
@@ -116,16 +106,14 @@ async fn handle_aria2c(action: String) -> Result<(), String> {
 
 fn load_cookies() -> rusqlite::Result<HashMap<String, CookieInfo>> {
     let conn = Connection::open(&*COOKIE_PATH)?;
-    let mut stmt = conn.prepare("SELECT name, value, path, domain, expires, httponly, secure FROM cookies")?;
+    let mut stmt = conn.prepare("SELECT name, value, path, domain, expires FROM cookies")?;
     let cookie_map: Result<HashMap<String, CookieInfo>, rusqlite::Error> = stmt.query_map([], |row| {
         let cookie_info = CookieInfo {
             name: row.get(0)?,
             value: row.get(1)?,
             path: row.get(2)?,
             domain: row.get(3)?,
-            expires: row.get(4)?,
-            httponly: row.get(5)?,
-            secure: row.get(6)?,
+            expires: row.get(4)?
         };
         Ok((cookie_info.name.clone(), cookie_info))
     })?.collect();
@@ -187,8 +175,6 @@ struct CookieInfo {
     path: String,
     domain: String,
     expires: String,
-    httponly: bool,
-    secure: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -269,7 +255,7 @@ async fn push_back_queue(
             "method": "aria2.addUri",
             "id": "1",
             "params": [
-                format!("token:{}", *ARIA2C_SECRET.read().await),
+                format!("token:{}", *SECRET.read().await),
                 url,
                 {"dir": path.parent().unwrap().to_str().unwrap(), "out": path.file_name().unwrap().to_str().unwrap()}
             ]
@@ -299,7 +285,7 @@ async fn push_back_queue(
         output_path: DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(display_name.clone()),
         tasks, action, media_data
     };
-    fs::create_dir_all(DOWNLOAD_DIR.read().await.join(ss_dir)).map_err(|e| handle_err(window.clone(), e)).unwrap();
+    fs::create_dir_all(DOWNLOAD_DIR.read().await.join(ss_dir)).map_err(|e| handle_err(window.clone(), e))?;
     update_queue(&window, "push", Some(info.clone())).await;
     Ok(gid)
 }
@@ -324,7 +310,7 @@ async fn process_queue(window: tWindow) -> Result<(), String> {
             if let Some(video_info) = update_queue(&window, "waiting", None).await {
                 let window_clone = window.clone();
                 tokio::spawn(async move {
-                    process_download(window_clone, video_info).await;
+                    process_download(window_clone, video_info).await.unwrap();
                 });
             }
         }
@@ -336,13 +322,13 @@ async fn process_queue(window: tWindow) -> Result<(), String> {
     Ok(())
 }
 
-async fn process_download(window: tWindow, download_info: VideoInfo) {
+async fn process_download(window: tWindow, download_info: VideoInfo) -> Result<(), String> {
     let action = &download_info.action;
     for task in &download_info.tasks {
         if let Ok(_) = download_file(window.clone(), task.clone(), download_info.gid.clone()).await {
             if *action == "only" {
                 fs::rename(task.path.clone(), download_info.output_path.clone())
-                .map_err(|e| handle_err(window.clone(), e)).unwrap();
+                .map_err(|e| handle_err(window.clone(), e))?;
             }
         }
     }
@@ -350,6 +336,7 @@ async fn process_download(window: tWindow, download_info: VideoInfo) {
         let _ = merge_video_audio(window.clone(), download_info.clone()).await;
     }
     update_queue(&window, "doing", None).await;
+    Ok(())
 }
 
 async fn update_queue(window: &tWindow, action: &str, info: Option<VideoInfo>) -> Option<VideoInfo> {
@@ -399,7 +386,7 @@ async fn download_file(window: tWindow, task: DownloadTask, gid: Value) -> Resul
             "jsonrpc": "2.0",
             "method": "aria2.tellStatus",
             "id": "1",
-            "params": [format!("token:{}", *ARIA2C_SECRET.read().await), task.gid]
+            "params": [format!("token:{}", *SECRET.read().await), task.gid]
         });
         let status_resp = client
             .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
@@ -576,7 +563,7 @@ async fn handle_download(window: tWindow, gid: String, action: String) -> Result
         "jsonrpc": "2.0",
         "method": format!("aria2.{}", action),
         "id": "1",
-        "params": [format!("token:{}", *ARIA2C_SECRET.read().await), gid]
+        "params": [format!("token:{}", *SECRET.read().await), gid]
     });
     let resp = client
         .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().await))
@@ -617,8 +604,6 @@ fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
     let mut path = "";
     let mut domain = "";
     let mut expires = "";
-    let mut httponly = false;
-    let mut secure = false;
     for part in cookie_str.split(';').skip(1) {
         let mut iter = part.splitn(2, '=').map(str::trim);
         if let Some(key) = iter.next() {
@@ -627,8 +612,6 @@ fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
                     "path" => path = value,
                     "domain" => domain = value,
                     "expires" => expires = value,
-                    "httponly" => httponly = iter.peekable().peek().is_some(),
-                    "secure" => secure = iter.peekable().peek().is_some(),
                     _ => {}
                 }
             }
@@ -640,8 +623,6 @@ fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
         path: path.to_string(),
         domain: domain.to_string(),
         expires: expires.to_string(),
-        httponly,
-        secure,
     })
 }
 
@@ -650,41 +631,25 @@ fn insert_cookie(window: tWindow, cookie_str: &str) -> Result<(), String> {
     let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
     let conn = Connection::open(&*COOKIE_PATH).unwrap();
     conn.execute(
-        "INSERT OR REPLACE INTO cookies (name, value, path, domain, expires, httponly, secure) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT OR REPLACE INTO cookies (name, value, path, domain, expires) VALUES (?1, ?2, ?3, ?4, ?5)",
         params![
             parsed_cookie.name,
             parsed_cookie.value,
             parsed_cookie.path,
             parsed_cookie.domain,
             parsed_cookie.expires,
-            parsed_cookie.httponly,
-            parsed_cookie.secure,
         ],
     ).unwrap();
     window.emit("headers", headers_to_json(init_headers())).unwrap();
     Ok(())
 }
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-async fn init(window: tWindow) -> Result<i64, String> {
-    rw_config(window.clone(), "read".to_string(), None).await.map_err(|e| handle_err(window.clone(), e))?;
-    init_database(window.clone()).await.unwrap();
-    handle_aria2c("restart".to_string()).await.unwrap();
-    update_queue(&window, "init", None).await;
-    stop_login();
-    get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
-    HashMap::new() });
-    let mid_value = if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
-        mid_cookie.value.parse::<i64>().unwrap_or(0)
-    } else { 0 };
-    window.emit("user-mid", mid_value.to_string()).unwrap();
-    return Ok(mid_value);
-}
-
-#[tauri::command]
-async fn rw_config(window: tWindow, action: String, sets: Option<Settings>) -> Result<i64, String> {
+async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secret: String) -> Result<i64, String> {
+    if secret != *SECRET.read().await {
+        window.emit("error", "403 Forbidden<br>请重启应用").unwrap();
+        return Err("403 Forbidden".to_string())
+    }
     let config_path = CONFIG_PATH.read().await.clone();
     let (temp_dir, down_dir, max_conc) = if let Some(settings) = sets {
         (settings.temp_dir, settings.down_dir, settings.max_conc)
@@ -737,7 +702,11 @@ async fn rw_config(window: tWindow, action: String, sets: Option<Settings>) -> R
 }
 
 #[tauri::command]
-async fn save_file(window: tWindow, content: String, path: String) -> Result<String, String> {
+async fn save_file(window: tWindow, content: String, path: String, secret: String) -> Result<String, String> {
+    if secret != *SECRET.read().await {
+        window.emit("error", "403 Forbidden<br>请重启应用").unwrap();
+        return Err("403 Forbidden".to_string())
+    }
     if let Err(e) = fs::write(path.clone(), content) {
         handle_err(window,  e.to_string());
         Err(e.to_string())
@@ -754,8 +723,7 @@ async fn open_select(window: tWindow, path: String) -> Result<String, String>{
             .arg("/select,").arg(path.clone())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| handle_err(window, e)).unwrap();
+            .spawn().map_err(|e| handle_err(window, e))?;
         Ok(path)
     }
 }
@@ -797,11 +765,6 @@ async fn exit(window: tWindow) -> Result<String, String> {
         log::warn!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
-}
-
-#[tauri::command]
-fn stop_login() {
-    LOGIN_POLLING.store(false, Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -1051,6 +1014,40 @@ async fn sms_login(window: tWindow,
     }
 }
 
+#[tauri::command]
+async fn ready(_window: tWindow) -> Result<String, String> {
+    #[cfg(not(debug_assertions))]
+    { if *READY.read().await {
+        _window.emit("error", "403 Forbidden<br>请重启应用").unwrap();
+        return Ok("403 Forbidden".to_string());
+    } }
+    LOGIN_POLLING.store(false, Ordering::SeqCst);
+    let secret: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10).map(char::from)
+        .collect();
+    *SECRET.write().await = secret.clone();
+    *READY.write().await = true;
+    Ok(secret)
+}
+
+#[tauri::command]
+async fn init(window: tWindow, secret: String) -> Result<i64, String> {
+    if secret != *SECRET.read().await { return Err("403 Forbidden".to_string()) }
+    rw_config(window.clone(), "read".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
+    init_database(window.clone()).await.unwrap();
+    handle_aria2c(window.clone(), "init".to_string()).await.unwrap();
+    update_queue(&window, "init", None).await;
+    get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
+    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    HashMap::new() });
+    let mid_value = if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
+        mid_cookie.value.parse::<i64>().unwrap_or(0)
+    } else { 0 };
+    window.emit("user-mid", mid_value.to_string()).unwrap();
+    return Ok(mid_value);
+}
+
 #[tokio::main]
 async fn main() {
     logger::init_logger().map_err(|e| e.to_string()).unwrap();
@@ -1059,14 +1056,19 @@ async fn main() {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit_all("single-instance", (argv, cwd)).unwrap();
         }))
-        .invoke_handler(tauri::generate_handler![init,
-            scan_login, pwd_login, sms_login, stop_login, insert_cookie,
+        .setup(|app| {
+            let window = app.get_window("main").unwrap();
+            window.listen("stop_login", |_| { LOGIN_POLLING.store(false, Ordering::SeqCst) });
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![ready, init,
+            scan_login, pwd_login, sms_login, insert_cookie, 
             open_select, rw_config, refresh_cookie, save_file, handle_download,
             push_back_queue, process_queue, exit, handle_temp, handle_aria2c])
         .on_window_event(move |event| match event.event() {
             WindowEvent::Destroyed => {
                 log::info!("Killing aria2c...");
-                tokio::spawn(async move { handle_aria2c("kill".to_string()).await.unwrap() });
+                tokio::spawn(async move { handle_aria2c(event.window().clone(), "kill".to_string()).await.unwrap() });
             }
             _ => {}
         })

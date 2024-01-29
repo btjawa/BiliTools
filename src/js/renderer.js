@@ -1,6 +1,14 @@
-const { invoke } = window.__TAURI__.tauri;
-const { emit, listen, once } = window.__TAURI__.event;
-const { shell, dialog, http, app, os, clipboard } = window.__TAURI__;
+import { invoke } from '@tauri-apps/api/tauri';
+import { emit, listen, once } from '@tauri-apps/api/event';
+import { shell, dialog, http, app, os, clipboard } from '@tauri-apps/api';
+
+import $ from "jquery";
+import iziToast from "izitoast";
+import Swal from "sweetalert2";
+import md5 from "md5";
+import QRCode from "qrcode";
+import protobuf from "protobufjs";
+import { JSEncrypt } from "jsencrypt";
 
 const searchInput = $('#search-input');
 const videoListTabHead = $('.video-list-tab-head');
@@ -24,7 +32,7 @@ const sidebar = {
 let currentElm = [], currentSel = [];
 let userData = { mid: null, coins: null, isLogin: false }
 let totalDown = 0;
-let headers = {};
+let headers = {}, secret;
 
 let mediaData = [];
 let selectedMedia = [];
@@ -52,6 +60,11 @@ iziToast.settings({
     backgroundColor: '#3b3b3b',
     theme: 'dark'
 });
+
+// https://github.com/gdsmith/jquery.easing
+$.easing.easeOutQuint = function(x) {
+    return 1 - Math.pow(1 - x, 5);
+};
 
 class MediaData {
     constructor(title, desc, pic, duration, id, cid, eid, type, rank, ss_title, display_name, badge) {
@@ -500,7 +513,7 @@ async function bilibili(ts) {
 async function backward() {
     const last = currentElm.at(-1);
     if (last == '.login') {
-        invoke('stop_login');
+        emit('stop_login');
         $('.login').removeClass('active');
     } else if (last == '.down-page') {
         $('.down-page').removeClass('active');
@@ -573,7 +586,10 @@ function contextMenu() {
 
 $(document).ready(function () {
     contextMenu();
-    invoke('init');
+    invoke('ready').then(e => {
+        secret = e;
+        invoke('init', { secret });
+    });
     app.getVersion().then(ver => $('#version').html(ver));
     os.platform().then(type => $('#platform').html(type));
     os.arch().then(arch => $('#arch').html(arch));
@@ -1001,7 +1017,7 @@ async function appendDownPageBlock(info, target, action) { // 填充下载块
     infoProgCont.append(openDirBtn, stopBtn, playBtn, infoProgText);
     const infoProgressBar = $('<div>').addClass('down-page-info-progress-bar').css("width", action == "complete" ? "100%" : 0);
     const infoProgress = $('<div>').addClass('down-page-info-progress').html(infoProgressBar);
-    infoBlock.append(infoCover, infoData.append(infoTitle, infoDesc, infoProgCont, infoProgress)).appendTo(target);
+    infoBlock.append(infoCover, infoData.append(infoTitle, infoProgCont, infoProgress)).appendTo(target);
     openDirBtn.on('click', () => {
         if (action == "complete") {
             invoke('open_select', { path: info.output_path });
@@ -1121,7 +1137,7 @@ function appendMoreList(data, block) { // 填充更多解析
                         defaultPath: date + '_' + format.filename(data.title)
                     });
                     if (selected) {
-                        invoke('save_file', { content, path: selected });
+                        invoke('save_file', { content, path: selected, secret });
                         saved();
                     }
                 })
@@ -1155,8 +1171,8 @@ function appendMoreList(data, block) { // 填充更多解析
             return null;
         }
         const summary = $('<div>').addClass('ai-summary-cont');
-        const summaryHeader = $('<div>').addClass('ai-summary-header').html(
-        '<img src="../assets/ai-summary-icon.svg" class="space" draggable=false>' + '<span>已为你生成视频总结</span>')
+        const summaryHeader = $('<div>').addClass('ai-summary-header').append($('<img>').addClass("space").attr("draggable", false)
+        .attr("src", await (await import("../assets/ai-summary-icon.svg")).default)).append('<span>已为你生成视频总结</span>')
         .append('<i class="fa-regular fa-xmark"></i>');
         const summaryBody = $('<div>').addClass('ai-summary-body');
         const abs = $('<div>').addClass('ai-child-abs').html(root.data.model_result.summary);
@@ -1312,8 +1328,10 @@ async function userProfile() {
         $('.user-profile-avatar').attr("src", details.data.card.face + '@256h');
         $('.user-profile-name').html(details.data.card.name);
         $('.user-profile-desc').html(details.data.card.sign);
-        $('.user-profile-sex').attr("src", `./assets/${details.data.card.sex=="男"?'male':'female'}.png`);
-        $('.user-profile-level').attr("src", `./assets/level/level${details.data.card.level_info.current_level}${details.data.card.is_senior_member?'_hardcore':''}.svg`);
+        const level = details.data.card.level_info.current_level;
+        const senior = details.data.card.is_senior_member;
+        $('.user-profile-sex').attr("src", await import(`../assets/${details.data.card.sex == "男" ? "male" : "female"}.png`).default);
+        $('.user-profile-level').attr("src", await (await import(`../assets/level/level${level}${senior?"_hardcore":""}.svg`)).default);
         if (details.data.card.vip) {
             $('.user-profile-bigvip').css("display", "block");
             $('.user-profile-bigvip').attr("src", details.data.card.vip.label.img_label_uri_hans_static);
@@ -1330,20 +1348,20 @@ async function userProfile() {
 }
 
 async function scanLogin() {
-    invoke('stop_login');
+    emit('stop_login');
     $('.login-qrcode-tips').removeClass('active');
     $('.login-scan-loading').addClass('active');
     const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', { headers })).data;
     $('.login-scan-loading').removeClass('active');
     const { qrcode_key, url } = response.data;
     $('#login-qrcode').empty();
-    new QRCode("login-qrcode", {
-        text: url,
-        width: 180,
-        height: 180,
-        colorDark: "#c4c4c4",
-        colorLight: "#3b3b3b9b",
-        correctLevel: QRCode.CorrectLevel.H,
+    QRCode.toCanvas($('#login-qrcode')[0], url, {
+        width: 180, height: 180,
+        margin: 0, errorCorrectionLevel: 'H',
+        color: {
+            dark: "#c4c4c4",
+            light: "#3b3b3b9b"
+        }
     });
     $('#login-qrcode').removeAttr("title");
     $('.login-qrcode-box').off('mouseenter').on('mouseenter', function() {
@@ -1557,7 +1575,7 @@ function settings() {
             default_ads: 0,    
             temp_dir: tempDirPath.val(),
             down_dir: downDirPath.val()
-        }});
+        }, secret});
     }
     $('.settings-side-bar-background').on('click', (event) => {
         const target = $(event.target).closest('.settings-side-bar-background');
@@ -1587,7 +1605,7 @@ async function getUserProfile(mid) {
     if (currentElm.at(-1) == ".login" || currentElm.at(-1) == ".user-profile") {
         backward();
     }
-    $('.user-avatar').attr('src', mid=="0" ? "./assets/default.jpg" : details.data.face);
+    $('.user-avatar').attr('src', mid=="0" ? await (await import("../assets/default.jpg")).default : details.data.face);
     $('.user-name').text( mid=="0" ? "登录" : details.data.name);
     if (details.code === 0 && details.data.vip.type != 0 && details.data.vip.avatar_subscript == 1) {
         $('.user-vip-icon').css('display', 'block');
@@ -1614,9 +1632,9 @@ once("settings", async (e) => {
     $(`#max-conc-${p.max_conc}`).click();
 });
 
-listen("user-mid", async (e) => getUserProfile(e.payload));
+listen("user-mid", (e) => getUserProfile(e.payload));
 
-listen("headers", async (e) => headers = e.payload);
+listen("headers", (e) => headers = e.payload);
 
 listen("login-status", async (event) => {
     if (event.payload == 86090) {

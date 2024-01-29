@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "tauri": "tauri",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "updater": "node scripts/updater.mjs",
     "release": "node scripts/release.mjs"
   },
@@ -19,11 +22,22 @@
   },
   "homepage": "https://github.com/btjawa/BiliTools#readme",
   "dependencies": {
-    "@tauri-apps/api": "^1.5.2"
+    "@tauri-apps/api": "^1.5.2",
+    "izitoast": "^1.4.0",
+    "jquery": "^3.7.1",
+    "jsencrypt": "^3.3.2",
+    "md5": "^2.3.0",
+    "protobufjs": "^7.2.6",
+    "qrcode": "^1.5.3",
+    "sweetalert2": "^11.10.4"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5.8",
     "@actions/github": "^6.0.0",
-    "node-fetch": "^3.3.2"
+    "@tauri-apps/cli": "^1.5.8",
+    "node-fetch": "^3.3.2",
+    "vite": "^5.0.12",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-dynamic-import": "^1.5.0",
+    "vite-plugin-remove-console": "^2.2.0"
   }
 }

@@ -6,6 +6,7 @@
         <meta name="referrer" content="no-referrer">
         <meta name="theme-color" content="#1f1f1f">
         <title>BiliTools</title>
+        <link rel="icon" href="./favicon.ico">
         <link rel="stylesheet" type="text/css" href="./font/HarmonyOS_Sans_SC_Regular/font.min.css">
         <link rel="stylesheet" href="./css/font-awesome/all.css">
         <link rel="stylesheet" type="text/css" href="./css/bcc-iconfont.css">
@@ -155,7 +156,7 @@
                             <label for="max-conc-1">1个</label><br>
                             <input type="radio" id="max-conc-2" name="max-conc">
                             <label for="max-conc-2">2个</label><br>
-                            <input type="radio" id="max-conc-3" name="max-conc">
+                            <input type="radio" id="max-conc-3" name="max-conc" checked>
                             <label for="max-conc-3">3个</label><br>
                             <input type="radio" id="max-conc-4" name="max-conc">
                             <label for="max-conc-4">4个</label><br>
@@ -242,7 +243,7 @@
             <div class="login-scan-wp">
                 <div class="login-scan-title">扫描二维码登录</div>
                 <div class="login-qrcode-box">
-                    <div id="login-qrcode"></div>
+                    <canvas id="login-qrcode"></canvas>
                     <div class="login-qrcode-tips"></div>
                     <img alt="加载中" class="login-scan-loading" src="./assets/loadTV.gif">
                 </div>
@@ -335,15 +336,7 @@
             </div>
             <div class="video-list"></div>
         </div>
-        <script src="./js/jquery-3.6.0.min.js"></script>
-        <script src="./js/jquery.easing.min.js"></script>
-        <script src="./js/iziToast.min.js"></script>
-        <script src="./js/sweetalert2.all.min.js"></script>
-        <script src="./js/qrcode.min.js"></script>
-        <script src="./js/md5.min.js"></script>
-        <script src="./js/jsencript.min.js"></script>
-        <script src="./js/gt.0.4.9.js"></script>
-        <script src="./js/protobuf.js"></script>
-        <script src="./js/renderer.js"></script>
+        <script type="module" src="./js/gt.0.4.9.js"></script>
+        <script type="module" src="./js/renderer.js"></script>
     </body>
 </html>
