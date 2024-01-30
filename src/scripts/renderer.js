@@ -1,14 +1,15 @@
 import { invoke } from '@tauri-apps/api/tauri';
-import { emit, listen, once } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import { shell, dialog, http, app, os, clipboard } from '@tauri-apps/api';
 
 import $ from "jquery";
 import iziToast from "izitoast";
 import Swal from "sweetalert2";
-import md5 from "md5";
-import QRCode from "qrcode";
 import protobuf from "protobufjs";
-import { JSEncrypt } from "jsencrypt";
+
+import * as data from "./data.ts";
+import * as format from './format.ts';
+import { login, verify } from './sdk.ts';
 
 const searchInput = $('#search-input');
 const videoListTabHead = $('.video-list-tab-head');
@@ -17,22 +18,15 @@ const videoList = $('.video-list');
 const infoBlock = $('.info');
 const multiSelectBtn = $('.multi-select-btn');
 const multiSelectNext = $('.multi-select-next-btn');
-const downDirPath = $('#down-dir-path');
-const tempDirPath = $('#temp-dir-path');
 const waitingList = $('.down-page-child.waiting');
 const doingList = $('.down-page-child.doing');
 const completeList = $('.down-page-child.complete');
 
-const sidebar = {
-    downPage: $('.down-page-bar-background'),
-    settings: $('.settings-page-bar-background'),
-    userProfile: $('.user-avatar-placeholder')
-}
+const sidebar = data.sidebar;
+const currentElm = data.currentElm;
 
-let currentElm = [], currentSel = [];
-let userData = { mid: null, coins: null, isLogin: false }
-let totalDown = 0;
-let headers = {}, secret;
+let currentSel = [];
+let userData = { mid: null, coins: null, isLogin: false };
 
 let mediaData = [];
 let selectedMedia = [];
@@ -94,211 +88,13 @@ class CurrentSel {
     }
 }
 
-const verify = {
-    app: {
-        android_1: {
-            appkey: "1d8b6e7d45233436",
-            appsec: "560c52ccd288fed045859ed18bffd973"
-        }
-    },
-    wbi: async function(params) {
-        const mixinKeyEncTab = [
-            46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
-            33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
-            61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
-            36, 20, 34, 44, 52
-        ];
-        const getMixinKey = (orig) => {
-            return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
-        };
-        const res = (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
-        { headers })).data;
-        const { img_url, sub_url } = res.data.wbi_img;
-        const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
-        const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
-        const mixinKey = getMixinKey(imgKey + subKey);
-        const currTime = Math.round(Date.now() / 1000);
-        const chrFilter = /[!'()*]/g;
-        Object.assign(params, { wts: currTime });
-        const query = Object.keys(params).sort().map(key => {
-            const value = params[key].toString().replace(chrFilter, '');
-            return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-        }).join('&');
-        const wbiSign = md5(query + mixinKey);
-        return query + '&w_rid=' + wbiSign;
-    },
-    uuid: function() {
-        function a(e) {
-            let t = "";
-            for (let r = 0; r < e; r++) {
-                t += o(Math.random() * 16);
-            }
-            return s(t, e);
-        }
-        function s(e, t) {
-            let r = "";
-            if (e.length < t) {
-                for (let n = 0; n < t - e.length; n++) {
-                    r += "0";
-                }
-            }
-            return r + e;
-        }
-        function o(e) { return Math.ceil(e).toString(16).toUpperCase(); }
-        let e = a(8);
-        let t = a(4);
-        let r = a(4);
-        let n = a(4);
-        let i = a(12);
-        let currentTime = (new Date()).getTime();
-        return e + "-" + t + "-" + r + "-" + n + "-" + i + s((currentTime % 100000).toString(), 5) + "infoc";    
-    },
-    bili_ticket: async function() {
-        const key = "XgwSnGZ1p";
-        const message = "ts" + Math.floor(Date.now() / 1000);
-        const encoder = new TextEncoder();
-        const keyBytes = encoder.encode(key);
-        const messageBytes = encoder.encode(message);
-        const cryptoKey = await crypto.subtle.importKey(
-            "raw", keyBytes, 
-            { name: "HMAC", hash: "SHA-256" }, 
-            false, ["sign"]
-        );
-        const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageBytes);
-        const hexSignature =  Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
-        const params = new URLSearchParams({
-            key_id: "ec02",
-            hexsign: hexSignature,
-            "context[ts]": Math.floor(Date.now() / 1000),
-            csrf: ""
-        })
-        return (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
-        { method: 'POST' })).data;
-    },
-    correspondPath: async function(timestamp) {
-        const publicKey = await crypto.subtle.importKey(
-            "jwk", {
-              kty: "RSA",
-              n: "y4HdjgJHBlbaBN04VERG4qNBIFHP6a3GozCl75AihQloSWCXC5HDNgyinEnhaQ_4-gaMud_GF50elYXLlCToR9se9Z8z433U3KjM-3Yx7ptKkmQNAMggQwAVKgq3zYAoidNEWuxpkY_mAitTSRLnsJW-NCTa0bqBFF6Wm1MxgfE",
-              e: "AQAB",
-            }, { name: "RSA-OAEP", hash: "SHA-256" },
-            true,
-            ["encrypt"],
-        )
-        const data = new TextEncoder().encode(`refresh_${timestamp}`);
-        const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
-        return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
-    },
-    appSign: function(params, platform) {
-        params.appkey = platform.appkey;
-        const searchParams = new URLSearchParams(params);
-        searchParams.sort();
-        const sign = md5(searchParams.toString() + platform.appsec);
-        return searchParams.toString() + '&sign=' + sign;
-    }
-}
-
-const format = {
-    id: function(input) {
-        let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-        if (match) return [match[0], "video"];
-        match = input.match(/ep(\d+)|ss(\d+)/i);
-        if (match) return [match[0], "bangumi"]; 
-        match = input.match(/au(\d+)/i);
-        if (match) return [match[0], "audio"]; 
-        else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
-            iziToast.error({
-                icon: 'fa-regular fa-circle-exclamation',
-                layout: '2', title: `警告`,
-                message: !input ? "请输入链接/AV/BV/SS/EP/AU号" : "输入不合法！请检查格式"
-            });
-            return [input, null];
-        }
-    },
-    stat: function(num) {
-        if (num >= 100000000) {
-            return (num / 100000000).toFixed(1) + '亿';
-        } else if (num >= 10000) {
-            return (num / 10000).toFixed(1) + '万';
-        } else return num.toString();
-    },
-    duration: function(n, type) {
-        if (isNaN(parseFloat(n))) return n;
-        const num = parseFloat(type == "bangumi" ? Math.round(n / 1000) : n);
-        const hs = Math.floor(num / 3600);
-        const mins = Math.floor((num % 3600) / 60);
-        const secs = Math.round(num % 60);
-        const finalHs = hs > 0 ? hs.toString().padStart(2, '0') + ':' : '';
-        const finalMins = mins.toString().padStart(2, '0');
-        const finalSecs = secs.toString().padStart(2, '0');
-        return finalHs + finalMins + ':' + finalSecs;
-    },
-    partition: function(cid) {
-        switch(cid) {case 1:return'动画';case 24:return'动画';case 25:return'动画';case 47:return'动画';case 210:return'动画';case 86:return'动画';case 253:return'动画';case 27:return'动画';case 13:return'番剧';case 51:return'番剧';case 152:return'番剧';case 32:return'番剧';case 33:return'番剧';case 167:return'国创';case 153:return'国创';case 168:return'国创';case 169:return'国创';case 170:return'国创';case 195:return'国创';case 3:return'音乐';case 28:return'音乐';case 31:return'音乐';case 30:return'音乐';case 59:return'音乐';case 193:return'音乐';case 29:return'音乐';case 130:return'音乐';case 243:return'音乐';case 244:return'音乐';case 129:return'舞蹈';case 20:return'舞蹈';case 154:return'舞蹈';case 156:return'舞蹈';case 198:return'舞蹈';case 199:return'舞蹈';case 200:return'舞蹈';case 4:return'游戏';case 17:return'游戏';case 171:return'游戏';case 172:return'游戏';case 65:return'游戏';case 173:return'游戏';case 121:return'游戏';case 136:return'游戏';case 19:return'游戏';case 36:return'知识';case 201:return'知识';case 124:return'知识';case 228:return'知识';case 207:return'知识';case 208:return'知识';case 209:return'知识';case 229:return'知识';case 122:return'知识';case 188:return'科技';case 95:return'科技';case 230:return'科技';case 231:return'科技';case 232:return'科技';case 233:return'科技';case 234:return'运动';case 235:return'运动';case 249:return'运动';case 164:return'运动';case 236:return'运动';case 237:return'运动';case 238:return'运动';case 223:return'汽车';case 245:return'汽车';case 246:return'汽车';case 247:return'汽车';case 248:return'汽车';case 240:return'汽车';case 227:return'汽车';case 176:return'汽车';case 160:return'生活';case 138:return'生活';case 250:return'生活';case 251:return'生活';case 239:return'生活';case 161:return'生活';case 162:return'生活';case 21:return'生活';case 211:return'美食';case 76:return'美食';case 212:return'美食';case 213:return'美食';case 214:return'美食';case 215:return'美食';case 217:return'动物圈';case 218:return'动物圈';case 219:return'动物圈';case 220:return'动物圈';case 221:return'动物圈';case 222:return'动物圈';case 75:return'动物圈';case 119:return'鬼畜';case 22:return'鬼畜';case 26:return'鬼畜';case 126:return'鬼畜';case 216:return'鬼畜';case 127:return'鬼畜';case 155:return'时尚';case 157:return'时尚';case 252:return'时尚';case 158:return'时尚';case 159:return'时尚';case 202:return'资讯';case 203:return'资讯';case 204:return'资讯';case 205:return'资讯';case 206:return'资讯';case 5:return'娱乐';case 71:return'娱乐';case 241:return'娱乐';case 242:return'娱乐';case 137:return'娱乐';case 181:return'影视';case 182:return'影视';case 183:return'影视';case 85:return'影视';case 184:return'影视';case 177:return'纪录片';case 37:return'纪录片';case 178:return'纪录片';case 179:return'纪录片';case 180:return'纪录片';case 23:return'电影';case 147:return'电影';case 145:return'电影';case 146:return'电影';case 83:return'电影';case 11:return'电视剧';case 185:return'电视剧';case 187:return'电视剧';default:return'未知分区'}
-    },
-    pubdate: function(timestamp, f) {
-        const date = f ? timestamp : new Date(timestamp * 1000);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        const seconds = date.getSeconds();
-        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}${f?'_':' '}` + 
-        `${hours.toString().padStart(2, '0')}${f?'-':':'}${minutes.toString().padStart(2, '0')}${f?'-':':'}${seconds.toString().padStart(2, '0')}`;
-    },
-    filename: function(filename) {
-        return filename.replace(/[\\/:*?"<>|\r\n]+/g, '_');
-    },
-    codec: function(codec) {
-        const parts = codec.split('.');
-        const codecType = parts[0];
-        let profileDesc;
-        let levelDesc;
-        if (codecType === 'hev1' || codecType === 'hvc1') {
-            const profilePart = parts[1];
-            const levelPart = parts[3].slice(1);
-            if (profilePart == '1') profileDesc = 'Main';
-            else if (profilePart == '2') profileDesc = 'Main 10';
-            else if (profilePart == '3') profileDesc = 'Main Still Picture';
-            else profileDesc = 'Unknown';
-            const levelNumber = parseFloat(levelPart);
-            if (!isNaN(levelNumber)) {
-                levelDesc = `Level ${levelNumber / 30.0}`;
-            } else levelDesc = "Unknown Level";
-            return `HEVC/H.265 ${profileDesc} ${levelDesc}`;
-        } else if (codecType === 'avc' || codecType === 'avc1') {
-            const profileAndLevel = parts[1];
-            if (profileAndLevel.startsWith('42')) {
-                profileDesc = 'Baseline';
-            } else if (profileAndLevel.startsWith('4D')) {
-                profileDesc = 'Main';
-            } else if (profileAndLevel.startsWith('58')) {
-                profileDesc = 'Extended';
-            } else if (profileAndLevel.startsWith('64')) {
-                profileDesc = 'High';
-            } else profileDesc = 'Unknown';
-            const levelPart = profileAndLevel.substring(2);
-            const levelNumber = parseInt(levelPart, 16);
-            if (!isNaN(levelNumber)) {
-                levelDesc = `Level ${levelNumber / 10.0}`;
-            } else levelDesc = "Unknown Level";
-            return `AVC/H.264 ${profileDesc} ${levelDesc}`;
-        } else if (codecType === 'av01') {
-            profileDesc = parts[2];
-            return `AV1 ${profileDesc}`;
-        }
-        return '未知编码格式';    
-    }
-}
-
 function debounce(fn, wait) {
     let bouncing = false;
     return function(...args) {
         if (bouncing) {
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',
-                layout: '2', title: '警告',
+                layout: 2, title: '警告',
                 message: `请等待${wait / 1000}秒后再进行请求`
             });
             return null;
@@ -309,18 +105,6 @@ function debounce(fn, wait) {
         }, wait);
         fn.apply(this, args);
     };
-}
-
-async function openFile(options = {}) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const selected = await dialog.open(options);
-            resolve(selected);
-        } catch (err) {
-            console.error(err)
-            reject(null);
-        }
-    });
 }
 
 async function saveFile(options = {}) {
@@ -347,7 +131,7 @@ async function getMediaInfo(rawId, type) {
         basicUrl = `https://www.bilibili.com/audio/music-service-c/web/song/info?sid=${id.match(/\d+/)[0]}`;
     }
     loadingBox.addClass('active');
-    const basicResp = (await http.fetch(basicUrl, { headers })).data;
+    const basicResp = (await http.fetch(basicUrl, { headers: data.headers })).data;
     loadingBox.removeClass('active');
     if (basicResp.code === 0) {
         if (type == "video") {
@@ -359,14 +143,14 @@ async function getMediaInfo(rawId, type) {
         } else if (type == "audio") {
             info = basicResp.data;
             tags = (await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`,
-            { headers })).data.data.map(item => item.info);
+            { headers: data.headers })).data.data.map(item => item.info);
         }
         handleMediaList({ info, tags }, type);
         return basicResp;
     } else {
         if (basicResp.code == -404 && type == "bangumi") {
             basicUrl = `https://api.bilibili.com/pugv/view/web/season?${id.startsWith('ep') ? 'ep_id' : 'season_id'}=${id.match(/\d+/)[0]}`;
-            const lssnResp = (await http.fetch(basicUrl, { headers })).data;
+            const lssnResp = (await http.fetch(basicUrl, { headers: data.headers })).data;
             if (lssnResp.code === 0) {
                 handleMediaList({ info: lssnResp.data }, "lesson");
                 return lssnResp;
@@ -378,7 +162,7 @@ async function getMediaInfo(rawId, type) {
     }
 }
 
-async function getPlayUrl(data,) {
+async function getPlayUrl(data) {
     const params = {
         avid: data.id, cid: data.cid, fourk: 1,
         fnval: 4048, fnver: 0
@@ -387,9 +171,9 @@ async function getPlayUrl(data,) {
     const key = data.type == "bangumi" ? "pgc/player/web" : (data.type == "lesson" ? "pugv/player/web" : "x/player/wbi");
     loadingBox.addClass('active');
     const details = (await http.fetch(`https://api.bilibili.com/${key}/playurl?${signature}${data.type == "lesson" ? `&ep_id=${data.eid}` : ""}`,
-    { headers })).data;
+    { headers: data.headers })).data;
     loadingBox.removeClass('active');
-    handleErr(details, data.type);
+    if(handleErr(details, data.type)) return null;
     return details;
 }
 
@@ -401,7 +185,7 @@ async function getMusicUrl(songid, quality) {
     const signature = await verify.wbi(params);
     loadingBox.addClass('active');
     const details = (await http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${signature}`,
-    { headers })).data;
+    { headers: data.headers })).data;
     loadingBox.removeClass('active');
     if (handleErr(details, "music")) return null;
     else return details;
@@ -455,11 +239,10 @@ function handleDown(isV, downUrl, quality, action, data) {
             displayName = `${safeTitle} (${quality}).${ext}`;
         }
         data.display_name = displayName;
-        totalDown++;
         return invoke('push_back_queue', {
             videoUrl: downUrl[0] || null,
             audioUrl: downUrl[1] || null,
-            action, indexId: totalDown, mediaData: data
+            action, mediaData: data
         });
     } else emit('error', "未找到符合条件的下载地址＞﹏＜");
 }
@@ -475,16 +258,12 @@ function handleErr(err, type) {
         } else if (root.v_voucher) errMsg = '目前请求次数过多, 已被风控, 请等待5分钟或更久后重新尝试请求';
     } else if (err.code === -404) {
         errMsg = `${err.message || err.msg}<br>错误代码: ${err.code}<br>可能是没有大会员/没有购买本片<br>或是地区受限<br>或是真的没有该资源`;
-    } else {
-        errMsg = `${err.message || err.msg || err}<br>错误代码: ${err.code}`;
-    }
+    } else errMsg = `${err.message || err.msg || err}<br>错误代码: ${err.code}`;
     if (errMsg) {
-        console.error(err, errMsg);
+        console.error(err);
         emit('error', errMsg);
-        return true;
-    } else {
-        return false;
     }
+    return errMsg;
 }
 
 async function bilibili(ts) {
@@ -503,7 +282,7 @@ async function bilibili(ts) {
         } else {
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',
-                layout: '2', title: `警告`,
+                layout: 2, title: `警告`,
                 message: `请先点击搜索按钮或返回到搜索结果页面`
             });
         }
@@ -587,8 +366,8 @@ function contextMenu() {
 $(document).ready(function () {
     contextMenu();
     invoke('ready').then(e => {
-        secret = e;
-        invoke('init', { secret });
+        data.set.secret(e);
+        invoke('init', { secret: data.secret });
     });
     app.getVersion().then(ver => $('#version').html(ver));
     os.platform().then(type => $('#platform').html(type));
@@ -606,28 +385,14 @@ $(document).ready(function () {
     };
     const dbc = debounce(search, 250);
     $('.search-btn').on('click', dbc);
-    searchInput.on('keydown', (e) => {if (e.keyCode === 13) dbc()});
-    sidebar.downPage.one('click', () => downPage());
-    sidebar.downPage.on('click', () => {
-        currentElm.push(".down-page");
-        $('.down-page').addClass('active');
-        $('.down-page-sel').first().click();
-    });
-    sidebar.settings.one('click', () => settings());
-    sidebar.settings.on('click', () => {
-        $('.settings').addClass('active');
-        currentElm.push('.settings');    
-        $('.settings-side-bar-background.general').click();
-    });
+    searchInput.on('keydown', (e) => {if (e.key == "Enter") dbc()});
     $('.backward').on('click', () => backward());
     $(".login, .settings, .down-page, .user-profile").append(`<button class="help link"t="https://blog.btjawa.top/posts/bilitools/#qa"><span>遇到问题?&nbsp;前往文档</span>&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></button>`);
     $('.link').on('click', function() {shell.open($(this).attr("t"))});
     $(document).on('keydown', async function(e) {
-        if (e.keyCode === 116 || (e.ctrlKey && e.keyCode === 82) || (e.ctrlKey && e.shiftKey && e.keyCode === 80)) {
-            e.preventDefault();
-        }
-        if (e.keyCode === 27) backward();
-        if (e.ctrlKey && e.keyCode === 65) {
+        if (e.key == "F5" || (e.ctrlKey && e.key == "p") || (e.ctrlKey && e.key == "r")) e.preventDefault();
+        if (e.key == "Escape") backward();
+        if (e.ctrlKey && e.key == "a") {
             if (multiSelectBtn.hasClass('checked') && !(document.activeElement &&
             (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA'))) {
                 e.preventDefault();
@@ -639,21 +404,6 @@ $(document).ready(function () {
         }
     })
 });
-
-async function checkRefresh() {
-    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
-    { headers })).data;
-    const { refresh, timestamp } = response.data;
-    if (refresh) {
-        const correspondPath = await verify.correspondPath(timestamp);
-        const csrfHtmlResp = await http.fetch(`https://www.bilibili.com/correspond/1/${correspondPath}`,
-        { headers, responseType: http.ResponseType.Text });
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(csrfHtmlResp.data, 'text/html');
-        const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
-        invoke("refresh_cookie", { refreshCsrf });
-    } else return refresh;
-}
 
 function ShowMediaInfo(details, type) {
     const isV = (type == "video" || type == "ugc_season");
@@ -733,7 +483,7 @@ function handleMediaList(details, type) {
                 if (root.rights.is_stein_gate) {
                     loadingBox.addClass('active');
                     http.fetch(`https://api.bilibili.com/x/player.so?id=cid:1&aid=${encodeURIComponent(root.aid)}`,
-                    { headers, responseType: http.ResponseType.Text }).then(async player => {
+                    { headers: data.headers, responseType: http.ResponseType.Text }).then(async player => {
                         const match = player.data.match(/<interaction>(.*?)<\/interaction>/);
                         const graph_version = JSON.parse(match[1]).graph_version;
                         appendSteinNode(root, graph_version, 1, type);
@@ -820,7 +570,7 @@ function handleMultiSelect() {
         if (selectedMedia.length > 50 || selectedMedia.length < 1) {
             iziToast.error({
                 icon: 'fa-regular fa-circle-exclamation',
-                layout: '2', title: `警告`,
+                layout: 2, title: `警告`,
                 message: selectedMedia.length < 1 ?
                 "请至少选择一个视频" : 
                 "单次最多只能下载50个视频, 超出将很大可能触发风控"
@@ -848,7 +598,7 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
     });
     loadingBox.addClass('active');
     const response = (await http.fetch(`https://api.bilibili.com/x/stein/edgeinfo_v2?${params.toString()}`,
-    { headers })).data;
+    { headers: data.headers })).data;
     loadingBox.removeClass('active');
     videoList.find('.stein-option, .video-block, .video-block-only, .video-block-multi')
     .removeClass('active').remove().end().addClass('active');
@@ -906,7 +656,7 @@ async function initActionBlock(action, block, data) {
     if (multiSelectBtn.hasClass('checked')) {
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
-            layout: '2', title: `警告`,
+            layout: 2, title: `警告`,
             message: "多选状态下请点击右下角 “确认/结算” 结算"
         });
         return null;    
@@ -915,7 +665,7 @@ async function initActionBlock(action, block, data) {
     loadingBox.addClass('active');
     const details = await getPlayUrl(data);
     loadingBox.removeClass('active');
-    if (details.code !== 0) {
+    if (!details || details.code !== 0) {
         videoBlockAction.remove();
         return null;
     }
@@ -1023,7 +773,7 @@ async function appendDownPageBlock(info, target, action) { // 填充下载块
             invoke('open_select', { path: info.output_path });
         } else iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
-            layout: '2', title: `下载`,
+            layout: 2, title: `下载`,
             message: `请等待下载完毕`
         });
     });
@@ -1052,7 +802,7 @@ function appendMoreList(data, block) { // 填充更多解析
                 protobuf.load('../proto/dm.proto', async function(err, root) {
                     const DmSegMobileReply = root.lookupType("bilibili.community.service.dm.v1.DmSegMobileReply");
                     loadingBox.addClass('active');
-                    const response = await http.fetch(url,{ headers, responseType: http.ResponseType.Binary });
+                    const response = await http.fetch(url,{ headers: data.headers, responseType: http.ResponseType.Binary });
                     loadingBox.removeClass('active');
                     const message = DmSegMobileReply.decode(new Uint8Array(response.data));
                     resolve(message.elems)
@@ -1067,7 +817,7 @@ function appendMoreList(data, block) { // 填充更多解析
         if (!userData.isLogin) {
             iziToast.error({
                 icon: 'fa-solid fa-circle-info',
-                layout: '2', title: '解析',
+                layout: 2, title: '解析',
                 message: '该模块需要登录',
             });
             return true;
@@ -1081,7 +831,7 @@ function appendMoreList(data, block) { // 填充更多解析
         })
         iziToast.info({
             icon: 'fa-solid fa-circle-info',
-            layout: '2', title: '弹幕',
+            layout: 2, title: '弹幕',
             message: 'JSON保存成功~',
         });
         return null;
@@ -1091,7 +841,7 @@ function appendMoreList(data, block) { // 填充更多解析
             type: 1, oid: data.cid, month
         });
         loadingBox.addClass('active');
-        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers })).data;
+        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers: data.headers })).data;
         loadingBox.removeClass('active');
         dms.find('.history-date-cont').remove();
         const dateCont = $('<div>').addClass('history-date-cont active');
@@ -1137,7 +887,7 @@ function appendMoreList(data, block) { // 填充更多解析
                         defaultPath: date + '_' + format.filename(data.title)
                     });
                     if (selected) {
-                        invoke('save_file', { content, path: selected, secret });
+                        invoke('save_file', { content, path: selected, secret: data.secret });
                         saved();
                     }
                 })
@@ -1163,7 +913,7 @@ function appendMoreList(data, block) { // 填充更多解析
         });
         const signature = await verify.wbi(params);
         loadingBox.addClass('active');
-        const response = await http.fetch(`https://api.bilibili.com/x/web-interface/view/conclusion/get?${signature}`, { headers });
+        const response = await http.fetch(`https://api.bilibili.com/x/web-interface/view/conclusion/get?${signature}`, { headers: data.headers });
         loadingBox.removeClass('active');
         const root = response.data;
         if (root.data.code !== 0) {
@@ -1317,11 +1067,11 @@ function appendAudioList(details, type, action, ms, block) { // 填充音频
 }
 
 async function userProfile() {
-    if (!userData.isLogin) { login(); return null; }
+    if (!userData.isLogin) { handleLogin(); return null; }
     currentElm.push(".user-profile");
     $('.user-profile').addClass('active');
     const detailData = await http.fetch(`https://api.bilibili.com/x/web-interface/card?mid=${userData.mid}&photo=true`,
-    { headers });
+    { headers: data.headers });
     if (detailData.ok) {
         const details = detailData.data;
         $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:") + '@200h');
@@ -1348,22 +1098,8 @@ async function userProfile() {
 }
 
 async function scanLogin() {
-    emit('stop_login');
+    login.scanLogin($('#login-qrcode'));
     $('.login-qrcode-tips').removeClass('active');
-    $('.login-scan-loading').addClass('active');
-    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', { headers })).data;
-    $('.login-scan-loading').removeClass('active');
-    const { qrcode_key, url } = response.data;
-    $('#login-qrcode').empty();
-    QRCode.toCanvas($('#login-qrcode')[0], url, {
-        width: 180, height: 180,
-        margin: 0, errorCorrectionLevel: 'H',
-        color: {
-            dark: "#c4c4c4",
-            light: "#3b3b3b9b"
-        }
-    });
-    $('#login-qrcode').removeAttr("title");
     $('.login-qrcode-box').off('mouseenter').on('mouseenter', function() {
         if (!$('.login-qrcode-tips').hasClass('active')) {
             $('.login-scan-tips').css('opacity', '1');
@@ -1376,14 +1112,6 @@ async function scanLogin() {
             $(this).css('opacity', '1');
         }
     });
-    try {
-        await invoke('scan_login', {qrcodeKey: qrcode_key});
-    } catch(err) {
-        $('.login-qrcode-box').off('click').on('click', () => {
-            scanLogin();
-            return null;
-        });
-    }
 }
 
 async function pwdLogin() {
@@ -1400,106 +1128,57 @@ async function pwdLogin() {
         try {
             const username = $('#username-input').val().toString();
             const password = $('#password-input').val().toString();
-            if (!username || !password) throw new Error('请输入账号与密码');
-            const rsaKeys = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/key', { headers })).data;
-            const { hash, key } = rsaKeys.data;
-            const enc = new JSEncrypt();
-            enc.setPublicKey(key);
-            const encedPwd = enc.encrypt(hash + password);
+            if (!username || !password) throw '请输入账号与密码'
             loadingBox.addClass('active');
-            const {token, challenge, validate, seccode} = await captcha();
-            await invoke('pwd_login', { username, password: encedPwd, token, challenge, validate, seccode });
+            await login.pwdLogin(username, password);
             loadingBox.removeClass('active');
-        } catch(err) {
-            console.error(err);
-            iziToast.error({
-                icon: 'fa-solid fa-circle-info',
-                layout: '2', title: '登录',
-                message: err
-            });
-        }
+        } catch(err) { emit("error", err); loadingBox.removeClass('active'); }
     });
     pwdInput.off('keydown').on('keydown', (e) => {
-        if (e.keyCode === 13) loginBtn.click();
+        if (e.key == "Enter") loginBtn.click();
     });
 }
 
 async function smsLogin() {
-    const prefix = (await http.fetch('https://api.bilibili.com/x/web-interface/zone', { headers })).data.data.country_code || 86;
-    const areaCodes = (await http.fetch('https://passport.bilibili.com/web/generic/country/list')).data;
-    const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
-    allCodes.sort((a, b) => a.id - b.id);
-    const codeList = $('.login-sms-area-code-list');
-    allCodes.forEach(code => {
-        const codeElement = $('<div>').addClass('login-sms-item-code-item checked')
-            .html(`<span style="float:left">${code.cname}</span>
-            <span style="float:right">+${code.country_id}</span>`);
-        codeList.append(codeElement);
-        codeElement.on('click', () => {
-            codeList.prev().find('.login-sms-item-text').html(codeElement.find('span').last().text()
-            + '&nbsp;<i class="fa-solid fa-chevron-down"></i>');
-            codeList.find('.login-sms-item-code-item').removeClass('checked');
-            codeList.removeClass('active');
-        });
-        if (code.country_id == prefix) codeElement.click();
+    login.codeList();
+    let key, canSend = true;
+    $('.login-sms-getcode-btn').off('click').on('click', async function() {
+        if (!canSend) return null;
+        const tel = $('#tel-input').val().toString();
+        if (!tel) { emit("error", "请输入手机号"); return null; }
+        else if ((tel.match(/^1[3456789]\d{9}$/) && $('.login-sms-item-text').text().includes('+86'))
+        || (!$('.login-sms-item-text').text().includes('+86') && tel)) { try {
+            loadingBox.addClass('active');
+            const response = await login.sendSms(tel, $('.login-sms-item-text').text().replace(/[^0-9]/g, ''))
+            loadingBox.removeClass('active');
+            if (response.code !== 0) { emit("error", response.message); return null; }
+            key = response.data.captcha_key;
+            let timeout = 60;
+            canSend = false;
+            $('.login-sms-getcode-btn').text(`重新发送(${timeout})`).addClass("disabled");
+            const timer = setInterval(() => {
+                $('.login-sms-getcode-btn').text(`重新发送(${--timeout})`);
+                if (timeout === 0) {
+                    clearInterval(timer);
+                    $('.login-sms-getcode-btn').text('重新发送').removeClass("disabled");
+                    canSend = true;
+                }
+            }, 1000);
+        } catch(err) { emit("error", err); loadingBox.removeClass('active'); } }
     });
-    codeList.prev().find('.login-sms-item-text').on('click', (e) => {
-        codeList.addClass('active');
-        e.stopPropagation();
-    });
-    $(document).off('click').on('click', (e) => {
-        if (!$(e.target).closest(".login-sms-area-code-list").length) codeList.removeClass('active');
-    });
-    function handleMsg(msg) { iziToast.info({
-        icon: 'fa-solid fa-circle-info',
-        layout: '2', title: '登录',
-        message: msg })}
-    try {
-        let key, canSend = true;
-        $('.login-sms-getcode-btn').off('click').on('click', async function() {
-            if (!canSend) return null;
-            const tel = $('#tel-input').val().toString();
-            if (!tel) { handleMsg("请输入手机号"); return null;}
-            else if ((tel.match(/^1[3456789]\d{9}$/) && $('.login-sms-item-text').text().includes('+86'))
-            || (!$('.login-sms-item-text').text().includes('+86') && tel)) {
-                const {token, challenge, validate, seccode} = await captcha();
-                const params = new URLSearchParams({
-                    cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, ''),
-                    tel, source: 'main-fe-header', token,
-                    challenge, validate, seccode
-                });
-                const response = (await http.fetch(`https://passport.bilibili.com/x/passport-login/web/sms/send?${params.toString()}`,
-                { headers, method: 'POST' })).data;
-                if (response.code !== 0) { handleMsg(response.message); return null; }
-                canSend = false;
-                key = response.data.captcha_key;
-                let timeout = 60;
-                $('.login-sms-getcode-btn').text(`重新发送(${timeout})`).addClass("disabled");
-                const timer = setInterval(() => {
-                    $('.login-sms-getcode-btn').text(`重新发送(${--timeout})`);
-                    if (timeout === 0) {
-                        clearInterval(timer);
-                        $('.login-sms-getcode-btn').text('重新发送').removeClass("disabled");
-                        canSend = true;
-                    }
-                }, 1000);
-            }
-        });
-        $('.login-sms-login-btn').off('click').on('click', async function() {
+    $('.login-sms-login-btn').off('click').on('click', async function() {
+        try {
             const tel = $('#tel-input').val().toString();
             const code = $('#sms-input').val().toString();
-            if (!tel || !code || !key) handleMsg(!tel || !code ? "请输入手机号与验证码" : "请先获取验证码")
+            if (!tel || !code || !key) { emit("error", !tel || !code ? "请输入手机号与验证码" : "请先获取短信验证码"); return null; }
             loadingBox.addClass('active');
-            await invoke('sms_login', { tel, code, key, cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, '') });
+            await invoke('sms_login', { tel, code, key, cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, '') })
             loadingBox.removeClass('active');
-        });
-    } catch(err) {
-        emit("error", err);
-        console.error(err);
-    }
+        } catch(err) { emit("error", err); loadingBox.removeClass('active'); }
+    });
 }
 
-async function login() {
+async function handleLogin() {
     if (userData.isLogin) return null;
     currentElm.push(".login");
     $('.login').addClass('active');
@@ -1517,90 +1196,12 @@ async function login() {
     smsLogin();
 }
 
-async function captcha() {
-    return new Promise(async resolve => {
-        const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header', { headers })).data;
-        const { token, geetest: { challenge, gt } } = response.data;
-        // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
-        await initGeetest({
-            gt: gt,
-            challenge: challenge,
-            offline: false,
-            new_captcha: true,
-            product: "bind",
-            width: "300px",
-            https: true
-        }, function (captchaObj) {
-            captchaObj.onReady(function () {
-                captchaObj.verify();
-            }).onSuccess(function () {
-                const result = captchaObj.getValidate();
-                const validate = result.geetest_validate;
-                const seccode = result.geetest_seccode;
-                return resolve({token, challenge, validate, seccode});
-            })
-        });
-    })
-        
-}
-
-function downPage() {
-    const sel = $('.down-page-sel');
-    sel.on('click', (event) => {
-        const target = $(event.target).closest('.down-page-sel');
-        const type = target.attr('class').split(/\s+/)[1];
-        sel.removeClass('active');
-        $('.down-page-child').removeClass('active');
-        target.addClass('active');
-        $(`.down-page-child.${type}`).addClass('active');
-    });
-}
-
-function settings() {
-    async function handleSave(set, input) {
-        if (input) {
-            const selected = await openFile({ directory: true });
-            if (selected) {
-                input.val(selected)
-                iziToast.info({
-                    icon: 'fa-solid fa-circle-info',
-                    layout: '2', title: '设置',
-                    message: `已保存设置 - ${set}`,
-                });
-            };
-        }
-        invoke('rw_config', {action: "save", sets: {
-            max_conc: parseInt($('.settings-page-options input[name="max-conc"]:checked').attr('id').replace(/[^\d]/g, "")),
-            default_dms: 0,
-            default_ads: 0,    
-            temp_dir: tempDirPath.val(),
-            down_dir: downDirPath.val()
-        }, secret});
-    }
-    $('.settings-side-bar-background').on('click', (event) => {
-        const target = $(event.target).closest('.settings-side-bar-background');
-        const type = target.attr('class').split(/\s+/)[1];
-        $('.settings-side-bar-background').removeClass('checked');
-        $('.settings-page').removeClass('active');
-        target.addClass('checked');
-        $(`.settings-page.${type}`).addClass('active');
-        if (type === "_info") {
-            const svg = $('.settings-page._info').find('svg').css('display', 'none');
-            setTimeout(() => svg.append(svg.find('style').detach()).css('display', 'block'), 1);
-        } else if (type == "general") invoke('handle_temp', { action: "calc" }).then(size => $('#temp-dir-size').html(size));
-    });
-    $('.settings-page-options input[name="max-conc"]').on('click', () => handleSave("最大并发下载数"));
-    $('#down-dir-path-openbtn').on('click', () => handleSave("存储路径", downDirPath));
-    $('#temp-dir-path-openbtn').on('click', () => handleSave("临时文件存储路径", tempDirPath));
-    $('#temp-dir-clearbtn').on('click', () => invoke('handle_temp', { action: "clear" }).then(size => $('#temp-dir-size').html(size)));
-    $('#aria2c-restart-btn').on('click', async () => await invoke('handle_aria2c', { action: "restart" }));
-}
-
-async function getUserProfile(mid) {
+listen("user-mid", async function(e) {
+    const mid = e.payload;
     sidebar.userProfile.attr('data-after', mid=="0" ? "登录" : '主页');
     invoke('insert_cookie', { cookieStr: `_uuid=${verify.uuid()}; Path=/; Domain=bilibili.com` });
     const signature = await verify.wbi({ mid });
-    const details = (await http.fetch(`https://api.bilibili.com/x/space/wbi/acc/info?${signature}`, { headers })).data;
+    const details = (await http.fetch(`https://api.bilibili.com/x/space/wbi/acc/info?${signature}`, { headers: data.headers })).data;
     userData = { mid, coins: null, isLogin: false };
     if (currentElm.at(-1) == ".login" || currentElm.at(-1) == ".user-profile") {
         backward();
@@ -1616,42 +1217,32 @@ async function getUserProfile(mid) {
         userData = { mid, coins: details.data.coins, isLogin: true };
         iziToast.info({
             icon: 'fa-solid fa-circle-info',
-            layout: '2',
+            layout: 2,
             title: '登录',
             message: `登录成功~`,
         });
         invoke('insert_cookie', { cookieStr: `bili_ticket=${(await verify.bili_ticket()).data.ticket}; Path=/; Domain=bilibili.com` });
-        checkRefresh();
+        verify.checkRefresh();
     }
-}
-
-once("settings", async (e) => {
-    const p = e.payload;
-    downDirPath.val(p.down_dir);
-    tempDirPath.val(p.temp_dir);
-    $(`#max-conc-${p.max_conc}`).click();
 });
 
-listen("user-mid", (e) => getUserProfile(e.payload));
+listen("headers", (e) => data.set.headers(e.payload));
 
-listen("headers", (e) => headers = e.payload);
-
-listen("login-status", async (event) => {
-    if (event.payload == 86090) {
+listen("login-status", async (e) => {
+    if (e.payload == 86090 || e.payload == 86038) {
+        const ex = e.payload == 86038;
         $('.login-qrcode-tips').addClass('active')
-        .html(`<i class="fa-solid fa-check"></i>
-        <span>扫码成功</span>
-        <span>请在手机上确认</span>`);
-    } else if (event.payload == 86038) {
-        $('.login-qrcode-tips').addClass('active')
-        .html(`<i class="fa-solid fa-rotate-right"></i>
-        <span>二维码已过期</span>
-        <span>请点击刷新</span>`);
+        .html(ex ? `<i class="fa-solid fa-rotate-right"></i><span>二维码已过期</span><span>请点击刷新</span>`
+        : `<i class="fa-solid fa-check"></i><span>扫码成功</span><span>请在手机上确认</span>`);
+        $('.login-qrcode-box').off('click').on('click', () => {
+            if (ex) scanLogin();
+            $('.login-qrcode-box').off('click');
+        });
     }
-})
+});
 
-listen("download-queue", async (event) => {
-    const p = event.payload;
+listen("download-queue", async (e) => {
+    const p = e.payload;
     $('.down-page-info').remove();
     p.waiting.forEach(info => appendDownPageBlock(info, waitingList, "waiting"));
     p.doing.forEach(info => appendDownPageBlock(info, doingList, "doing"));
@@ -1666,8 +1257,8 @@ listen("download-queue", async (event) => {
     });
 });
 
-listen("progress", async (event) => {
-    const p = event.payload;
+listen("progress", async (e) => {
+    const p = e.payload;
     doingList.children().each(function() {
         const block = $(this);
         if (block.attr('vgid') === p.gid.vgid && block.attr('agid') === p.gid.agid) {
@@ -1683,11 +1274,12 @@ listen("progress", async (event) => {
     });
 });
 
-listen("error", async (event) => {
+listen("error", async (e) => {
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
-        layout: '2', title: '错误',
+        layout: 2, title: '错误',
         timeout: 10000,
-        message: `遇到错误：${event.payload}`,
+        message: `遇到错误：${e.payload}`,
     });
+    console.error(e.payload);
 })

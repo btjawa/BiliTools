@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import dynamicImport from 'vite-plugin-dynamic-import';
 import viteCompression from 'vite-plugin-compression';
-import removeConsole from "vite-plugin-remove-console";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -22,7 +21,6 @@ export default defineConfig(async () => ({
   },
   plugins: [
     dynamicImport(),
-    viteCompression(),
-    removeConsole()
+    viteCompression()
   ]
 }));

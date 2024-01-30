@@ -1036,7 +1036,7 @@ async fn init(window: tWindow, secret: String) -> Result<i64, String> {
     if secret != *SECRET.read().await { return Err("403 Forbidden".to_string()) }
     rw_config(window.clone(), "read".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
     init_database(window.clone()).await.unwrap();
-    handle_aria2c(window.clone(), "init".to_string()).await.unwrap();
+    handle_aria2c(window.clone(), "restart".to_string()).await.unwrap();
     update_queue(&window, "init", None).await;
     get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
     let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);

@@ -6,7 +6,7 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "updater": "node scripts/updater.mjs",
     "release": "node scripts/release.mjs"
@@ -34,10 +34,13 @@
   "devDependencies": {
     "@actions/github": "^6.0.0",
     "@tauri-apps/cli": "^1.5.8",
+    "@types/jquery": "^3.5.29",
+    "@types/md5": "^2.3.5",
+    "@types/qrcode": "^1.5.5",
     "node-fetch": "^3.3.2",
+    "typescript": "^5.3.3",
     "vite": "^5.0.12",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-dynamic-import": "^1.5.0",
-    "vite-plugin-remove-console": "^2.2.0"
+    "vite-plugin-dynamic-import": "^1.5.0"
   }
 }

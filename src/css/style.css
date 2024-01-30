@@ -1455,6 +1455,7 @@ button:hover { background-color: #3b3b3b; }
     white-space: nowrap;
     min-width: 82px;
     text-align: center;
+    cursor: pointer;
 }
 
 .login-sms-getcode-btn.disabled {
