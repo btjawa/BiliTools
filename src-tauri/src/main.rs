@@ -7,12 +7,13 @@ use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
 use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant, net::{TcpListener, SocketAddr},
-process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt};
-use tokio::{fs::File, sync::{Mutex, RwLock}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
+process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt, panic};
+use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use rusqlite::{Connection, params};
 use regex::Regex;
 use tauri::{Manager, Window as tWindow, WindowEvent};
 use rand::{distributions::Alphanumeric, Rng};
+use walkdir::WalkDir;
 mod logger;
 
 lazy_static! {
@@ -27,18 +28,19 @@ lazy_static! {
     static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::var("TEMP").unwrap())));
     static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
-    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<usize>> = Arc::new(RwLock::new(3));
+    static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<i64>> = Arc::new(RwLock::new(3));
     static ref ARIA2C_PORT: Arc<RwLock<usize>> = Arc::new(RwLock::new(0));
-    static ref ARIA2C_PROCESS: std::sync::Mutex<Option<Child>> = std::sync::Mutex::new(None);
+    static ref ARIA2C_MANAGER: Arc<Mutex<Aria2cManager>> = Arc::new(Mutex::new(Aria2cManager::new()));
     static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref DOING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref COMPLETE_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
+    static ref DOWNLOAD_COMPLETED_NOTIFY: Notify = Notify::new();
 }
 
 fn handle_err<E: std::fmt::Display>(window: tWindow, e: E) -> String {
-    log::warn!("{}", e);
+    log::error!("{}", e);
     window.emit("error", e.to_string()).unwrap(); e.to_string()
 }
 
@@ -59,49 +61,10 @@ async fn init_database(window: tWindow) -> Result<(), String> {
                 expires TEXT
             )",
             params![],
-        ).map_err(|e| handle_err(window.clone(), e)).unwrap();
+        ).map_err(|e| handle_err(window.clone(), e))?;
     }
     window.emit("headers", headers_to_json(init_headers())).unwrap();
     Ok(())
-}
-
-#[tauri::command]
-#[async_recursion::async_recursion]
-async fn handle_aria2c(window: tWindow, action: String) -> Result<(), String> {
-    match action.as_str() {
-        "init" => {
-            let start_port = 6800;
-            let end_port = 65535;
-            let port = (start_port..end_port)
-                .find_map(|port| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).ok())
-                .ok_or("No free port found".to_string())?.local_addr().unwrap().port();
-            *ARIA2C_PORT.write().await = port as usize;
-            let current_dir = env::current_dir().map_err(|e| e.to_string())?
-                .join("aria2c");
-            let child = Command::new(current_dir.join("aria2c.exe").clone())
-                .creation_flags(0x08000000)
-                .current_dir(current_dir.clone())
-                .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
-                .arg(format!("--rpc-listen-port={}", port))
-                .arg(format!("--rpc-secret={}", SECRET.read().await.clone()))
-                .arg(format!("--max-concurrent-downloads={}", MAX_CONCURRENT_DOWNLOADS.read().await))
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn().unwrap();
-            *ARIA2C_PROCESS.lock().unwrap() = Some(child);
-            return Ok(());
-        },
-        "kill" => {
-            if let Some(ref mut p) = *ARIA2C_PROCESS.lock().unwrap() { p.kill().unwrap(); }
-            return Ok(());
-        },
-        "restart" => {
-            handle_aria2c(window.clone(), "kill".to_string()).await?;
-            handle_aria2c(window.clone(), "init".to_string()).await?;
-            return Ok(());
-        }
-        _ => Err(action)
-    }
 }
 
 fn load_cookies() -> rusqlite::Result<HashMap<String, CookieInfo>> {
@@ -168,6 +131,42 @@ fn extract_filename(url: &str) -> String {
         .unwrap_or_else(|| "default_filename".to_string())
 }
 
+struct Aria2cManager {
+    child: Option<Child>,
+}
+
+impl Aria2cManager {
+    pub fn new() -> Self { Aria2cManager { child: None } }
+    pub async fn init(&mut self) -> Result<(), String> {
+        let start_port = 6800;
+        let end_port = 65535;
+        let port = (start_port..end_port)
+            .find_map(|port| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).ok())
+            .ok_or("No free port found".to_string())?.local_addr().unwrap().port();
+        *ARIA2C_PORT.write().await = port as usize;
+        let current_dir = env::current_dir().map_err(|e| e.to_string())?
+            .join("aria2c");
+        let child = Command::new(current_dir.join("aria2c.exe").clone())
+            .creation_flags(0x08000000)
+            .current_dir(current_dir.clone())
+            .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
+            .arg(format!("--rpc-listen-port={}", port))
+            .arg(format!("--rpc-secret={}", SECRET.read().await.clone()))
+            .arg(format!("--max-concurrent-downloads={}", MAX_CONCURRENT_DOWNLOADS.read().await))
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn().map_err(|e| e.to_string())?;
+        self.child = Some(child);
+        Ok(())
+    }
+    pub fn kill(&mut self) -> Result<(), String> {
+        if let Some(ref mut sc) = self.child {
+            sc.kill().map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone)]
 struct CookieInfo {
     name: String,
@@ -198,11 +197,9 @@ struct DownloadTask {
     file_type: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct Settings {
     max_conc: i64,
-    default_dms: i64,
-    default_ads: i64,
     temp_dir: String,
     down_dir: String
 }
@@ -232,7 +229,7 @@ async fn get_buvid(window: tWindow) -> Result<String, String> {
         }
         return Ok("成功获取buvid".to_string());
     } else {
-        log::warn!("{}, {}", buvid4_resp_data["code"], buvid4_resp_data["message"]);
+        log::error!("{}, {}", buvid4_resp_data["code"], buvid4_resp_data["message"]);
         return Err(format!("{}, {}", buvid4_resp_data["code"], buvid4_resp_data["message"]).to_string())
     }
 }
@@ -240,16 +237,15 @@ async fn get_buvid(window: tWindow) -> Result<String, String> {
 #[tauri::command]
 async fn push_back_queue(
     window: tWindow, video_url: Option<Vec<String>>, audio_url: Option<Vec<String>>,
-    action: String, media_data: Value
+    action: String, media_data: Value, date: String
 ) -> Result<Value, String> {
     let mut tasks = vec![];
     let client = init_client();
     let ss_dir = &media_data.get("ss_title").unwrap().as_str().unwrap().to_string();
     let display_name = media_data.get("display_name").unwrap().as_str().unwrap().to_string();
     for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
-        let path = if action == "multi" {
-            TEMP_DIR.read().await.join(&extract_filename(&url[0]))
-        } else { DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(&display_name) };
+        let filename = &extract_filename(&url[0]);
+        let path = TEMP_DIR.read().await.join(format!("{}_{}.{}", date, filename, "bilitools.downloading")).join(filename);
         let init_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.addUri",
@@ -282,32 +278,21 @@ async fn push_back_queue(
         display_name: display_name.clone(),
         video_path: tasks.iter().find(|t| t.file_type == "video").map(|t| t.path.clone()).unwrap_or_default(),
         audio_path: tasks.iter().find(|t| t.file_type == "audio").map(|t| t.path.clone()).unwrap_or_default(),
-        output_path: DOWNLOAD_DIR.read().await.join(ss_dir.clone()).join(display_name.clone()),
+        output_path:  DOWNLOAD_DIR.read().await.join(ss_dir.clone()),
         tasks, action, media_data
     };
-    fs::create_dir_all(DOWNLOAD_DIR.read().await.join(ss_dir)).map_err(|e| handle_err(window.clone(), e))?;
-    update_queue(&window, "push", Some(info.clone())).await;
+    update_queue(&window, "push", Some(info.clone()), None).await;
     Ok(gid)
 }
 
 #[tauri::command]
-#[async_recursion::async_recursion]
-async fn process_queue(window: tWindow) -> Result<(), String> {
+async fn process_queue(window: tauri::Window, date: String) -> Result<(), String> {
     log::info!("Processing queue...");
-    // let mut tasks = { WAITING_QUEUE.lock().await.len() };
-    // while tasks > 0 {
-    // if let Some(video_info) = update_queue(&window, "waiting", None).await {
-    //     let window_clone = window.clone();
-    //     tokio::spawn(async move {
-    //         process_download(window_clone, video_info).await;
-    //     });
-    //     tasks -= 1;
-    // }}
     loop {
         let max_conc = *MAX_CONCURRENT_DOWNLOADS.read().await;
-        let doing_len = { DOING_QUEUE.lock().await.len() };
+        let doing_len = { DOING_QUEUE.lock().await.len() as i64 };
         for _ in 0..max_conc.saturating_sub(doing_len) {
-            if let Some(video_info) = update_queue(&window, "waiting", None).await {
+            if let Some(video_info) = update_queue(&window, "waiting", None, Some(date.clone())).await {
                 let window_clone = window.clone();
                 tokio::spawn(async move {
                     process_download(window_clone, video_info).await.unwrap();
@@ -318,6 +303,7 @@ async fn process_queue(window: tWindow) -> Result<(), String> {
         if waiting_empty && DOING_QUEUE.lock().await.is_empty() {
             break;
         }
+        DOWNLOAD_COMPLETED_NOTIFY.notified().await;
     }
     Ok(())
 }
@@ -333,35 +319,52 @@ async fn process_download(window: tWindow, download_info: VideoInfo) -> Result<(
         }
     }
     if *action == "multi" {
-        let _ = merge_video_audio(window.clone(), download_info.clone()).await;
+        merge_video_audio(window.clone(), download_info.clone()).await
+        .map_err(|e| handle_err(window.clone(), e))?;
     }
-    update_queue(&window, "doing", None).await;
+    update_queue(&window, "doing", None, None).await;
     Ok(())
 }
 
-async fn update_queue(window: &tWindow, action: &str, info: Option<VideoInfo>) -> Option<VideoInfo> {
+fn add_timestamp(mut info: VideoInfo, date: String) -> VideoInfo {
+    let mut output_path_str = info.output_path.to_string_lossy().to_string();
+    output_path_str += &format!("_{}", date);
+    info.output_path = PathBuf::from(output_path_str).join(&info.display_name);
+    info
+}
+
+async fn update_queue(window: &tWindow, action: &str, info: Option<VideoInfo>, date: Option<String>) -> Option<VideoInfo> {
     let mut waiting_queue = WAITING_QUEUE.lock().await;
     let mut doing_queue = DOING_QUEUE.lock().await;
     let mut complete_queue = COMPLETE_QUEUE.lock().await;
     let mut result_info: Option<VideoInfo> = None;
     match action {
         "push" => {
-            if let Some(info) = info {
+            if let Some(org_info) = info {
+                let info = if let Some(date) = date {
+                    add_timestamp(org_info, date)
+                } else { org_info };
                 waiting_queue.push_back(info.clone());
                 result_info = Some(info);
             }
         },
         "waiting" => {
-            if let Some(info) = waiting_queue.pop_front() {
+            if let Some(org_info) = waiting_queue.pop_front() {
+                let info = if let Some(date) = date {
+                    add_timestamp(org_info, date)
+                } else { org_info };
                 doing_queue.push_back(info.clone());
-                let _ = process_queue(window.clone());
                 result_info = Some(info);
             }
         },
         "doing" => {
-            if let Some(info) = doing_queue.pop_front() {
+            if let Some(org_info) = doing_queue.pop_front() {
+                let info = if let Some(date) = date {
+                    add_timestamp(org_info, date)
+                } else { org_info };
                 complete_queue.push_back(info.clone());
-                let _ = process_queue(window.clone());
+                log::info!("Finished. Notifying process_queue...");
+                DOWNLOAD_COMPLETED_NOTIFY.notify_one();
                 result_info = Some(info);
             }
         },
@@ -445,18 +448,10 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
     let current_dir = env::current_dir().unwrap();
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
     let output_path = info.output_path.to_string_lossy();
+    fs::create_dir_all(&info.output_path.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
+    let video_filename = &info.output_path.file_name().unwrap().to_string_lossy();
     let video_path = info.video_path.clone();
     let audio_path = info.audio_path.clone();
-    if let Some(ss_dir_path) = info.output_path.parent() {
-        if !ss_dir_path.exists() {
-            fs::create_dir_all(&ss_dir_path).map_err(|e| handle_err(window.clone(), e))?;
-            log::info!("成功创建{}", ss_dir_path.to_string_lossy());
-        }
-    }
-    let video_filename = &info.output_path.file_name()
-        .and_then(|f| f.to_str())
-        .ok_or_else(|| "无法提取视频文件名".to_string())?;
-
     let progress_path = current_dir.join("ffmpeg")
         .join(format!("{}.log", video_filename));
 
@@ -474,10 +469,6 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
         .spawn()
         .map_err(|e| handle_err(window.clone(), e))?;
 
-    let video_path_clone = video_path.clone();
-    let audio_path_clone = audio_path.clone();
-    let window_clone = window.clone();
-    let progress_path_clone = &progress_path.clone();
     while !progress_path.exists() {
         sleep(Duration::from_millis(250)).await;
     }
@@ -486,9 +477,9 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
     let mut last_log_time = Instant::now();
     loop {
         let mut printed_keys = HashSet::new();
-        let metadata = tokio::fs::metadata(&progress_path).await.map_err(|e| handle_err(window.clone(), e))?;
+        let metadata = tokio::fs::metadata(&progress_path.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
         if metadata.len() > last_size {
-            let mut file = File::open(&progress_path).await.map_err(|e| handle_err(window.clone(), e))?;
+            let mut file = File::open(&progress_path.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
             file.seek(SeekFrom::Start(last_size)).await.map_err(|e| handle_err(window.clone(), e))?;
             let mut reader = BufReader::new(file);
             let mut line = String::new();
@@ -537,21 +528,21 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
             log::info!("{:?}", formatted_array.join(" | "));
             last_log_time = Instant::now();
         }
-        window_clone.emit("progress", &formatted_values).map_err(|e| handle_err(window.clone(), e))?;
+        window.clone().emit("progress", &formatted_values).map_err(|e| handle_err(window.clone(), e))?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
             break;
         }
         sleep(Duration::from_millis(100)).await;
     }
     let status = child.wait().map_err(|e| handle_err(window.clone(), e))?;
-    tokio::fs::remove_file(audio_path_clone.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-    tokio::fs::remove_file(video_path_clone.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-    tokio::fs::remove_file(progress_path_clone).await.map_err(|e| handle_err(window.clone(), e))?;
+    fs::remove_dir_all(video_path.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
+    fs::remove_dir_all(audio_path.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
+    fs::remove_file(progress_path).map_err(|e| handle_err(window.clone(), e))?;
     if status.success() {
         log::info!("FFmpeg process completed.");
         Ok(info)
     } else {
-        tokio::fs::remove_file(&*output_path.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
+        fs::remove_file(&*output_path).map_err(|e| handle_err(window.clone(), e))?;
         Err("FFmpeg command failed".to_string())
     }
 }
@@ -576,15 +567,22 @@ async fn handle_download(window: tWindow, gid: String, action: String) -> Result
 
 #[tauri::command]
 async fn handle_temp(window: tWindow, action: String) -> Result<String, String> {
-    let mut bytes: u64 = 0;
-    let dir_entries = fs::read_dir(&TEMP_DIR.read().await.clone()).map_err(|e| handle_err(window.clone(), e))?;
-    for entry in dir_entries {
-        let entry = entry.map_err(|e| handle_err(window.clone(), e))?;
-        let path = entry.path();
-        if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("m4s") {
-            if action == "calc" { bytes += fs::metadata(&path).unwrap().len(); }
-            else if action == "clear" { fs::remove_file(&path).unwrap() }
+    let mut bytes = 0;
+    let walker = WalkDir::new(&TEMP_DIR.read().await.clone()).into_iter().filter_map(|e| e.ok())
+    .filter(|e| e.file_name().to_str().map_or(false, |s| s.ends_with(".bilitools.downloading")));
+    for entry in walker {
+        for entry in WalkDir::new(entry.path().to_str().unwrap()) {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if action == "calc" { bytes += fs::metadata(path).unwrap().len(); }
+            else if action == "clear" {
+                if path.is_file() && !path.file_name().unwrap()
+                .to_str().map_or(false, |s| s.ends_with(".aria2")) {
+                    fs::remove_file(&path).map_err(|e| handle_err(window.clone(), e))?;
+                }
+            }
         }
+        let _ = fs::remove_dir(&entry.path());
     }
     const KIB: u64 = 1024;
     const MIB: u64 = KIB * 1024;
@@ -645,66 +643,64 @@ fn insert_cookie(window: tWindow, cookie_str: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secret: String) -> Result<i64, String> {
+async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
-        window.emit("error", "403 Forbidden<br>请重启应用").unwrap();
+        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
     }
     let config_path = CONFIG_PATH.read().await.clone();
-    let (temp_dir, down_dir, max_conc) = if let Some(settings) = sets {
-        (settings.temp_dir, settings.down_dir, settings.max_conc)
-    } else {
-        let current_temp_dir = TEMP_DIR.read().await.to_string_lossy().into_owned();
-        let current_down_dir = DOWNLOAD_DIR.read().await.to_string_lossy().into_owned();
-        let current_max_conc = *MAX_CONCURRENT_DOWNLOADS.read().await as i64;
-        (current_temp_dir, current_down_dir, current_max_conc)
-    };
-    let new_config = json!({
-        "max_conc": max_conc,
-        "default_dms": 0,
-        "default_ads": 0,
-        "temp_dir": temp_dir,
-        "down_dir": down_dir,
-    });
-    let new_config_str = serde_json::to_string(&new_config).map_err(|e| handle_err(window.clone(), e))?;
-    if !WORKING_DIR.clone().exists() {
-        fs::create_dir_all(WORKING_DIR.clone()).map_err(|e| handle_err(window.clone(), e))?;
+    let work_dir = WORKING_DIR.clone();
+    let config = Arc::new(RwLock::new(Settings {
+        temp_dir: TEMP_DIR.read().await.to_string_lossy().into_owned(),
+        down_dir: DOWNLOAD_DIR.read().await.to_string_lossy().into_owned(),
+        max_conc: *MAX_CONCURRENT_DOWNLOADS.read().await
+    }));
+
+    if !work_dir.exists() {
+        log::info!("Initializing Work Dir...");
+        fs::create_dir_all(&work_dir).map_err(|e| handle_err(window.clone(), e))?;
     }
-    if action == "save" || (action == "read" && (!config_path.exists() || fs::read_to_string(&config_path).map_err(|e| handle_err(window.clone(), e))?.trim().is_empty())) {
-        fs::write(&config_path, &new_config_str).map_err(|e| handle_err(window.clone(), e))?;
-    }
-    let config_str = fs::read_to_string(&config_path).map_err(|e| handle_err(window.clone(), e))?;
-    let config: Value = serde_json::from_str(&config_str).map_err(|e| handle_err(window.clone(), e))?;
-    if let Some(max_conc) = config["max_conc"].as_u64() {
-        *MAX_CONCURRENT_DOWNLOADS.write().await = max_conc as usize;
-        log::info!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
-    }
-    if let Some(temp_dir_str) = config["temp_dir"].as_str() {
-        *TEMP_DIR.write().await = PathBuf::from(temp_dir_str);
-        log::info!("成功更新TEMP_DIR: {:?}", *TEMP_DIR.read().await);
-    }
-    if let Some(down_dir_str) = config["down_dir"].as_str() {
-        *DOWNLOAD_DIR.write().await = PathBuf::from(down_dir_str);
-        log::info!("成功更新DOWNLOAD_DIR: {:?}", *DOWNLOAD_DIR.read().await);
-    }
-    let dirs_to_check = vec![TEMP_DIR.read().await.clone(), DOWNLOAD_DIR.read().await.clone()];
-    for dir in &dirs_to_check {
-        if !dir.exists() {
-            fs::create_dir_all(dir).map_err(|e| handle_err(window.clone(), e))?;
+
+    if action == "init" {
+        if let Ok(s) = fs::read_to_string(config_path.clone()) {
+            if let Ok(local_config) = serde_json::from_str::<HashMap<String, Value>>(&s) {
+                let mut d_config = config.write().await;
+                for (key, value) in local_config { match key.as_str() {
+                    "temp_dir" => d_config.temp_dir = value.as_str().unwrap_or_default().to_string(),
+                    "down_dir" => d_config.down_dir = value.as_str().unwrap_or_default().to_string(),
+                    "max_conc" => d_config.max_conc = value.as_i64().unwrap_or_default(),
+                    _ => {}
+                } }
+            }
         }
+    } else if action == "write" {
+        if let Some(settings) = sets {
+            *config.write().await = settings;
+        }
+    }
+
+    if action != "read" {
+        let config = config.read().await;
+        fs::write(config_path.clone(), serde_json::to_string(&*config).unwrap()).map_err(|e| handle_err(window.clone(), e))?;
+        *MAX_CONCURRENT_DOWNLOADS.write().await = config.max_conc;
+        log::info!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
+        *TEMP_DIR.write().await = PathBuf::from(config.temp_dir.clone());
+        log::info!("成功更新TEMP_DIR: {:?}", *TEMP_DIR.read().await);
+        *DOWNLOAD_DIR.write().await = PathBuf::from(config.down_dir.clone());
+        log::info!("成功更新DOWNLOAD_DIR: {:?}", *DOWNLOAD_DIR.read().await);
     }
     window.emit("settings", serde_json::json!({
         "down_dir": *DOWNLOAD_DIR.read().await,
         "temp_dir": *TEMP_DIR.read().await,
         "max_conc": *MAX_CONCURRENT_DOWNLOADS.read().await
     })).unwrap();
-    Ok(0)
+    Ok(action)
 }
 
 #[tauri::command]
 async fn save_file(window: tWindow, content: String, path: String, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
-        window.emit("error", "403 Forbidden<br>请重启应用").unwrap();
+        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
     }
     if let Err(e) = fs::write(path.clone(), content) {
@@ -731,7 +727,7 @@ async fn open_select(window: tWindow, path: String) -> Result<String, String>{
 #[tauri::command]
 async fn exit(window: tWindow) -> Result<String, String> {
     let client = init_client();
-    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    let cookies = load_cookies().unwrap_or_else(|err| { log::error!("Error loading cookies: {:?}", err);
     HashMap::new() });
     let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
         &bili_jct.value } else { "" };
@@ -762,7 +758,7 @@ async fn exit(window: tWindow) -> Result<String, String> {
         window.emit("user-mid", 0.to_string()).unwrap();
         return Ok("成功退出登录".to_string());
     } else {
-        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
 }
@@ -770,7 +766,7 @@ async fn exit(window: tWindow) -> Result<String, String> {
 #[tauri::command]
 async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String, String> {
     let client = init_client();
-    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    let cookies = load_cookies().unwrap_or_else(|err| { log::error!("Error loading cookies: {:?}", err);
     HashMap::new() });
     let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
         &bili_jct.value } else { "" };
@@ -818,7 +814,7 @@ async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String,
                 .send().await.map_err(|e| handle_err(window.clone(), e))?;
                 if conf_refresh_resp.status() != reqwest::StatusCode::OK {
                     if conf_refresh_resp.status().to_string() != "412 Precondition Failed" {
-                        log::warn!("刷新Cookie失败");
+                        log::error!("刷新Cookie失败");
                         return Err("刷新Cookie失败".to_string());
                     }
                 }
@@ -829,16 +825,16 @@ async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String,
                         return Ok("刷新Cookie成功".to_string());
                     }
                     _ => {
-                        log::warn!("{}", response_data["data"]["message"]);
+                        log::error!("{}", response_data["data"]["message"]);
                         return Err(format!("{}", response_data["data"]["message"]).to_string())
                     },
                 }
             }
         }
-        log::warn!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
+        log::error!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
         return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
     } else {
-        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
 }
@@ -892,17 +888,17 @@ async fn scan_login(window: tWindow, qrcode_key: String) -> Result<String, Strin
                 }
                 Some(86101) | Some(86090) => log::info!("{}: {}", cloned_key, response_data["data"]["message"]),
                 _ => {
-                    log::warn!("{}: {}, {}", cloned_key, response_data["data"]["code"], response_data["data"]["message"]);
+                    log::error!("{}: {}, {}", cloned_key, response_data["data"]["code"], response_data["data"]["message"]);
                     return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
                 },
             }
         } else {
-            log::warn!("{}: {}, {}", cloned_key, response_data["data"]["code"], response_data["data"]["message"]);
+            log::error!("{}: {}, {}", cloned_key, response_data["data"]["code"], response_data["data"]["message"]);
             return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).to_string())
         }
         sleep(Duration::from_secs(1)).await;
     }
-    log::warn!("{}: \"登录轮询被前端截断\"", cloned_key);
+    log::error!("{}: \"登录轮询被前端截断\"", cloned_key);
     return Ok("登录过程被终止".to_string());
 }
 
@@ -956,7 +952,7 @@ async fn pwd_login(window: tWindow,
         }
         return Ok("密码登录成功".to_string());
     } else {
-        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
 }
@@ -1009,37 +1005,49 @@ async fn sms_login(window: tWindow,
         log::info!("短信登录成功");
         return Ok("短信登录成功".to_string());
     } else {
-        log::warn!("{}, {}", response_data["code"], response_data["message"]);
+        log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
     }
+}
+
+#[tauri::command]
+async fn handle_aria2c(window: tWindow, secret: String, action: String) -> Result<(), String> {
+    if secret != *SECRET.read().await {
+        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
+        return Err("403 Forbidden".to_string())
+    }
+    log::info!("Killing aria2c...");
+    let mut manager = ARIA2C_MANAGER.lock().await;
+    manager.kill().map_err(|e| handle_err(window.clone(), e))?;
+    if action == "restart" {
+        log::info!("Initializing aria2c...");
+        manager.init().await.map_err(|e| handle_err(window.clone(), e))?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
 async fn ready(_window: tWindow) -> Result<String, String> {
     #[cfg(not(debug_assertions))]
     { if *READY.read().await {
-        _window.emit("error", "403 Forbidden<br>请重启应用").unwrap();
+        _window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Ok("403 Forbidden".to_string());
     } }
     LOGIN_POLLING.store(false, Ordering::SeqCst);
-    let secret: String = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(10).map(char::from)
-        .collect();
-    *SECRET.write().await = secret.clone();
     *READY.write().await = true;
-    Ok(secret)
+    Ok(SECRET.read().await.to_string())
 }
 
 #[tauri::command]
 async fn init(window: tWindow, secret: String) -> Result<i64, String> {
-    if secret != *SECRET.read().await { return Err("403 Forbidden".to_string()) }
+    if secret != *SECRET.read().await {
+        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
+        return Err("403 Forbidden".to_string())
+    }
     rw_config(window.clone(), "read".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
     init_database(window.clone()).await.unwrap();
-    handle_aria2c(window.clone(), "restart".to_string()).await.unwrap();
-    update_queue(&window, "init", None).await;
     get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-    let cookies = load_cookies().unwrap_or_else(|err| { log::warn!("Error loading cookies: {:?}", err);
+    let cookies = load_cookies().unwrap_or_else(|err| { log::error!("Error loading cookies: {:?}", err);
     HashMap::new() });
     let mid_value = if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
         mid_cookie.value.parse::<i64>().unwrap_or(0)
@@ -1051,6 +1059,11 @@ async fn init(window: tWindow, secret: String) -> Result<i64, String> {
 #[tokio::main]
 async fn main() {
     logger::init_logger().map_err(|e| e.to_string()).unwrap();
+    let secret: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10).map(char::from)
+        .collect();
+    *SECRET.write().await = secret.clone();
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
@@ -1058,20 +1071,30 @@ async fn main() {
         }))
         .setup(|app| {
             let window = app.get_window("main").unwrap();
-            window.listen("stop_login", |_| { LOGIN_POLLING.store(false, Ordering::SeqCst) });
+            let window_for_panic = std::sync::Arc::new(std::sync::Mutex::new(window.clone()));
+            panic::set_hook(Box::new(move |e| {
+                handle_err(window_for_panic.lock().unwrap().clone(), e);
+            }));
+            tokio::spawn(async move {
+                rw_config(window.clone(), "init".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
+                ARIA2C_MANAGER.lock().await.init().await.map_err(|e| handle_err(window.clone(), e))?;
+                window.clone().listen("stop_login", |_| { LOGIN_POLLING.store(false, Ordering::SeqCst) });
+                Ok::<(), String>(())
+            });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![ready, init,
-            scan_login, pwd_login, sms_login, insert_cookie, 
-            open_select, rw_config, refresh_cookie, save_file, handle_download,
-            push_back_queue, process_queue, exit, handle_temp, handle_aria2c])
+        .invoke_handler(tauri::generate_handler![ready, init, exit, 
+            scan_login, pwd_login, sms_login, insert_cookie, open_select,
+            rw_config, refresh_cookie, save_file, handle_download,
+            push_back_queue, process_queue, handle_temp, handle_aria2c])
         .on_window_event(move |event| match event.event() {
             WindowEvent::Destroyed => {
                 log::info!("Killing aria2c...");
-                tokio::spawn(async move { handle_aria2c(event.window().clone(), "kill".to_string()).await.unwrap() });
+                tokio::spawn(async move { ARIA2C_MANAGER.lock().await.kill()
+                .map_err(|e| handle_err(event.window().clone(), e)) });
             }
             _ => {}
-        })
+         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running BiliTools");
 }

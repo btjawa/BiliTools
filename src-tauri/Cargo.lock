@@ -350,7 +350,6 @@ checksum = "c79fed4cdb43e993fcdadc7e58a09fd0e3e649c4436fa11da71c9f1f3ee7feb9"
 name = "bilitools"
 version = "1.0.3"
 dependencies = [
- "async-recursion",
  "chrono",
  "futures",
  "lazy_static",
@@ -366,6 +365,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-single-instance",
  "tokio",
+ "walkdir",
  "warp",
 ]
 

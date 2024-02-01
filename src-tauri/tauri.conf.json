@@ -36,6 +36,7 @@
     },
     "bundle": {
       "active": true,
+      "category": "Utility",
       "targets": "all",
       "identifier": "com.btjawa.bilitools",
       "icon": [

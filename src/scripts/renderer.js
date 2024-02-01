@@ -7,7 +7,7 @@ import iziToast from "izitoast";
 import Swal from "sweetalert2";
 import protobuf from "protobufjs";
 
-import * as data from "./data.ts";
+import * as tdata from "./data.ts";
 import * as format from './format.ts';
 import { login, verify } from './sdk.ts';
 
@@ -22,8 +22,8 @@ const waitingList = $('.down-page-child.waiting');
 const doingList = $('.down-page-child.doing');
 const completeList = $('.down-page-child.complete');
 
-const sidebar = data.sidebar;
-const currentElm = data.currentElm;
+const sidebar = tdata.sidebar;
+const currentElm = tdata.currentElm;
 
 let currentSel = [];
 let userData = { mid: null, coins: null, isLogin: false };
@@ -131,7 +131,7 @@ async function getMediaInfo(rawId, type) {
         basicUrl = `https://www.bilibili.com/audio/music-service-c/web/song/info?sid=${id.match(/\d+/)[0]}`;
     }
     loadingBox.addClass('active');
-    const basicResp = (await http.fetch(basicUrl, { headers: data.headers })).data;
+    const basicResp = (await http.fetch(basicUrl, { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
     if (basicResp.code === 0) {
         if (type == "video") {
@@ -143,14 +143,14 @@ async function getMediaInfo(rawId, type) {
         } else if (type == "audio") {
             info = basicResp.data;
             tags = (await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`,
-            { headers: data.headers })).data.data.map(item => item.info);
+            { headers: tdata.headers })).data.data.map(item => item.info);
         }
         handleMediaList({ info, tags }, type);
         return basicResp;
     } else {
         if (basicResp.code == -404 && type == "bangumi") {
             basicUrl = `https://api.bilibili.com/pugv/view/web/season?${id.startsWith('ep') ? 'ep_id' : 'season_id'}=${id.match(/\d+/)[0]}`;
-            const lssnResp = (await http.fetch(basicUrl, { headers: data.headers })).data;
+            const lssnResp = (await http.fetch(basicUrl, { headers: tdata.headers })).data;
             if (lssnResp.code === 0) {
                 handleMediaList({ info: lssnResp.data }, "lesson");
                 return lssnResp;
@@ -171,7 +171,7 @@ async function getPlayUrl(data) {
     const key = data.type == "bangumi" ? "pgc/player/web" : (data.type == "lesson" ? "pugv/player/web" : "x/player/wbi");
     loadingBox.addClass('active');
     const details = (await http.fetch(`https://api.bilibili.com/${key}/playurl?${signature}${data.type == "lesson" ? `&ep_id=${data.eid}` : ""}`,
-    { headers: data.headers })).data;
+    { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
     if(handleErr(details, data.type)) return null;
     return details;
@@ -185,7 +185,7 @@ async function getMusicUrl(songid, quality) {
     const signature = await verify.wbi(params);
     loadingBox.addClass('active');
     const details = (await http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${signature}`,
-    { headers: data.headers })).data;
+    { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
     if (handleErr(details, "music")) return null;
     else return details;
@@ -194,7 +194,6 @@ async function getMusicUrl(songid, quality) {
 function matchDownUrl(details, quality, action, fileType) {
     let downUrl = [];
     const isV = fileType === "video";
-    console.log(arguments)
     for (const file of isV ? details.dash.video : details.dash.audio) {
         if (action == "music") downUrl[1] = details.dash.audio
         else if (file.id == isV ? quality.dms_id : quality.ads_id
@@ -223,11 +222,11 @@ function matchDownUrl(details, quality, action, fileType) {
     return [isV, downUrl, quality, action]
 }
 
-function handleDown(isV, downUrl, quality, action, data) {
+function handleDown(isV, downUrl, quality, action, mediaData) {
     if (isV ? downUrl[0][0] : downUrl[1][0] && action == "multi" ? downUrl[1][0] : true) {
         let qualityStr, displayName;
         const ext = isV ? "mp4" : "mp3";
-        const safeTitle = format.filename(data.title);
+        const safeTitle = format.filename(mediaData.title);
         if (action == "only") {
             qualityStr = isV ? quality.dms_desc : quality.ads_desc;
             displayName = `${safeTitle} (${qualityStr}).${ext}`;
@@ -238,11 +237,11 @@ function handleDown(isV, downUrl, quality, action, data) {
             const ext = downUrl[1][0].split('.').pop().split('?')[0].split('#')[0];
             displayName = `${safeTitle} (${quality}).${ext}`;
         }
-        data.display_name = displayName;
+        mediaData.display_name = displayName;
         return invoke('push_back_queue', {
             videoUrl: downUrl[0] || null,
             audioUrl: downUrl[1] || null,
-            action, mediaData: data
+            action, mediaData, date: format.pubdate(new Date(), true)
         });
     } else emit('error', "未找到符合条件的下载地址＞﹏＜");
 }
@@ -276,7 +275,7 @@ async function bilibili(ts) {
             const data = format.id(input);
             if (data[1]) {
                 const path = data[1] == "bangumi" ? "bangumi/play" : data[1];
-                shell.open(`https://www.bilibili.com/${path}/${data[0]}/${ts?`ts=${ts}`:''}`);
+                shell.open(`https://www.bilibili.com/${path}/${data[0]}/${ts?`?ts=${ts}`:''}`);
                 return null;
             }
         } else {
@@ -323,8 +322,8 @@ function contextMenu() {
             const start = element.selectionStart;
             const end = element.selectionEnd;
             const selectedText = element.value.substring(start, end);
-            element.value = element.value.substring(0, start) + text + element.value.substring(end);
-            const pos = start + text.length;
+            element.value = element.value.substring(0, start) + (text || "") + element.value.substring(end);
+            const pos = start + text?.length;
             element.setSelectionRange(pos, pos);
             return selectedText;
         } else return text;
@@ -366,8 +365,8 @@ function contextMenu() {
 $(document).ready(function () {
     contextMenu();
     invoke('ready').then(e => {
-        data.set.secret(e);
-        invoke('init', { secret: data.secret });
+        tdata.set.secret(e);
+        invoke('init', { secret: tdata.secret });
     });
     app.getVersion().then(ver => $('#version').html(ver));
     os.platform().then(type => $('#platform').html(type));
@@ -452,7 +451,6 @@ function handleMediaList(details, type) {
     let actualSearch = 0;
     mediaData = [], selectedMedia = [];
     const root = details.info;
-    function date(title) { return format.filename(title) + "_" + format.pubdate(new Date(), true) }
     if (Object.values(root).length) {
         infoBlock.addClass('active');
         videoList.addClass('active');
@@ -472,7 +470,7 @@ function handleMediaList(details, type) {
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
                         episode.aid, episode.cid, episode.id,
-                        type, rank + 1, date(ugc_root.title), null, null
+                        type, rank + 1, ugc_root.title, null, null
                     );
                     appendMediaBlock(mediaData[rank]);
                     Object.values(episode).forEach(id => {
@@ -483,7 +481,7 @@ function handleMediaList(details, type) {
                 if (root.rights.is_stein_gate) {
                     loadingBox.addClass('active');
                     http.fetch(`https://api.bilibili.com/x/player.so?id=cid:1&aid=${encodeURIComponent(root.aid)}`,
-                    { headers: data.headers, responseType: http.ResponseType.Text }).then(async player => {
+                    { headers: tdata.headers, responseType: http.ResponseType.Text }).then(async player => {
                         const match = player.data.match(/<interaction>(.*?)<\/interaction>/);
                         const graph_version = JSON.parse(match[1]).graph_version;
                         appendSteinNode(root, graph_version, 1, type);
@@ -495,7 +493,7 @@ function handleMediaList(details, type) {
                         mediaData[rank] = new MediaData(
                             title, root.desc, root.pic, page.duration,
                             root.aid, page.cid, page.bvid, type, rank + 1,
-                            date(root.title), null, null
+                            root.title, null, null
                         );
                         appendMediaBlock(mediaData[rank])
                         Object.values(page).forEach(id => {
@@ -512,7 +510,7 @@ function handleMediaList(details, type) {
                     isL ? root.subtitle : episode.share_copy,
                     episode.cover, episode.duration, episode.aid,
                     episode.cid, episode.id, type, rank + 1,
-                    date(isL ? root.title : root.season_title),
+                    isL ? root.title : root.season_title,
                     null, episode.badge_info || { text: episode.label,
                     bg_color_night: "#0BA395" }
                 );
@@ -548,7 +546,7 @@ function handleMediaList(details, type) {
             }
         }, 100);
         $('.down-page-start-process').off('click').on('click', () => {
-            invoke('process_queue');
+            invoke('process_queue', { date: format.pubdate(new Date(), true) });
             $('.down-page-sel.doing').click();
         });
     } else {
@@ -598,7 +596,7 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
     });
     loadingBox.addClass('active');
     const response = (await http.fetch(`https://api.bilibili.com/x/stein/edgeinfo_v2?${params.toString()}`,
-    { headers: data.headers })).data;
+    { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
     videoList.find('.stein-option, .video-block, .video-block-only, .video-block-multi')
     .removeClass('active').remove().end().addClass('active');
@@ -608,7 +606,7 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
         current.title, info.desc, 
         info.pic, "未知", info.aid,
         current.cid, edge_id, type,
-        mediaData.length + 1, info.titlem, null
+        mediaData.length + 1, info.title, null
     ));
     appendMediaBlock(mediaData.at(-1));
     for (const story of response.data.story_list) {
@@ -745,7 +743,7 @@ function appendMediaBlock(root, audio) { // 填充视频块
     getAudioBtn.on('click', async () => {
         const details = await getMusicUrl(root.id, audio.type);
         const res = matchDownUrl({dash:{audio:details.data.cdns}}, audio.bps.replace("kbit/s", "K"), "music", "audio");
-        handleDown(...res, root);
+        handleDown(...res, root, format);
         sidebar.downPage.click();
 });
 }
@@ -802,7 +800,7 @@ function appendMoreList(data, block) { // 填充更多解析
                 protobuf.load('../proto/dm.proto', async function(err, root) {
                     const DmSegMobileReply = root.lookupType("bilibili.community.service.dm.v1.DmSegMobileReply");
                     loadingBox.addClass('active');
-                    const response = await http.fetch(url,{ headers: data.headers, responseType: http.ResponseType.Binary });
+                    const response = await http.fetch(url,{ headers: tdata.headers, responseType: http.ResponseType.Binary });
                     loadingBox.removeClass('active');
                     const message = DmSegMobileReply.decode(new Uint8Array(response.data));
                     resolve(message.elems)
@@ -841,7 +839,7 @@ function appendMoreList(data, block) { // 填充更多解析
             type: 1, oid: data.cid, month
         });
         loadingBox.addClass('active');
-        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers: data.headers })).data;
+        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers: tdata.headers })).data;
         loadingBox.removeClass('active');
         dms.find('.history-date-cont').remove();
         const dateCont = $('<div>').addClass('history-date-cont active');
@@ -887,7 +885,7 @@ function appendMoreList(data, block) { // 填充更多解析
                         defaultPath: date + '_' + format.filename(data.title)
                     });
                     if (selected) {
-                        invoke('save_file', { content, path: selected, secret: data.secret });
+                        invoke('save_file', { content, path: selected, secret: tdata.secret });
                         saved();
                     }
                 })
@@ -913,7 +911,7 @@ function appendMoreList(data, block) { // 填充更多解析
         });
         const signature = await verify.wbi(params);
         loadingBox.addClass('active');
-        const response = await http.fetch(`https://api.bilibili.com/x/web-interface/view/conclusion/get?${signature}`, { headers: data.headers });
+        const response = await http.fetch(`https://api.bilibili.com/x/web-interface/view/conclusion/get?${signature}`, { headers: tdata.headers });
         loadingBox.removeClass('active');
         const root = response.data;
         if (root.data.code !== 0) {
@@ -1071,7 +1069,7 @@ async function userProfile() {
     currentElm.push(".user-profile");
     $('.user-profile').addClass('active');
     const detailData = await http.fetch(`https://api.bilibili.com/x/web-interface/card?mid=${userData.mid}&photo=true`,
-    { headers: data.headers });
+    { headers: tdata.headers });
     if (detailData.ok) {
         const details = detailData.data;
         $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:") + '@200h');
@@ -1201,7 +1199,7 @@ listen("user-mid", async function(e) {
     sidebar.userProfile.attr('data-after', mid=="0" ? "登录" : '主页');
     invoke('insert_cookie', { cookieStr: `_uuid=${verify.uuid()}; Path=/; Domain=bilibili.com` });
     const signature = await verify.wbi({ mid });
-    const details = (await http.fetch(`https://api.bilibili.com/x/space/wbi/acc/info?${signature}`, { headers: data.headers })).data;
+    const details = (await http.fetch(`https://api.bilibili.com/x/space/wbi/acc/info?${signature}`, { headers: tdata.headers })).data;
     userData = { mid, coins: null, isLogin: false };
     if (currentElm.at(-1) == ".login" || currentElm.at(-1) == ".user-profile") {
         backward();
@@ -1226,7 +1224,7 @@ listen("user-mid", async function(e) {
     }
 });
 
-listen("headers", (e) => data.set.headers(e.payload));
+listen("headers", (e) => tdata.set.headers(e.payload));
 
 listen("login-status", async (e) => {
     if (e.payload == 86090 || e.payload == 86038) {
@@ -1255,6 +1253,7 @@ listen("download-queue", async (e) => {
         sel.toggleClass("active", len !== 0);
         if (elm.hasClass('waiting')) $('.down-page-start-process').toggleClass("active", len !== 0);
     });
+    console.log(p)
 });
 
 listen("progress", async (e) => {

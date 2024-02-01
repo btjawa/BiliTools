@@ -61,7 +61,7 @@ $(document).ready(function () {
                     });
                 };
             }
-            invoke('rw_config', {action: "save", sets: {
+            invoke('rw_config', {action: "write", sets: {
                 max_conc: parseInt($('.settings-page-options input[name="max-conc"]:checked').attr('id').replace(/[^\d]/g, "")),
                 default_dms: 0,
                 default_ads: 0,    
@@ -85,7 +85,7 @@ $(document).ready(function () {
         $('#down-dir-path-openbtn').on('click', () => handleSave("存储路径", downDirPath));
         $('#temp-dir-path-openbtn').on('click', () => handleSave("临时文件存储路径", tempDirPath));
         $('#temp-dir-clearbtn').on('click', () => invoke('handle_temp', { action: "clear" }).then(size => $('#temp-dir-size').html(size)));
-        $('#aria2c-restart-btn').on('click', async () => await invoke('handle_aria2c', { action: "restart" }));
+        $('#aria2c-restart-btn').on('click', async () => invoke('handle_aria2c', { secret: data.secret, action: "restart" }));
     });
     sidebar.settings.on('click', () => {
         $('.settings').addClass('active');

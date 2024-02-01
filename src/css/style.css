@@ -437,8 +437,8 @@ button:hover { background-color: #3b3b3b; }
 .settings-page-title {
     font-size: 19px;
     margin-bottom: 6px;
-    min-height: 24px;
-    max-height: 48px;
+    min-height: 25px;
+    max-height: 50px;
     max-width: 86%;
     overflow: auto;
     word-wrap: break-word;
