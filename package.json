@@ -29,7 +29,7 @@
     "md5": "^2.3.0",
     "protobufjs": "^7.2.6",
     "qrcode": "^1.5.3",
-    "sweetalert2": "^11.10.4"
+    "sweetalert2": "^11.6.13"
   },
   "devDependencies": {
     "@actions/github": "^6.0.0",

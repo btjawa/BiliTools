@@ -368,7 +368,10 @@ $(document).ready(function () {
         tdata.set.secret(e);
         invoke('init', { secret: tdata.secret });
     });
-    app.getVersion().then(ver => $('#version').html(ver));
+    app.getVersion().then(ver => {
+        $('#version').html(ver);
+        $('#version-details').attr("t", `https://github.com/btjawa/BiliTools/releases/tag/v${ver}`);
+    });
     os.platform().then(type => $('#platform').html(type));
     os.arch().then(arch => $('#arch').html(arch));
     $('#year').html((new Date()).getFullYear())

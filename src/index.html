@@ -205,7 +205,13 @@
                         <path class="letter letter9" d="m155.08,31.44c-1.57,0-3.13-.27-4.68-.8-1.55-.53-2.8-1.33-3.76-2.4-.29-.32-.41-.68-.36-1.08.05-.4.25-.75.6-1.04.37-.27.76-.37,1.16-.32.4.05.73.23,1,.52.64.75,1.49,1.32,2.54,1.72,1.05.4,2.22.6,3.5.6,1.97,0,3.4-.34,4.28-1.02.88-.68,1.33-1.5,1.36-2.46,0-.96-.45-1.75-1.36-2.38s-2.4-1.11-4.48-1.46c-2.69-.43-4.67-1.17-5.92-2.24-1.25-1.07-1.88-2.33-1.88-3.8,0-1.36.36-2.49,1.08-3.4.72-.91,1.68-1.59,2.88-2.04,1.2-.45,2.52-.68,3.96-.68,1.79,0,3.33.31,4.62.92,1.29.61,2.34,1.44,3.14,2.48.27.35.37.71.32,1.08-.05.37-.27.68-.64.92-.32.19-.69.25-1.1.18-.41-.07-.77-.26-1.06-.58-.67-.77-1.44-1.34-2.32-1.7-.88-.36-1.89-.54-3.04-.54-1.47,0-2.64.3-3.52.9-.88.6-1.32,1.35-1.32,2.26,0,.61.17,1.15.5,1.6.33.45.91.85,1.72,1.2.81.35,1.95.64,3.42.88,2,.32,3.58.79,4.74,1.42,1.16.63,1.99,1.36,2.48,2.2s.74,1.75.74,2.74c0,1.25-.37,2.35-1.1,3.3-.73.95-1.75,1.69-3.04,2.22-1.29.53-2.78.8-4.46.8Z" style="--len: 114.1632308959961px;"/>
                     </svg>
                 </icon>
-                <div class="version">版本：<strong id="version" class="space"></strong>(<span id="platform"></span>;&nbsp;<span id="arch"></span>)</div>
+                <div class="version">版本：
+                    <strong id="version" class="space"></strong>
+                    (<span id="platform"></span>;&nbsp;<span id="arch"></span>)
+                    <div class="space"></div>
+                    <button class="link" id="version-details">
+                    <a class="fa-solid fa-up-to-line space"></a>版本详情</button>
+                </div>
                 <div class="about">
                     项目地址：<button class="link" t="https://github.com/btjawa/BiliTools">
                         <i class="fa-brands fa-github space"></i>
@@ -337,6 +343,7 @@
             <div class="video-list"></div>
         </div>
         <script type="module" src="./scripts/gt.0.4.9.js"></script>
+        <script type="module" src="./scripts/updater.ts"></script>
         <script type="module" src="./scripts/pages.js"></script>
         <script type="module" src="./scripts/renderer.js"></script>
     </body>
