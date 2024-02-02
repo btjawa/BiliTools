@@ -113,7 +113,7 @@ async function saveFile(options = {}) {
             const selected = await dialog.save(options);
             resolve(selected);
         } catch(err) {
-            console.error(err);
+            emit("error", err);
             reject(null);
         }
     });
@@ -809,7 +809,7 @@ function appendMoreList(data, block) { // 填充更多解析
                     resolve(message.elems)
                 });
             } catch(err) {
-                console.error(err);
+                emit("error", err);
                 reject(err)
             }
         })
@@ -1256,7 +1256,7 @@ listen("download-queue", async (e) => {
         sel.toggleClass("active", len !== 0);
         if (elm.hasClass('waiting')) $('.down-page-start-process').toggleClass("active", len !== 0);
     });
-    console.log(p)
+    if (p.waiting.length === 0 && p.doing.length === 0) $('.down-page-sel.complete').click();
 });
 
 listen("progress", async (e) => {

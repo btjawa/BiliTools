@@ -6,7 +6,7 @@
   },
   "package": {
     "productName": "BiliTools",
-    "version": "1.0.2"
+    "version": "1.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -37,6 +37,7 @@
     "bundle": {
       "active": true,
       "category": "Utility",
+      "copyright": "Copyright © 2024 btjawa",
       "targets": "all",
       "identifier": "com.btjawa.bilitools",
       "icon": [
