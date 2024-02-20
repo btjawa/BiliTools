@@ -309,6 +309,7 @@ async fn process_queue(window: tauri::Window, date: String) -> Result<(), String
 }
 
 async fn process_download(window: tWindow, download_info: VideoInfo) -> Result<(), String> {
+    fs::create_dir_all(&download_info.output_path.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
     let action = &download_info.action;
     for task in &download_info.tasks {
         if let Ok(_) = download_file(window.clone(), task.clone(), download_info.gid.clone()).await {
@@ -448,7 +449,6 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
     let current_dir = env::current_dir().unwrap();
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
     let output_path = info.output_path.to_string_lossy();
-    fs::create_dir_all(&info.output_path.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
     let video_filename = &info.output_path.file_name().unwrap().to_string_lossy();
     let video_path = info.video_path.clone();
     let audio_path = info.audio_path.clone();

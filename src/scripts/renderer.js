@@ -1021,7 +1021,7 @@ function appendCodecList(details, type, action, ms, block) { // 填充编码格�
 function appendAudioList(details, type, action, ms, block) { // 填充音频
     const root = type == "bangumi" ? details.result : details.data;
     const dms = $('<div>').addClass("video-block-opt-cont audio");
-    const text = $('<div>').addClass("video-block-opt-text").text("分辨率/画质");
+    const text = $('<div>').addClass("video-block-opt-text").text("比特率/音质");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt audio");
     const downBtn = $('<button>').addClass(`video-block-${action=="multi"?'video':'vaudio'}-down-btn ${action}`).text('下一步');

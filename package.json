@@ -1,6 +1,6 @@
 {
   "name": "bilitools",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "bilibili工具箱，视频/番剧+伴音/音乐下载，三种登录方式，仅用作学习用途。",
   "type": "module",
   "scripts": {
