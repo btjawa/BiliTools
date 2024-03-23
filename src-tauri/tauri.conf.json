@@ -27,7 +27,8 @@
         "all": false,
         "request": true,
         "scope": [
-          "https://*.bilibili.com/*"
+          "https://*.bilibili.com/*",
+          "https://*.hdslb.com/*"
         ]
       },
       "clipboard": {

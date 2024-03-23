@@ -698,7 +698,7 @@ async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secr
 }
 
 #[tauri::command]
-async fn save_file(window: tWindow, content: String, path: String, secret: String) -> Result<String, String> {
+async fn save_file(window: tWindow, content: Vec<u8>, path: String, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())

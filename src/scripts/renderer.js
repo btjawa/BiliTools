@@ -45,7 +45,6 @@ const bigVipIcon = `<svg class="user-vip-icon" width="16" height="16" viewBox="0
 </svg>`
 
 iziToast.settings({
-    timeout: 4000,
     closeOnEscape: 'true',
     transitionIn: 'bounceInLeft',
     transitionOut: 'fadeOutRight',
@@ -55,13 +54,31 @@ iziToast.settings({
     theme: 'dark'
 });
 
+function iziInfo(message = '') {
+    console.log(message)
+    iziToast.info({
+        icon: 'fa-solid fa-circle-info',
+        layout: 2, timeout: 4000,
+        title: '提示', message
+    });
+}
+
+function iziError(message = '') {
+    console.error(message);
+    iziToast.error({
+        icon: 'fa-regular fa-circle-exclamation',
+        layout: 2, timeout: 10000,
+        title: '警告 / 错误', message
+    });
+}
+
 // https://github.com/gdsmith/jquery.easing
 $.easing.easeOutQuint = function(x) {
     return 1 - Math.pow(1 - x, 5);
 };
 
 class MediaData {
-    constructor(title, desc, pic, duration, id, cid, eid, type, rank, ss_title, display_name, badge) {
+    constructor(title, desc, pic, duration, id, cid, eid, type, rank, ss_title, display_name, badge, ext) {
         this.title = title;
         this.desc = desc;
         this.pic = pic;
@@ -71,9 +88,10 @@ class MediaData {
         this.eid = eid;
         this.type = type;
         this.rank = rank;
-        this.ss_title = ss_title;
-        this.display_name = display_name;
-        this.badge = badge;
+        this.ss_title = ss_title || null;
+        this.display_name = display_name || null;
+        this.badge = badge || null;
+        this.ext = ext || null;
     }
 }
 
@@ -92,11 +110,7 @@ function debounce(fn, wait) {
     let bouncing = false;
     return function(...args) {
         if (bouncing) {
-            iziToast.error({
-                icon: 'fa-regular fa-circle-exclamation',
-                layout: 2, title: '警告',
-                message: `请等待${wait / 1000}秒后再进行请求`
-            });
+            iziError(`请等待${wait / 1000}秒后再进行请求`);
             return null;
         }
         bouncing = true;
@@ -113,7 +127,7 @@ async function saveFile(options = {}) {
             const selected = await dialog.save(options);
             resolve(selected);
         } catch(err) {
-            emit("error", err);
+            iziError(err);
             reject(null);
         }
     });
@@ -156,7 +170,7 @@ async function getMediaInfo(rawId, type) {
                 return lssnResp;
             }
         }
-        handleErr(basicResp, null);
+        handleErr(basicResp);
         backward();
         return null;
     }
@@ -173,7 +187,7 @@ async function getPlayUrl(data) {
     const details = (await http.fetch(`https://api.bilibili.com/${key}/playurl?${signature}${data.type == "lesson" ? `&ep_id=${data.eid}` : ""}`,
     { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
-    if(handleErr(details, data.type)) return null;
+    if(handleErr(details)) return null;
     return details;
 }
 
@@ -187,23 +201,23 @@ async function getMusicUrl(songid, quality) {
     const details = (await http.fetch(`https://api.bilibili.com/audio/music-service-c/url?${signature}`,
     { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
-    if (handleErr(details, "music")) return null;
+    if (handleErr(details)) return null;
     else return details;
 }
 
 function matchDownUrl(details, quality, action, fileType) {
     let downUrl = [];
     const isV = fileType === "video";
-    for (const file of isV ? details.dash.video : details.dash.audio) {
+    for (const file of isV ? (details?.dash?.video || details?.durl) : details.dash.audio) {
         if (action == "music") downUrl[1] = details.dash.audio
-        else if (file.id == isV ? quality.dms_id : quality.ads_id
-        && !isV || file.codecs == quality.codec_id) {
-            downUrl[isV ? 0 : 1] = [file.base_url];
+        else if ((file.id == isV ? quality.dms_id : quality.ads_id
+        && !isV || file.codecs == quality.codec_id) || details?.durl) {
+            downUrl[isV ? 0 : 1] = [file.base_url || file.url];
             if (file.backup_url) downUrl[isV ? 0 : 1].push(...file.backup_url)
             break;
         }
     }
-    if (action == "multi") {
+    if (action == "multi" && details?.dash) {
         const target = quality.ads_id == 30250 ? details.dash.dolby.audio
         : (quality.ads_id == 30251 ? details.dash.flac.audio : details.dash.audio);
         if (Array.isArray(target)) {
@@ -219,24 +233,28 @@ function matchDownUrl(details, quality, action, fileType) {
             if (target.backup_url) downUrl[1].push(...target.backup_url);
         }
     }
-    return [isV, downUrl, quality, action]
+    return [isV, downUrl, quality, quality.ads_id=="flv" ? "only" : action]
 }
 
 function handleDown(isV, downUrl, quality, action, mediaData) {
     if (isV ? downUrl[0][0] : downUrl[1][0] && action == "multi" ? downUrl[1][0] : true) {
-        let qualityStr, displayName;
-        const ext = isV ? "mp4" : "mp3";
+        let qualityStr, displayName, ext;
+        const f_ext = (url) => url.split('.').pop().split('?')[0].split('#')[0];
         const safeTitle = format.filename(mediaData.title);
-        if (action == "only") {
-            qualityStr = isV ? quality.dms_desc : quality.ads_desc;
-            displayName = `${safeTitle} (${qualityStr}).${ext}`;
-        } else if (action == "multi") {
+        if (action == "multi") {
             qualityStr = `${quality.dms_desc}-${quality.ads_desc}`;
-            displayName = `${safeTitle} (${qualityStr}).mp4`;
-        } else if (action == "music") {
-            const ext = downUrl[1][0].split('.').pop().split('?')[0].split('#')[0];
-            displayName = `${safeTitle} (${quality}).${ext}`;
+            ext = "mp4";
+        } else {
+            if (quality.ads_id == "flv") {
+                qualityStr = quality.dms_desc;
+                ext = f_ext(downUrl[0][0]);
+            } else {                
+                qualityStr = action == "only" ? `${quality.dms_desc}-${quality.ads_desc}` : quality;
+                ext = action == "only" ? isV ? "mp4" : "mp3" : f_ext(downUrl[1][0]);
+            }
         }
+        displayName = `${safeTitle} (${qualityStr}).${ext}`;
+        mediaData.ss_title = format.filename(mediaData.ss_title);
         mediaData.display_name = displayName;
         return invoke('push_back_queue', {
             videoUrl: downUrl[0] || null,
@@ -246,18 +264,13 @@ function handleDown(isV, downUrl, quality, action, mediaData) {
     } else emit('error', "未找到符合条件的下载地址＞﹏＜");
 }
 
-function handleErr(err, type) {
+function handleErr(err) {
     let errMsg = '';
     if (err.code === 0) {
-        const root = type != "bangumi" ? err.data : err.result;
-        if (root.is_preview === 1) {
-            if (root.durls && root.durl) {
-                errMsg = '没有本片权限, 只有试看权限<br>可能是没有大会员/没有购买本片<br>或是地区受限';
-            }
-        } else if (root.v_voucher) errMsg = '目前请求次数过多, 已被风控, 请等待5分钟或更久后重新尝试请求';
+        if ((err.data || err.result).v_voucher) errMsg = '目前请求次数过多, 已被风控, 请等待5分钟或更久后重新尝试请求';
     } else if (err.code === -404) {
-        errMsg = `${err.message || err.msg}<br>错误代码: ${err.code}<br>可能是没有大会员/没有购买本片<br>或是地区受限<br>或是真的没有该资源`;
-    } else errMsg = `${err.message || err.msg || err}<br>错误代码: ${err.code}`;
+        errMsg = `${err.message || err.msg}<br>\n错误代码: ${err.code}<br>\n可能是没有大会员/没有购买本片<br>\n或是地区受限<br>\n或是真的没有该资源`;
+    } else errMsg = `${err.message || err.msg || err}<br>\n错误代码: ${err.code}`;
     if (errMsg) {
         console.error(err);
         emit('error', errMsg);
@@ -278,13 +291,7 @@ async function bilibili(ts) {
                 shell.open(`https://www.bilibili.com/${path}/${data[0]}/${ts?`?ts=${ts}`:''}`);
                 return null;
             }
-        } else {
-            iziToast.error({
-                icon: 'fa-regular fa-circle-exclamation',
-                layout: 2, title: `警告`,
-                message: `请先点击搜索按钮或返回到搜索结果页面`
-            });
-        }
+        } else iziError('请先点击搜索按钮或返回到搜索结果页面');
     }
 }
 
@@ -389,7 +396,7 @@ $(document).ready(function () {
     $('.search-btn').on('click', dbc);
     searchInput.on('keydown', (e) => {if (e.key == "Enter") dbc()});
     $('.backward').on('click', () => backward());
-    $(".login, .settings, .down-page, .user-profile").append(`<button class="help link"t="https://blog.btjawa.top/posts/bilitools/#qa"><span>遇到问题?&nbsp;前往文档</span>&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></button>`);
+    $(".login, .settings, .down-page, .user-profile").append(`<button class="help link"t="https://blog.btjawa.top/posts/bilitools/#Q-A"><span>遇到问题?&nbsp;前往文档</span>&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></button>`);
     $('.link').on('click', function() {shell.open($(this).attr("t"))});
     $(document).on('keydown', async function(e) {
         if (e.key == "F5" || (e.ctrlKey && e.key == "p") || (e.ctrlKey && e.key == "r")) e.preventDefault();
@@ -473,7 +480,7 @@ function handleMediaList(details, type) {
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
                         episode.aid, episode.cid, episode.id,
-                        type, rank + 1, ugc_root.title, null, null
+                        type, rank + 1, ugc_root.title
                     );
                     appendMediaBlock(mediaData[rank]);
                     Object.values(episode).forEach(id => {
@@ -495,8 +502,8 @@ function handleMediaList(details, type) {
                         const title = page.part || root.title;
                         mediaData[rank] = new MediaData(
                             title, root.desc, root.pic, page.duration,
-                            root.aid, page.cid, page.bvid, type, rank + 1,
-                            root.title, null, null
+                            root.aid, page.cid, page.bvid, type,
+                            rank + 1, root.title
                         );
                         appendMediaBlock(mediaData[rank])
                         Object.values(page).forEach(id => {
@@ -530,7 +537,7 @@ function handleMediaList(details, type) {
                 root.title, root.intro, 
                 root.cover, root.duration, 
                 root.id, root.cod, root.uid,
-                type, 0, root.title, null
+                type, 0, root.title
             );
             getMusicUrl(root.id, 3).then(async response => {
                 response.data.qualities.reverse().forEach(quality => {
@@ -569,21 +576,16 @@ function handleMultiSelect() {
     });
     multiSelectNext.off('click').on('click', async () => {
         if (selectedMedia.length > 50 || selectedMedia.length < 1) {
-            iziToast.error({
-                icon: 'fa-regular fa-circle-exclamation',
-                layout: 2, title: `警告`,
-                message: selectedMedia.length < 1 ?
-                "请至少选择一个视频" : 
-                "单次最多只能下载50个视频, 超出将很大可能触发风控"
-            })
-            return;
+            iziError(selectedMedia.length < 1 ? "请至少选择一个视频"
+            : "单次最多只能下载50个视频, 超出将很大可能触发风控");
+            return null;
         }
         for (let i = 0; i < selectedMedia.length; i++) {
             const data = selectedMedia[i];
             const details = await getPlayUrl(data);
             if (details.code !== 0) continue;
-            const dms = appendDimensionList(details, data.type, "multi", true, null);
-            const ads = appendAudioList(details, data.type, "multi", true, null);
+            const dms = appendDimensionList(details, data.type, "multi");
+            const ads = appendAudioList(details, data.type, "multi");
             const quality = new CurrentSel(...dms, ...ads);
             const res = matchDownUrl(details.data || details.result, quality, "multi", "video");
             handleDown(...res, data);
@@ -609,7 +611,7 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
         current.title, info.desc, 
         info.pic, "未知", info.aid,
         current.cid, edge_id, type,
-        mediaData.length + 1, info.title, null
+        mediaData.length + 1, info.title
     ));
     appendMediaBlock(mediaData.at(-1));
     for (const story of response.data.story_list) {
@@ -655,11 +657,7 @@ async function initActionBlock(action, block, data) {
         block.next().remove();
     }
     if (multiSelectBtn.hasClass('checked')) {
-        iziToast.error({
-            icon: 'fa-regular fa-circle-exclamation',
-            layout: 2, title: `警告`,
-            message: "多选状态下请点击右下角 “确认/结算” 结算"
-        });
+        iziError("多选状态下请点击右下角 “确认/结算” 结算");
         return null;    
     }
     block.after(videoBlockAction);
@@ -674,9 +672,9 @@ async function initActionBlock(action, block, data) {
         appendMoreList(data, videoBlockAction);
         videoBlockAction.append(crossSplit.clone());
     }
-    appendDimensionList(details, data.type, action, false, videoBlockAction);
+    appendDimensionList(details, data.type, action, videoBlockAction);
     if (action == "only") videoBlockAction.append(crossSplit);
-    appendAudioList(details, data.type, action, false, videoBlockAction);
+    appendAudioList(details, data.type, action, videoBlockAction);
     async function down(fileType) {
         const quality = new CurrentSel(...currentSel);
         const res = matchDownUrl(details.data || details.result, quality, action, fileType, data);
@@ -740,7 +738,17 @@ function appendMediaBlock(root, audio) { // 填充视频块
             selectedMedia = selectedMedia.filter(video => video.rank !== root.rank);
         }
     }
-    getCoverBtn.on('click', () => shell.open(root.pic.replace(/http/g, 'https')));
+    getCoverBtn.on('click', async () => {
+        const content = (await http.fetch(root.pic.replace(/http/g, 'https'), {
+            headers: tdata.headers,
+            responseType: http.ResponseType.Binary
+        })).data;
+        const sel = await saveFile({
+            filters: [{ name: 'JPG 文件', extensions: ['jpg'] }],
+            defaultPath: `封面_${format.filename(isV ? root.title : audio.desc)}.jpg`
+        });
+        if (sel) invoke('save_file', { content, path: sel, secret: tdata.secret });
+    });
     getMultiBtn.on('click', () => initActionBlock("multi", block, root));
     getMoreBtn.on('click', () => initActionBlock("only", block, root));
     getAudioBtn.on('click', async () => {
@@ -772,11 +780,7 @@ async function appendDownPageBlock(info, target, action) { // 填充下载块
     openDirBtn.on('click', () => {
         if (action == "complete") {
             invoke('open_select', { path: info.output_path });
-        } else iziToast.error({
-            icon: 'fa-regular fa-circle-exclamation',
-            layout: 2, title: `下载`,
-            message: `请等待下载完毕`
-        });
+        } else iziError('请等待下载完毕');
     });
     function handleAction(type) {
         if (action == "doing") {
@@ -809,18 +813,14 @@ function appendMoreList(data, block) { // 填充更多解析
                     resolve(message.elems)
                 });
             } catch(err) {
-                emit("error", err);
+                iziError(err);
                 reject(err)
             }
         })
     }
     function noLogin() {
         if (!userData.isLogin) {
-            iziToast.error({
-                icon: 'fa-solid fa-circle-info',
-                layout: 2, title: '解析',
-                message: '该模块需要登录',
-            });
+            iziError('该模块需要登录');
             return true;
         } else return false;
     }
@@ -828,13 +828,9 @@ function appendMoreList(data, block) { // 填充更多解析
         Swal.fire({
             title: '<strong>数据结构</strong>',
             icon: 'info',
-            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/posts/bilitools#danmakuelem" target="_blank">BiliTools#DanmakuElem</a>',
+            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/posts/bilitools#DanmakuElem" target="_blank">BiliTools#DanmakuElem</a>',
         })
-        iziToast.info({
-            icon: 'fa-solid fa-circle-info',
-            layout: 2, title: '弹幕',
-            message: 'JSON保存成功~',
-        });
+        iziInfo('JSON保存成功~');
         return null;
     }
     async function refresh(month) {
@@ -882,10 +878,11 @@ function appendMoreList(data, block) { // 填充更多解析
                     loadingBox.addClass('active');
                     const url = `https://api.bilibili.com/x/v2/dm/web/history/seg.so?${params1.toString()}`;
                     loadingBox.removeClass('active');
-                    const content = JSON.stringify(await dm(url), null, 2);
+                    const encoder = new TextEncoder();
+                    const content = Array.from(encoder.encode(JSON.stringify(await dm(url), null, 2)));
                     const selected = await saveFile({
                         filters: [{ name: 'JSON 文件', extensions: ['json'] }],
-                        defaultPath: date + '_' + format.filename(data.title)
+                        defaultPath: `弹幕_${date}_${format.filename(data.title)}.json`
                     });
                     if (selected) {
                         invoke('save_file', { content, path: selected, secret: tdata.secret });
@@ -918,7 +915,7 @@ function appendMoreList(data, block) { // 填充更多解析
         loadingBox.removeClass('active');
         const root = response.data;
         if (root.data.code !== 0) {
-            emit("error", `${root.data.code === 1 ? "未找到可用无摘要" : "本视频不支持AI摘要"}`)
+            iziError(`${root.data.code === 1 ? "未找到可用无摘要" : "本视频不支持AI摘要"}`)
             return null;
         }
         const summary = $('<div>').addClass('ai-summary-cont');
@@ -946,14 +943,14 @@ function appendMoreList(data, block) { // 填充更多解析
     })
 }
 
-function appendDimensionList(details, type, action, ms, block) { // 填充分辨率
+function appendDimensionList(details, type, action, block = null) { // 填充分辨率
     const root = type == "bangumi" ? details.result : details.data;
     const dms = $('<div>').addClass("video-block-opt-cont dimension");
     const text = $('<div>').addClass("video-block-opt-text").text("分辨率/画质");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt dimension");
     dms.append(text, split, opt).appendTo(block);
-    const maxQuality = Math.max(...root.dash.video.map(v => v.id));
+    const maxQuality = Math.max(...root.accept_quality);
     const qualityList = root.accept_quality.filter(quality => quality <= maxQuality);
     for (const quality of qualityList) {
         const qualityItem = root.support_formats.find(format => format.quality === quality);
@@ -966,29 +963,32 @@ function appendDimensionList(details, type, action, ms, block) { // 填充分辨
             currentBtn.addClass('checked');
             currentSel[0] = quality;
             currentSel[1] = description;
-            const codec = appendCodecList(qualityItem, "init", action, ms, block);
-            if (ms) return [quality, description, ...codec];
+            const codec = appendCodecList(qualityItem, "init", action, block);
+            if (!block) return [quality, description, ...codec];
         }
         currentBtn.on('click', function() {
             block.find('.video-block-opt-item.dimension').removeClass('checked');
             $(this).addClass('checked');
             currentSel[0] = quality;
             currentSel[1] = qualityItem.display_desc;
-            appendCodecList(qualityItem, "update", action, ms, block);
+            appendCodecList(qualityItem, "update", action, block);
         });
     }
 };
 
-function appendCodecList(details, type, action, ms, block) { // 填充编码格式
-    if (!details.codecs) return null;
+function appendCodecList(details, type, action, block = null) { // 填充编码格式
     const dms = $('<div>').addClass("video-block-opt-cont codec");
     const text = $('<div>').addClass("video-block-opt-text").text("编码格式");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt codec");
     const downBtn = $('<button>').addClass(`video-block-video-down-btn ${action}`).text('下一步');
-    if (!ms) block.find('.video-block-opt.codec').remove();
-    if (type == "init" && !ms) dms.append(text, split, opt).appendTo(block);
-    else $('.video-block-opt-cont.codec').append(opt)
+    if (action == "only") opt.append(downBtn)
+    if (block) {
+        block.find('.video-block-opt.codec').remove();
+        if (type == "init") dms.append(text, split, opt).appendTo(block);
+        else block.find('.video-block-opt-cont.codec').append(opt);
+    }
+    if (!details.codecs) return null;
     const codecsList = details.codecs.map(codec => ({
         codec, 
         priority: (codec.includes('avc') ? 1 : codec.includes('hev') ? 2 : 3)
@@ -1000,13 +1000,13 @@ function appendCodecList(details, type, action, ms, block) { // 填充编码格�
         const currentBtn = $('<button>').addClass(`video-block-opt-item codec`);
         const currentIcon = $('<i>').addClass(`fa-solid fa-rectangle-code space`);
         currentBtn.append(currentIcon, description);
-        opt.append(currentBtn);
+        opt.prepend(currentBtn);
         if (codec == 0) continue;
         if (i === 0) {
             currentBtn.addClass('checked');
             currentSel[2] = codec;
             currentSel[3] = description;
-            if (ms) return [codec, description];
+            if (!block) return [codec, description];
         }
         currentBtn.on('click', function() {
             block.find('.video-block-opt-item.codec').removeClass('checked');
@@ -1015,17 +1015,21 @@ function appendCodecList(details, type, action, ms, block) { // 填充编码格�
             currentSel[3] = description
         });
     }
-    if (action == "only") opt.append(downBtn)
 }
 
-function appendAudioList(details, type, action, ms, block) { // 填充音频
+function appendAudioList(details, type, action, block = null) { // 填充音频
     const root = type == "bangumi" ? details.result : details.data;
     const dms = $('<div>').addClass("video-block-opt-cont audio");
     const text = $('<div>').addClass("video-block-opt-text").text("比特率/音质");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt audio");
     const downBtn = $('<button>').addClass(`video-block-${action=="multi"?'video':'vaudio'}-down-btn ${action}`).text('下一步');
-    dms.append(text, split, opt).appendTo(block);
+    dms.append(text, split, opt.append(downBtn)).appendTo(block);
+    if (!root.accept_format.split(",").includes("mp4") && root.durl && root.durl.length > 0) {
+        iziInfo("由于此视频是 FLV 格式，因此我们无法获取音质与编码格式信息。<br>\n此视频已包含音频，因此在下载完成后无需合并音视频。")
+        currentSel[4] = "flv";
+        return null;
+    }
     const qualityDesc = {
         30216: "64K",
         30232: "132K",
@@ -1047,15 +1051,15 @@ function appendAudioList(details, type, action, ms, block) { // 填充音频
         const currentBtn = $('<button>').addClass(`video-block-opt-item audio`);
         const currentIcon = $('<i>').addClass(`fa-solid fa-${quality==0?'music-note-slash':'audio-description'} space`);
         currentBtn.append(currentIcon, description);
-        opt.append(currentBtn);
+        opt.prepend(currentBtn);
         if (quality == 0) {
             currentBtn.css('cursor', 'not-allowed');
             continue;
-        } else if (ms || !block.find('.video-block-opt-item.audio').hasClass('checked')) {
+        } else if (!block || !block.find('.video-block-opt-item.audio').hasClass('checked')) {
             currentBtn.addClass('checked');
             currentSel[4] = quality;
             currentSel[5] = description;
-            if (ms) return [quality, description];
+            if (!block) return [quality, description];
         };
         currentBtn.on('click', function() {
             item.removeClass('checked');
@@ -1064,7 +1068,6 @@ function appendAudioList(details, type, action, ms, block) { // 填充音频
             currentSel[5] = description;
         });
     }
-    opt.append(downBtn)
 }
 
 async function userProfile() {
@@ -1133,7 +1136,7 @@ async function pwdLogin() {
             loadingBox.addClass('active');
             await login.pwdLogin(username, password);
             loadingBox.removeClass('active');
-        } catch(err) { emit("error", err); loadingBox.removeClass('active'); }
+        } catch(err) { iziError(err); loadingBox.removeClass('active'); }
     });
     pwdInput.off('keydown').on('keydown', (e) => {
         if (e.key == "Enter") loginBtn.click();
@@ -1146,13 +1149,13 @@ async function smsLogin() {
     $('.login-sms-getcode-btn').off('click').on('click', async function() {
         if (!canSend) return null;
         const tel = $('#tel-input').val().toString();
-        if (!tel) { emit("error", "请输入手机号"); return null; }
+        if (!tel) { iziError("请输入手机号"); return null; }
         else if ((tel.match(/^1[3456789]\d{9}$/) && $('.login-sms-item-text').text().includes('+86'))
         || (!$('.login-sms-item-text').text().includes('+86') && tel)) { try {
             loadingBox.addClass('active');
             const response = await login.sendSms(tel, $('.login-sms-item-text').text().replace(/[^0-9]/g, ''))
             loadingBox.removeClass('active');
-            if (response.code !== 0) { emit("error", response.message); return null; }
+            if (response.code !== 0) { iziError(response.message); return null; }
             key = response.data.captcha_key;
             let timeout = 60;
             canSend = false;
@@ -1165,17 +1168,17 @@ async function smsLogin() {
                     canSend = true;
                 }
             }, 1000);
-        } catch(err) { emit("error", err); loadingBox.removeClass('active'); } }
+        } catch(err) { iziError(err); loadingBox.removeClass('active'); } }
     });
     $('.login-sms-login-btn').off('click').on('click', async function() {
         try {
             const tel = $('#tel-input').val().toString();
             const code = $('#sms-input').val().toString();
-            if (!tel || !code || !key) { emit("error", !tel || !code ? "请输入手机号与验证码" : "请先获取短信验证码"); return null; }
+            if (!tel || !code || !key) { iziError(!tel || !code ? "请输入手机号与验证码" : "请先获取短信验证码"); return null; }
             loadingBox.addClass('active');
             await invoke('sms_login', { tel, code, key, cid: $('.login-sms-item-text').text().replace(/[^0-9]/g, '') })
             loadingBox.removeClass('active');
-        } catch(err) { emit("error", err); loadingBox.removeClass('active'); }
+        } catch(err) { iziError(err); loadingBox.removeClass('active'); }
     });
 }
 
@@ -1216,12 +1219,7 @@ listen("user-mid", async function(e) {
     sidebar.userProfile.off('click').on('click', dbc);
     if (mid != "0") {
         userData = { mid, coins: details.data.coins, isLogin: true };
-        iziToast.info({
-            icon: 'fa-solid fa-circle-info',
-            layout: 2,
-            title: '登录',
-            message: `登录成功~`,
-        });
+        iziInfo(`登录成功~`);
         invoke('insert_cookie', { cookieStr: `bili_ticket=${(await verify.bili_ticket()).data.ticket}; Path=/; Domain=bilibili.com` });
         verify.checkRefresh();
     }
@@ -1276,12 +1274,4 @@ listen("progress", async (e) => {
     });
 });
 
-listen("error", async (e) => {
-    iziToast.error({
-        icon: 'fa-regular fa-circle-exclamation',
-        layout: 2, title: '错误',
-        timeout: 10000,
-        message: `遇到错误：${e.payload}`,
-    });
-    console.error(e.payload);
-})
+listen("error", (e) => iziError(`遇到错误：${e.payload}`))
