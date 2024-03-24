@@ -5,7 +5,6 @@ import { shell, dialog, http, app, os, clipboard } from '@tauri-apps/api';
 import $ from "jquery";
 import iziToast from "izitoast";
 import Swal from "sweetalert2";
-import protobuf from "protobufjs";
 
 import * as tdata from "./data.ts";
 import * as format from './format.ts';
@@ -797,40 +796,38 @@ function appendMoreList(data, block) { // 填充更多解析
     const text = $('<div>').addClass("video-block-opt-text").text("更多解析");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt more");
-    const hsdm = $('<button>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor space'></i>历史弹幕(JSON)");
-    const rtdm = $('<button>').addClass("video-block-opt-item realtime-danmaku").html("<i class='fa-solid fa-meteor space'></i>实时弹幕(ASS/XML)");
+    const hsdm = $('<button>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor space'></i>历史弹幕");
+    const rtdm = $('<button>').addClass("video-block-opt-item realtime-danmaku").html("<i class='fa-solid fa-meteor space'></i>实时弹幕");
     const aism = $('<button>').addClass("video-block-opt-item ai-summary").html("<i class='fa-solid fa-microchip-ai space'></i>视频AI总结");
     dms.append(text, split, opt).appendTo(block);
     opt.append(hsdm, rtdm, aism);
-    async function hs_dm(params) {
-        return new Promise(async (resolve, reject) => {
-            // https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/grpc_api/bilibili/community/service/dm/v1/dm.proto
-            protobuf.load('../proto/dm.proto', async function(err, root) { try {
-                const DmSegMobileReply = root.lookupType("bilibili.community.service.dm.v1.DmSegMobileReply");
-                loadingBox.addClass('active');
-                const response = await http.fetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so?' + params.toString(),
-                { headers: tdata.headers, responseType: http.ResponseType.Binary });
-                loadingBox.removeClass('active');
-                const message = DmSegMobileReply.decode(new Uint8Array(response.data));
-                resolve(message.elems)
-            } catch(err) {
-                iziError(err);
-                reject(err)
-            }});
-        })
-    }
-    function noLogin() {
-        if (!userData.isLogin) {
-            iziError('该模块需要登录');
-            return true;
-        } else return false;
+    async function getDm(date, hs) {
+        Swal.fire({
+            title: '选择下载类型',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'ASS 字幕',
+            cancelButtonText: 'XML 文档'
+        }).then(async (res) => {
+            const p = `弹幕_${date}_${format.filename(data.title)}`;
+            loadingBox.addClass('active');
+            if (res.dismiss == Swal.DismissReason.cancel || res.isConfirmed)
+                await invoke('get_dm', {
+                secret: tdata.secret,
+                oid: data.cid, date: hs ? date : null,
+                dfPath: p + (res.isConfirmed ? '.ass' : '.xml'),
+                xml: !res.isConfirmed
+            });
+            loadingBox.removeClass('active');
+            iziInfo('弹幕保存成功~');
+        });
     }
     async function refresh(month) {
-        const params0 = new URLSearchParams({
+        const params = new URLSearchParams({
             type: 1, oid: data.cid, month
         });
         loadingBox.addClass('active');
-        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params0.toString()}`, { headers: tdata.headers })).data;
+        const dateList = (await http.fetch(`https://api.bilibili.com/x/v2/dm/history/index?${params.toString()}`, { headers: tdata.headers })).data;
         loadingBox.removeClass('active');
         dms.find('.history-date-cont').remove();
         const dateCont = $('<div>').addClass('history-date-cont active');
@@ -863,33 +860,15 @@ function appendMoreList(data, block) { // 填充更多解析
                 }
                 const col = $('<div>').addClass('history-date-body-col').html(date.split("-")[2]);
                 lastRow.append(col);
-                col.on('click', async () => {
-                    const params1 = new URLSearchParams({
-                        type: 1, oid: data.cid, date
-                    });
-                    loadingBox.addClass('active');
-                    loadingBox.removeClass('active');
-                    const content = Array.from((new TextEncoder()).encode(await hs_dm(params1)));
-                    const selected = await saveFile({
-                        filters: [{ name: 'JSON 文件', extensions: ['json'] }],
-                        defaultPath: `弹幕_${date}_${format.filename(data.title)}.json`
-                    });
-                    if (selected) {
-                        invoke('save_file', { content, path: selected, secret: tdata.secret });
-                        Swal.fire({
-                            title: '<strong>数据结构</strong>',
-                            icon: 'info',
-                            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/2024/bilitools/#DanmakuElem" target="_blank">文档</a>',
-                        })
-                        iziInfo('JSON保存成功~');
-                        return null;                
-                    }
-                })
+                col.on('click', () => getDm(date, true));
             });
         }
     }
     hsdm.on('click', async function() {
-        if (noLogin()) return null;
+        if (!userData.isLogin) {
+            iziError('该模块需要登录');
+            return null;
+        }
         const date = new Date();
         let month = date.getMonth() + 1;
         let day = date.getDate();
@@ -901,27 +880,7 @@ function appendMoreList(data, block) { // 填充更多解析
             if (!$(e.target).closest(".history-date-cont").length && !$(e.target).hasClass('swal2-confirm')) dms.find('.history-date-cont').removeClass('active');
         });
     });
-    rtdm.on('click', async function() {
-        Swal.fire({
-            title: '选择下载类型',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonText: 'ASS 字幕',
-            cancelButtonText: 'XML 文档'
-        }).then(async (res) => {
-            const p = `弹幕_${format.pubdate(new Date(), true)}_${format.filename(data.title)}`;
-            loadingBox.addClass('active');
-            if (res.isConfirmed) await invoke('get_dm', { secret: tdata.secret, oid: data.cid, dfPath: p + '.ass', xml: false });
-            else if (res.dismiss === Swal.DismissReason.cancel) await invoke('get_dm', { secret: tdata.secret, oid: data.cid, dfPath: p + '.xml', xml: true });
-            loadingBox.removeClass('active');
-            Swal.fire({
-                title: '<strong>使用教程</strong>',
-                icon: 'info',
-                html: '关于字幕如何使用，请查看 <a href="https://blog.btjawa.top/2024/bilitools/#ASS字幕如何使用" target="_blank">文档</a>',
-            })
-            iziInfo('弹幕保存成功~');
-        })
-    });
+    rtdm.on('click', () => getDm(format.pubdate(new Date(), true), false));
     aism.on('click', async function() {
         const params = ({
             aid: data.id, cid: data.cid, up_mid: userData.mid || 0, 

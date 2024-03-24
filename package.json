@@ -27,7 +27,6 @@
     "jquery": "^3.7.1",
     "jsencrypt": "^3.3.2",
     "md5": "^2.3.0",
-    "protobufjs": "^7.2.6",
     "qrcode": "^1.5.3",
     "sweetalert2": "^11.6.13"
   },
