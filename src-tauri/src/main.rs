@@ -6,12 +6,13 @@ use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
-use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant, net::{TcpListener, SocketAddr},
-process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt, panic};
+use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc}, time::Instant, net::{TcpListener, SocketAddr},
+process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt, panic, io::Read};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use rusqlite::{Connection, params};
 use regex::Regex;
-use tauri::{Manager, Window as tWindow, WindowEvent};
+use flate2::read::DeflateDecoder;
+use tauri::{Manager, Window as tWindow, WindowEvent, async_runtime, api::dialog::FileDialogBuilder};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
 mod logger;
@@ -245,7 +246,7 @@ async fn push_back_queue(
     let display_name = media_data.get("display_name").unwrap().as_str().unwrap().to_string();
     for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
         let filename = &extract_filename(&url[0]);
-        let path = TEMP_DIR.read().await.join(format!("{}_{}.{}", date, filename, "bilitools.downloading")).join(filename);
+        let path = TEMP_DIR.read().await.join(format!("{}_{}.bilitools.downloading", date, filename)).join(filename);
         let init_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.addUri",
@@ -261,7 +262,7 @@ async fn push_back_queue(
             .json(&init_payload)
             .send().await.map_err(|e| handle_err(window.clone(), e))?;
 
-        let init_resp_data: Value = init_resp.json().await.map_err(|e| e.to_string())?;
+        let init_resp_data: Value = init_resp.json().await.map_err(|e| handle_err(window.clone(), e))?;
         let gid = init_resp_data["result"].as_str().unwrap().to_string();
         handle_download(window.clone(), gid.clone(), "pause".to_string()).await.map_err(|e| handle_err(window.clone(), e))?;
         tasks.push(DownloadTask {
@@ -294,7 +295,7 @@ async fn process_queue(window: tauri::Window, date: String) -> Result<(), String
         for _ in 0..max_conc.saturating_sub(doing_len) {
             if let Some(video_info) = update_queue(&window, "waiting", None, Some(date.clone())).await {
                 let window_clone = window.clone();
-                tokio::spawn(async move {
+                async_runtime::spawn(async move {
                     process_download(window_clone, video_info).await.unwrap();
                 });
             }
@@ -1056,6 +1057,67 @@ async fn init(window: tWindow, secret: String) -> Result<i64, String> {
     return Ok(mid_value);
 }
 
+#[tauri::command]
+async fn get_dm(window: tWindow, secret: String, oid: i64, date: Option<String>, df_path: String, xml: bool) -> Result<(), String> {
+    if secret != *SECRET.read().await {
+        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
+        return Err("403 Forbidden".to_string())
+    }
+    let client = init_client();
+    let mut url = "https://api.bilibili.com/x/v1/dm/list.so";
+    let mut query = vec![("oid", oid.to_string())];
+    if let Some(date) = date {
+        url = "https://api.bilibili.com/x/v2/dm/history";
+        query.push(("date", date));
+        query.push(("type", "1".to_string()));
+    };
+    let response = client.get(url).query(&query).send()
+        .await.map_err(|e| handle_err(window.clone(), e))?;
+
+    if response.status() != reqwest::StatusCode::OK {
+        handle_err(window.clone(), response.status().to_string());
+        return Err(response.status().to_string());
+    }
+
+    let bytes = response.bytes().await.map_err(|e| handle_err(window.clone(), e))?.to_vec();
+    let mut decoder = DeflateDecoder::new(&*bytes);
+    let mut dec_data = String::new();
+    decoder.read_to_string(&mut dec_data).map_err(|e| handle_err(window.clone(), e))?;
+
+    let mut dialog = FileDialogBuilder::new().set_file_name(&df_path);
+
+    if xml { dialog = dialog.add_filter("XML 文档", &["xml"]);
+    } else { dialog = dialog.add_filter("Aegisub 高级字幕文件", &["ass"]); }
+
+    let (sender, receiver) = mpsc::channel(); // 模拟 Promise
+    dialog.save_file(move |path| {
+        let _ = sender.send(path);
+    });
+    let path = receiver.recv().map_err(|e| handle_err(window.clone(), e))?;
+    if let Some(output) = path {
+        let input = if xml { output.clone() } else {
+            TEMP_DIR.read().await.join(format!(
+            "{}.bilitools.downloading", output.file_name()
+            .unwrap().to_string_lossy())).join("input.xml")
+        };
+        fs::create_dir_all(&input.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
+        fs::write(input.clone(), dec_data).map_err(|e| handle_err(window.clone(), e))?;
+        if !xml {
+            let current_dir = env::current_dir().unwrap();
+            let df_path = current_dir.join("DanmakuFactory").join("DanmakuFactory.exe");
+            let _ = Command::new(df_path)
+                .creation_flags(0x08000000)
+                .arg("-i").arg(input)
+                .arg("-o").arg(output)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .map_err(|e| handle_err(window.clone(), e))?;
+        }
+    };
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     logger::init_logger().map_err(|e| e.to_string()).unwrap();
@@ -1075,7 +1137,7 @@ async fn main() {
             panic::set_hook(Box::new(move |e| {
                 handle_err(window_for_panic.lock().unwrap().clone(), e);
             }));
-            tokio::spawn(async move {
+            async_runtime::spawn(async move {
                 rw_config(window.clone(), "init".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
                 ARIA2C_MANAGER.lock().await.init().await.map_err(|e| handle_err(window.clone(), e))?;
                 window.clone().listen("stop_login", |_| { LOGIN_POLLING.store(false, Ordering::SeqCst) });
@@ -1085,12 +1147,12 @@ async fn main() {
         })
         .invoke_handler(tauri::generate_handler![ready, init, exit, 
             scan_login, pwd_login, sms_login, insert_cookie, open_select,
-            rw_config, refresh_cookie, save_file, handle_download,
+            rw_config, refresh_cookie, save_file, handle_download, get_dm,
             push_back_queue, process_queue, handle_temp, handle_aria2c])
         .on_window_event(move |event| match event.event() {
             WindowEvent::Destroyed => {
                 log::info!("Killing aria2c...");
-                tokio::spawn(async move { ARIA2C_MANAGER.lock().await.kill()
+                async_runtime::spawn(async move { ARIA2C_MANAGER.lock().await.kill()
                 .map_err(|e| handle_err(event.window().clone(), e)) });
             }
             _ => {}

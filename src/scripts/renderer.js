@@ -78,7 +78,7 @@ $.easing.easeOutQuint = function(x) {
 };
 
 class MediaData {
-    constructor(title, desc, pic, duration, id, cid, eid, type, rank, ss_title, display_name, badge, ext) {
+    constructor(title, desc, pic, duration, id, cid, eid, type, rank, ss_title, display_name, badge, dms) {
         this.title = title;
         this.desc = desc;
         this.pic = pic;
@@ -91,7 +91,7 @@ class MediaData {
         this.ss_title = ss_title || null;
         this.display_name = display_name || null;
         this.badge = badge || null;
-        this.ext = ext || null;
+        this.dms = dms;
     }
 }
 
@@ -479,8 +479,8 @@ function handleMediaList(details, type) {
                     mediaData[rank] = new MediaData(
                         episode.title, episode.arc.desc, 
                         episode.arc.pic, episode.arc.duration, 
-                        episode.aid, episode.cid, episode.id,
-                        type, rank + 1, ugc_root.title
+                        episode.aid, episode.cid, episode.id, type,
+                        rank + 1, ugc_root.title, null, null, episode.page.dimension
                     );
                     appendMediaBlock(mediaData[rank]);
                     Object.values(episode).forEach(id => {
@@ -502,8 +502,8 @@ function handleMediaList(details, type) {
                         const title = page.part || root.title;
                         mediaData[rank] = new MediaData(
                             title, root.desc, root.pic, page.duration,
-                            root.aid, page.cid, page.bvid, type,
-                            rank + 1, root.title
+                            root.aid, page.cid, page.bvid, type, rank + 1,
+                            root.title, null, null, page.dimension || root.dimension
                         );
                         appendMediaBlock(mediaData[rank])
                         Object.values(page).forEach(id => {
@@ -522,7 +522,7 @@ function handleMediaList(details, type) {
                     episode.cid, episode.id, type, rank + 1,
                     isL ? root.title : root.season_title,
                     null, episode.badge_info || { text: episode.label,
-                    bg_color_night: "#0BA395" }
+                    bg_color_night: "#0BA395" }, episode.dimension
                 );
                 appendMediaBlock(mediaData[rank])
                 Object.values(episode).forEach(id => {
@@ -611,7 +611,8 @@ async function appendSteinNode(info, graph_version, edge_id, type) {
         current.title, info.desc, 
         info.pic, "未知", info.aid,
         current.cid, edge_id, type,
-        mediaData.length + 1, info.title
+        mediaData.length + 1, info.title,
+        null, null, current.dimension
     ));
     appendMediaBlock(mediaData.at(-1));
     for (const story of response.data.story_list) {
@@ -796,26 +797,26 @@ function appendMoreList(data, block) { // 填充更多解析
     const text = $('<div>').addClass("video-block-opt-text").text("更多解析");
     const split = $('<div>').addClass("video-block-split");
     const opt = $('<div>').addClass("video-block-opt more");
-    const dmhk = $('<button>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor space'></i>历史弹幕");
+    const hsdm = $('<button>').addClass("video-block-opt-item history-danmaku").html("<i class='fa-solid fa-meteor space'></i>历史弹幕(JSON)");
+    const rtdm = $('<button>').addClass("video-block-opt-item realtime-danmaku").html("<i class='fa-solid fa-meteor space'></i>实时弹幕(ASS/XML)");
     const aism = $('<button>').addClass("video-block-opt-item ai-summary").html("<i class='fa-solid fa-microchip-ai space'></i>视频AI总结");
     dms.append(text, split, opt).appendTo(block);
-    opt.append(dmhk, aism);
-    async function dm(url) {
+    opt.append(hsdm, rtdm, aism);
+    async function hs_dm(params) {
         return new Promise(async (resolve, reject) => {
-            try {
-                // https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/grpc_api/bilibili/community/service/dm/v1/dm.proto
-                protobuf.load('../proto/dm.proto', async function(err, root) {
-                    const DmSegMobileReply = root.lookupType("bilibili.community.service.dm.v1.DmSegMobileReply");
-                    loadingBox.addClass('active');
-                    const response = await http.fetch(url,{ headers: tdata.headers, responseType: http.ResponseType.Binary });
-                    loadingBox.removeClass('active');
-                    const message = DmSegMobileReply.decode(new Uint8Array(response.data));
-                    resolve(message.elems)
-                });
+            // https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/grpc_api/bilibili/community/service/dm/v1/dm.proto
+            protobuf.load('../proto/dm.proto', async function(err, root) { try {
+                const DmSegMobileReply = root.lookupType("bilibili.community.service.dm.v1.DmSegMobileReply");
+                loadingBox.addClass('active');
+                const response = await http.fetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so?' + params.toString(),
+                { headers: tdata.headers, responseType: http.ResponseType.Binary });
+                loadingBox.removeClass('active');
+                const message = DmSegMobileReply.decode(new Uint8Array(response.data));
+                resolve(message.elems)
             } catch(err) {
                 iziError(err);
                 reject(err)
-            }
+            }});
         })
     }
     function noLogin() {
@@ -823,15 +824,6 @@ function appendMoreList(data, block) { // 填充更多解析
             iziError('该模块需要登录');
             return true;
         } else return false;
-    }
-    function saved() {
-        Swal.fire({
-            title: '<strong>数据结构</strong>',
-            icon: 'info',
-            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/posts/bilitools#DanmakuElem" target="_blank">BiliTools#DanmakuElem</a>',
-        })
-        iziInfo('JSON保存成功~');
-        return null;
     }
     async function refresh(month) {
         const params0 = new URLSearchParams({
@@ -876,23 +868,27 @@ function appendMoreList(data, block) { // 填充更多解析
                         type: 1, oid: data.cid, date
                     });
                     loadingBox.addClass('active');
-                    const url = `https://api.bilibili.com/x/v2/dm/web/history/seg.so?${params1.toString()}`;
                     loadingBox.removeClass('active');
-                    const encoder = new TextEncoder();
-                    const content = Array.from(encoder.encode(JSON.stringify(await dm(url), null, 2)));
+                    const content = Array.from((new TextEncoder()).encode(await hs_dm(params1)));
                     const selected = await saveFile({
                         filters: [{ name: 'JSON 文件', extensions: ['json'] }],
                         defaultPath: `弹幕_${date}_${format.filename(data.title)}.json`
                     });
                     if (selected) {
                         invoke('save_file', { content, path: selected, secret: tdata.secret });
-                        saved();
+                        Swal.fire({
+                            title: '<strong>数据结构</strong>',
+                            icon: 'info',
+                            html: '有关数据结构请查看 <a href="https://blog.btjawa.top/2024/bilitools/#DanmakuElem" target="_blank">文档</a>',
+                        })
+                        iziInfo('JSON保存成功~');
+                        return null;                
                     }
                 })
             });
         }
     }
-    dmhk.on('click', async function() {
+    hsdm.on('click', async function() {
         if (noLogin()) return null;
         const date = new Date();
         let month = date.getMonth() + 1;
@@ -904,6 +900,27 @@ function appendMoreList(data, block) { // 填充更多解析
         $(document).off('click').on('click', (e) => {
             if (!$(e.target).closest(".history-date-cont").length && !$(e.target).hasClass('swal2-confirm')) dms.find('.history-date-cont').removeClass('active');
         });
+    });
+    rtdm.on('click', async function() {
+        Swal.fire({
+            title: '选择下载类型',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'ASS 字幕',
+            cancelButtonText: 'XML 文档'
+        }).then(async (res) => {
+            const p = `弹幕_${format.pubdate(new Date(), true)}_${format.filename(data.title)}`;
+            loadingBox.addClass('active');
+            if (res.isConfirmed) await invoke('get_dm', { secret: tdata.secret, oid: data.cid, dfPath: p + '.ass', xml: false });
+            else if (res.dismiss === Swal.DismissReason.cancel) await invoke('get_dm', { secret: tdata.secret, oid: data.cid, dfPath: p + '.xml', xml: true });
+            loadingBox.removeClass('active');
+            Swal.fire({
+                title: '<strong>使用教程</strong>',
+                icon: 'info',
+                html: '关于字幕如何使用，请查看 <a href="https://blog.btjawa.top/2024/bilitools/#ASS字幕如何使用" target="_blank">文档</a>',
+            })
+            iziInfo('弹幕保存成功~');
+        })
     });
     aism.on('click', async function() {
         const params = ({

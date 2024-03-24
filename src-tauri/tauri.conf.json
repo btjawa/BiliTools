@@ -61,7 +61,8 @@
       ],
       "resources": [
         "ffmpeg",
-        "aria2c"
+        "aria2c",
+        "DanmakuFactory"
       ],
       "windows": {
         "wix": {
