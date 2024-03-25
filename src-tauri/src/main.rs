@@ -114,6 +114,7 @@ async fn init_dh(window: tWindow) -> Result<(), String> {
     }).await.map_err(|e| e.to_string())?;
     {
         let mut complete_queue = COMPLETE_QUEUE.lock().await;
+        complete_queue.clear();
         for info in result.map_err(|e| handle_err(window.clone(), e))? {
             complete_queue.push_back(info);
         }
@@ -1044,6 +1045,7 @@ async fn sms_login(window: tWindow,
             insert_cookie(window.clone(), &cookie).map_err(|e| handle_err(window.clone(), e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(window.clone(), e))?;
             if parsed_cookie.name == "DedeUserID" {
+                log::info!("短信登录成功: {}", parsed_cookie.value);
                 window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
             } else if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
@@ -1055,7 +1057,6 @@ async fn sms_login(window: tWindow,
                 }
             }
         }
-        log::info!("短信登录成功");
         return Ok("短信登录成功".to_string());
     } else {
         log::error!("{}, {}", response_data["code"], response_data["message"]);

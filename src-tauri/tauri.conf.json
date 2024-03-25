@@ -84,7 +84,7 @@
       "endpoints": [
         "https://gh.con.sh/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
         "https://mirror.ghproxy.com/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://raw.fgit.cf/btjawa/BiliTools/master/install.json",
+        "https://cdn.jsdelivr.net/gh/btjawa/BiliTools/install.json",
         "https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json"
       ]
     },

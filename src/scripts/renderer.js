@@ -5,6 +5,7 @@ import { shell, dialog, http, app, os, clipboard } from '@tauri-apps/api';
 import $ from "jquery";
 import iziToast from "izitoast";
 import Swal from "sweetalert2";
+import pako from "pako";
 
 import * as tdata from "./data.ts";
 import * as format from './format.ts';
@@ -144,7 +145,10 @@ async function getMediaInfo(rawId, type) {
         basicUrl = `https://www.bilibili.com/audio/music-service-c/web/song/info?sid=${id.match(/\d+/)[0]}`;
     }
     loadingBox.addClass('active');
-    const basicResp = (await http.fetch(basicUrl, { headers: tdata.headers })).data;
+    const basicResp = type == "audio" ? JSON.parse((new TextDecoder()).decode(pako.inflate(new Uint8Array(
+    (await http.fetch(basicUrl, {
+        headers: tdata.headers, responseType: http.ResponseType.Binary
+    })).data)))) : (await http.fetch(basicUrl, { headers: tdata.headers })).data;
     loadingBox.removeClass('active');
     if (basicResp.code === 0) {
         if (type == "video") {
@@ -155,8 +159,10 @@ async function getMediaInfo(rawId, type) {
             tags = basicResp.result.styles;
         } else if (type == "audio") {
             info = basicResp.data;
-            tags = (await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`,
-            { headers: tdata.headers })).data.data.map(item => item.info);
+            tags = JSON.parse((new TextDecoder()).decode(pako.inflate(new Uint8Array(
+            (await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`, {
+                headers: tdata.headers, responseType: http.ResponseType.Binary
+            })).data)))).data.map(item => item.info);
         }
         handleMediaList({ info, tags }, type);
         return basicResp;
@@ -232,7 +238,7 @@ function matchDownUrl(details, quality, action, fileType) {
             if (target.backup_url) downUrl[1].push(...target.backup_url);
         }
     }
-    return [isV, downUrl, quality, quality.ads_id=="flv" ? "only" : action]
+    return [isV, downUrl, quality, action=="music"||quality.ads_id=="flv" ? "only" : action]
 }
 
 function handleDown(isV, downUrl, quality, action, mediaData) {
@@ -287,7 +293,7 @@ async function bilibili(ts) {
             const data = format.id(input);
             if (data[1]) {
                 const path = data[1] == "bangumi" ? "bangumi/play" : data[1];
-                shell.open(`https://www.bilibili.com/${path}/${data[0]}/${ts?`?ts=${ts}`:''}`);
+                shell.open(`https://www.bilibili.com/${path}/${data[0]}/${ts?`?t=${ts}`:''}`);
                 return null;
             }
         } else iziError('请先点击搜索按钮或返回到搜索结果页面');
@@ -395,7 +401,7 @@ $(document).ready(function () {
     $('.search-btn').on('click', dbc);
     searchInput.on('keydown', (e) => {if (e.key == "Enter") dbc()});
     $('.backward').on('click', () => backward());
-    $(".login, .settings, .down-page, .user-profile").append(`<button class="help link"t="https://blog.btjawa.top/posts/bilitools/#Q-A"><span>遇到问题?&nbsp;前往文档</span>&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></button>`);
+    $(".login, .settings, .down-page, .user-profile").append(`<button class="help link"t="https://btjawa.top/bilitools/#Q-A"><span>遇到问题?&nbsp;前往文档</span>&nbsp;<a class="fa-solid fa-arrow-up-right-from-square"></a></button>`);
     $('.link').on('click', function() {shell.open($(this).attr("t"))});
     $(document).on('keydown', async function(e) {
         if (e.key == "F5" || (e.ctrlKey && e.key == "p") || (e.ctrlKey && e.key == "r")) e.preventDefault();
@@ -740,8 +746,7 @@ function appendMediaBlock(root, audio) { // 填充视频块
     }
     getCoverBtn.on('click', async () => {
         const content = (await http.fetch(root.pic.replace(/http/g, 'https'), {
-            headers: tdata.headers,
-            responseType: http.ResponseType.Binary
+            headers: tdata.headers, responseType: http.ResponseType.Binary
         })).data;
         const sel = await saveFile({
             filters: [{ name: 'JPG 文件', extensions: ['jpg'] }],

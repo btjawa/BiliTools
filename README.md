@@ -22,7 +22,7 @@
     - 支持 FLV 下载
 - 音乐下载 - `AU`
     - 音质最高支持：`320K + 无损SQ FLAC`
-- 弹幕获取 - `实时弹幕 / 历史弹幕(Json)`
+- 弹幕获取 - `XML+ASS: 实时弹幕 / 历史弹幕`
 - 视频AI总结
 - 三种登录方式 + 自动刷新登录状态
     - 扫码登录
@@ -37,7 +37,7 @@
 
 # 更多信息
 
-可转至 [Blog](https://blog.btjawa.top/posts/bilitools)
+可转至 [Blog](https://btjawa.top/bilitools)
 
 # 感谢
 
@@ -48,3 +48,5 @@
 [FFmpeg](https://github.com/FFmpeg/FFmpeg)
 
 [aria2](https://github.com/aria2/aria2)
+
+[DanmakuFactory](https://github.com/hihkm/DanmakuFactory)
