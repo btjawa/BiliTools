@@ -5,7 +5,7 @@
 use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
-use reqwest::{Client, header, header::{HeaderMap, HeaderValue}, Url};
+use reqwest::{Client, header, header::{HeaderMap, HeaderName, HeaderValue}, Url};
 use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc}, time::Instant, net::{TcpListener, SocketAddr},
 process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt, panic, io::Read};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
@@ -28,6 +28,7 @@ lazy_static! {
     };
     static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::var("TEMP").unwrap())));
     static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
+    static ref DH_PATH: PathBuf = WORKING_DIR.join("Downloads");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<i64>> = Arc::new(RwLock::new(3));
     static ref ARIA2C_PORT: Arc<RwLock<usize>> = Arc::new(RwLock::new(0));
@@ -45,13 +46,12 @@ fn handle_err<E: std::fmt::Display>(window: tWindow, e: E) -> String {
     window.emit("error", e.to_string()).unwrap(); e.to_string()
 }
 
-async fn init_database(window: tWindow) -> Result<(), String> {
+async fn init_cookie(window: tWindow) -> Result<(), String> {
     if !&COOKIE_PATH.exists() {
         fs::write(&*COOKIE_PATH, "").map_err(|e| handle_err(window.clone(), e))?;
     }
-    let metadata = fs::metadata(&*COOKIE_PATH).unwrap();
     let conn = Connection::open(&*COOKIE_PATH).unwrap();
-    if metadata.len() == 0 {
+    if fs::metadata(&*COOKIE_PATH).unwrap().len() == 0 {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS cookies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +64,77 @@ async fn init_database(window: tWindow) -> Result<(), String> {
             params![],
         ).map_err(|e| handle_err(window.clone(), e))?;
     }
-    window.emit("headers", headers_to_json(init_headers())).unwrap();
+    let cookies = load_cookies().map_err(|e| handle_err(window.clone(), e))?;
+    let mid_value = if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
+        mid_cookie.value.parse::<i64>().unwrap_or(0)
+    } else { 0 };
+    window.emit("headers", init_headers()).unwrap();
+    window.emit("user-mid", mid_value.to_string()).unwrap();
+    Ok(())
+}
+
+async fn init_dh(window: tWindow) -> Result<(), String> {
+    if !&DH_PATH.exists() {
+        fs::write(&*DH_PATH, "").map_err(|e| handle_err(window.clone(), e))?;
+    }
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = Connection::open(&*DH_PATH).unwrap();
+        if fs::metadata(&*DH_PATH).unwrap().len() == 0 {
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS download_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    gid TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    path TEXT NOT NULL,
+                    tasks TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    media_data TEXT NOT NULL
+                )",
+                params![],
+            )?;
+        }
+        let mut stmt = conn.prepare("SELECT gid, display_name, path, tasks, action, media_data FROM download_history")?;
+        let dh_iter = stmt.query_map(params![], |row| {
+            Ok(VideoInfo {
+                gid: serde_json::from_str(&row.get::<_, String>(0)?).unwrap(),
+                display_name: row.get(1)?,
+                video_path: PathBuf::from(row.get::<_, String>(2)?),
+                audio_path: PathBuf::from(row.get::<_, String>(2)?),
+                output_path: PathBuf::from(row.get::<_, String>(2)?),
+                tasks: serde_json::from_str(&row.get::<_, String>(3)?).unwrap(),
+                action: row.get::<_, String>(4)?,
+                media_data: serde_json::from_str(&row.get::<_, String>(5)?).unwrap(),
+            })
+        })?;
+        let mut results = Vec::new();
+        for info in dh_iter {
+            results.push(info?);
+        }
+        Ok::<Vec<VideoInfo>, rusqlite::Error>(results)
+    }).await.map_err(|e| e.to_string())?;
+    {
+        let mut complete_queue = COMPLETE_QUEUE.lock().await;
+        for info in result.map_err(|e| handle_err(window.clone(), e))? {
+            complete_queue.push_back(info);
+        }
+    }
+    update_queue(&window, "init", None, None).await;
+    Ok(())
+}
+
+fn insert_dh(window: tWindow, info: VideoInfo) -> Result<(), String> {
+    let conn = Connection::open(&*DH_PATH).unwrap();
+    conn.execute(
+        "INSERT OR REPLACE INTO download_history (gid, display_name, path, tasks, action, media_data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+            info.gid.to_string(),
+            info.display_name,
+            info.output_path.to_str(),
+            serde_json::to_string(&info.tasks).unwrap(),
+            info.action,
+            info.media_data.to_string()
+        ],
+    ).map_err(|e| handle_err(window.clone(), e))?;
     Ok(())
 }
 
@@ -84,52 +154,34 @@ fn load_cookies() -> rusqlite::Result<HashMap<String, CookieInfo>> {
     cookie_map
 }
 
-fn init_headers() -> HeaderMap {
-    let mut headers = HeaderMap::new();
-    headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
-    headers.insert("Accept", HeaderValue::from_static("*/*"));
-    headers.insert("Accept-Language", HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"));
-    if let Ok(cookies) = load_cookies() {
-        let cookies_header = cookies.values()
-            .map(|cookie_info| format!("{}={}", cookie_info.name, cookie_info.value))
-            .collect::<Vec<_>>()
-            .join("; ") + ";";
-        headers.insert("Cookie", HeaderValue::from_str(&cookies_header).unwrap());
-    }
-    headers.insert("Upgrade-Insecure-Requests", HeaderValue::from_static("1"));
-    headers.insert("Sec-Ch-Ua", HeaderValue::from_static("\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\""));
-    headers.insert("Sec-Ch-Ua-Mobile", HeaderValue::from_static("?0"));
-    headers.insert("Connection", HeaderValue::from_static("keep-alive"));
-    headers.insert("Referer", HeaderValue::from_static("https://www.bilibili.com"));
+fn init_headers() -> HashMap<String, String> {
+    let mut headers = HashMap::new();
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".into());
+    headers.insert("Accept".into(), "*/*".into());
+    headers.insert("Accept-Language".into(), "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6".into());
+    let cookies = load_cookies().map_err(|e| e.to_string()).unwrap();
+    headers.insert("Cookie".into(), cookies.values()
+        .map(|cookie_info| format!("{}={}", cookie_info.name, cookie_info.value))
+        .collect::<Vec<_>>().join("; ") + ";");
+    headers.insert("Upgrade-Insecure-Requests".into(), "1".into());
+    headers.insert("Sec-Ch-Ua".into(), "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"".into());
+    headers.insert("Sec-Ch-Ua-Mobile".into(), "?0".into());
+    headers.insert("Connection".into(), "keep-alive".into());
+    headers.insert("Referer".into(), "https://www.bilibili.com".into());
     headers
 }
 
-fn headers_to_json(headers: HeaderMap) -> HashMap<String, String> {
-    headers.iter().filter_map(|(k, v)| {
-        if let Ok(v_str) = v.to_str() {
-            Some((k.to_string(), v_str.to_string()))
-        } else {
-            None
-        }
-    }).collect()
-}
-
 fn init_client() -> Client {
+    let mut headers = HeaderMap::new();
+    for (key, value) in init_headers() {
+    headers.insert(
+        HeaderName::from_bytes(key.as_bytes()).unwrap(),
+        HeaderValue::from_str(&value).unwrap()
+    );}
     Client::builder()
-        .default_headers(init_headers())
+        .default_headers(headers)
         .build()
         .unwrap()
-}
-
-fn extract_filename(url: &str) -> String {
-    Url::parse(url)
-        .ok()
-        .and_then(|parsed_url| {
-            parsed_url.path_segments()
-                .and_then(|segments| segments.last())
-                .map(|last_segment| last_segment.to_string())
-        })
-        .unwrap_or_else(|| "default_filename".to_string())
 }
 
 struct Aria2cManager {
@@ -168,7 +220,7 @@ impl Aria2cManager {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct CookieInfo {
     name: String,
     value: String,
@@ -245,7 +297,8 @@ async fn push_back_queue(
     let ss_dir = &media_data.get("ss_title").unwrap().as_str().unwrap().to_string();
     let display_name = media_data.get("display_name").unwrap().as_str().unwrap().to_string();
     for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
-        let filename = &extract_filename(&url[0]);
+        let purl = Url::parse(&url[0]).map_err(|e| handle_err(window.clone(), e))?;
+        let filename = purl.path_segments().unwrap().last().unwrap();
         let path = TEMP_DIR.read().await.join(format!("{}_{}.bilitools.downloading", date, filename)).join(filename);
         let init_payload = json!({
             "jsonrpc": "2.0",
@@ -364,6 +417,7 @@ async fn update_queue(window: &tWindow, action: &str, info: Option<VideoInfo>, d
                 let info = if let Some(date) = date {
                     add_timestamp(org_info, date)
                 } else { org_info };
+                insert_dh(window.clone(), info.clone()).map_err(|e| handle_err(window.clone(), e)).unwrap();
                 complete_queue.push_back(info.clone());
                 log::info!("Finished. Notifying process_queue...");
                 DOWNLOAD_COMPLETED_NOTIFY.notify_one();
@@ -478,7 +532,7 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
     let mut last_log_time = Instant::now();
     loop {
         let mut printed_keys = HashSet::new();
-        let metadata = tokio::fs::metadata(&progress_path.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
+        let metadata = fs::metadata(&progress_path.clone()).unwrap();
         if metadata.len() > last_size {
             let mut file = File::open(&progress_path.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
             file.seek(SeekFrom::Start(last_size)).await.map_err(|e| handle_err(window.clone(), e))?;
@@ -639,7 +693,7 @@ fn insert_cookie(window: tWindow, cookie_str: &str) -> Result<(), String> {
             parsed_cookie.expires,
         ],
     ).unwrap();
-    window.emit("headers", headers_to_json(init_headers())).unwrap();
+    window.emit("headers", init_headers()).unwrap();
     Ok(())
 }
 
@@ -682,7 +736,7 @@ async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secr
 
     if action != "read" {
         let config = config.read().await;
-        fs::write(config_path.clone(), serde_json::to_string(&*config).unwrap()).map_err(|e| handle_err(window.clone(), e))?;
+        fs::write(config_path.clone(), serde_json::to_string_pretty(&*config).unwrap()).map_err(|e| handle_err(window.clone(), e))?;
         *MAX_CONCURRENT_DOWNLOADS.write().await = config.max_conc;
         log::info!("成功更新MAX_CONCURRENT_DOWNLOADS: {}", *MAX_CONCURRENT_DOWNLOADS.read().await);
         *TEMP_DIR.write().await = PathBuf::from(config.temp_dir.clone());
@@ -728,8 +782,7 @@ async fn open_select(window: tWindow, path: String) -> Result<String, String>{
 #[tauri::command]
 async fn exit(window: tWindow) -> Result<String, String> {
     let client = init_client();
-    let cookies = load_cookies().unwrap_or_else(|err| { log::error!("Error loading cookies: {:?}", err);
-    HashMap::new() });
+    let cookies = load_cookies().map_err(|e| handle_err(window.clone(), e))?;
     let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
         &bili_jct.value } else { "" };
     let response = client
@@ -755,7 +808,7 @@ async fn exit(window: tWindow) -> Result<String, String> {
             &[&parsed_cookie.name]).map_err(|e| handle_err(window.clone(), e))?;
         }
         get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-        window.emit("headers", headers_to_json(init_headers())).unwrap();
+        window.emit("headers", init_headers()).unwrap();
         window.emit("user-mid", 0.to_string()).unwrap();
         return Ok("成功退出登录".to_string());
     } else {
@@ -767,8 +820,7 @@ async fn exit(window: tWindow) -> Result<String, String> {
 #[tauri::command]
 async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String, String> {
     let client = init_client();
-    let cookies = load_cookies().unwrap_or_else(|err| { log::error!("Error loading cookies: {:?}", err);
-    HashMap::new() });
+    let cookies = load_cookies().map_err(|e| handle_err(window.clone(), e))?;
     let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
         &bili_jct.value } else { "" };
     let refresh_token = if let Some(refresh_token) = cookies.get("refresh_token") {
@@ -1040,21 +1092,16 @@ async fn ready(_window: tWindow) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn init(window: tWindow, secret: String) -> Result<i64, String> {
+async fn init(window: tWindow, secret: String) -> Result<(), String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
     }
     rw_config(window.clone(), "read".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
-    init_database(window.clone()).await.unwrap();
+    init_cookie(window.clone()).await.unwrap();
+    init_dh(window.clone()).await.unwrap();
     get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-    let cookies = load_cookies().unwrap_or_else(|err| { log::error!("Error loading cookies: {:?}", err);
-    HashMap::new() });
-    let mid_value = if let Some(mid_cookie) = cookies.values().find(|cookie| cookie.name.eq("DedeUserID")) {
-        mid_cookie.value.parse::<i64>().unwrap_or(0)
-    } else { 0 };
-    window.emit("user-mid", mid_value.to_string()).unwrap();
-    return Ok(mid_value);
+    return Ok(());
 }
 
 #[tauri::command]
