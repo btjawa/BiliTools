@@ -1,15 +1,15 @@
 {
-  "version": "v1.1.1",
-  "notes": "包含BUG更新\r\n- 修复: 下载相关\r\n    - 修复下载完成时的报错 \"找不到指定的路径\"\r\n    - 修正部分文本",
-  "pub_date": "2024-02-20T04:27:17.048Z",
+  "version": "v1.1.2",
+  "notes": "包含逻辑/BUG更新，以及新功能\r\n- 功能: 下载相关\r\n    - FLV 支持\r\n    - 历史弹幕/实时弹幕支持 XML+ASS 下载\r\n    - 持久化存储下载记录\r\n- 修复: 下载相关\r\n    - 优化特殊字符检测\r\n    - 优化链接获取\r\n    - 优化下载处理逻辑\r\n- 杂项更新: 修复\r\n    - 修复一系列BUG",
+  "pub_date": "2024-03-25T20:16:33.501Z",
   "platforms": {
     "win64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ZiMi9GV2hIckpMb3JqTkxGZ0tZOHNnY1RQV1kyemhlWDdBQ3ZidlpCYm9IbzZjQVo1TEpCZ1dnaFNocTNWenVoMHIvcVJiQXIyUi9TS1hkWSs3YndRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA4NDAzMjI1CWZpbGU6QmlsaVRvb2xzXzEuMS4xX3g2NF96aC1DTi5tc2kuemlwClVjSzJ5c3Z5cDhJSUJEMmtEQ092Nm93RG9BM0Q5VDdtVzd4d1RYaEl0Si8xeHZEY1dRRVVYNWtSSGF4cE5ZN2ExMzZmWGU3QkpKVEs3VUkxMThlNEFnPT0K",
-      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.1.1/BiliTools_1.1.1_x64_zh-CN.msi.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2xSSDlpcVYvdkRuaU5TM2FMNDl6dmtlWHl2VHltY0o5ckhUaktEc0UyTkxjUlQ0azV5aVJJUnFWZUNLeWJQWXpablNBdVJSN0hwcjFLdi9wVXplSHdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzExMzk3NzgxCWZpbGU6QmlsaVRvb2xzXzEuMS4yX3g2NF96aC1DTi5tc2kuemlwCm1wcGNXMENIVVIzajdVRWR6dlZ1RUlmWmlzbnN1SWp3Qy93WHhUQ0FkVmxaUUg4NnRwQW83WWR1aUpDVnBUU3NoNUZsTGJjU2VSalhwMURqenM0QkN3PT0K",
+      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.1.2/BiliTools_1.1.2_x64_zh-CN.msi.zip"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ZiMi9GV2hIckpMb3JqTkxGZ0tZOHNnY1RQV1kyemhlWDdBQ3ZidlpCYm9IbzZjQVo1TEpCZ1dnaFNocTNWenVoMHIvcVJiQXIyUi9TS1hkWSs3YndRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzA4NDAzMjI1CWZpbGU6QmlsaVRvb2xzXzEuMS4xX3g2NF96aC1DTi5tc2kuemlwClVjSzJ5c3Z5cDhJSUJEMmtEQ092Nm93RG9BM0Q5VDdtVzd4d1RYaEl0Si8xeHZEY1dRRVVYNWtSSGF4cE5ZN2ExMzZmWGU3QkpKVEs3VUkxMThlNEFnPT0K",
-      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.1.1/BiliTools_1.1.1_x64_zh-CN.msi.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2xSSDlpcVYvdkRuaU5TM2FMNDl6dmtlWHl2VHltY0o5ckhUaktEc0UyTkxjUlQ0azV5aVJJUnFWZUNLeWJQWXpablNBdVJSN0hwcjFLdi9wVXplSHdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzExMzk3NzgxCWZpbGU6QmlsaVRvb2xzXzEuMS4yX3g2NF96aC1DTi5tc2kuemlwCm1wcGNXMENIVVIzajdVRWR6dlZ1RUlmWmlzbnN1SWp3Qy93WHhUQ0FkVmxaUUg4NnRwQW83WWR1aUpDVnBUU3NoNUZsTGJjU2VSalhwMURqenM0QkN3PT0K",
+      "url": "https://gh.con.sh/https://github.com/btjawa/BiliTools/releases/download/v1.1.2/BiliTools_1.1.2_x64_zh-CN.msi.zip"
     }
   }
 }
