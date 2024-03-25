@@ -159,17 +159,21 @@ async function getMediaInfo(rawId, type) {
             tags = basicResp.result.styles;
         } else if (type == "audio") {
             info = basicResp.data;
+            loadingBox.addClass('active');
             tags = JSON.parse((new TextDecoder()).decode(pako.inflate(new Uint8Array(
             (await http.fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`, {
                 headers: tdata.headers, responseType: http.ResponseType.Binary
             })).data)))).data.map(item => item.info);
+            loadingBox.removeClass('active');
         }
         handleMediaList({ info, tags }, type);
         return basicResp;
     } else {
         if (basicResp.code == -404 && type == "bangumi") {
+            loadingBox.addClass('active');
             basicUrl = `https://api.bilibili.com/pugv/view/web/season?${id.startsWith('ep') ? 'ep_id' : 'season_id'}=${id.match(/\d+/)[0]}`;
             const lssnResp = (await http.fetch(basicUrl, { headers: tdata.headers })).data;
+            loadingBox.removeClass('active');
             if (lssnResp.code === 0) {
                 handleMediaList({ info: lssnResp.data }, "lesson");
                 return lssnResp;
@@ -745,9 +749,11 @@ function appendMediaBlock(root, audio) { // 填充视频块
         }
     }
     getCoverBtn.on('click', async () => {
+        loadingBox.addClass('active');
         const content = (await http.fetch(root.pic.replace(/http/g, 'https'), {
             headers: tdata.headers, responseType: http.ResponseType.Binary
         })).data;
+        loadingBox.removeClass('active');
         const sel = await saveFile({
             filters: [{ name: 'JPG 文件', extensions: ['jpg'] }],
             defaultPath: `封面_${format.filename(isV ? root.title : audio.desc)}.jpg`
@@ -1055,31 +1061,31 @@ async function userProfile() {
     if (!userData.isLogin) { handleLogin(); return null; }
     currentElm.push(".user-profile");
     $('.user-profile').addClass('active');
+    loadingBox.addClass('active');
     const detailData = await http.fetch(`https://api.bilibili.com/x/web-interface/card?mid=${userData.mid}&photo=true`,
     { headers: tdata.headers });
-    if (detailData.ok) {
-        const details = detailData.data;
-        $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:") + '@200h');
-        $('.user-profile-avatar').attr("src", details.data.card.face + '@256h');
-        $('.user-profile-name').html(details.data.card.name);
-        $('.user-profile-desc').html(details.data.card.sign);
-        const level = details.data.card.level_info.current_level;
-        const senior = details.data.card.is_senior_member;
-        $('.user-profile-sex').attr("src", await import(`../assets/${details.data.card.sex == "男" ? "male" : "female"}.png`).default);
-        $('.user-profile-level').attr("src", await (await import(`../assets/level/level${level}${senior?"_hardcore":""}.svg`)).default);
-        if (details.data.card.vip) {
-            $('.user-profile-bigvip').css("display", "block");
-            $('.user-profile-bigvip').attr("src", details.data.card.vip.label.img_label_uri_hans_static);
-        }
-        $('.user-profile-coins').html('<a>硬币</a><br>' + userData.coins);
-        $('.user-profile-subs').html('<a>关注数</a><br>' + format.stat(details.data.card.friend));
-        $('.user-profile-fans').html('<a>粉丝数</a><br>' + format.stat(details.data.card.fans));
-        $('.user-profile-likes').html('<a>获赞数</a><br>' + format.stat(details.data.like_num));
-        $('.user-profile-exit').off('click').on('click', async () => {
-            loadingBox.addClass('active');
-            await invoke('exit').then(() => loadingBox.removeClass('active'));
-        });
+    loadingBox.removeClass('active');
+    const details = detailData.data;
+    $('.user-profile-img').attr("src", details.data.space.l_img.replace("http:", "https:") + '@200h');
+    $('.user-profile-avatar').attr("src", details.data.card.face + '@256h');
+    $('.user-profile-name').html(details.data.card.name);
+    $('.user-profile-desc').html(details.data.card.sign);
+    const level = details.data.card.level_info.current_level;
+    const senior = details.data.card.is_senior_member;
+    $('.user-profile-sex').attr("src", await import(`../assets/${details.data.card.sex == "男" ? "male" : "female"}.png`).default);
+    $('.user-profile-level').attr("src", await (await import(`../assets/level/level${level}${senior?"_hardcore":""}.svg`)).default);
+    if (details.data.card.vip) {
+        $('.user-profile-bigvip').css("display", "block");
+        $('.user-profile-bigvip').attr("src", details.data.card.vip.label.img_label_uri_hans_static);
     }
+    $('.user-profile-coins').html('<a>硬币</a><br>' + userData.coins);
+    $('.user-profile-subs').html('<a>关注数</a><br>' + format.stat(details.data.card.friend));
+    $('.user-profile-fans').html('<a>粉丝数</a><br>' + format.stat(details.data.card.fans));
+    $('.user-profile-likes').html('<a>获赞数</a><br>' + format.stat(details.data.like_num));
+    $('.user-profile-exit').off('click').on('click', async () => {
+        loadingBox.addClass('active');
+        await invoke('exit').then(() => loadingBox.removeClass('active'));
+    });
 }
 
 async function scanLogin() {

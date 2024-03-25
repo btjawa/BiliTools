@@ -343,7 +343,9 @@ async fn push_back_queue(
 #[tauri::command]
 async fn process_queue(window: tauri::Window, date: String) -> Result<(), String> {
     log::info!("Processing queue...");
+    let mut waiting_len = { WAITING_QUEUE.lock().await.len() as i64 };
     loop {
+        if waiting_len == 0 { break; }
         let max_conc = *MAX_CONCURRENT_DOWNLOADS.read().await;
         let doing_len = { DOING_QUEUE.lock().await.len() as i64 };
         for _ in 0..max_conc.saturating_sub(doing_len) {
@@ -354,10 +356,7 @@ async fn process_queue(window: tauri::Window, date: String) -> Result<(), String
                 });
             }
         }
-        let waiting_empty = { WAITING_QUEUE.lock().await.is_empty() };
-        if waiting_empty && DOING_QUEUE.lock().await.is_empty() {
-            break;
-        }
+        waiting_len -= 1;
         DOWNLOAD_COMPLETED_NOTIFY.notified().await;
     }
     Ok(())
