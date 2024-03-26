@@ -30,7 +30,7 @@ tokio = { version = "1", features = ["full"] }
 rand = "0.8.5"
 walkdir = "2.4.0"
 flate2 = "1.0.28"
-ctrlc = "3.4.4"
+win32job = "2.0.0"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

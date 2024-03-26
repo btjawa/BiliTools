@@ -11,8 +11,9 @@ process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os:
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use rusqlite::{Connection, params};
 use regex::Regex;
+use win32job::Job;
 use flate2::read::DeflateDecoder;
-use tauri::{Manager, Window as tWindow, WindowEvent, async_runtime, api::dialog::FileDialogBuilder};
+use tauri::{Manager, Window as tWindow, async_runtime, api::dialog::FileDialogBuilder};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
 mod logger;
@@ -1166,13 +1167,18 @@ async fn get_dm(window: tWindow, secret: String, oid: i64, date: Option<String>,
 }
 
 #[tokio::main]
-async fn main() {
-    logger::init_logger().map_err(|e| e.to_string()).unwrap();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    logger::init_logger().map_err(|e| e.to_string())?;
     let secret: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10).map(char::from)
         .collect();
     *SECRET.write().await = secret.clone();
+    let job = Job::create()?;
+    let mut info = job.query_extended_limit_info()?;
+    info.limit_kill_on_job_close();
+    job.set_extended_limit_info(&mut info)?;
+    job.assign_current_process()?;
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
@@ -1196,14 +1202,7 @@ async fn main() {
             scan_login, pwd_login, sms_login, insert_cookie, open_select,
             rw_config, refresh_cookie, save_file, handle_download, get_dm,
             push_back_queue, process_queue, handle_temp, handle_aria2c])
-        .on_window_event(move |event| match event.event() {
-            WindowEvent::Destroyed => {
-                log::info!("Killing aria2c...");
-                async_runtime::spawn(async move { ARIA2C_MANAGER.lock().await.kill()
-                .map_err(|e| handle_err(event.window().clone(), e)) });
-            }
-            _ => {}
-         })
         .run(tauri::generate_context!())
         .expect("error while running BiliTools");
+    Ok(())
 }
