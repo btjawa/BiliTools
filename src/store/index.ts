@@ -1,5 +1,6 @@
 import { createStore } from 'vuex';
-import { invoke, http } from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
+import * as http from '@tauri-apps/plugin-http';
 import { UserInfoResp } from '../types/UserInfo.type';
 import * as verify from "../scripts/verify";
 
@@ -57,9 +58,9 @@ export default createStore({
         async fetchUser({ commit, state }) {
             if (state.user.mid != "0") {
                 const signature = await verify.wbi({ mid: state.user.mid });
-                const details = (await http.fetch('https://api.bilibili.com/x/space/wbi/acc/info?' + signature, {
+                const details = await (await http.fetch('https://api.bilibili.com/x/space/wbi/acc/info?' + signature, {
                     headers: state.headers, method: 'GET'
-                })).data as UserInfoResp;
+                })).json() as UserInfoResp;
                 const userData: UserData = {
                     avatar: details.data.face, name: details.data.name, desc: details.data.sign,
                     top_photo: (details.data.top_photo).replace('http:', 'https:'),

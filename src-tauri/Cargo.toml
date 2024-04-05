@@ -1,41 +1,34 @@
 [package]
 name = "bilitools"
 version = "1.1.2"
-description = "BiliTools"
+description = "bilibili工具箱，视频/番剧+伴音/音乐下载，三种登录方式，仅用作学习用途。"
 authors = ["btjawa"]
-license = "MIT"
-repository = "git+https://github.com/btjawa/BiliTools.git"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
+tauri-build = { version = "2.0.0-beta", features = [] }
 
 [dependencies]
+tauri = { version = "2.0.0-beta", features = ["unstable"] }
+tauri-plugin-single-instance = "2.0.0-beta"
+tauri-plugin-shell = "2.0.0-beta"
+tauri-plugin-http = { version = "2.0.0-beta.4", features = ["json", "rustls-tls"] }
+tauri-plugin-dialog = "2.0.0-beta.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1.10.2"
 log4rs = "1.0"
 log = "0.4"
-chrono = "0.4"
-rusqlite = { version = "0.27.0", features = ["bundled"] }
-regex = "1.10.2"
-futures = "0.3"
-tauri = { version = "1.5.4", features = [ "window-start-dragging", "window-unmaximize", "window-unminimize", "window-maximize", "window-close", "window-minimize", "clipboard-all", "dialog-save", "shell-open", "updater", "os-all", "dialog-open", "http-request"] }
-tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
-# tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1", features = ["sqlite"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-reqwest = { version = "0.12", features = ["json", "cookies", "stream", "gzip", "brotli"] }
-warp = "0.3.6"
 lazy_static = "1.4.0"
 tokio = { version = "1", features = ["full"] }
 rand = "0.8.5"
 walkdir = "2.4.0"
 flate2 = "1.0.28"
 win32job = "2.0.0"
-window-shadows = "0.2.2"
-window-vibrancy = "0.4.0"
-
-[features]
-# this feature is used for production builds or when `devPath` points to the filesystem
-# DO NOT REMOVE!!
-custom-protocol = ["tauri/custom-protocol"]
+window-vibrancy = "0.5.0"
+chrono = "0.4.37"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+tauri-plugin-clipboard-manager = "2.1.0-beta.0"
+tauri-plugin-os = "2.0.0-beta.3"

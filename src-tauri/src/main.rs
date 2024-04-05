@@ -5,24 +5,23 @@
 use lazy_static::lazy_static;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
-use reqwest::{Client, header, header::{HeaderMap, HeaderName, HeaderValue}, Url};
 use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc}, time::Instant, net::{TcpListener, SocketAddr},
 process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt, panic, io::Read};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use rusqlite::{Connection, params};
-// use tauri_plugin_sql::Builder;
 use regex::Regex;
 use win32job::Job;
 use flate2::read::DeflateDecoder;
-use tauri::{Manager, Window as tWindow, async_runtime, api::dialog::FileDialogBuilder};
+use tauri::{Manager, Window, async_runtime, Runtime};
+use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_http::reqwest::{self, Client, header, header::{HeaderMap, HeaderName, HeaderValue}, Url};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
-use window_shadows::set_shadow;
 use window_vibrancy::apply_acrylic;
 mod logger;
 
 lazy_static! {
-    static ref GLOBAL_WINDOW: Arc<Mutex<Option<tWindow>>> = Arc::new(Mutex::new(None));
+    static ref GLOBAL_WINDOW: Arc<Mutex<Option<Window>>> = Arc::new(Mutex::new(None));
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref WORKING_DIR: PathBuf = {
         PathBuf::from(env::var("LOCALAPPDATA").unwrap()).join("com.btjawa.bilitools")
@@ -45,12 +44,12 @@ lazy_static! {
     static ref DOWNLOAD_COMPLETED_NOTIFY: Notify = Notify::new();
 }
 
-fn handle_err<E: std::fmt::Display>(window: tWindow, e: E) -> String {
+fn handle_err<E: std::fmt::Display>(window: Window, e: E) -> String {
     log::error!("{}", e);
     window.emit("error", e.to_string()).unwrap(); e.to_string()
 }
 
-async fn init_cookie(window: tWindow) -> Result<String, String> {
+async fn init_cookie(window: Window) -> Result<String, String> {
     if !&COOKIE_PATH.exists() {
         fs::write(&*COOKIE_PATH, "").map_err(|e| handle_err(window.clone(), e))?;
     }
@@ -76,7 +75,7 @@ async fn init_cookie(window: tWindow) -> Result<String, String> {
     Ok(mid_value.to_string())
 }
 
-async fn init_dh(window: tWindow) -> Result<(), String> {
+async fn init_dh(window: Window) -> Result<(), String> {
     if !&DH_PATH.exists() {
         fs::write(&*DH_PATH, "").map_err(|e| handle_err(window.clone(), e))?;
     }
@@ -126,7 +125,7 @@ async fn init_dh(window: tWindow) -> Result<(), String> {
     Ok(())
 }
 
-fn insert_dh(window: tWindow, info: VideoInfo) -> Result<(), String> {
+fn insert_dh(window: Window, info: VideoInfo) -> Result<(), String> {
     let conn = Connection::open(&*DH_PATH).unwrap();
     conn.execute(
         "INSERT OR REPLACE INTO download_history (gid, display_name, path, tasks, action, media_data) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -161,16 +160,10 @@ fn load_cookies() -> rusqlite::Result<HashMap<String, CookieInfo>> {
 fn init_headers() -> HashMap<String, String> {
     let mut headers = HashMap::new();
     headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".into());
-    headers.insert("Accept".into(), "*/*".into());
-    headers.insert("Accept-Language".into(), "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6".into());
     let cookies = load_cookies().map_err(|e| e.to_string()).unwrap();
     headers.insert("Cookie".into(), cookies.values()
         .map(|cookie_info| format!("{}={}", cookie_info.name, cookie_info.value))
         .collect::<Vec<_>>().join("; ") + ";");
-    headers.insert("Upgrade-Insecure-Requests".into(), "1".into());
-    headers.insert("Sec-Ch-Ua".into(), "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"".into());
-    headers.insert("Sec-Ch-Ua-Mobile".into(), "?0".into());
-    headers.insert("Connection".into(), "keep-alive".into());
     headers.insert("Referer".into(), "https://www.bilibili.com".into());
     headers
 }
@@ -261,7 +254,7 @@ struct Settings {
     down_dir: String
 }
 
-async fn get_buvid(window: tWindow) -> Result<String, String> {
+async fn get_buvid(window: Window) -> Result<String, String> {
     let client = init_client();
     let buvid3_resp = client
         .get("https://www.bilibili.com")
@@ -293,7 +286,7 @@ async fn get_buvid(window: tWindow) -> Result<String, String> {
 
 #[tauri::command]
 async fn push_back_queue(
-    window: tWindow, video_url: Option<Vec<String>>, audio_url: Option<Vec<String>>,
+    window: Window, video_url: Option<Vec<String>>, audio_url: Option<Vec<String>>,
     action: String, media_data: Value, date: String
 ) -> Result<Value, String> {
     let mut tasks = vec![];
@@ -365,7 +358,7 @@ async fn process_queue(window: tauri::Window, date: String) -> Result<(), String
     Ok(())
 }
 
-async fn process_download(window: tWindow, download_info: VideoInfo) -> Result<(), String> {
+async fn process_download(window: Window, download_info: VideoInfo) -> Result<(), String> {
     fs::create_dir_all(&download_info.output_path.parent().unwrap()).map_err(|e| handle_err(window.clone(), e))?;
     let action = &download_info.action;
     for task in &download_info.tasks {
@@ -391,7 +384,7 @@ fn add_timestamp(mut info: VideoInfo, date: String) -> VideoInfo {
     info
 }
 
-async fn update_queue(window: &tWindow, action: &str, info: Option<VideoInfo>, date: Option<String>) -> Option<VideoInfo> {
+async fn update_queue(window: &Window, action: &str, info: Option<VideoInfo>, date: Option<String>) -> Option<VideoInfo> {
     let mut waiting_queue = WAITING_QUEUE.lock().await;
     let mut doing_queue = DOING_QUEUE.lock().await;
     let mut complete_queue = COMPLETE_QUEUE.lock().await;
@@ -438,7 +431,7 @@ async fn update_queue(window: &tWindow, action: &str, info: Option<VideoInfo>, d
     result_info
 }
 
-async fn download_file(window: tWindow, task: DownloadTask, gid: Value) -> Result<String, String> {
+async fn download_file(window: Window, task: DownloadTask, gid: Value) -> Result<String, String> {
     log::info!("Starting download for: {}", &task.display_name);
     let client = init_client();
     handle_download(window.clone(), task.gid.clone(), "unpause".to_string()).await.map_err(|e| handle_err(window.clone(), e))?;
@@ -502,7 +495,7 @@ async fn download_file(window: tWindow, task: DownloadTask, gid: Value) -> Resul
     Ok(task.display_name.to_string())
 }
 
-async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo, String> {
+async fn merge_video_audio(window: Window, info: VideoInfo) -> Result<VideoInfo, String> {
     log::info!("Starting merge process for audio");
     let current_dir = env::current_dir().unwrap();
     let ffmpeg_path = current_dir.join("ffmpeg").join("ffmpeg.exe");
@@ -606,7 +599,7 @@ async fn merge_video_audio(window: tWindow, info: VideoInfo) -> Result<VideoInfo
 }
 
 #[tauri::command]
-async fn handle_download(window: tWindow, gid: String, action: String) -> Result<Value, String> {
+async fn handle_download(window: Window, gid: String, action: String) -> Result<Value, String> {
     let client = init_client();
     let payload = json!({
         "jsonrpc": "2.0",
@@ -624,7 +617,7 @@ async fn handle_download(window: tWindow, gid: String, action: String) -> Result
 }
 
 #[tauri::command]
-async fn handle_temp(window: tWindow, action: String) -> Result<String, String> {
+async fn handle_temp(window: Window, action: String) -> Result<String, String> {
     let mut bytes = 0;
     let walker = WalkDir::new(&TEMP_DIR.read().await.clone()).into_iter().filter_map(|e| e.ok())
     .filter(|e| e.file_name().to_str().map_or(false, |s| s.ends_with(".bilitools.downloading")));
@@ -683,7 +676,7 @@ fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
 }
 
 #[tauri::command]
-fn insert_cookie(window: tWindow, cookie_str: &str) -> Result<(), String> {
+fn insert_cookie(window: Window, cookie_str: &str) -> Result<(), String> {
     let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
     let conn = Connection::open(&*COOKIE_PATH).unwrap();
     conn.execute(
@@ -701,7 +694,7 @@ fn insert_cookie(window: tWindow, cookie_str: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secret: String) -> Result<String, String> {
+async fn rw_config(window: Window, action: String, sets: Option<Settings>, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
@@ -756,7 +749,7 @@ async fn rw_config(window: tWindow, action: String, sets: Option<Settings>, secr
 }
 
 #[tauri::command]
-async fn save_file(window: tWindow, content: Vec<u8>, path: String, secret: String) -> Result<String, String> {
+async fn save_file(window: Window, content: Vec<u8>, path: String, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
@@ -768,7 +761,7 @@ async fn save_file(window: tWindow, content: Vec<u8>, path: String, secret: Stri
 }
 
 #[tauri::command]
-async fn open_select(window: tWindow, path: String) -> Result<String, String>{
+async fn open_select(window: Window, path: String) -> Result<String, String>{
     if let Err(e) = fs::metadata(&path) {
         handle_err(window.clone(), format!("{}<br>\n文件可能已被移动或删除。", e.to_string()));
         Err(format!("{}<br>\n文件可能已被移动或删除。", e.to_string()))
@@ -783,7 +776,7 @@ async fn open_select(window: tWindow, path: String) -> Result<String, String>{
 }
 
 #[tauri::command]
-async fn exit(window: tWindow) -> Result<String, String> {
+async fn exit(window: Window) -> Result<String, String> {
     let client = init_client();
     let cookies = load_cookies().map_err(|e| handle_err(window.clone(), e))?;
     let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
@@ -820,7 +813,7 @@ async fn exit(window: tWindow) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String, String> {
+async fn refresh_cookie(window: Window, refresh_csrf: String) -> Result<String, String> {
     let client = init_client();
     let cookies = load_cookies().map_err(|e| handle_err(window.clone(), e))?;
     let bili_jct = if let Some(bili_jct) = cookies.get("bili_jct") {
@@ -893,7 +886,7 @@ async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String,
 }
 
 #[tauri::command]
-async fn scan_login(window: tWindow, qrcode_key: String) -> Result<String, String> {
+async fn scan_login(window: Window, qrcode_key: String) -> Result<String, String> {
     let client = init_client();
     let mut cloned_key = qrcode_key.clone();
     let mask_range = 8..cloned_key.len()-8;
@@ -957,7 +950,7 @@ async fn scan_login(window: tWindow, qrcode_key: String) -> Result<String, Strin
 }
 
 #[tauri::command]
-async fn pwd_login(window: tWindow,
+async fn pwd_login(window: Window,
     username: String, password: String,
     token: String, challenge: String,
     validate: String, seccode: String
@@ -1013,7 +1006,7 @@ async fn pwd_login(window: tWindow,
 }
 
 #[tauri::command]
-async fn sms_login(window: tWindow,
+async fn sms_login(window: Window,
     cid: String, tel: String,
     code: String, key: String,
 ) -> Result<String, String> {
@@ -1067,7 +1060,7 @@ async fn sms_login(window: tWindow,
 }
 
 #[tauri::command]
-async fn handle_aria2c(window: tWindow, secret: String, action: String) -> Result<(), String> {
+async fn handle_aria2c(window: Window, secret: String, action: String) -> Result<(), String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
@@ -1083,7 +1076,7 @@ async fn handle_aria2c(window: tWindow, secret: String, action: String) -> Resul
 }
 
 #[tauri::command]
-async fn ready(_window: tWindow) -> Result<String, String> {
+async fn ready(_window: Window) -> Result<String, String> {
     #[cfg(not(debug_assertions))]
     { if *READY.read().await {
         _window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
@@ -1095,7 +1088,7 @@ async fn ready(_window: tWindow) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn init(window: tWindow, secret: String) -> Result<String, String> {
+async fn init(window: Window, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
@@ -1108,7 +1101,7 @@ async fn init(window: tWindow, secret: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn get_dm(window: tWindow, secret: String, oid: i64, date: Option<String>, df_path: String, xml: bool) -> Result<(), String> {
+async fn get_dm<R: Runtime>(app: tauri::AppHandle<R>, window: Window, secret: String, oid: i64, date: Option<String>, df_path: String, xml: bool) -> Result<(), String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
@@ -1134,7 +1127,7 @@ async fn get_dm(window: tWindow, secret: String, oid: i64, date: Option<String>,
     let mut dec_data = String::new();
     decoder.read_to_string(&mut dec_data).map_err(|e| handle_err(window.clone(), e))?;
 
-    let mut dialog = FileDialogBuilder::new().set_file_name(&df_path);
+    let mut dialog = app.dialog().file().set_file_name(&df_path);
 
     if xml { dialog = dialog.add_filter("XML 文档", &["xml"]);
     } else { dialog = dialog.add_filter("Aegisub 高级字幕文件", &["ass"]); }
@@ -1182,17 +1175,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     job.set_extended_limit_info(&mut info)?;
     job.assign_current_process()?;
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
-            app.emit_all("single-instance", (argv, cwd)).unwrap();
+            app.emit("single-instance", (argv, cwd)).unwrap();
             let window = app.get_window("main").unwrap();
             window.unminimize().unwrap();
             window.set_focus().unwrap();
         }))
         .setup(|app| {
             let window = app.get_window("main").unwrap();
-            #[cfg(any(windows, target_os = "macos"))]
-                set_shadow(&window, true).unwrap();
             #[cfg(target_os = "windows")]
                 apply_acrylic(&window, Some((18, 18, 18, 125))).expect("Unsupported OS version/platform! 'apply_acrylic' is only supported on Windows 10/11");
                 // window_vibrancy::apply_mica(&window, None).expect("Unsupported OS version/platform! 'apply_mica' is only supported on Windows 11");
@@ -1208,7 +1203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![ready, init, exit, 
+        .invoke_handler(tauri::generate_handler![ready, init, exit,
             scan_login, pwd_login, sms_login, insert_cookie, open_select,
             rw_config, refresh_cookie, save_file, handle_download, get_dm,
             push_back_queue, process_queue, handle_temp, handle_aria2c])

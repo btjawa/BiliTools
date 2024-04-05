@@ -5,15 +5,17 @@ import viteCompression from 'vite-plugin-compression';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
+  plugins: [
+    vue(),
+    dynamicImport(),
+    viteCompression(),
+  ],
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
-  build: {
-    outDir: "dist",
-    target: "ESNext"
-  },
   server: {
     port: 1420,
     strictPort: true,
@@ -22,9 +24,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-  plugins: [
-    vue(),
-    dynamicImport(),
-    viteCompression()
-  ]
 }));

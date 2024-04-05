@@ -1,5 +1,5 @@
-import { http } from "@tauri-apps/api";
-import { invoke } from "@tauri-apps/api/tauri";
+import * as http from "@tauri-apps/plugin-http";
+import { invoke } from "@tauri-apps/api/core";
 import store from "../store/index";
 import * as LoginTypes from "../types/Login.type";
 import { NavInfoResp } from "../types/UserInfo.type";
@@ -47,8 +47,8 @@ export async function wbi(params: any) {
     const getMixinKey = (orig: String) => {
         return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
     };
-    const res = (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
-    { method: "GET", headers: store.state.headers })).data as NavInfoResp;
+    const res = await (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
+    { method: "GET", headers: store.state.headers })).json() as NavInfoResp;
     const { img_url, sub_url } = res.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
@@ -110,8 +110,8 @@ export async function bili_ticket() {
         "context[ts]": Math.floor(Date.now() / 1000).toString(),
         csrf: ""
     });    
-    return (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
-    { method: "POST" })).data as LoginTypes.GenWebTicketResp;
+    return await (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
+    { method: "POST" })).json() as LoginTypes.GenWebTicketResp;
 }
 
 export function appSign(params: any, key: keyof AppPlatforms) {
@@ -125,8 +125,8 @@ export function appSign(params: any, key: keyof AppPlatforms) {
 
 export async function captcha() {
     return new Promise(async resolve => {
-        const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header',
-        { method: "GET", headers: store.state.headers })).data as LoginTypes.GenCaptchaResp
+        const response = await (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header',
+        { method: "GET", headers: store.state.headers })).json() as LoginTypes.GenCaptchaResp
         const { token, geetest: { challenge, gt } } = response.data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
@@ -166,13 +166,13 @@ export async function correspondPath(timestamp: number) {
 }
 
 export async function checkRefresh() {
-    const response = (await http.fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
-    { method: "GET", headers: store.state.headers })).data as LoginTypes.CookieInfoResp;
+    const response = await (await http.fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
+    { method: "GET", headers: store.state.headers })).json() as LoginTypes.CookieInfoResp;
     const { refresh, timestamp } = response.data;
     if (refresh) {
         const path = await correspondPath(timestamp);
-        const csrfHtml = (await http.fetch(`https://www.bilibili.com/correspond/1/${path}`,
-        { method: "GET", headers: store.state.headers, responseType: http.ResponseType.Text })).data as string;
+        const csrfHtml = await (await http.fetch(`https://www.bilibili.com/correspond/1/${path}`,
+        { method: "GET", headers: store.state.headers })).text() as string;
         const parser = new DOMParser();
         const doc = parser.parseFromString(csrfHtml, 'text/html');
         const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;

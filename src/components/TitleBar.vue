@@ -15,12 +15,13 @@
 </template>
 
 <script lang="ts">
-import { appWindow } from '@tauri-apps/api/window';
+import { getCurrent } from '@tauri-apps/api/window';
 import { defineComponent, onMounted, ref } from 'vue';
 
 export default defineComponent({
     setup() {
         const maxed = ref(false);
+        const appWindow = getCurrent();
         onMounted(async () => maxed.value = await appWindow.isMaximized());
         function minimize() { appWindow.minimize(); }
         function maximize() {

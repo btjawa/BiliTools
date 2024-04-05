@@ -38,7 +38,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useStore } from 'vuex';
-import { http } from '@tauri-apps/api';
+import * as http from '@tauri-apps/plugin-http';
 
 export default defineComponent({
     setup() {
@@ -48,12 +48,9 @@ export default defineComponent({
         const sex = store.state.user.sex;
         const sexDesc = sex=='男'?'mars':sex=='女'?'venus':'question';
         http.fetch(store.state.user.top_photo, {
-            headers: store.state.headers, method: 'GET',
-            responseType: http.ResponseType.Binary
-        }).then(resp => {
-            const binary = resp.data;
-            const arrayBuffer = new Uint8Array(binary as any).buffer;
-            const blob = new Blob([arrayBuffer]);
+            headers: store.state.headers, method: 'GET'
+        }).then(async resp => {
+            const blob = await resp.blob();
             const reader = new FileReader();
             reader.onloadend = function() {
                 base64Img.value = reader.result as string;

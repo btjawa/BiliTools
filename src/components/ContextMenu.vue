@@ -23,7 +23,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, reactive, nextTick, onMounted, onUnmounted } from 'vue';
-import { clipboard } from '@tauri-apps/api';
+import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import * as utils from '../scripts/utils';
 
 export default defineComponent({

@@ -1,7 +1,7 @@
 import iziToast from "izitoast";
 import router from "../router";
 import store from "../store";
-import { shell } from "@tauri-apps/api";
+import * as shell from "@tauri-apps/plugin-shell";
 import * as verify from "./verify";
 
 iziToast.settings({

@@ -1,105 +1,14 @@
 {
+  "productName": "bilitools",
+  "version": "1.1.2",
+  "identifier": "com.btjawa.bilitools",
   "build": {
     "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420"
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "BiliTools",
-    "version": "1.1.2"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "os": {
-        "all": true
-      },
-      "dialog": {
-        "all": false,
-        "open": true,
-        "save": true
-      },
-      "http": {
-        "all": false,
-        "request": true,
-        "scope": [
-          "https://*.bilibili.com/*",
-          "https://*.hdslb.com/*"
-        ]
-      },
-      "clipboard": {
-        "all": true
-      },
-      "window": {
-        "all": false,
-        "close": true,
-        "maximize": true,
-        "minimize": true,
-        "startDragging": true,
-        "unmaximize": true,
-        "unminimize": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "Utility",
-      "copyright": "Copyright © 2024 btjawa",
-      "targets": "all",
-      "identifier": "com.btjawa.bilitools",
-      "icon": [
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/32x32.png",
-        "icons/icon.icns",
-        "icons/icon.ico",
-        "icons/icon.png",
-        "icons/Square107x107Logo.png",
-        "icons/Square142x142Logo.png",
-        "icons/Square150x150Logo.png",
-        "icons/Square284x284Logo.png",
-        "icons/Square30x30Logo.png",
-        "icons/Square310x310Logo.png",
-        "icons/Square44x44Logo.png",
-        "icons/Square71x71Logo.png",
-        "icons/Square89x89Logo.png",
-        "icons/StoreLogo.png"
-      ],
-      "resources": [
-        "ffmpeg",
-        "aria2c",
-        "DanmakuFactory"
-      ],
-      "windows": {
-        "wix": {
-          "language": "zh-CN"
-        },
-        "nsis": {
-          "languages": [
-            "SimpChinese",
-            "English"
-          ],
-          "displayLanguageSelector": true
-        }
-      }
-    },
-    "updater": {
-      "active": true,
-      "dialog": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQTUzQTQ3NDY3RUZEMjgKUldRby9YNUdSenFsN3JJYklTL0g5RUd2QkhUWklqQUxydVZXdFA4c25ZazI0YjJIbTFFM0JiNjkK",
-      "endpoints": [
-        "https://gh.con.sh/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://cdn.jsdelivr.net/gh/btjawa/BiliTools/install.json",
-        "https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json"
-      ]
-    },
-    "security": {
-      "csp": null
-    },
+  "app": {
     "windows": [
       {
         "fullscreen": false,
@@ -113,6 +22,63 @@
         "decorations": false,
         "transparent": true
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "Utility",
+    "copyright": "Copyright © 2024 btjawa",
+    "targets": "all",
+    "resources": [
+      "ffmpeg",
+      "aria2c",
+      "DanmakuFactory"
+    ],
+    "icon": [
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/32x32.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png",
+      "icons/Square107x107Logo.png",
+      "icons/Square142x142Logo.png",
+      "icons/Square150x150Logo.png",
+      "icons/Square284x284Logo.png",
+      "icons/Square30x30Logo.png",
+      "icons/Square310x310Logo.png",
+      "icons/Square44x44Logo.png",
+      "icons/Square71x71Logo.png",
+      "icons/Square89x89Logo.png",
+      "icons/StoreLogo.png"
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+        "languages": [
+          "SimpChinese",
+          "English"
+        ],
+        "displayLanguageSelector": true
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQTUzQTQ3NDY3RUZEMjgKUldRby9YNUdSenFsN3JJYklTL0g5RUd2QkhUWklqQUxydVZXdFA4c25ZazI0YjJIbTFFM0JiNjkK",
+      "endpoints": [
+        "https://gh.con.sh/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
+        "https://cdn.jsdelivr.net/gh/btjawa/BiliTools/install.json",
+        "https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json"
+      ]
+    }
   }
 }
