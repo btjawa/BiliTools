@@ -23,13 +23,17 @@
   "homepage": "https://github.com/btjawa/BiliTools#readme",
   "dependencies": {
     "@tauri-apps/api": "^1.5.2",
+    "@vitejs/plugin-vue": "^5.0.4",
     "izitoast": "^1.4.0",
     "jquery": "^3.7.1",
     "jsencrypt": "^3.3.2",
     "md5": "^2.3.0",
     "pako": "^2.1.0",
     "qrcode": "^1.5.3",
-    "sweetalert2": "^11.6.13"
+    "sweetalert2": "^11.6.13",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "vuex": "^4.0.2"
   },
   "devDependencies": {
     "@actions/github": "^6.0.0",

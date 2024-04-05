@@ -10,12 +10,15 @@ use std::{env, fs, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}, mp
 process::{Command, Stdio, Child}, collections::{VecDeque, HashSet, HashMap}, os::windows::process::CommandExt, panic, io::Read};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use rusqlite::{Connection, params};
+// use tauri_plugin_sql::Builder;
 use regex::Regex;
 use win32job::Job;
 use flate2::read::DeflateDecoder;
 use tauri::{Manager, Window as tWindow, async_runtime, api::dialog::FileDialogBuilder};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
+use window_shadows::set_shadow;
+use window_vibrancy::apply_acrylic;
 mod logger;
 
 lazy_static! {
@@ -47,7 +50,7 @@ fn handle_err<E: std::fmt::Display>(window: tWindow, e: E) -> String {
     window.emit("error", e.to_string()).unwrap(); e.to_string()
 }
 
-async fn init_cookie(window: tWindow) -> Result<(), String> {
+async fn init_cookie(window: tWindow) -> Result<String, String> {
     if !&COOKIE_PATH.exists() {
         fs::write(&*COOKIE_PATH, "").map_err(|e| handle_err(window.clone(), e))?;
     }
@@ -70,8 +73,7 @@ async fn init_cookie(window: tWindow) -> Result<(), String> {
         mid_cookie.value.parse::<i64>().unwrap_or(0)
     } else { 0 };
     window.emit("headers", init_headers()).unwrap();
-    window.emit("user-mid", mid_value.to_string()).unwrap();
-    Ok(())
+    Ok(mid_value.to_string())
 }
 
 async fn init_dh(window: tWindow) -> Result<(), String> {
@@ -810,8 +812,7 @@ async fn exit(window: tWindow) -> Result<String, String> {
         }
         get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
         window.emit("headers", init_headers()).unwrap();
-        window.emit("user-mid", 0.to_string()).unwrap();
-        return Ok("成功退出登录".to_string());
+        return Ok(0.to_string());
     } else {
         log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
@@ -849,9 +850,7 @@ async fn refresh_cookie(window: tWindow, refresh_csrf: String) -> Result<String,
         for cookie in cookie_headers.clone() {
             insert_cookie(window.clone(), &cookie).map_err(|e| handle_err(window.clone(), e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(window.clone(), e))?;
-            if parsed_cookie.name == "DedeUserID" {
-                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
-            } else if parsed_cookie.name == "bili_jct" {
+            if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                     let refresh_token = format!(
                         "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
@@ -922,11 +921,12 @@ async fn scan_login(window: tWindow, qrcode_key: String) -> Result<String, Strin
             window.emit("login-status", response_data["data"]["code"].to_string()).unwrap();
             match response_data["data"]["code"].as_i64() {
                 Some(0) => {
+                    let mut mid = "0".to_string();
                     for cookie in cookie_headers.clone() {
                         insert_cookie(window.clone(), &cookie).map_err(|e| handle_err(window.clone(), e))?;
                         let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(window.clone(), e))?;
                         if parsed_cookie.name == "DedeUserID" {
-                            window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+                            mid = parsed_cookie.value;
                         } else if parsed_cookie.name == "bili_jct" {
                             if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                                 let refresh_token = format!(
@@ -938,7 +938,7 @@ async fn scan_login(window: tWindow, qrcode_key: String) -> Result<String, Strin
                         }
                     }
                     log::info!("{}: \"扫码登录成功\"", cloned_key);
-                    return Ok("扫码登录成功".to_string());
+                    return Ok(mid.to_string());
                 }
                 Some(86101) | Some(86090) => log::info!("{}: {}", cloned_key, response_data["data"]["message"]),
                 _ => {
@@ -988,12 +988,12 @@ async fn pwd_login(window: tWindow,
 
     let response_data: Value = response.json().await.map_err(|e| handle_err(window.clone(), e))?;
     if response_data["code"].as_i64() == Some(0) {
+        let mut mid = "0".to_string();
         for cookie in cookie_headers.clone() {
             insert_cookie(window.clone(), &cookie).map_err(|e| handle_err(window.clone(), e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(window.clone(), e))?;
             if parsed_cookie.name == "DedeUserID" {
-                log::info!("密码登录成功: {}", parsed_cookie.value);
-                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+                mid = parsed_cookie.value.to_string();
             } else if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                     let refresh_token = format!(
@@ -1004,7 +1004,8 @@ async fn pwd_login(window: tWindow,
                 }
             }
         }
-        return Ok("密码登录成功".to_string());
+        log::info!("密码登录成功: {}", mid);
+        return Ok(mid.to_string());
     } else {
         log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
@@ -1041,12 +1042,12 @@ async fn sms_login(window: tWindow,
 
     let response_data: Value = response.json().await.map_err(|e| handle_err(window.clone(), e))?;
     if response_data["code"].as_i64() == Some(0) {
+        let mut mid = "0".to_string();
         for cookie in cookie_headers.clone() {
             insert_cookie(window.clone(), &cookie).map_err(|e| handle_err(window.clone(), e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(window.clone(), e))?;
             if parsed_cookie.name == "DedeUserID" {
-                log::info!("短信登录成功: {}", parsed_cookie.value);
-                window.emit("user-mid", parsed_cookie.value.to_string()).unwrap();
+                mid = parsed_cookie.value.to_string();
             } else if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
                     let refresh_token = format!(
@@ -1057,7 +1058,8 @@ async fn sms_login(window: tWindow,
                 }
             }
         }
-        return Ok("短信登录成功".to_string());
+        log::info!("短信登录成功: {}", mid);
+        return Ok(mid.to_string());
     } else {
         log::error!("{}, {}", response_data["code"], response_data["message"]);
         return Err(format!("{}, {}", response_data["code"], response_data["message"]).to_string())
@@ -1093,16 +1095,16 @@ async fn ready(_window: tWindow) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn init(window: tWindow, secret: String) -> Result<(), String> {
+async fn init(window: tWindow, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
     }
     rw_config(window.clone(), "read".to_string(), None, secret).await.map_err(|e| handle_err(window.clone(), e))?;
-    init_cookie(window.clone()).await.unwrap();
+    let mid = init_cookie(window.clone()).await.unwrap();
     init_dh(window.clone()).await.unwrap();
     get_buvid(window.clone()).await.map_err(|e| handle_err(window.clone(), e))?;
-    return Ok(());
+    return Ok(mid);
 }
 
 #[tauri::command]
@@ -1183,9 +1185,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit_all("single-instance", (argv, cwd)).unwrap();
+            let window = app.get_window("main").unwrap();
+            window.unminimize().unwrap();
+            window.set_focus().unwrap();
         }))
         .setup(|app| {
             let window = app.get_window("main").unwrap();
+            #[cfg(any(windows, target_os = "macos"))]
+                set_shadow(&window, true).unwrap();
+            #[cfg(target_os = "windows")]
+                apply_acrylic(&window, Some((18, 18, 18, 125))).expect("Unsupported OS version/platform! 'apply_acrylic' is only supported on Windows 10/11");
+                // window_vibrancy::apply_mica(&window, None).expect("Unsupported OS version/platform! 'apply_mica' is only supported on Windows 11");
             let window_for_panic = std::sync::Arc::new(std::sync::Mutex::new(window.clone()));
             panic::set_hook(Box::new(move |e| {
                 handle_err(window_for_panic.lock().unwrap().clone(), e);

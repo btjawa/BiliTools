@@ -1,11 +1,9 @@
 import { checkUpdate, installUpdate, onUpdaterEvent } from '@tauri-apps/api/updater'
-import { invoke } from '@tauri-apps/api/tauri';
 import { emit } from '@tauri-apps/api/event';
 import { dialog, app } from '@tauri-apps/api';
 import { relaunch } from '@tauri-apps/api/process'
 
 import Swal from "sweetalert2";
-import * as data from "./data.ts";
 
 const unlisten = await onUpdaterEvent(({ error, status }) => {
     // This will log all updater events, including status updates and errors.
@@ -33,8 +31,6 @@ try {
                     Swal.showLoading();
                 },
             });
-            // Kill aria2c.
-            invoke("handle_aria2c", { action: "kill", secret: data.secret })
             // Install the update. This will also restart the app on Windows!
             await installUpdate()
             // On macOS and Linux you will need to restart the app manually.

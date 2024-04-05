@@ -1,19 +1,19 @@
 import iziToast from "izitoast";
 
-export function id(input: string): [string, string] {
+export function id(input: string): { id: string, type: string | null } {
     let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-    if (match) return [match[0], "video"];
+    if (match) return { id: match[0], type: "video" };
     match = input.match(/ep(\d+)|ss(\d+)/i);
-    if (match) return [match[0], "bangumi"]; 
+    if (match) return { id: match[0], type: "bangumi" }; 
     match = input.match(/au(\d+)/i);
-    if (match) return [match[0], "audio"]; 
+    if (match) return { id: match[0], type: "audio" }; 
     else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
         iziToast.error({
             icon: 'fa-regular fa-circle-exclamation',
             layout: 2, title: `警告`,
             message: !input ? "请输入链接/AV/BV/SS/EP/AU号" : "输入不合法！请检查格式"
         });
-        return [input, ""];
+        return { id: input, type: null };
     }
 }
 

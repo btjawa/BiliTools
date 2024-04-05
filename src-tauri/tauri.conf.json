@@ -33,6 +33,15 @@
       },
       "clipboard": {
         "all": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "maximize": true,
+        "minimize": true,
+        "startDragging": true,
+        "unmaximize": true,
+        "unminimize": true
       }
     },
     "bundle": {
@@ -100,7 +109,9 @@
         "title": "BiliTools",
         "label": "main",
         "width": 1280,
-        "height": 720
+        "height": 720,
+        "decorations": false,
+        "transparent": true
       }
     ]
   }
