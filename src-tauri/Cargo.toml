@@ -16,6 +16,9 @@ tauri-plugin-single-instance = "2.0.0-beta"
 tauri-plugin-shell = "2.0.0-beta"
 tauri-plugin-http = { version = "2.0.0-beta.4", features = ["json", "rustls-tls"] }
 tauri-plugin-dialog = "2.0.0-beta.4"
+tauri-plugin-clipboard-manager = "2.1.0-beta.0"
+tauri-plugin-os = "2.0.0-beta.3"
+tauri-plugin-store = "2.0.0-beta.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 regex = "1.10.2"
@@ -29,6 +32,3 @@ flate2 = "1.0.28"
 win32job = "2.0.0"
 window-vibrancy = "0.5.0"
 chrono = "0.4.37"
-rusqlite = { version = "0.31.0", features = ["bundled"] }
-tauri-plugin-clipboard-manager = "2.1.0-beta.0"
-tauri-plugin-os = "2.0.0-beta.3"

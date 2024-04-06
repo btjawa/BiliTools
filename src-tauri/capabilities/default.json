@@ -33,6 +33,10 @@
     "clipboard-manager:allow-clear",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
-    "os:default"
+    "os:default",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-load"
   ]
 }

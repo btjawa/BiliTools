@@ -17,7 +17,8 @@
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 import TitleBar from "./components/TitleBar.vue";
 import ContextMenu from "./components/ContextMenu.vue";
-import SideBar from "./components/SideBar.vue"; 
+import SideBar from "./components/SideBar.vue";
+import { iziError } from "./scripts/utils"; 
 import { listen } from "@tauri-apps/api/event";
 import { ref } from 'vue';
 
@@ -30,6 +31,7 @@ export default {
     mounted() {
         this.$store.dispatch('init');
         listen('headers', (e) => this.$store.commit('updateHeaders', e.payload));
+        listen('error', (e) => iziError(e.payload as string));
     },
     setup() {
         const contextMenu = ref(null);
