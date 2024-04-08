@@ -25,54 +25,120 @@
                     </span>
                 </span>
             </div>
-            <div class="user-profile__data">
-                
+            <div class="user-profile__operates">
+                <div class="user-profile__exit_login" @click="exit">
+                    <i class="fa-regular fa-arrow-right-from-arc"></i>
+                    <span>退出登录</span>
+                </div>
             </div>
         </div>
     </div>
     <div class="user-login" v-if="!store.state.user.isLogin">
+        <div class="user-login__scan_wp">
+            <div class="user-login__scan_title">扫描二维码登录</div>
+            <div class="user-login__scan_box">
+                <div class="user-login__qrcode" ref="qrcodeBox"></div>
+            </div>
+            <div class="user-login__scan_tips" ref="qrcodeTips"></div>
+            <div class="user-login__scan_desc">
+                <p>请使用<a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端</a></p>
+                <p>扫码登录或扫码下载APP</p>
+            </div>
+        </div>
+        <div class="user-login__main_split"></div>
+        <div class="user-login__pwd_wp"></div>
     </div>
 </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, onMounted, onUnmounted } from 'vue';
 import { useStore } from 'vuex';
-import * as http from '@tauri-apps/plugin-http';
+import { iziInfo } from '../scripts/utils';
+import { useRouter } from 'vue-router';
+import { invoke } from '@tauri-apps/api/core';
+import { emit } from "@tauri-apps/api/event";
+import * as login from '../scripts/login';
+import * as http from '../scripts/http';
 
 export default defineComponent({
     setup() {
         const store = useStore();
-        const base64Img = ref('');
+        const router = useRouter();
+        const base64Img = ref("");
+        const qrcodeBox = ref(null);
+        const qrcodeTips = ref(null);
         const levelIcon = new URL(`../assets/level/level${store.state.user.level}.svg`, import.meta.url).href;
         const sex = store.state.user.sex;
         const sexDesc = sex=='男'?'mars':sex=='女'?'venus':'question';
-        http.fetch(store.state.user.top_photo, {
-            headers: store.state.headers, method: 'GET'
-        }).then(async resp => {
-            const blob = await resp.blob();
-            const reader = new FileReader();
-            reader.onloadend = function() {
-                base64Img.value = reader.result as string;
-            };
-            reader.readAsDataURL(blob);
+        onMounted(() => {
+            if (store.state.user.isLogin) {
+                http.fetch(store.state.user.top_photo, {
+                    headers: store.state.headers, method: 'GET'
+                }).then(async resp => { // 主页头图
+                    const blob = await resp.blob();
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        base64Img.value = reader.result as string;
+                    };
+                    reader.readAsDataURL(blob);
+                });
+            } else {
+                if (qrcodeBox.value) {
+                    login.scanLogin(qrcodeBox.value).then(mid => {
+                        if (mid !== 0) {
+                            iziInfo('登录成功~')
+                            router.push('/');
+                            setTimeout(() => store.dispatch('fetchUser', mid), 300);
+                        }
+                    })
+                }
+            }
         });
-        return { store, base64Img, levelIcon, sexDesc }
+        async function exit() {
+            const mid = Number(await invoke('exit'));
+            router.push('/');
+            setTimeout(() => store.dispatch('fetchUser', mid), 300);
+        }
+        onUnmounted(() => {
+            emit('stop_login');
+        })
+        return { store, base64Img, levelIcon, sexDesc, qrcodeBox, qrcodeTips, exit }
     }
 });
 </script>
 
 <style>
-.user-profile .user-profile__text_area {
+.user-profile .user-profile__text_area,
+.user-login__scan_wp, .user-login__pwd_wp,
+.user-profile__operates {
     display: flex;
     flex-direction: column;
 }
 
-.user-profile {
+.user-profile__text_area {
+    margin-right: auto;
+}
+
+.user-profile, .user-login {
     position: relative;
     border-radius: 20px;
     background: var(--block-color);
+    border: #333333 solid 1px;
     height: 240px;
+}
+
+.user-login {
+    display: flex;
+    width: 820px;
+    height: 430px;
+    padding: 52px 65px 29px 92px;
+    background-image: url("../assets/22_open.png"),
+                      url("../assets/33_open.png");
+    background-position: 0 100%, 100% 100%;
+    background-repeat: no-repeat, no-repeat;
+    background-size: 14%;
+    user-select: none;
 }
 
 .user-profile__top_photo, .user-profile__top_photo img, .user-profile::after {
@@ -90,6 +156,7 @@ export default defineComponent({
     left: 0;
     bottom: 0;
     right: 0;
+    border-bottom: #333333 solid 1px;
     background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.13) 25%, rgba(0,0,0,0.26) 50%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0.66) 100%);
 }
 
@@ -125,7 +192,7 @@ export default defineComponent({
     z-index: 1;
 }
 
-.user-profile__name {
+.user-profile__name, .user-profile__exit_login {
     display: flex;
     margin-top: auto;
     align-items: center;
@@ -172,5 +239,74 @@ export default defineComponent({
 
 .user-profile__desc span {
     margin-left: 8px;
+}
+
+.user-profile__operates {
+    font-size: 13px;
+    user-select: none;
+}
+
+.user-profile__operates div {
+    padding: 8px;
+    transition: color 0.2s;
+}
+
+.user-profile__operates div:hover {
+    color: rgb(212,78,125);
+    cursor: pointer;
+}
+
+.user-profile__operates i {
+    margin-right: 6px;
+}
+
+.user-login__scan_wp, .user-login__pwd_wp,
+.user-login__scan_box {
+    display: flex;
+    align-items: center;
+}
+
+.user-login__scan_title {
+    font-size: 18px;
+    margin-bottom: 26px;
+}
+
+.user-login__scan_box {
+    border-radius: 8px;
+    border: solid #444 2px;
+    width: 180px;
+    height: 180px;
+    justify-content: center;
+    transition: opacity 0.4s;
+}
+
+.user-login__scan_tips {
+    position: absolute;
+    opacity: 0;
+    height: 173px;
+    width: 330px;
+    transform: translateX(0);
+    transform: translateY(50px);
+    background-size: 100% 100%;
+    background-image: url("../assets/qr-tips.png");
+    transition: opacity 0.4s;
+}
+
+.user-login__scan_desc {
+    font-size: 13px;
+    margin-top: 18px;
+    text-align: center;
+}
+
+.user-login__scan_desc a {
+    color: #3086bf;
+    text-decoration: none;
+}
+
+.user-login__main_split {
+    height: 70%;
+    width: 1px;
+    background-color: #444;
+    margin: 43px 44px 0 45px;
 }
 </style>

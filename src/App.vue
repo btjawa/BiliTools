@@ -5,7 +5,10 @@
     <div class="main" @contextmenu.prevent="showMenu">
         <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
-                <keep-alive><component :is="Component" class="page" /></keep-alive>
+                <keep-alive v-if="keepAlive()">
+                    <component :is="Component" class="page" />
+                </keep-alive>
+                <component v-else :is="Component" class="page" />
             </transition>
         </router-view>
     </div>
@@ -18,6 +21,7 @@
 import TitleBar from "./components/TitleBar.vue";
 import ContextMenu from "./components/ContextMenu.vue";
 import SideBar from "./components/SideBar.vue";
+import { useRouter } from "vue-router";
 import { iziError } from "./scripts/utils"; 
 import { listen } from "@tauri-apps/api/event";
 import { ref } from 'vue';
@@ -35,11 +39,14 @@ export default {
     },
     setup() {
         const contextMenu = ref(null);
+        const router = useRouter();
+        router.push("/");
         function showMenu(e: MouseEvent) {
             if (contextMenu.value)
             (contextMenu.value as any).showMenu(e);
         }
-        return { contextMenu, showMenu }
+        const keepAlive = () => router.currentRoute.value.name != "LoginPage";
+        return { contextMenu, showMenu, keepAlive }
     },
 }
 
@@ -47,14 +54,14 @@ export default {
 
 <style scoped>
 .main {
-    background-color: rgba(23,23,23,0.75);
+    background-color: rgba(23,23,23,0.9);
     display: flex;
     justify-content: center;
     align-items: center;
     position: absolute;
     right: 0;
     bottom: 0;
-    width: calc(100vw - 63px);
+    width: calc(100vw - 60px);
     height: calc(100vh - 35px);
 }
 
@@ -67,9 +74,9 @@ export default {
     color: var(--content-color);
 }
 
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.15s ease;
+/* .fade-leave-active, */
+.fade-enter-active {
+    transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,

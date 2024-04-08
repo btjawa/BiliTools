@@ -1,7 +1,5 @@
 <template>
 <div data-tauri-drag-region @contextmenu.prevent class="title-bar">
-    <img class="favicon" src="../assets/icon.png" />
-    <div class="title">BiliTools</div>
     <div class="titlebar-button" id="titlebar-minimize" @click="minimize">
         <i class="iconfont icon-minus-bold"></i>
     </div>
@@ -39,12 +37,11 @@ export default defineComponent({
 <style scoped>
 .title-bar {
     height: 35px;
-    width: 100vw;
-    background: rgba(26,26,26,1);
+    width: calc(100vw - 60px);
+    background: rgba(28,28,28,0.9);
     border-bottom: #333333 solid 1px;
     position: absolute;
     display: flex;
-    z-index: 99;
     right: 0;
     top: 0;
     color: #c4c4c4;
@@ -67,24 +64,11 @@ export default defineComponent({
     background-color: #242424;
 }
 
+#titlebar-minimize {
+    margin-left: auto;
+}
+
 #titlebar-close:hover {
     background-color: rgb(196,43,28);
-}
-
-.favicon {
-    height: 18px;
-    width: 18px;
-    margin: 8.5px;
-}
-
-.title {
-    margin-right: auto;
-    line-height: 35px;
-    font-size: 13px;
-}
-
-.favicon, .title {
-    user-select: none;
-    pointer-events: none;
 }
 </style>

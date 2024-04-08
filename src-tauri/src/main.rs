@@ -3,6 +3,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use std::{collections::{HashMap, HashSet, VecDeque}, env, fs, io::Read, net::{SocketAddr, TcpListener}, os::windows::process::CommandExt, panic, path::PathBuf, process::{Child, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc}, time::Instant};
@@ -12,12 +13,13 @@ use win32job::Job;
 use flate2::read::DeflateDecoder;
 use tauri::{async_runtime, AppHandle, Manager, Wry, Window};
 use tauri_plugin_dialog::DialogExt;
-use tauri_plugin_http::reqwest::{self, Client, header, header::{HeaderMap, HeaderName, HeaderValue}, Url};
+use reqwest::{Client, header, header::{HeaderMap, HeaderName, HeaderValue}, Url};
 use tauri_plugin_store::{with_store, StoreCollection, JsonValue};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
-use window_vibrancy::apply_acrylic;
+use window_vibrancy::{apply_blur, apply_acrylic};
 mod logger;
+mod http;
 
 lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
@@ -34,7 +36,7 @@ lazy_static! {
     static ref MAX_CONCURRENT_DOWNLOADS: Arc<RwLock<i64>> = Arc::new(RwLock::new(3));
     static ref ARIA2C_PORT: Arc<RwLock<usize>> = Arc::new(RwLock::new(0));
     static ref ARIA2C_MANAGER: Arc<Mutex<Aria2cManager>> = Arc::new(Mutex::new(Aria2cManager::new()));
-    static ref COOKIE_MANAGER: Arc<Mutex<CookieManager>> = Arc::new(Mutex::new(CookieManager::new()));
+    static ref COOKIE_MANAGER: Arc<OnceCell<CookieManager>> = Arc::new(OnceCell::new());
     static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     static ref DOING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
@@ -47,7 +49,7 @@ fn handle_err<E: std::fmt::Display>(e: E) -> String {
     let err_msg = e.to_string();
     log::error!("{}", err_msg);
     async_runtime::spawn(async move {
-        let app_handle = COOKIE_MANAGER.lock().await.get_app_handle().unwrap();
+        let app_handle = COOKIE_MANAGER.get().unwrap().get_app_handle().unwrap();
         app_handle.get_window("main").unwrap().emit("error", &err_msg).unwrap();
     });
     e.to_string()
@@ -55,9 +57,9 @@ fn handle_err<E: std::fmt::Display>(e: E) -> String {
 
 async fn init_dh() -> Result<(), String> {
     if !&DH_PATH.exists() {
-        fs::write(&*DH_PATH, "").map_err(|e| handle_err(e))?;
+        fs::write(&*DH_PATH, "{}").map_err(|e| handle_err(e))?;
     }
-    let handle = COOKIE_MANAGER.lock().await.get_app_handle().unwrap();
+    { let handle = COOKIE_MANAGER.get().unwrap().get_app_handle().unwrap();
     let stores = handle.app_handle().state::<StoreCollection<Wry>>();
     let entries = with_store(handle.app_handle().clone(), stores, &*DH_PATH, |store| {
         Ok(store.entries().map(|(k, v)| (k.clone(), v.clone()))
@@ -67,13 +69,13 @@ async fn init_dh() -> Result<(), String> {
     complete_queue.clear();
     for (_, value) in entries {
         complete_queue.push_back(serde_json::from_value(value).unwrap());
-    }
+    } }
     update_queue("init", None, None).await;
     Ok(())
 }
 
 async fn insert_dh(info: VideoInfo) -> Result<(), String> {
-    let handle = COOKIE_MANAGER.lock().await.get_app_handle().unwrap();
+    let handle = COOKIE_MANAGER.get().unwrap().get_app_handle().unwrap();
     let stores = handle.app_handle().state::<StoreCollection<Wry>>();
     with_store(handle.app_handle().clone(), stores, &*DH_PATH, |store| {
         store.insert(info.display_name.clone().into(), json!({
@@ -90,20 +92,20 @@ async fn insert_dh(info: VideoInfo) -> Result<(), String> {
     Ok(())
 }
 
-async fn init_headers() -> HashMap<String, String> {
+fn init_headers() -> HashMap<String, String> {
     let mut headers = HashMap::new();
     headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".into());
-    let cookies = COOKIE_MANAGER.lock().await.load().map_err(|e| e.to_string()).unwrap();
+    let cookies = COOKIE_MANAGER.get().unwrap().load().map_err(|e| e.to_string()).unwrap();
     headers.insert("Cookie".into(), cookies.iter()
-        .map(|(key, value)| format!("{}={}", key, value))
+        .map(|(key, value)| format!("{}={}", key, value).replace("\"", ""))
         .collect::<Vec<_>>().join("; ") + ";");
     headers.insert("Referer".into(), "https://www.bilibili.com".into());
     return headers
 }
 
-async fn init_client() -> Client {
+fn init_client() -> Client {
     let mut headers = HeaderMap::new();
-    for (key, value) in init_headers().await {
+    for (key, value) in init_headers() {
     headers.insert(
         HeaderName::from_bytes(key.as_bytes()).unwrap(),
         HeaderValue::from_str(&value).unwrap()
@@ -151,55 +153,44 @@ impl Aria2cManager {
 }
 
 struct CookieManager {
-    app_handle: Option<AppHandle<Wry>>,
+    app_handle: AppHandle<Wry>,
 }
 
 impl CookieManager {
-    pub fn new() -> Self { CookieManager { app_handle: None } }
-    pub fn set_app_handle(&mut self, handle: AppHandle<Wry>) {
-        self.app_handle = Some(handle);
+    pub fn new(app_handle: AppHandle<Wry>) -> Self { CookieManager { app_handle } }
+    pub fn get_app_handle(&self) -> Result<AppHandle<Wry>, String> {
+        return Ok(self.app_handle.clone())
     }
-    pub fn get_app_handle(&mut self) -> Result<AppHandle<Wry>, String> {
-        if let Some(handle) = &self.app_handle {
-            return Ok(handle.clone())
-        } else { return Err("No app_handle Found".to_string()) };
+    pub fn load(&self) -> Result<HashMap<String, JsonValue>, String> {
+        let stores = self.app_handle.state::<StoreCollection<Wry>>();
+        return Ok(with_store(self.app_handle.clone(), stores, &*COOKIE_PATH, |store| {
+            Ok(store.entries().map(|(k, v)| (k.clone(), v.clone()))
+            .collect::<HashMap<String, JsonValue>>())
+        }).map_err(|e| handle_err(e)).unwrap())
     }
-    pub fn load(&mut self) -> Result<HashMap<String, JsonValue>, String> {
-        if let Some(handle) = &self.app_handle {
-            let stores = handle.state::<StoreCollection<Wry>>();
-            return Ok(with_store(handle.clone(), stores, &*COOKIE_PATH, |store| {
-                Ok(store.entries().map(|(k, v)| (k.clone(), v.clone()))
-                .collect::<HashMap<String, JsonValue>>())
-            }).map_err(|e| handle_err(e)).unwrap())
-        } else { return Err("No app_handle Found".to_string()) };
+    pub fn insert(&self, cookie_str: &str) -> Result<(), String> {
+        let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
+        let stores = self.app_handle.app_handle().state::<StoreCollection<Wry>>();
+        with_store(self.app_handle.app_handle().clone(), stores, &*COOKIE_PATH, |store| {
+            store.insert(
+                parsed_cookie.name,
+                parsed_cookie.value.into()
+            )?;
+            store.save()?;
+            Ok(())
+        }).map_err(|e| handle_err(e))?;
+        self.app_handle.get_window("main").unwrap().emit("headers", init_headers()).unwrap();
+        return Ok(())
     }
-    pub async fn insert(&mut self, cookie_str: &str) -> Result<(), String> {
-        if let Some(handle) = &self.app_handle {
-            let parsed_cookie = parse_cookie_header(cookie_str).unwrap();
-            let stores = handle.app_handle().state::<StoreCollection<Wry>>();
-            with_store(handle.app_handle().clone(), stores, &*COOKIE_PATH, |store| {
-                store.insert(
-                    parsed_cookie.name,
-                    parsed_cookie.value.into()
-                )?;
-                store.save()?;
-                Ok(())
-            }).map_err(|e| handle_err(e))?;
-            handle.get_window("main").unwrap().emit("headers", init_headers().await).unwrap();
-            return Ok(())
-        } else { return Err("No app_handle Found".to_string()) };
-    }
-    pub async fn delete(&mut self, key: String) -> Result<(), String> {
-        if let Some(handle) = &self.app_handle {
-            let stores = handle.app_handle().state::<StoreCollection<Wry>>();
-            with_store(handle.app_handle().clone(), stores, &*COOKIE_PATH, |store| {
-                store.delete(key)?;
-                store.save()?;
-                Ok(())
-            }).map_err(|e| handle_err(e))?;
-            handle.get_window("main").unwrap().emit("headers", init_headers().await).unwrap();
-            return Ok(())
-        } else { return Err("No app_handle Found".to_string()) };
+    pub fn delete(&self, key: String) -> Result<(), String> {
+        let stores = self.app_handle.app_handle().state::<StoreCollection<Wry>>();
+        with_store(self.app_handle.app_handle().clone(), stores, &*COOKIE_PATH, |store| {
+            store.delete(key)?;
+            store.save()?;
+            Ok(())
+        }).map_err(|e| handle_err(e))?;
+        self.app_handle.get_window("main").unwrap().emit("headers", init_headers()).unwrap();
+        return Ok(())
     }
 }
 
@@ -241,8 +232,7 @@ struct Settings {
 }
 
 async fn get_buvid() -> Result<String, String> {
-    let client = init_client().await;
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
+    let client = init_client();
     let buvid3_resp = client
         .get("https://www.bilibili.com")
         .send().await.map_err(|e| handle_err(e))?;
@@ -250,9 +240,9 @@ async fn get_buvid() -> Result<String, String> {
         .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-    for cookie in cookie_headers.clone() {
-        cookie_manager.insert(&cookie).await.map_err(|e| handle_err(e))?;
-    }
+    { for cookie in cookie_headers.clone() {
+        COOKIE_MANAGER.get().unwrap().insert(&cookie).map_err(|e| handle_err(e))?;
+    } }
     let buvid4_resp = client
         .get("https://api.bilibili.com/x/frontend/finger/spi")
         .send().await.map_err(|e| handle_err(e))?;
@@ -262,7 +252,7 @@ async fn get_buvid() -> Result<String, String> {
             let buvid4 = format!(
                 "buvid4={}; Path=/; Domain=bilibili.com", buvid4
             );
-            cookie_manager.insert(&buvid4).await.map_err(|e| handle_err(e))?;
+            { COOKIE_MANAGER.get().unwrap().insert(&buvid4).map_err(|e| handle_err(e))?; }
         }
         return Ok("成功获取buvid".to_string());
     } else {
@@ -277,7 +267,7 @@ async fn push_back_queue(
     action: String, media_data: Value, date: String
 ) -> Result<Value, String> {
     let mut tasks = vec![];
-    let client = init_client().await;
+    let client = init_client();
     let ss_dir = &media_data.get("ss_title").unwrap().as_str().unwrap().to_string();
     let display_name = media_data.get("display_name").unwrap().as_str().unwrap().to_string();
     for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
@@ -372,7 +362,7 @@ fn add_timestamp(mut info: VideoInfo, date: String) -> VideoInfo {
 }
 
 async fn update_queue(action: &str, info: Option<VideoInfo>, date: Option<String>) -> Option<VideoInfo> {
-    let window = COOKIE_MANAGER.lock().await.get_app_handle().unwrap().get_window("main").unwrap();
+    let window = COOKIE_MANAGER.get().unwrap().get_app_handle().unwrap().get_window("main").unwrap();
     let mut waiting_queue = WAITING_QUEUE.lock().await;
     let mut doing_queue = DOING_QUEUE.lock().await;
     let mut complete_queue = COMPLETE_QUEUE.lock().await;
@@ -421,7 +411,7 @@ async fn update_queue(action: &str, info: Option<VideoInfo>, date: Option<String
 
 async fn download_file(window: Window, task: DownloadTask, gid: Value) -> Result<String, String> {
     log::info!("Starting download for: {}", &task.display_name);
-    let client = init_client().await;
+    let client = init_client();
     handle_download(task.gid.clone(), "unpause".to_string()).await.map_err(|e| handle_err(e))?;
     let mut last_log_time = Instant::now();
     loop {
@@ -588,7 +578,7 @@ async fn merge_video_audio(window: Window, info: VideoInfo) -> Result<VideoInfo,
 
 #[tauri::command]
 async fn handle_download(gid: String, action: String) -> Result<Value, String> {
-    let client = init_client().await;
+    let client = init_client();
     let payload = json!({
         "jsonrpc": "2.0",
         "method": format!("aria2.{}", action),
@@ -661,13 +651,6 @@ fn parse_cookie_header(cookie_str: &str) -> Result<CookieInfo, &'static str> {
         domain: domain.to_string(),
         expires: expires.to_string(),
     })
-}
-
-#[tauri::command]
-async fn insert_cookie(cookie_str: &str) -> Result<(), String> {
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
-    cookie_manager.insert(cookie_str).await.map_err(|e| handle_err(e))?;
-    Ok(())
 }
 
 #[tauri::command]
@@ -754,12 +737,11 @@ async fn open_select(path: String) -> Result<String, String>{
 
 #[tauri::command]
 async fn exit(window: Window) -> Result<String, String> {
-    let client = init_client().await;
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
-    let cookies = cookie_manager.load().map_err(|e| handle_err(e))?;
+    let client = init_client();
+    let cookies = { COOKIE_MANAGER.get().unwrap().load().map_err(|e| handle_err(e))? };
     let response = client
         .post("https://passport.bilibili.com/login/exit/v2")
-        .query(&[("biliCSRF", cookies.get("bili_jct").unwrap_or(&json!("")).to_string())])
+        .query(&[("biliCSRF", cookies.get("bili_jct").unwrap_or(&json!("")).as_str().unwrap())])
         .send().await.map_err(|e| handle_err(e))?;
 
     if response.status() != reqwest::StatusCode::OK {
@@ -770,15 +752,14 @@ async fn exit(window: Window) -> Result<String, String> {
         .iter().flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-
     let response_data: Value = response.json().await.map_err(|e| handle_err(e))?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(e))?;
-            cookie_manager.delete(parsed_cookie.name).await.map_err(|e| handle_err(e))?;
+            { COOKIE_MANAGER.get().unwrap().delete(parsed_cookie.name).map_err(|e| handle_err(e))?; }
         }
         get_buvid().await.map_err(|e| handle_err(e))?;
-        window.emit("headers", init_headers().await).unwrap();
+        window.emit("headers", init_headers()).unwrap();
         return Ok(0.to_string());
     } else {
         log::error!("{}, {}", response_data["code"], response_data["message"]);
@@ -788,8 +769,8 @@ async fn exit(window: Window) -> Result<String, String> {
 
 #[tauri::command]
 async fn refresh_cookie(refresh_csrf: String) -> Result<String, String> {
-    let client = init_client().await;
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
+    let client = init_client();
+    let cookie_manager = COOKIE_MANAGER.get().unwrap();
     let cookies = cookie_manager.load().map_err(|e| handle_err(e))?;
     let refresh_token = cookies.get("refresh_token").unwrap_or(&json!("")).to_string();
     let response = client
@@ -813,7 +794,7 @@ async fn refresh_cookie(refresh_csrf: String) -> Result<String, String> {
     let response_data: Value = response.json().await.map_err(|e| handle_err(e))?;
     if response_data["code"].as_i64() == Some(0) {
         for cookie in cookie_headers.clone() {
-            cookie_manager.insert(&cookie).await.map_err(|e| handle_err(e))?;
+            cookie_manager.insert(&cookie).map_err(|e| handle_err(e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(e))?;
             if parsed_cookie.name == "bili_jct" {
                 if let Some(refresh_token) = response_data["data"]["refresh_token"].as_str() { 
@@ -821,7 +802,7 @@ async fn refresh_cookie(refresh_csrf: String) -> Result<String, String> {
                         "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
                         refresh_token, parsed_cookie.expires
                     );
-                    cookie_manager.insert(&refresh_token).await.map_err(|e| handle_err(e))?;
+                    cookie_manager.insert(&refresh_token).map_err(|e| handle_err(e))?;
                 }
                 let conf_refresh_resp = client
                 .post("https://passport.bilibili.com/x/passport-login/web/confirm/refresh")
@@ -859,8 +840,7 @@ async fn refresh_cookie(refresh_csrf: String) -> Result<String, String> {
 
 #[tauri::command]
 async fn scan_login(window: Window, qrcode_key: String) -> Result<String, String> {
-    let client = init_client().await;
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
+    let client = init_client();
     let mut cloned_key = qrcode_key.clone();
     let mask_range = 8..cloned_key.len()-8;
     let mask = "*".repeat(mask_range.end - mask_range.start);
@@ -889,7 +869,7 @@ async fn scan_login(window: Window, qrcode_key: String) -> Result<String, String
                 Some(0) => {
                     let mut mid = "0".to_string();
                     for cookie in cookie_headers.clone() {
-                        cookie_manager.insert(&cookie).await.map_err(|e| handle_err(e))?;
+                        { COOKIE_MANAGER.get().unwrap().insert(&cookie).map_err(|e| handle_err(e))?; }
                         let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(e))?;
                         if parsed_cookie.name == "DedeUserID" {
                             mid = parsed_cookie.value;
@@ -899,7 +879,7 @@ async fn scan_login(window: Window, qrcode_key: String) -> Result<String, String
                                     "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
                                     refresh_token, parsed_cookie.expires
                                 );
-                                cookie_manager.insert(&refresh_token).await.map_err(|e| handle_err(e))?;
+                                { COOKIE_MANAGER.get().unwrap().insert(&refresh_token).map_err(|e| handle_err(e))?; }
                             }
                         }
                     }
@@ -919,7 +899,7 @@ async fn scan_login(window: Window, qrcode_key: String) -> Result<String, String
         sleep(Duration::from_secs(1)).await;
     }
     log::error!("{}: \"登录轮询被前端截断\"", cloned_key);
-    return Ok("登录过程被终止".to_string());
+    return Ok(0.to_string());
 }
 
 #[tauri::command]
@@ -928,8 +908,8 @@ async fn pwd_login(
     token: String, challenge: String,
     validate: String, seccode: String
 ) -> Result<String, String> {
-    let client = init_client().await;
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
+    let client = init_client();
+    let cookie_manager = COOKIE_MANAGER.get().unwrap();
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login")
         .query(&[
@@ -957,7 +937,7 @@ async fn pwd_login(
     if response_data["code"].as_i64() == Some(0) {
         let mut mid = "0".to_string();
         for cookie in cookie_headers.clone() {
-            cookie_manager.insert(&cookie).await.map_err(|e| handle_err(e))?;
+            cookie_manager.insert(&cookie).map_err(|e| handle_err(e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(e))?;
             if parsed_cookie.name == "DedeUserID" {
                 mid = parsed_cookie.value.to_string();
@@ -967,7 +947,7 @@ async fn pwd_login(
                         "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
                         refresh_token, parsed_cookie.expires
                     );
-                    cookie_manager.insert(&refresh_token).await.map_err(|e| handle_err(e))?;
+                    cookie_manager.insert(&refresh_token).map_err(|e| handle_err(e))?;
                 }
             }
         }
@@ -984,8 +964,8 @@ async fn sms_login(
     cid: String, tel: String,
     code: String, key: String,
 ) -> Result<String, String> {
-    let client = init_client().await;
-    let mut cookie_manager = COOKIE_MANAGER.lock().await;
+    let client = init_client();
+    let cookie_manager = COOKIE_MANAGER.get().unwrap();
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login/sms")
         .query(&[
@@ -1012,7 +992,7 @@ async fn sms_login(
     if response_data["code"].as_i64() == Some(0) {
         let mut mid = "0".to_string();
         for cookie in cookie_headers.clone() {
-            cookie_manager.insert(&cookie).await.map_err(|e| handle_err(e))?;
+            cookie_manager.insert(&cookie).map_err(|e| handle_err(e))?;
             let parsed_cookie = parse_cookie_header(&cookie).map_err(|e| handle_err(e))?;
             if parsed_cookie.name == "DedeUserID" {
                 mid = parsed_cookie.value.to_string();
@@ -1022,7 +1002,7 @@ async fn sms_login(
                         "refresh_token={}; Path=/; Domain=bilibili.com; Expires={}",
                         refresh_token, parsed_cookie.expires
                     );
-                    cookie_manager.insert(&refresh_token).await.map_err(|e| handle_err(e))?;
+                    cookie_manager.insert(&refresh_token).map_err(|e| handle_err(e))?;
                 }
             }
         }
@@ -1063,30 +1043,28 @@ async fn ready(_window: Window) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn init(window: Window, secret: String) -> Result<String, String> {
+async fn init(window: Window, secret: String) -> Result<i64, String> {
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
     }
     rw_config(window.clone(), "read".to_string(), None, secret).await.map_err(|e| handle_err(e))?;
-    if !&COOKIE_PATH.exists() {
-        fs::write(&*COOKIE_PATH, "").map_err(|e| handle_err(e))?;
-    }
-    let cookies = COOKIE_MANAGER.lock().await.load().map_err(|e| handle_err(e))?;
-    window.emit("headers", init_headers().await).unwrap();
-    init_dh().await.unwrap();
+    if !&COOKIE_PATH.exists() { fs::write(&*COOKIE_PATH, "{}").map_err(|e| handle_err(e))?; }
+    let cookies = COOKIE_MANAGER.get().unwrap().load().map_err(|e| handle_err(e))?;
+    window.emit("headers", init_headers()).unwrap();
+    init_dh().await.map_err(|e| handle_err(e))?;
     get_buvid().await.map_err(|e| handle_err(e))?;
-    return Ok(cookies.get("DedeUserID").unwrap_or(&json!(0)).to_string());
+    return Ok(cookies.get("DedeUserID").and_then(|v| v.as_str()).unwrap_or("0").parse::<i64>().unwrap_or(0));
 }
 
 #[tauri::command]
 async fn get_dm(window: Window, secret: String, oid: i64, date: Option<String>, df_path: String, xml: bool) -> Result<(), String> {
-    let app_handle = COOKIE_MANAGER.lock().await.get_app_handle().unwrap();
+    let app_handle = COOKIE_MANAGER.get().unwrap().get_app_handle().unwrap();
     if secret != *SECRET.read().await {
         window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".to_string())
     }
-    let client = init_client().await;
+    let client = init_client();
     let mut url = "https://api.bilibili.com/x/v1/dm/list.so";
     let mut query = vec![("oid", oid.to_string())];
     if let Some(date) = date {
@@ -1155,11 +1133,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     job.set_extended_limit_info(&mut info)?;
     job.assign_current_process()?;
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit("single-instance", (argv, cwd)).unwrap();
@@ -1169,27 +1148,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }))
         .setup(|app| {
             let app_handle = app.app_handle();
+            let _ = COOKIE_MANAGER.set(CookieManager::new(app_handle.clone()));
             let window = app.get_window("main").unwrap();
-            #[cfg(target_os = "windows")]
-                apply_acrylic(&window, Some((18, 18, 18, 125))).expect("Unsupported OS version/platform! 'apply_acrylic' is only supported on Windows 10/11");
-                // window_vibrancy::apply_mica(&window, None).expect("Unsupported OS version/platform! 'apply_mica' is only supported on Windows 11");
             panic::set_hook(Box::new(move |e| {
                 handle_err(e);
             }));
-            let app_handle_clone = app_handle.clone();
+            match tauri_plugin_os::version() {
+                tauri_plugin_os::Version::Semantic(major, minor, build) => {
+                    #[cfg(target_os = "windows")]
+                    if build > 22000 || (major == 10 && build <= 18362) { // Windows 10 & 11 Early Version
+                        apply_acrylic(&window, Some((18, 18, 18, 160))).map_err(|e| handle_err(e))?;
+                    } else if (build > 18362 && build <= 22000) || (major == 6 && minor == 1) { // Windows 7 & Windows 10 v1903+ to Windows 11 22000
+                        apply_blur(&window, Some((18, 18, 18, 160))).map_err(|e| handle_err(e))?;
+                    }
+                },
+                _ => println!("Failed to determine OS version"),
+            }
             async_runtime::spawn(async move {
-                COOKIE_MANAGER.lock().await.set_app_handle(app_handle_clone);
                 rw_config(window.clone(), "init".to_string(), None, secret).await.map_err(|e| handle_err(e))?;
                 ARIA2C_MANAGER.lock().await.init().await.map_err(|e| handle_err(e))?;
                 window.clone().listen("stop_login", |_| { LOGIN_POLLING.store(false, Ordering::SeqCst) });
+                window.clone().listen("insert_cookie", move |event| {
+                    COOKIE_MANAGER.get().unwrap().insert(event.payload()).map_err(|e| handle_err(e)).unwrap();
+                });
                 Ok::<(), String>(())
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![ready, init, exit,
-            scan_login, pwd_login, sms_login, open_select, insert_cookie,
-            refresh_cookie, rw_config, save_file, handle_download, get_dm,
-            push_back_queue, process_queue, handle_temp, handle_aria2c])
+        .invoke_handler(tauri::generate_handler![ready, init, exit, http::fetch,
+            scan_login, pwd_login, sms_login, open_select, refresh_cookie,
+            rw_config, save_file, handle_download, get_dm, push_back_queue,
+            process_queue, handle_temp, handle_aria2c])
         .run(tauri::generate_context!())
         .expect("error while running BiliTools");
     Ok(())

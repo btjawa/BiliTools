@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { getOctokit, context } from '@actions/github';
 import { execSync } from 'child_process';
 import fs from 'fs';

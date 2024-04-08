@@ -1,4 +1,4 @@
-import * as http from "@tauri-apps/plugin-http";
+import * as http from "../scripts/http";
 import { invoke } from "@tauri-apps/api/core";
 import store from "../store/index";
 import * as LoginTypes from "../types/Login.type";
@@ -47,8 +47,7 @@ export async function wbi(params: any) {
     const getMixinKey = (orig: String) => {
         return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
     };
-    const res = await (await http.fetch('https://api.bilibili.com/x/web-interface/nav',
-    { method: "GET", headers: store.state.headers })).json() as NavInfoResp;
+    const res = await (await http.fetch('https://api.bilibili.com/x/web-interface/nav', { headers: store.state.headers })).json() as NavInfoResp;
     const { img_url, sub_url } = res.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));

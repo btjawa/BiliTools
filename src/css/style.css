@@ -28,7 +28,7 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
-    /* color: #c4c4c4; */
+    background-color: rgba(15,15,15,0.6);
 }
 
  * {

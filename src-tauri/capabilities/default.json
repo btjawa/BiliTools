@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "path:default",
     "event:default",
@@ -11,6 +13,7 @@
     "window:allow-maximize",
     "window:allow-is-maximized",
     "window:allow-set-focus",
+    "window:allow-unmaximize",
     "window:allow-unminimize",
     "window:allow-start-dragging",
     "app:default",
@@ -20,14 +23,6 @@
     "tray:default",
     "shell:allow-open",
     "webview:allow-internal-toggle-devtools",
-    {
-      "identifier": "http:default",
-      "allow": [
-        { "url": "https://*.bilibili.com/*" },
-        { "url": "https://*.hdslb.com/*" }
-      ]
-    },
-    "http:allow-fetch",
     "dialog:allow-open",
     "dialog:allow-save",
     "clipboard-manager:allow-clear",
@@ -37,6 +32,9 @@
     "store:allow-get",
     "store:allow-set",
     "store:allow-save",
-    "store:allow-load"
+    "store:allow-load",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:allow-restart"
   ]
 }

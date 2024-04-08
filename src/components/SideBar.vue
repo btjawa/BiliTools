@@ -8,22 +8,22 @@
     </router-link>
     <router-link to="/" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/') }" class="sidebar-item sidebar-home-page" @click="navigate">
-            <i class="fa-duotone fa-house-chimney-user"></i>
-            <span>主页</span>
+            <i :class="{ 'fa-duotone': isActive('/'), 'fa-regular': !isActive('/'), }"
+            class="fa-house-chimney-user"></i>
         </li>
     </router-link>
     <router-link to="/down-page" custom v-slot="{ navigate }">
         <li class="sidebar-item sidebar-down-page" @click="navigate"
             :class="{ 'active': isActive('/down-page') }">
-            <i class="fa-duotone fa-bars-progress"></i>
-            <span>下载页</span>
+            <i :class="{ 'fa-duotone': isActive('/down-page'), 'fa-regular': !isActive('/down-page'), }"
+            class="fa-bars-progress"></i>
         </li>
     </router-link>
     <router-link to="/setting-page" custom v-slot="{ navigate }">
         <li class="sidebar-item sidebar-setting-page" @click="navigate"
             :class="{ 'active': isActive('/setting-page') }">
-            <i class="fa-duotone fa-gear faa-gear animated"></i>
-            <span>设置</span>
+            <i :class="{ 'fa-duotone': isActive('/setting-page'), 'fa-regular': !isActive('/setting-page'), }"
+            class="fa-gear"></i>
         </li>
     </router-link>
 </ul>
@@ -52,15 +52,17 @@ export default defineComponent({
 
 <style scoped>
 .sidebar {
-    width: 63px;
-    height: calc(100vh - 35px);
+    width: 60px;
+    height: 100vh;
     bottom: 0;
-    background-color: rgba(31,31,31,1);
+    background: transparent;
+    /* background-color: rgba(31,31,31,0.5); */
     border-right: #333333 solid 1px;
     position: absolute;
     display: flex;
     flex-direction: column;
     user-select: none;
+    padding: 10px 0;
 }
 
 .user-avatar {
@@ -71,15 +73,20 @@ export default defineComponent({
 }
 
 .sidebar-item {
-    width: 63px;
-    height: 63px;
+    width: 40px;
+    height: 40px;
     color: var(--desc-color);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    margin: 8px 0;
     transition: all 0.1s;
+    position: relative;
+    margin: 6px 10px;
+}
+
+.sidebar-item.sidebar-login-page {
+    margin-bottom: 12px;
 }
 
 .sidebar-item:hover, .sidebar-item.active {
@@ -87,13 +94,24 @@ export default defineComponent({
     cursor: pointer;
 }
 
-.sidebar-item i {
-    font-size: 22px;
-    margin-bottom: 6px;
+.sidebar-item:not(.sidebar-login-page):hover:before, .sidebar-item:not(.sidebar-login-page).active::before {
+    background: rgba(80, 80, 80, 0.5);
 }
 
-.sidebar-item span {
-    font-size: 11px;
+.sidebar-item::before {
+    position: absolute;
+    content: '';
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    transition: all 0.2s;
+    border-radius: 6px;
+}
+
+.sidebar-item i {
+    font-size: 21px;
 }
 
 .sidebar-down-page {

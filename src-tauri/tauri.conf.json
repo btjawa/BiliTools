@@ -1,5 +1,5 @@
 {
-  "productName": "bilitools",
+  "productName": "BiliTools",
   "version": "1.1.2",
   "identifier": "com.btjawa.bilitools",
   "build": {
@@ -13,12 +13,12 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "minWidth": 1280,
-        "minHeight": 720,
+        "minWidth": 1120,
+        "minHeight": 700,
         "title": "BiliTools",
         "label": "main",
-        "width": 1280,
-        "height": 720,
+        "width": 1120,
+        "height": 700,
         "decorations": false,
         "transparent": true
       }
@@ -32,6 +32,8 @@
     "category": "Utility",
     "copyright": "Copyright © 2024 btjawa",
     "targets": "all",
+    "shortDescription": "BiliTools - bilibili工具箱",
+    "longDescription": "bilibili工具箱，视频/番剧+伴音/音乐下载，三种登录方式，仅用作学习用途。",
     "resources": [
       "ffmpeg",
       "aria2c",
