@@ -3,12 +3,10 @@
     <ContextMenu ref="contextMenu" />
     <SideBar />
     <div class="main" @contextmenu.prevent="showMenu">
+        <div class="loading"></div>
         <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
-                <keep-alive v-if="keepAlive()">
-                    <component :is="Component" class="page" />
-                </keep-alive>
-                <component v-else :is="Component" class="page" />
+                <keep-alive><component :is="Component" class="page" /></keep-alive>
             </transition>
         </router-view>
     </div>
@@ -45,8 +43,7 @@ export default {
             if (contextMenu.value)
             (contextMenu.value as any).showMenu(e);
         }
-        const keepAlive = () => router.currentRoute.value.name != "LoginPage";
-        return { contextMenu, showMenu, keepAlive }
+        return { contextMenu, showMenu }
     },
 }
 
@@ -54,14 +51,14 @@ export default {
 
 <style scoped>
 .main {
-    background-color: rgba(23,23,23,0.9);
+    background-color: rgb(24,24,24);
     display: flex;
     justify-content: center;
     align-items: center;
     position: absolute;
     right: 0;
     bottom: 0;
-    width: calc(100vw - 60px);
+    width: calc(100vw - 61px);
     height: calc(100vh - 35px);
 }
 
@@ -71,6 +68,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: absolute;
     color: var(--content-color);
 }
 
@@ -82,5 +80,32 @@ export default {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+.loading {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    top: 0;
+    left: 0;
+    z-index: 99;
+    margin: 24px;
+    opacity: 0;
+    border: 2px solid #c4c4c4;
+    border-top-color: rgba(255, 255, 255, 0.2);
+    border-right-color: rgba(255, 255, 255, 0.2);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    border-radius: 100%;
+    transition: opacity 0.2s;
+    animation: circle infinite 0.75s linear;
+}
+
+.loading.active {
+    opacity: 1;
+}
+
+@keyframes circle {
+    0% { transform: rotate(0); }
+    100% { transform: rotate(360deg); }
 }
 </style>

@@ -5,11 +5,10 @@ use log4rs::{
     config::{Appender, Config, Root},
     encode::pattern::PatternEncoder,
 };
-use std::{env, path::PathBuf};
 pub fn init_logger() -> Result<(), Box<dyn std::error::Error>> {
     let logfile = format!(
         "{}/{}.log",
-        PathBuf::from(env::var("LOCALAPPDATA").unwrap())
+        dirs::data_local_dir().unwrap()
             .join("com.btjawa.bilitools")
             .join("Logs")
             .to_string_lossy(),

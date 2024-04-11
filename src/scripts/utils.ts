@@ -1,6 +1,7 @@
 import iziToast from "izitoast";
 import router from "../router";
 import store from "../store";
+import { MediaType } from "../types/Sdk.type";
 import * as shell from "@tauri-apps/plugin-shell";
 import * as verify from "./verify";
 
@@ -31,6 +32,18 @@ export function iziError(message = '') {
     });
 }
 
+export function debounce(fn: any, wait: number) {
+    let bouncing = false;
+    return function(this: any, ...args: any[]) {
+        if (bouncing) return null;
+        bouncing = true;
+        setTimeout(() => {
+            bouncing = false;
+        }, wait);
+        fn.apply(this, args);
+    };
+}
+
 export async function bilibili(ts: number | null, input: HTMLInputElement | null) {
     if (router.currentRoute.value.name == "LoginPage") {
         shell.open(`https://space.bilibili.com/${store.state.user.mid}`);
@@ -39,7 +52,12 @@ export async function bilibili(ts: number | null, input: HTMLInputElement | null
         if (router.currentRoute.value.name == "HomePage" && input) {
             const data = verify.id(input?.value);
             if (data.type) {
-                const path = data.type == "bangumi" ? "bangumi/play" : data.type;
+                const path = function() {
+                    if (data.type == MediaType.Video) return 'video'
+                    else if (data.type == MediaType.Bangumi) return 'bangumi/play'
+                    else if (data.type == MediaType.Lesson) return 'cheese/play'
+                    else if (data.type == MediaType.Music) return 'audio'
+                }();
                 shell.open(`https://www.bilibili.com/${path}/${data.id}/${typeof ts=="number"?`?t=${ts}`:''}`);
                 return null;
             }
@@ -47,7 +65,8 @@ export async function bilibili(ts: number | null, input: HTMLInputElement | null
     }
 }
 
-export function stat(num: number): string {
+export function stat(num: number|string): string {
+    if (typeof num == "string") return num;
     if (num >= 100000000) {
         return (num / 100000000).toFixed(1) + '亿';
     } else if (num >= 10000) {
@@ -72,7 +91,8 @@ export function partition(cid: number): string {
     switch(cid) {case 1:return'动画';case 24:return'动画';case 25:return'动画';case 47:return'动画';case 210:return'动画';case 86:return'动画';case 253:return'动画';case 27:return'动画';case 13:return'番剧';case 51:return'番剧';case 152:return'番剧';case 32:return'番剧';case 33:return'番剧';case 167:return'国创';case 153:return'国创';case 168:return'国创';case 169:return'国创';case 170:return'国创';case 195:return'国创';case 3:return'音乐';case 28:return'音乐';case 31:return'音乐';case 30:return'音乐';case 59:return'音乐';case 193:return'音乐';case 29:return'音乐';case 130:return'音乐';case 243:return'音乐';case 244:return'音乐';case 129:return'舞蹈';case 20:return'舞蹈';case 154:return'舞蹈';case 156:return'舞蹈';case 198:return'舞蹈';case 199:return'舞蹈';case 200:return'舞蹈';case 4:return'游戏';case 17:return'游戏';case 171:return'游戏';case 172:return'游戏';case 65:return'游戏';case 173:return'游戏';case 121:return'游戏';case 136:return'游戏';case 19:return'游戏';case 36:return'知识';case 201:return'知识';case 124:return'知识';case 228:return'知识';case 207:return'知识';case 208:return'知识';case 209:return'知识';case 229:return'知识';case 122:return'知识';case 188:return'科技';case 95:return'科技';case 230:return'科技';case 231:return'科技';case 232:return'科技';case 233:return'科技';case 234:return'运动';case 235:return'运动';case 249:return'运动';case 164:return'运动';case 236:return'运动';case 237:return'运动';case 238:return'运动';case 223:return'汽车';case 245:return'汽车';case 246:return'汽车';case 247:return'汽车';case 248:return'汽车';case 240:return'汽车';case 227:return'汽车';case 176:return'汽车';case 160:return'生活';case 138:return'生活';case 250:return'生活';case 251:return'生活';case 239:return'生活';case 161:return'生活';case 162:return'生活';case 21:return'生活';case 211:return'美食';case 76:return'美食';case 212:return'美食';case 213:return'美食';case 214:return'美食';case 215:return'美食';case 217:return'动物圈';case 218:return'动物圈';case 219:return'动物圈';case 220:return'动物圈';case 221:return'动物圈';case 222:return'动物圈';case 75:return'动物圈';case 119:return'鬼畜';case 22:return'鬼畜';case 26:return'鬼畜';case 126:return'鬼畜';case 216:return'鬼畜';case 127:return'鬼畜';case 155:return'时尚';case 157:return'时尚';case 252:return'时尚';case 158:return'时尚';case 159:return'时尚';case 202:return'资讯';case 203:return'资讯';case 204:return'资讯';case 205:return'资讯';case 206:return'资讯';case 5:return'娱乐';case 71:return'娱乐';case 241:return'娱乐';case 242:return'娱乐';case 137:return'娱乐';case 181:return'影视';case 182:return'影视';case 183:return'影视';case 85:return'影视';case 184:return'影视';case 177:return'纪录片';case 37:return'纪录片';case 178:return'纪录片';case 179:return'纪录片';case 180:return'纪录片';case 23:return'电影';case 147:return'电影';case 145:return'电影';case 146:return'电影';case 83:return'电影';case 11:return'电视剧';case 185:return'电视剧';case 187:return'电视剧';default:return'未知分区'}
 }
 
-export function pubdate(timestamp: Date|number, f: boolean): string {
+export function pubdate(timestamp: Date|number|string, f: boolean): string {
+    if (typeof timestamp == "string") return timestamp;
     const date = f ? timestamp as Date : new Date(timestamp as number * 1000);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;

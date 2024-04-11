@@ -6,10 +6,9 @@ use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
-use std::{collections::{HashMap, HashSet, VecDeque}, env, fs, io::Read, net::{SocketAddr, TcpListener}, os::windows::process::CommandExt, panic, path::PathBuf, process::{Child, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc}, time::Instant};
+use std::{collections::{HashMap, HashSet, VecDeque}, env, fs, io::Read, net::{SocketAddr, TcpListener}, panic, path::PathBuf, process::{Child, Command, Stdio}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc}, time::Instant};
 use tokio::{fs::File, sync::{Mutex, RwLock, Notify}, io::{AsyncBufReadExt, AsyncSeekExt, SeekFrom, BufReader}, time::{sleep, Duration}};
 use regex::Regex;
-use win32job::Job;
 use flate2::read::DeflateDecoder;
 use tauri::{async_runtime, AppHandle, Manager, Wry, Window};
 use tauri_plugin_dialog::DialogExt;
@@ -17,19 +16,17 @@ use reqwest::{Client, header, header::{HeaderMap, HeaderName, HeaderValue}, Url}
 use tauri_plugin_store::{with_store, StoreCollection, JsonValue};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
-use window_vibrancy::{apply_blur, apply_acrylic};
 mod logger;
 mod http;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    static ref WORKING_DIR: PathBuf = {
-        PathBuf::from(env::var("LOCALAPPDATA").unwrap()).join("com.btjawa.bilitools")
-    };
-    static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = {
-        Arc::new(RwLock::new(PathBuf::from(env::var("USERPROFILE").unwrap()).join("Desktop")))
-    };
-    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::var("TEMP").unwrap())));
+    static ref WORKING_DIR: PathBuf = dirs::data_local_dir().unwrap().join("com.btjawa.bilitools");
+    static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(dirs::desktop_dir().unwrap()));
+    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::temp_dir())));
     static ref COOKIE_PATH: PathBuf = WORKING_DIR.join("Cookies");
     static ref DH_PATH: PathBuf = WORKING_DIR.join("Downloads");
     static ref CONFIG_PATH: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(WORKING_DIR.join("config.json")));
@@ -131,16 +128,18 @@ impl Aria2cManager {
         *ARIA2C_PORT.write().await = port as usize;
         let current_dir = env::current_dir().map_err(|e| e.to_string())?
             .join("aria2c");
-        let child = Command::new(current_dir.join("aria2c.exe").clone())
-            .creation_flags(0x08000000)
-            .current_dir(current_dir.clone())
+        let mut command = Command::new(current_dir.join("aria2c.exe").clone());
+        #[cfg(target_os = "windows")]
+        command.creation_flags(0x08000000);
+        command.current_dir(current_dir.clone())
             .arg(format!("--conf-path={}", current_dir.join("aria2.conf").to_string_lossy()))
             .arg(format!("--rpc-listen-port={}", port))
             .arg(format!("--rpc-secret={}", SECRET.read().await.clone()))
             .arg(format!("--max-concurrent-downloads={}", MAX_CONCURRENT_DOWNLOADS.read().await))
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn().map_err(|e| e.to_string())?;
+            .stderr(Stdio::piped());
+
+        let child = command.spawn().map_err(|e| e.to_string())?;
         self.child = Some(child);
         Ok(())
     }
@@ -484,9 +483,10 @@ async fn merge_video_audio(window: Window, info: VideoInfo) -> Result<VideoInfo,
     let progress_path = current_dir.join("ffmpeg")
         .join(format!("{}.log", video_filename));
 
-    let mut child = Command::new(ffmpeg_path)
-        .creation_flags(0x08000000)
-        .arg("-i").arg(video_path.clone())
+    let mut command = Command::new(ffmpeg_path);
+    #[cfg(target_os = "windows")]
+    command.creation_flags(0x08000000);
+    command.arg("-i").arg(video_path.clone())
         .arg("-i").arg(audio_path.clone())
         .arg("-stats_period").arg("0.1")
         .arg("-c:v").arg("copy")
@@ -494,9 +494,9 @@ async fn merge_video_audio(window: Window, info: VideoInfo) -> Result<VideoInfo,
         .arg(&*output_path).arg("-progress")
         .arg(&progress_path).arg("-y")
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| handle_err(e))?;
+        .stderr(Stdio::piped());
+
+    let mut child = command.spawn().map_err(|e| handle_err(e))?;
 
     while !progress_path.exists() {
         sleep(Duration::from_millis(250)).await;
@@ -1106,14 +1106,16 @@ async fn get_dm(window: Window, secret: String, oid: i64, date: Option<String>, 
         if !xml {
             let current_dir = env::current_dir().unwrap();
             let df_path = current_dir.join("DanmakuFactory").join("DanmakuFactory.exe");
-            let _ = Command::new(df_path)
-                .creation_flags(0x08000000)
-                .arg("-i").arg(input)
+
+            let mut command = Command::new(df_path);
+            #[cfg(target_os = "windows")]
+            command.creation_flags(0x08000000);
+            command.arg("-i").arg(input)
                 .arg("-o").arg(output)
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .map_err(|e| handle_err(e))?;
+                .stderr(Stdio::piped());
+            
+            command.spawn().map_err(|e| handle_err(e))?;
         }
     };
     Ok(())
@@ -1121,21 +1123,26 @@ async fn get_dm(window: Window, secret: String, oid: i64, date: Option<String>, 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(target_os = "windows")]
+    let _job: win32job::Job = {
+        let job = win32job::Job::create()?;
+        let mut info = job.query_extended_limit_info()?;
+        info.limit_kill_on_job_close();
+        job.set_extended_limit_info(&mut info)?;
+        job.assign_current_process()?;
+        job
+    };
     logger::init_logger().map_err(|e| e.to_string())?;
     let secret: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10).map(char::from)
         .collect();
     *SECRET.write().await = secret.clone();
-    let job = Job::create()?;
-    let mut info = job.query_extended_limit_info()?;
-    info.limit_kill_on_job_close();
-    job.set_extended_limit_info(&mut info)?;
-    job.assign_current_process()?;
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
@@ -1153,9 +1160,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             panic::set_hook(Box::new(move |e| {
                 handle_err(e);
             }));
+            #[cfg(target_os = "windows")]
             match tauri_plugin_os::version() {
                 tauri_plugin_os::Version::Semantic(major, minor, build) => {
-                    #[cfg(target_os = "windows")]
+                    use window_vibrancy::{apply_acrylic, apply_blur};
                     if build > 22000 || (major == 10 && build <= 18362) { // Windows 10 & 11 Early Version
                         apply_acrylic(&window, Some((18, 18, 18, 160))).map_err(|e| handle_err(e))?;
                     } else if (build > 18362 && build <= 22000) || (major == 6 && minor == 1) { // Windows 7 & Windows 10 v1903+ to Windows 11 22000
@@ -1163,6 +1171,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 },
                 _ => println!("Failed to determine OS version"),
+            }
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None).map_err(|e| handle_err(e))?;
             }
             async_runtime::spawn(async move {
                 rw_config(window.clone(), "init".to_string(), None, secret).await.map_err(|e| handle_err(e))?;

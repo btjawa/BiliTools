@@ -1,27 +1,27 @@
 <template>
 <div class="login-page">
-    <div class="user-profile" v-if="store.state.user.isLogin">
+    <div class="user-profile" v-if="user.isLogin">
         <div class="user-profile__top_photo" :style="{ opacity: base64Img ? 1 : 0 }"><img :src=base64Img draggable="false" /></div>
         <div class="user-profile__details">
             <div class="user-profile__avatar_cont">
-                <img :src="store.state.user.avatar" draggable="false" class="user-profile__avatar" />
-                <img src="../assets/big-vip.svg" draggable="false" class="user-profile__big_vip" v-if="store.state.user.vip_status" />
+                <img :src="user.avatar" draggable="false" class="user-profile__avatar" />
+                <img src="../assets/big-vip.svg" draggable="false" class="user-profile__big_vip" v-if="user.vip_status" />
             </div>
             <div class="user-profile__text_area">
                 <div class="user-profile__name">
-                    <span>{{ store.state.user.name }}</span>
+                    <span>{{ user.name }}</span>
                     <img :src="levelIcon" draggable="false" class="user-profile__level" />
-                    <img :src="store.state.user.vip" draggable="false" class="user-profile__vip_label" />
+                    <img :src="user.vip" draggable="false" class="user-profile__vip_label" />
                 </div>
-                <span class="user-profile__desc"><div>{{ store.state.user.desc }}</div>
+                <span class="user-profile__desc"><div>{{ user.desc }}</div>
                     <i :class="'fa-regular fa-' + sexDesc"></i>
                     <span class="user-profile__mid">
                         <i class="fa-regular fa-id-card"></i>
-                        {{ store.state.user.mid }}
+                        {{ user.mid }}
                     </span>
                     <span class="user-profile__coin">
                         <i class="fa-regular fa-coin-front"></i>
-                        {{ store.state.user.coins }}
+                        {{ user.coins }}
                     </span>
                 </span>
             </div>
@@ -33,7 +33,7 @@
             </div>
         </div>
     </div>
-    <div class="user-login" v-if="!store.state.user.isLogin">
+    <div class="user-login" v-if="!user.isLogin">
         <div class="user-login__scan_wp">
             <div class="user-login__scan_title">扫描二维码登录</div>
             <div class="user-login__scan_box">
@@ -52,59 +52,61 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from 'vue';
-import { useStore } from 'vuex';
+import { defineComponent } from 'vue';
 import { iziInfo } from '../scripts/utils';
-import { useRouter } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from "@tauri-apps/api/event";
 import * as login from '../scripts/login';
 import * as http from '../scripts/http';
 
 export default defineComponent({
-    setup() {
-        const store = useStore();
-        const router = useRouter();
-        const base64Img = ref("");
-        const qrcodeBox = ref(null);
-        const qrcodeTips = ref(null);
-        const levelIcon = new URL(`../assets/level/level${store.state.user.level}.svg`, import.meta.url).href;
-        const sex = store.state.user.sex;
-        const sexDesc = sex=='男'?'mars':sex=='女'?'venus':'question';
-        onMounted(() => {
-            if (store.state.user.isLogin) {
-                http.fetch(store.state.user.top_photo, {
-                    headers: store.state.headers, method: 'GET'
-                }).then(async resp => { // 主页头图
-                    const blob = await resp.blob();
-                    const reader = new FileReader();
-                    reader.onloadend = function() {
-                        base64Img.value = reader.result as string;
-                    };
-                    reader.readAsDataURL(blob);
-                });
-            } else {
-                if (qrcodeBox.value) {
-                    login.scanLogin(qrcodeBox.value).then(mid => {
-                        if (mid !== 0) {
-                            iziInfo('登录成功~')
-                            router.push('/');
-                            setTimeout(() => store.dispatch('fetchUser', mid), 300);
-                        }
-                    })
+    data() {
+        return { base64Img: '' };
+    },
+    computed: {
+        user() { return this.$store.state.user },
+        headers() { return this.$store.state.headers },
+        levelIcon() { return new URL(`../assets/level/level${this.user.level}.svg`, import.meta.url).href },
+        sexDesc() {
+            const sex = this.user.sex;
+            return sex == '男' ? 'mars' : sex == '女' ? 'venus' : 'question';
+        },
+    },
+    methods: {
+        async fetchImage(url: string) {
+            const blob = await (await http.fetch(url, {
+                headers: this.headers, method: 'GET'
+            })).blob();
+            const reader = new FileReader();
+            reader.onloadend = () => this.base64Img = reader.result as string;
+            reader.readAsDataURL(blob);
+        },
+        async login() {
+            login.scanLogin(this.$refs.qrcodeBox as HTMLElement).then(mid => {
+                if (mid !== 0) {
+                    iziInfo('登录成功~')
+                    this.$router.push('/');
+                    setTimeout(() => this.$store.dispatch('fetchUser', mid), 300);
                 }
-            }
-        });
-        async function exit() {
+            })
+        },
+        async exit() {
+            const loadingBox = document.querySelector('.loading');
+            if (loadingBox) loadingBox.classList.add('active');
             const mid = Number(await invoke('exit'));
-            router.push('/');
-            setTimeout(() => store.dispatch('fetchUser', mid), 300);
-        }
-        onUnmounted(() => {
-            emit('stop_login');
-        })
-        return { store, base64Img, levelIcon, sexDesc, qrcodeBox, qrcodeTips, exit }
-    }
+            if (loadingBox) loadingBox.classList.remove('active');
+            this.$router.push('/');
+            setTimeout(() => this.$store.dispatch('fetchUser', mid), 300);
+        },
+    },
+    unmounted() {
+        emit('stop_login');
+    },
+    activated() {
+        if (this.user.isLogin) {
+            this.fetchImage(this.user.top_photo);
+        } else this.login();
+    },
 });
 </script>
 

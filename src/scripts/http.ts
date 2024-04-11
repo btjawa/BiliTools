@@ -34,9 +34,12 @@ export async function fetch(input: URL | Request | string, options?: RequestInit
         maxRedirections,
         connectTimeout,
     }
+    const loadingBox = document.querySelector('.loading');
+    if (loadingBox) loadingBox.classList.add('active');
     const { status, statusText, url, headers: responseHeaders, body } = await invoke("fetch", {
         clientConfig,
     }) as any;
+    if (loadingBox) loadingBox.classList.remove('active');
     const res = new Response(body instanceof ArrayBuffer && body.byteLength
         ? body
         : body instanceof Array && body.length

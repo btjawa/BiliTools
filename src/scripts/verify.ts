@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import store from "../store/index";
 import * as LoginTypes from "../types/Login.type";
 import { NavInfoResp } from "../types/UserInfo.type";
+import { MediaType } from "../types/Sdk.type";
 import md5 from "md5";
 import { iziError } from "./utils";
 
@@ -22,14 +23,14 @@ export const appPlatforms: AppPlatforms = {
     }
 }
 
-export function id(input: string): { id: string, type: string | null } {
+export function id(input: string): { id: string, type: MediaType | null } {
     let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-    if (match) return { id: match[0], type: "video" };
+    if (match) return { id: match[0], type: MediaType.Video };
     match = input.match(/ep(\d+)|ss(\d+)/i);
-    if (match) return { id: match[0], type: "bangumi" }; 
+    if (match) return { id: match[0], type: MediaType.Bangumi }; 
     match = input.match(/au(\d+)/i);
-    if (match) return { id: match[0], type: "audio" }; 
-    else if (!input || !input.match(/a-zA-Z0-9/g) || true) {
+    if (match) return { id: match[0], type: MediaType.Music }; 
+    else {
         iziError(!input ? "输入不能为空" : "输入不合法！请检查格式");
         return { id: input, type: null };
     }

@@ -13,19 +13,21 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "minWidth": 1120,
-        "minHeight": 700,
+        "minWidth": 1220,
+        "minHeight": 755,
         "title": "BiliTools",
         "label": "main",
-        "width": 1120,
-        "height": 700,
+        "width": 1220,
+        "height": 755,
         "decorations": false,
-        "transparent": true
+        "transparent": true,
+        "theme": "Dark"
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,

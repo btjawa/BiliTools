@@ -1,8 +1,8 @@
 <template>
-<ul data-tauri-drag-region @contextmenu.prevent class="sidebar">
+<ul data-tauri-drag-region @contextmenu.prevent class="sidebar" ref="sidebar">
     <router-link to="/login-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/login-page') }" class="sidebar-item sidebar-login-page"
-            @click="store.state.inited ? navigate() : iziError('请等待初始化完成');">
+            @click="inited ? navigate() : iziError('请等待初始化完成');">
             <img class="user-avatar" :src="avatarUrl" draggable="false" />
         </li>
     </router-link>
@@ -30,29 +30,37 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue';
-import { useRoute } from 'vue-router';
-import { useStore } from 'vuex';
+import { defineComponent } from 'vue';
 import { iziError } from '../scripts/utils';
+import { type } from '@tauri-apps/plugin-os';
 export default defineComponent({
-    setup() {
-        const route = useRoute();
-        const store = useStore();
-        const avatarUrl = computed(() => {
-            return store.state.user.isLogin ? store.state.user.avatar : new URL('../assets/default-avatar.jpg', import.meta.url).href;
-        });
-        const userName = computed(() => {
-            return store.state.user.isLogin ? store.state.user.name : '登录';
-        });
-        const isActive = (path: string) => route.path == path;
-        return { isActive, avatarUrl, userName, store, iziError };
+    methods: {
+        isActive(path: string): boolean {
+            return this.$route.path == path;
+        },
+        iziError
     },
+    computed: {
+        user() { return this.$store.state.user },
+        inited() { return this.$store.state.inited },
+        avatarUrl(): string {
+            return this.user.isLogin ? this.user.avatar : new URL('../assets/default-avatar.jpg', import.meta.url).href;
+        },
+        userName(): string {
+            return this.user.isLogin ? this.user.name : '登录';
+        },
+    },
+    mounted() {
+        type().then(os => {
+            if (os == "macos") (this.$refs.sidebar as HTMLElement).classList.add('macos');
+        })
+    }
 });
 </script>
 
 <style scoped>
 .sidebar {
-    width: 60px;
+    width: 61px;
     height: 100vh;
     bottom: 0;
     background: transparent;
@@ -63,6 +71,11 @@ export default defineComponent({
     flex-direction: column;
     user-select: none;
     padding: 10px 0;
+    transition: padding 0.2s;
+}
+
+.sidebar.macos {
+    padding-top: 35px;
 }
 
 .user-avatar {
