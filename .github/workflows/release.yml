@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         # platform: [macos-latest, ubuntu-20.04, windows-latest]
-        platform: [windows-latest]
+        platform: [macos-latest, windows-latest]
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -33,11 +33,13 @@ jobs:
         with:
           toolchain: stable
 
-      # Rust cache
-      - uses: Swatinem/rust-cache@v1
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
 
       - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf
