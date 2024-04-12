@@ -64,7 +64,10 @@
           "English"
         ],
         "displayLanguageSelector": true
-      }
+      },
+      "certificateThumbprint": "11D4FEDB0336A43923931095F79AB6E31865F6C8",
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
     }
   },
   "plugins": {
