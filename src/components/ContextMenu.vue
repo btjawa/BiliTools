@@ -23,7 +23,6 @@
 
 <script lang="ts">
 import { defineComponent, ref, reactive, nextTick, onMounted, onUnmounted } from 'vue';
-import * as clipboard from '@tauri-apps/plugin-clipboard-manager';
 import * as utils from '../scripts/utils';
 
 export default defineComponent({
@@ -56,13 +55,13 @@ export default defineComponent({
             const activeElement = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
             switch (action) {
                 case 'cut':
-                    clipboard.writeText(handleTextUpdate(activeElement));
+                    navigator.clipboard.writeText(handleTextUpdate(activeElement));
                     break;
                 case 'copy':
-                    clipboard.writeText(window.getSelection()?.toString() || "");
+                    navigator.clipboard.writeText(window.getSelection()?.toString() || "");
                     break;
                 case 'paste':
-                    handleTextUpdate(activeElement, await clipboard.readText() || "");
+                    handleTextUpdate(activeElement, await navigator.clipboard.readText() || "");
                     break;
                 case 'bilibili':
                     utils.bilibili(null, document.querySelector('.search__input'));

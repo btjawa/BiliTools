@@ -1,9 +1,7 @@
-import { check } from '@tauri-apps/plugin-updater';
 import { emit } from '@tauri-apps/api/event';
 import { app } from '@tauri-apps/api';
 import * as dialog from '@tauri-apps/plugin-dialog';
-import { relaunch } from '@tauri-apps/plugin-process';
-
+import { check } from '@tauri-apps/plugin-updater';
 import Swal from "sweetalert2";
 
 try {
@@ -25,7 +23,7 @@ try {
                 },
             });
             await update.downloadAndInstall();
-            await relaunch();
+            await emit("restart");
         }
         
     }

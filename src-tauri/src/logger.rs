@@ -8,7 +8,7 @@ use log4rs::{
 pub fn init_logger() -> Result<(), Box<dyn std::error::Error>> {
     let logfile = format!(
         "{}/{}.log",
-        dirs::data_local_dir().unwrap()
+        dirs_next::data_local_dir().unwrap()
             .join("com.btjawa.bilitools")
             .join("Logs")
             .to_string_lossy(),

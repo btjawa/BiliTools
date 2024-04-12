@@ -27,18 +27,9 @@
     "webview:allow-internal-toggle-devtools",
     "dialog:allow-open",
     "dialog:allow-save",
-    "clipboard-manager:allow-clear",
-    "clipboard-manager:allow-read-text",
-    "clipboard-manager:allow-write-text",
     "os:allow-arch",
-    "os:allow-hostname",
     "os:allow-os-type",
-    "store:allow-get",
-    "store:allow-set",
-    "store:allow-save",
-    "store:allow-load",
     "updater:allow-check",
-    "updater:allow-download-and-install",
-    "process:allow-restart"
+    "updater:allow-download-and-install"
   ]
 }

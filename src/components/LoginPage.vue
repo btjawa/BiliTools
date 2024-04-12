@@ -74,12 +74,11 @@ export default defineComponent({
     },
     methods: {
         async fetchImage(url: string) {
-            const blob = await (await http.fetch(url, {
+            const arrayBuffer = await (await http.fetch(url, {
                 headers: this.headers, method: 'GET'
-            })).blob();
-            const reader = new FileReader();
-            reader.onloadend = () => this.base64Img = reader.result as string;
-            reader.readAsDataURL(blob);
+            })).arrayBuffer();
+            const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+            this.base64Img = `data:image/jpeg;base64,${base64}`;
         },
         async login() {
             login.scanLogin(this.$refs.qrcodeBox as HTMLElement).then(mid => {

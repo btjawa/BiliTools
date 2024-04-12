@@ -36,11 +36,6 @@
     "targets": "all",
     "shortDescription": "BiliTools - bilibili工具箱",
     "longDescription": "bilibili工具箱，视频/番剧+伴音/音乐下载，三种登录方式，仅用作学习用途。",
-    "resources": [
-      "ffmpeg",
-      "aria2c",
-      "DanmakuFactory"
-    ],
     "icon": [
       "icons/128x128.png",
       "icons/128x128@2x.png",
