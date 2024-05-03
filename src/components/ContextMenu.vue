@@ -23,7 +23,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, reactive, nextTick, onMounted, onUnmounted } from 'vue';
-import * as utils from '../scripts/utils';
+import * as utils from '../services/utils';
 
 export default defineComponent({
     setup() {

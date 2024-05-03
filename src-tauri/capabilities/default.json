@@ -29,6 +29,18 @@
     "dialog:allow-save",
     "os:allow-arch",
     "os:allow-os-type",
+    "http:allow-fetch",
+    "http:allow-fetch-read-body",
+    "http:allow-fetch-send",
+    "http:allow-fetch-cancel",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://*.bilibili.com/*" },
+        { "url": "https://*.hdslb.com/*" },
+        { "url": "https://httpbin.org/*" }
+      ]
+    },
     "updater:allow-check",
     "updater:allow-download-and-install"
   ]

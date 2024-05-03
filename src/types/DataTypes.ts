@@ -5,7 +5,7 @@ export enum MediaType {
   Lesson = "lesson",
 }
 
-export interface MediaList {
+export interface MediaInfo {
   title: string;
   cover: string;
   desc: string;
@@ -25,7 +25,16 @@ export interface MediaList {
     avatar: string | null,
     name: string | null,
     mid: number | null,
-  }
+  },
+  list: {
+    title: string;
+    cover: string;
+    desc: string;
+    duration: number;
+    id: number,
+    cid: number,
+    ss_title: string;
+  }[]
 }
 
 export interface VideoInfo {
@@ -134,6 +143,125 @@ export interface VideoInfo {
         list: unknown[];
       };
       is_season_display: boolean;
+      ugc_season: {
+        id: number;
+        title: string;
+        cover: string;
+        mid: number;
+        intro: string;
+        sign_state: number;
+        attribute: number;
+        sections: {
+          season_id: number;
+          id: number;
+          title: string;
+          type: number;
+          episodes: {
+            season_id: number;
+            section_id: number;
+            id: number;
+            aid: number;
+            cid: number;
+            title: string;
+            attribute: number;
+            arc: {
+              aid: number;
+              videos: number;
+              type_id: number;
+              type_name: string;
+              copyright: number;
+              pic: string;
+              title: string;
+              pubdate: number;
+              ctime: number;
+              desc: string;
+              state: number;
+              duration: number;
+              rights: {
+                bp: number;
+                elec: number;
+                download: number;
+                movie: number;
+                pay: number;
+                hd5: number;
+                no_reprint: number;
+                autoplay: number;
+                ugc_pay: number;
+                is_cooperation: number;
+                ugc_pay_preview: number;
+                arc_pay: number;
+                free_watch: number;
+              };
+              author: {
+                mid: number;
+                name: string;
+                face: string;
+              };
+              stat: {
+                aid: number;
+                view: number;
+                danmaku: number;
+                reply: number;
+                fav: number;
+                coin: number;
+                share: number;
+                now_rank: number;
+                his_rank: number;
+                like: number;
+                dislike: number;
+                evaluation: string;
+                argue_msg: string;
+                vt: number;
+                vv: number;
+              };
+              dynamic: string;
+              dimension: {
+                width: number;
+                height: number;
+                rotate: number;
+              };
+              desc_v2: null;
+              is_chargeable_season: boolean;
+              is_blooper: boolean;
+              enable_vt: number;
+              vt_display: string;
+            };
+            page: {
+              cid: number;
+              page: number;
+              from: string;
+              part: string;
+              duration: number;
+              vid: string;
+              weblink: string;
+              dimension: {
+                width: number;
+                height: number;
+                rotate: number;
+              };
+            };
+            bvid: string;
+          }[];
+        }[];
+        stat: {
+          season_id: number;
+          view: number;
+          danmaku: number;
+          reply: number;
+          fav: number;
+          coin: number;
+          share: number;
+          now_rank: number;
+          his_rank: number;
+          like: number;
+          vt: number;
+          vv: number;
+        };
+        ep_count: number;
+        season_type: number;
+        is_pay_season: boolean;
+        enable_vt: number;
+      };
       user_garb: {
         url_image_ani_cut: string;
       };

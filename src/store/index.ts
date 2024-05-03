@@ -1,9 +1,10 @@
 import { createStore } from 'vuex';
 import { invoke } from '@tauri-apps/api/core';
-import { iziError } from '../scripts/utils';
-import * as http from "../scripts/http";
-import { UserInfoResp } from '../types/UserInfo.type';
-import * as verify from "../scripts/verify";
+import { iziError } from '@/services/utils';
+import { fetch } from '@tauri-apps/plugin-http';
+import * as types from '@/types';
+import * as verify from "../services/auth";
+import { MediaInfo } from '../types/DataTypes';
 
 interface UserData {
     avatar: string,
@@ -31,6 +32,7 @@ export default createStore({
             secret: "",
             headers: {},
             inited: false,
+            mediaInfo: {} as MediaInfo,
         };
     },
     mutations: {
@@ -58,8 +60,8 @@ export default createStore({
         async fetchUser({ commit, state }, mid: number) {
             if (mid != 0) {
                 const signature = await verify.wbi({ mid });
-                const details = await (await http.fetch('https://api.bilibili.com/x/space/wbi/acc/info?'
-                + signature, { headers: state.headers })).json() as UserInfoResp;
+                const details = await (await fetch('https://api.bilibili.com/x/space/wbi/acc/info?'
+                + signature, { headers: state.headers })).json() as types.userInfo.UserInfoResp;
                 if (details.code == 0) {
                     const userData: UserData = {
                         avatar: details.data.face, name: details.data.name, desc: details.data.sign,

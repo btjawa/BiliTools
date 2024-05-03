@@ -1,11 +1,11 @@
 <template>
-<div class="home-page" @keydown.esc="elmState.allInActive = true;">
-    <div class="search" :class="{ 'active': elmState.searchActive && !elmState.allInActive }">
+<div class="home-page" @keydown.esc="elmState.active = false;">
+    <div class="search" :class="{ 'active': elmState.active }">
         <input class="search__input" type="text" placeholder="链接/AV/BV/SS/EP/AU号..."
         @keydown.enter="search" autocomplete="off" spellcheck="false" v-model="elmState.searchInput">
         <i class="fa-solid fa-search search__btn" @click="search"></i>
     </div>
-    <div class="media-root" :class="{ 'active': elmState.mediaRootActive && !elmState.allInActive }">
+    <div class="media-root" :class="{ 'active': elmState.active && elmState.rootActive }">
         <div class="media-info">
             <img class="media-info__cover" :src="mediaInfo?.cover" @load="dataWidth" draggable="false" />
             <div class="media-info__data" :style="{ width: !mediaInfo?.upper?.avatar ? '100%' : elmState.dataWidth }" >
@@ -33,59 +33,83 @@
             </div>
             <template v-else="elmState.dataWidth = '100%'"></template>
         </div>
-        <div class="media-list"></div>
+        <div class="media-thead">
+            <div class="media-thead__item rank">编号</div>
+            <div class="media-thead__split"></div>
+            <div class="media-thead__item title">标题</div>
+            <div class="media-thead__split"></div>
+            <div class="media-thead__item time">时长</div>
+            <div class="media-thead__split"></div>
+            <div class="media-thead__item">解析选项</div>
+        </div>
+        <div class="media-list">
+            <div class="media-list__item" v-for="(item, index) in mediaInfo.list" :key="index">
+                <div class="media-thead__item rank">{{ index + 1 }}</div>
+                <div class="media-thead__split"></div>
+                <div class="media-thead__item title">{{ item.title }}</div>
+                <div class="media-thead__split"></div>
+                <div class="media-thead__item time">{{ utils.duration(item.duration, mediaInfo.type) }}</div>
+                <div class="media-thead__split"></div>
+                <div class="media-thead__item options">
+                    
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, ref } from 'vue';
-import * as verify from "../scripts/verify";
-import * as sdk from "../scripts/sdk";
-import * as utils from "../scripts/utils";
-import * as SdkTypes from '../types/Sdk.type';
+import { auth, data, utils } from "@/services";
+import * as types from "@/types";
 import * as shell from "@tauri-apps/plugin-shell";
 
-export default defineComponent({
-    setup() {
-        const mediaInfo = ref({} as SdkTypes.MediaList);
-        const elmState = reactive({
-            searchInput: '',
-            searchActive: false,
-            mediaRootActive: false,
-            allInActive: false,
-            dataWidth: ''
-        });
-        const dataWidth = (e: Event) => elmState.dataWidth = `calc(100% - ${(e.target as HTMLElement).offsetWidth}px - 68px)`;
-        const openUpperSpace = (mid: number) => shell.open('https://space.bilibili.com/' + mid);
-        const statItems = computed(() => {
-            return [
-                { key: 'play', label: '播放', icon: 'bcc-iconfont bcc-icon-icon_list_player_x1', value: mediaInfo.value?.stat?.play },
-                { key: 'danmaku', label: '弹幕', icon: 'bcc-iconfont bcc-icon-danmuguanli', value: mediaInfo.value?.stat?.danmaku },
-                { key: 'reply', label: '评论', icon: 'bcc-iconfont bcc-icon-pinglunguanli', value: mediaInfo.value?.stat?.reply },
-                { key: 'like', label: '点赞', icon: 'bcc-iconfont bcc-icon-ic_Likesx', value: mediaInfo.value?.stat?.like },
-                { key: 'coin', label: '硬币', icon: 'bcc-iconfont bcc-icon-icon_action_reward_n_x', value: mediaInfo.value?.stat?.coin },
-                { key: 'favorite', label: '收藏', icon: 'bcc-iconfont bcc-icon-icon_action_collection_n_x', value: mediaInfo.value?.stat?.favorite },
-                { key: 'share', label: '分享', icon: 'bcc-iconfont bcc-icon-icon_action_share_n_x', value: mediaInfo.value?.stat?.share },
-            ];
-        })
-        async function search() {
-            const v = verify.id(elmState.searchInput);
+export default {
+    methods: {
+        openUpperSpace(mid: number) { shell.open('https://space.bilibili.com/' + mid) },
+        dataWidth(e: Event) { this.elmState.dataWidth = `calc(100% - ${(e.target as HTMLElement).offsetWidth}px - 68px)` },
+        async search() {
+            const v = auth.id(this.elmState.searchInput);
             if (v.type) {
-                elmState.allInActive = false;
-                elmState.searchActive = true;
-                const data = await sdk.getMediaInfo(v.id, v.type);
-                if (data) {
-                    elmState.mediaRootActive = true;
-                    data.stat.reply = data.stat?.reply ? utils.stat(data.stat?.reply) : null;
-                    data.stat.pubdate = data.stat?.pubdate ? utils.pubdate(data.stat?.pubdate, false) : null;
-                    mediaInfo.value = data;
-                } else elmState.allInActive = true;
-            } else elmState.allInActive = true;
-        }
-        return { elmState, search, mediaInfo, utils, SdkTypes, statItems, dataWidth, openUpperSpace }
+                this.elmState.active = true;
+                try {
+                    await data.getMediaInfo(v.id, v.type);
+                    this.elmState.rootActive = true;
+                } catch(err: any) {
+                    this.elmState.active = false;
+                    utils.iziError(err.message);
+                    return null;
+                }
+            }
+        },
     },
-});
+    computed: {
+        statItems() {
+            return [
+                { key: 'play', label: '播放', icon: 'bcc-iconfont bcc-icon-icon_list_player_x1', value: this.mediaInfo.stat?.play },
+                { key: 'danmaku', label: '弹幕', icon: 'bcc-iconfont bcc-icon-danmuguanli', value: this.mediaInfo.stat?.danmaku },
+                { key: 'reply', label: '评论', icon: 'bcc-iconfont bcc-icon-pinglunguanli', value: this.mediaInfo.stat?.reply },
+                { key: 'like', label: '点赞', icon: 'bcc-iconfont bcc-icon-ic_Likesx', value: this.mediaInfo.stat?.like },
+                { key: 'coin', label: '硬币', icon: 'bcc-iconfont bcc-icon-icon_action_reward_n_x', value: this.mediaInfo.stat?.coin },
+                { key: 'favorite', label: '收藏', icon: 'bcc-iconfont bcc-icon-icon_action_collection_n_x', value: this.mediaInfo.stat?.favorite },
+                { key: 'share', label: '分享', icon: 'bcc-iconfont bcc-icon-icon_action_share_n_x', value: this.mediaInfo.stat?.share },
+            ];
+        },
+        mediaInfo() { return this.$store.state.mediaInfo as types.data.MediaInfo },
+    },
+    data() {
+        return {
+            elmState: {
+                active: false,
+                searchActive: false,
+                rootActive: false,
+                searchInput: '',
+                dataWidth: ''
+            },
+            utils,
+        }
+    }
+};
 </script>
 
 <style scoped>
@@ -106,18 +130,18 @@ export default defineComponent({
 }
 
 .search {
-    background: #3B3B3B;
+    background: var(--block-color);
     width: 680px;
-    height: 43px;
+    height: 40px;
     box-shadow: 0 0 3px 3px #2a2a2a;
     position: absolute;
     padding-left: 20px;
-    top: calc(50% - 21.5px);
+    top: calc(50% - 20px);
     z-index: 8;
 }
 
 .search.active {
-    top: 20px;
+    top: 16px;
 }
 
 .search__input {
@@ -148,7 +172,7 @@ export default defineComponent({
 }
 
 .search:focus-within .search__input {
-    color: #3b3b3b;
+    color: var(--block-color);
 }
 
 .media-root {
@@ -158,7 +182,7 @@ export default defineComponent({
     align-items: center;
     position: absolute;
     opacity: 0;
-    top: 83px;
+    top: 72px;
     transition: opacity 0.2s;
 }
 
@@ -169,16 +193,17 @@ export default defineComponent({
 .media-info {
     height: 170px;
     width: 100%;
-    background-color: #3b3b3bc0;
+    background-color: var(--block-color);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--block-radius);
     align-items: center;
     display: flex;
     padding: 16px;
+    border: 1px solid #2a2a2a;
 }
 
 .media-info__cover {
-    border-radius: 8px;
+    border-radius: var(--block-radius);
     height: 138px;
     user-select: none;
     margin-right: 16px;
@@ -262,4 +287,52 @@ export default defineComponent({
     white-space: nowrap;
 }
 
+.media-thead,
+.media-list__item {
+    border-radius: var(--block-radius);
+    width: 100%;
+    background: var(--block-color);
+    border: 1px solid #2a2a2a;
+    display: flex;
+}
+
+.media-thead {
+    padding: 4px 8px;
+    margin: 5px;
+}
+
+.media-list__item {
+    padding: 12px 8px;
+}
+
+.media-thead__item {
+    font-size: 14px;
+    min-width: 38px;
+    margin-left: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.media-thead__split {
+    background: var(--split-color);
+    width: 2px;
+    border-radius: var(--block-radius);
+    margin: 0 10px;
+}
+
+.media-thead__item.title {
+    width: 40%;
+}
+
+.media-thead__item.time {
+    width: 65px;
+}
+
+.media-list {
+    width: 100%;
+    max-height: calc(100vh - 320px);
+    overflow: auto;
+    border-radius: var(--block-radius);
+}
 </style>

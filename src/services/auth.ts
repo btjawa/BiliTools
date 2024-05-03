@@ -1,42 +1,24 @@
-import * as http from "../scripts/http";
 import { invoke } from "@tauri-apps/api/core";
-import store from "../store/index";
-import * as LoginTypes from "../types/Login.type";
-import { NavInfoResp } from "../types/UserInfo.type";
-import { MediaType } from "../types/Sdk.type";
+import { fetch } from '@tauri-apps/plugin-http';
+import store from "@/store";
+import { utils } from "@/services";
+import * as types from "@/types";
 import md5 from "md5";
-import { iziError } from "./utils";
 
-interface AppPlatforms {
-    android_1: { appkey: string; appsec: string; };
-    ios_1: { appkey: string; appsec: string; };
-}
-
-export const appPlatforms: AppPlatforms = {
-    android_1: {
-        appkey: "1d8b6e7d45233436",
-        appsec: "560c52ccd288fed045859ed18bffd973"
-    },
-    ios_1: {
-        appkey: "4ebafd7c4951b366",
-        appsec: "8cb98205e9b2ad3669aad0fce12a4c13"
-    }
-}
-
-export function id(input: string): { id: string, type: MediaType | null } {
+export function id(input: string): { id: string, type: types.data.MediaType | null } {
     let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-    if (match) return { id: match[0], type: MediaType.Video };
+    if (match) return { id: match[0], type: types.data.MediaType.Video };
     match = input.match(/ep(\d+)|ss(\d+)/i);
-    if (match) return { id: match[0], type: MediaType.Bangumi }; 
+    if (match) return { id: match[0], type: types.data.MediaType.Bangumi }; 
     match = input.match(/au(\d+)/i);
-    if (match) return { id: match[0], type: MediaType.Music }; 
+    if (match) return { id: match[0], type: types.data.MediaType.Music }; 
     else {
-        iziError(!input ? "输入不能为空" : "输入不合法！请检查格式");
+        utils.iziError(!input ? "输入不能为空" : "输入不合法！请检查格式");
         return { id: input, type: null };
     }
 }
 
-declare function initGeetest(params: any, callback: (captchaObj: any) => void): void;
+declare function initGeetest(params: any, callback: (captchaObj: any) => void): Promise<void>;
 
 export async function wbi(params: any) {
     const mixinKeyEncTab = [
@@ -48,7 +30,7 @@ export async function wbi(params: any) {
     const getMixinKey = (orig: String) => {
         return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
     };
-    const res = await (await http.fetch('https://api.bilibili.com/x/web-interface/nav', { headers: store.state.headers })).json() as NavInfoResp;
+    const res = await (await fetch('https://api.bilibili.com/x/web-interface/nav', { headers: store.state.headers })).json() as types.userInfo.NavInfoResp;
     const { img_url, sub_url } = res.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
@@ -110,23 +92,14 @@ export async function bili_ticket() {
         "context[ts]": Math.floor(Date.now() / 1000).toString(),
         csrf: ""
     });    
-    return await (await http.fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
-    { method: "POST" })).json() as LoginTypes.GenWebTicketResp;
-}
-
-export function appSign(params: any, key: keyof AppPlatforms) {
-    const platform = appPlatforms[key];
-    params.appkey = platform.appkey;
-    const searchParams = new URLSearchParams(params);
-    searchParams.sort();
-    const sign = md5(searchParams.toString() + platform.appsec);
-    return searchParams.toString() + '&sign=' + sign;
+    return await (await fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`,
+    { method: "POST" })).json() as types.login.GenWebTicketResp;
 }
 
 export async function captcha() {
     return new Promise(async resolve => {
-        const response = await (await http.fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header',
-        { method: "GET", headers: store.state.headers })).json() as LoginTypes.GenCaptchaResp
+        const response = await (await fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header',
+        { method: "GET", headers: store.state.headers })).json() as types.login.GenCaptchaResp;
         const { token, geetest: { challenge, gt } } = response.data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
@@ -144,7 +117,7 @@ export async function captcha() {
                 const result = captchaObj.getValidate();
                 const validate = result.geetest_validate;
                 const seccode = result.geetest_seccode;
-                return resolve({token, challenge, validate, seccode} as LoginTypes.VerifiedCaptchaResp);
+                return resolve({token, challenge, validate, seccode} as types.login.VerifiedCaptchaResp);
             })
         });
     })
@@ -166,12 +139,12 @@ export async function correspondPath(timestamp: number) {
 }
 
 export async function checkRefresh() {
-    const response = await (await http.fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
-    { method: "GET", headers: store.state.headers })).json() as LoginTypes.CookieInfoResp;
+    const response = await (await fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
+    { method: "GET", headers: store.state.headers })).json() as types.login.CookieInfoResp;
     const { refresh, timestamp } = response.data;
     if (refresh) {
         const path = await correspondPath(timestamp);
-        const csrfHtml = await (await http.fetch(`https://www.bilibili.com/correspond/1/${path}`,
+        const csrfHtml = await (await fetch(`https://www.bilibili.com/correspond/1/${path}`,
         { method: "GET", headers: store.state.headers })).text() as string;
         const parser = new DOMParser();
         const doc = parser.parseFromString(csrfHtml, 'text/html');

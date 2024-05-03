@@ -1,3 +1,5 @@
+@import url("./iziToast.min.css");
+
 ::-webkit-scrollbar {
     width: 7.5px;
     height: 7.5px;
@@ -20,8 +22,10 @@
 
 :root {
     --content-color: rgb(233,233,233);
-    --block-color: rgb(23,23,23);
+    --block-color: #3b3b3bc0;
     --desc-color: #a2a7ae;
+    --block-radius: 8px;
+    --split-color: #c4c4c433;
 }
 
 body {
@@ -36,4 +40,10 @@ body {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    text-rendering: optimizeLegibility;
+}
+
+.iziToast-wrapper-topRight,
+.iziToast-wrapper-topLeft {
+    transform: translateY(30px);
 }

@@ -29,7 +29,7 @@
 <script lang="ts">
 import { getCurrent } from '@tauri-apps/api/window';
 import { defineComponent } from 'vue';
-import { debounce } from '../scripts/utils';
+import { debounce } from '../services/utils';
 import { type } from '@tauri-apps/plugin-os';
 const appWindow = getCurrent();
 
@@ -71,7 +71,7 @@ export default defineComponent({
 
 <style scoped>
 .title-bar {
-    height: 35px;
+    height: 30px;
     width: calc(100vw - 61px);
     background: rgba(28,28,28,0.9);
     border-bottom: #333333 solid 1px;
@@ -96,11 +96,11 @@ export default defineComponent({
 
 .windows .titlebar-button {
     width: 45px;
-    height: 34px;
+    height: 29px;
 }
 
 .windows .titlebar-button i {
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .windows .titlebar-button:hover {

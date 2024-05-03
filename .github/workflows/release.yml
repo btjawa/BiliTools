@@ -20,8 +20,6 @@ jobs:
     steps:
       - name: Checkout original repository
         uses: actions/checkout@v4
-        with:
-          ref: master
 
       - name: Setup node
         uses: actions/setup-node@v1

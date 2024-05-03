@@ -16,13 +16,9 @@
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-import TitleBar from "./components/TitleBar.vue";
-import ContextMenu from "./components/ContextMenu.vue";
-import SideBar from "./components/SideBar.vue";
-import { useRouter } from "vue-router";
-import { iziError } from "./scripts/utils"; 
+import { TitleBar, ContextMenu, SideBar } from "@/components";
 import { listen } from "@tauri-apps/api/event";
-import { ref } from 'vue';
+import { iziError } from "@/services/utils";
 
 export default {
     components: {
@@ -30,21 +26,17 @@ export default {
         ContextMenu,
         SideBar
     },
+    methods: {
+        showMenu(e: MouseEvent) {
+            (this.$refs.contextMenu as any).showMenu(e);
+        }
+    },
     mounted() {
+        this.$router.push("/");
         this.$store.dispatch('init');
         listen('headers', (e) => this.$store.commit('updateHeaders', e.payload));
         listen('error', (e) => iziError(e.payload as string));
-    },
-    setup() {
-        const contextMenu = ref(null);
-        const router = useRouter();
-        router.push("/");
-        function showMenu(e: MouseEvent) {
-            if (contextMenu.value)
-            (contextMenu.value as any).showMenu(e);
-        }
-        return { contextMenu, showMenu }
-    },
+    }
 }
 
 </script>
@@ -59,7 +51,7 @@ export default {
     right: 0;
     bottom: 0;
     width: calc(100vw - 61px);
-    height: calc(100vh - 35px);
+    height: calc(100vh - 30px);
 }
 
 .page {

@@ -1,17 +1,17 @@
-import * as http from '../scripts/http';
+import { fetch } from '@tauri-apps/plugin-http';
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
 
 import { JSEncrypt } from "jsencrypt";
-import store from "../store/index";
-import * as LoginTypes from '../types/Login.type';
-import * as verify from "./verify";
+import store from "../store";
+import * as LoginTypes from '../types/LoginTypes';
+import * as verify from "./auth";
 import QRCode from 'qrcodejs2-fix';
 
 export async function scanLogin(box: HTMLElement) {
     emit('stop_login');
     box.innerHTML = "";
-    const response = await (await http.fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate',
+    const response = await (await fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate',
     { method: "GET", headers: store.state.headers })).json() as LoginTypes.GenQrcodeResp;
     const { qrcode_key, url } = response.data;
     new QRCode(box, {
@@ -26,7 +26,7 @@ export async function scanLogin(box: HTMLElement) {
 }
 
 export async function pwdLogin(username: string, password: string) {
-    const rsaKeys = await (await http.fetch('https://passport.bilibili.com/x/passport-login/web/key',
+    const rsaKeys = await (await fetch('https://passport.bilibili.com/x/passport-login/web/key',
     { method: "GET", headers: store.state.headers })).json() as LoginTypes.GetPwdLoginKeyResp;
     const { hash, key } = rsaKeys.data;
     const enc = new JSEncrypt();
@@ -37,9 +37,9 @@ export async function pwdLogin(username: string, password: string) {
 }
 
 export async function codeList() {
-    // const prefix = ((await http.fetch('https://api.bilibili.com/x/web-interface/zone',
+    // const prefix = ((await fetch('https://api.bilibili.com/x/web-interface/zone',
     // { method: "GET", headers: store.state.headers })).data as LoginTypes.GetZoneResp).data.country_code || 86;
-    // const areaCodes = (await http.fetch('https://passport.bilibili.com/web/generic/country/list',
+    // const areaCodes = (await fetch('https://passport.bilibili.com/web/generic/country/list',
     // { method: "GET", headers: store.state.headers })).data as LoginTypes.GetCountryListResp;
     // const allCodes = [...areaCodes.data.common, ...areaCodes.data.others];
     // allCodes.sort((a, b) => a.id - b.id);
@@ -73,7 +73,7 @@ export async function sendSms(tel: string, cid: string) {
         cid, tel, source: 'main-fe-header',
         token, challenge, validate, seccode
     });
-    const response = await (await http.fetch(`https://passport.bilibili.com/x/passport-login/web/sms/send?${params.toString()}`,
+    const response = await (await fetch(`https://passport.bilibili.com/x/passport-login/web/sms/send?${params.toString()}`,
     { method: "POST", headers: store.state.headers })).json() as LoginTypes.SendSmsResp;
     return response;
 }

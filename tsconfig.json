@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+
     "target": "ES2022",
     "useDefineForClassFields": true,
     "module": "ESNext",
@@ -21,7 +23,8 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
-      "vuex": ["./node_modules/vuex/types"] 
+      "vuex": ["./node_modules/vuex/types"],
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],

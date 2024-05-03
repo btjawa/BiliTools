@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "updater": "node scripts/updater.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "postinstall": "patch-package"
   },
   "repository": {
     "type": "git",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@tauri-apps/api": ">=2.0.0-beta.0",
     "@tauri-apps/plugin-dialog": "^2.0.0-beta.2",
+    "@tauri-apps/plugin-http": "^2.0.0-beta.2",
     "@tauri-apps/plugin-os": "^2.0.0-beta.2",
     "@tauri-apps/plugin-shell": ">=2.0.0-beta.0",
     "@tauri-apps/plugin-updater": "^2.0.0-beta.2",
@@ -41,6 +43,8 @@
   "devDependencies": {
     "@actions/github": "^6.0.0",
     "@tauri-apps/cli": ">=2.0.0-beta.0",
+    "patch-package": "^8.0.0",
+    "postinstall-postinstall": "^2.1.0",
     "typescript": "^5.0.2",
     "vite": "^5.0.0",
     "vite-plugin-compression": "^0.5.1",

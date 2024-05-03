@@ -2,6 +2,7 @@ import { emit } from '@tauri-apps/api/event';
 import { app } from '@tauri-apps/api';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import { check } from '@tauri-apps/plugin-updater';
+import { iziError } from '@/services/utils';
 import Swal from "sweetalert2";
 
 try {
@@ -27,4 +28,4 @@ try {
         }
         
     }
-} catch (e) { emit("error", e) }
+} catch (e) { iziError(e as string) }

@@ -1,0 +1,31 @@
+diff --git a/node_modules/@tauri-apps/plugin-http/dist-js/index.js b/node_modules/@tauri-apps/plugin-http/dist-js/index.js
+index b95775b..7d78e10 100644
+--- a/node_modules/@tauri-apps/plugin-http/dist-js/index.js
++++ b/node_modules/@tauri-apps/plugin-http/dist-js/index.js
+@@ -39,6 +39,9 @@ import { invoke } from '@tauri-apps/api/core';
+  * @since 2.0.0
+  */
+ async function fetch(input, init) {
++    // Custom Loading Box while requesting - btjawa
++    const loadingBox = document.querySelector('.loading');
++
+     const maxRedirections = init?.maxRedirections;
+     const connectTimeout = init?.connectTimeout;
+     const proxy = init?.proxy;
+@@ -81,12 +84,16 @@ async function fetch(input, init) {
+             rid,
+         });
+     });
++    // Before request, make custom loading box active - btjawa
++    if (loadingBox) loadingBox.classList.add('active');
+     const { status, statusText, url, headers: responseHeaders, rid: responseRid, } = await invoke("plugin:http|fetch_send", {
+         rid,
+     });
+     const body = await invoke("plugin:http|fetch_read_body", {
+         rid: responseRid,
+     });
++    // After request, make custom loading box inactive - btjawa
++    if (loadingBox) loadingBox.classList.remove('active');
+     const res = new Response(body instanceof ArrayBuffer && body.byteLength
+         ? body
+         : body instanceof Array && body.length

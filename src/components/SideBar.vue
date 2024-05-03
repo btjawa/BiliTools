@@ -1,7 +1,7 @@
 <template>
 <ul data-tauri-drag-region @contextmenu.prevent class="sidebar" ref="sidebar">
-    <router-link to="/login-page" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/login-page') }" class="sidebar-item sidebar-login-page"
+    <router-link to="/user-page" custom v-slot="{ navigate }">
+        <li :class="{ 'active': isActive('/user-page') }" class="sidebar-item sidebar-user-page"
             @click="inited ? navigate() : iziError('请等待初始化完成');">
             <img class="user-avatar" :src="avatarUrl" draggable="false" />
         </li>
@@ -31,7 +31,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { iziError } from '../scripts/utils';
+import { iziError } from '@/services/utils';
 import { type } from '@tauri-apps/plugin-os';
 export default defineComponent({
     methods: {
@@ -44,7 +44,7 @@ export default defineComponent({
         user() { return this.$store.state.user },
         inited() { return this.$store.state.inited },
         avatarUrl(): string {
-            return this.user.isLogin ? this.user.avatar : new URL('../assets/default-avatar.jpg', import.meta.url).href;
+            return this.user.isLogin ? this.user.avatar : new URL('@/assets/img/default-avatar.jpg', import.meta.url).href;
         },
         userName(): string {
             return this.user.isLogin ? this.user.name : '登录';
@@ -75,7 +75,7 @@ export default defineComponent({
 }
 
 .sidebar.macos {
-    padding-top: 35px;
+    padding-top: 30px;
 }
 
 .user-avatar {
@@ -98,7 +98,7 @@ export default defineComponent({
     margin: 6px 10px;
 }
 
-.sidebar-item.sidebar-login-page {
+.sidebar-item.sidebar-user-page {
     margin-bottom: 12px;
 }
 
@@ -107,7 +107,7 @@ export default defineComponent({
     cursor: pointer;
 }
 
-.sidebar-item:not(.sidebar-login-page):hover:before, .sidebar-item:not(.sidebar-login-page).active::before {
+.sidebar-item:not(.sidebar-user-page):hover:before, .sidebar-item:not(.sidebar-user-page).active::before {
     background: rgba(80, 80, 80, 0.5);
 }
 
