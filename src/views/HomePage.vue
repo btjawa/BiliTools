@@ -3,13 +3,13 @@
     <div class="search" :class="{ 'active': elmState.active }">
         <input class="search__input" type="text" placeholder="链接/AV/BV/SS/EP/AU号..."
         @keydown.enter="search" autocomplete="off" spellcheck="false" v-model="elmState.searchInput">
-        <i class="fa-solid fa-search search__btn" @click="search"></i>
+        <button class="fa-solid fa-search search__btn" @click="search"></button>
     </div>
     <div class="media-root" :class="{ 'active': elmState.active && elmState.rootActive }">
         <div class="media-info">
             <img class="media-info__cover" :src="mediaInfo?.cover" @load="dataWidth" draggable="false" />
-            <div class="media-info__data" :style="{ width: !mediaInfo?.upper?.avatar ? '100%' : elmState.dataWidth }" >
-                <div class="media-info__title">{{ mediaInfo?.title }}</div>
+            <div class="media-info__data text" :style="{ width: !mediaInfo?.upper?.avatar ? '100%' : elmState.dataWidth }" >
+                <div class="media-info__title ellipsis">{{ mediaInfo?.title }}</div>
                 <div class="media-info__meta">
                     <div class="media-info__meta_item">
                         <div class="media-info__meta_stat" v-for="item in statItems" :key="item.key">
@@ -30,28 +30,27 @@
             </div>
             <div class="media-info__upper" v-if="mediaInfo?.upper?.avatar" @click="openUpperSpace(mediaInfo?.upper?.mid!)">
                 <img :src="mediaInfo?.upper?.avatar"/>
+                <span class="ellipsis">{{ mediaInfo?.upper?.name }}</span>
             </div>
             <template v-else="elmState.dataWidth = '100%'"></template>
         </div>
         <div class="media-thead">
-            <div class="media-thead__item rank">编号</div>
-            <div class="media-thead__split"></div>
-            <div class="media-thead__item title">标题</div>
-            <div class="media-thead__split"></div>
-            <div class="media-thead__item time">时长</div>
-            <div class="media-thead__split"></div>
-            <div class="media-thead__item">解析选项</div>
+            <div :class="['media-thead__item text', header.id]" v-for="header in headers" :key="header.id">
+                {{ header.label }}
+            </div>
         </div>
         <div class="media-list">
-            <div class="media-list__item" v-for="(item, index) in mediaInfo.list" :key="index">
-                <div class="media-thead__item rank">{{ index + 1 }}</div>
-                <div class="media-thead__split"></div>
-                <div class="media-thead__item title">{{ item.title }}</div>
-                <div class="media-thead__split"></div>
-                <div class="media-thead__item time">{{ utils.duration(item.duration, mediaInfo.type) }}</div>
-                <div class="media-thead__split"></div>
-                <div class="media-thead__item options">
-                    
+            <div class="media-list__item" v-for="info in mediaInfo.list" :key="info.id">
+                <div :class="['media-thead__item text', header.id]" v-for="(header, index) in headers" :key="header.id">
+                    <template v-if="header.id === 'rank'">{{ index + 1 }}</template>
+                    <template v-else-if="header.id === 'title'">{{ info.title }}</template>
+                    <template v-else-if="header.id === 'time'">{{ utils.duration(info.duration, mediaInfo.type) }}</template>
+                    <template v-else-if="header.id === 'options'">
+                        <button v-for="option in options" :key="option.id" @click="handleOptions(option.id)"
+                        :class="['media-thead__item options__item', option.id]">
+                            <i :class="option.icon"></i>{{ option.label }}
+                        </button>
+                    </template>
                 </div>
             </div>
         </div>
@@ -63,25 +62,53 @@
 import { auth, data, utils } from "@/services";
 import * as types from "@/types";
 import * as shell from "@tauri-apps/plugin-shell";
+import * as dialog from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { transformImage } from "@tauri-apps/api/image";
+import { fetch } from "@tauri-apps/plugin-http";
+import store from "@/store";
 
 export default {
     methods: {
         openUpperSpace(mid: number) { shell.open('https://space.bilibili.com/' + mid) },
         dataWidth(e: Event) { this.elmState.dataWidth = `calc(100% - ${(e.target as HTMLElement).offsetWidth}px - 68px)` },
-        async search() {
+        search() {
             const v = auth.id(this.elmState.searchInput);
             if (v.type) {
                 this.elmState.active = true;
-                try {
-                    await data.getMediaInfo(v.id, v.type);
+                this.elmState.rootActive = false;
+                data.getMediaInfo(v.id, v.type)
+                .then(_ => {
                     this.elmState.rootActive = true;
-                } catch(err: any) {
+                }).catch(err => {
                     this.elmState.active = false;
                     utils.iziError(err.message);
                     return null;
-                }
+                });
             }
         },
+        handleOptions(type: string) {
+            if (type === "cover") {
+                dialog.save({
+                    filters: [{
+                        name: 'PNG Image',
+                        extensions: ['png']
+                    }],
+                    defaultPath: `${this.store.settings.down_dir}/封面_${this.mediaInfo.title}_${utils.pubdate(new Date(), true)}`
+                }).then(async path => {
+                    if (!path) return null;
+                    const coverData = await (await fetch(this.mediaInfo.cover)).arrayBuffer();
+                    invoke('save_file', { content: transformImage(coverData), path, secret: this.store.data.secret });
+                }).catch(err => {
+                    utils.iziError(err.message);
+                    return null;
+                });
+            } else if (type === "media") {
+
+            } else if (type === "more") {
+                
+            }
+        }
     },
     computed: {
         statItems() {
@@ -95,7 +122,7 @@ export default {
                 { key: 'share', label: '分享', icon: 'bcc-iconfont bcc-icon-icon_action_share_n_x', value: this.mediaInfo.stat?.share },
             ];
         },
-        mediaInfo() { return this.$store.state.mediaInfo as types.data.MediaInfo },
+        mediaInfo() { return this.store.data.mediaInfo as types.data.MediaInfo },
     },
     data() {
         return {
@@ -107,6 +134,18 @@ export default {
                 dataWidth: ''
             },
             utils,
+            headers: [
+                { id: 'rank', label: '编号' },
+                { id: 'title', label: '标题' },
+                { id: 'time', label: '时长' },
+                { id: 'options', label: '解析选项' }
+            ],
+            options: [
+                { id: 'cover', icon: 'fa-solid fa-image space', label: '下载封面' },
+                { id: 'media', icon: 'fa-solid fa-file-video space', label: '解析音视频' },
+                { id: 'more', icon: 'fa-solid fa-anchor space', label: '更多解析' }
+            ],
+            store: store.state
         }
     }
 };
@@ -148,7 +187,6 @@ export default {
     width: 100%;
     height: 40px;
     font-size: 14px;
-    user-select: none;
 }
 
 .search__input:hover {
@@ -182,6 +220,7 @@ export default {
     align-items: center;
     position: absolute;
     opacity: 0;
+    gap: 5px;
     top: 72px;
     transition: opacity 0.2s;
 }
@@ -205,7 +244,6 @@ export default {
 .media-info__cover {
     border-radius: var(--block-radius);
     height: 138px;
-    user-select: none;
     margin-right: 16px;
 }
 
@@ -217,21 +255,11 @@ export default {
 
 .media-info__data {
     height: 100%;
-}
-
-.media-info__title,
-.media-info__meta {
-    display: flex;
-    margin-bottom: 6px;
+    gap: 6px;
 }
 
 .media-info__title {
     font-size: 18px;
-    display: inline-block;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    word-break: break-all;
-    white-space: nowrap;
     width: 100%;
 }
 
@@ -283,8 +311,7 @@ export default {
 
 .media-info__upper span {
     font-size: 11px;
-    word-break: keep-all;
-    white-space: nowrap;
+    max-width: 68px;
 }
 
 .media-thead,
@@ -292,37 +319,55 @@ export default {
     border-radius: var(--block-radius);
     width: 100%;
     background: var(--block-color);
-    border: 1px solid #2a2a2a;
+    border: 1px solid #222;
     display: flex;
 }
 
 .media-thead {
     padding: 4px 8px;
-    margin: 5px;
 }
 
 .media-list__item {
-    padding: 12px 8px;
+    padding: 6px 8px;
+    align-items: center;
+    min-height: 32px;
 }
 
-.media-thead__item {
+.media-thead__item:not(.options__item) {
     font-size: 14px;
-    min-width: 38px;
+    min-width: 44px;
     margin-left: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    position: relative;
 }
 
-.media-thead__split {
+.media-thead__item:not(.options__item):not(:first-child) {
+    margin-left: 16px;
+}
+
+.media-thead__item.options {
+    display: flex;
+    flex-grow: 1;
+    justify-content: space-between;
+    padding-right: 10px;
+}
+
+.media-thead__item:not(.options__item):not(:last-child)::after {
+    display: inline-block;
+    content: '';
+    position: absolute;
+    right: -10px;
     background: var(--split-color);
     width: 2px;
     border-radius: var(--block-radius);
     margin: 0 10px;
+    min-height: 18.4px;
 }
 
 .media-thead__item.title {
-    width: 40%;
+    width: 41%;
 }
 
 .media-thead__item.time {
@@ -334,5 +379,24 @@ export default {
     max-height: calc(100vh - 320px);
     overflow: auto;
     border-radius: var(--block-radius);
+}
+
+.media-thead__item.options__item {
+    padding: 8px 10px;
+    background-color: #2b2b2b;
+    border-radius: 8px;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+.media-thead__item.options__item i {
+    font-size: 13px;
+}
+
+.media-thead__item.options__item:hover {
+    background-color: #262626;
 }
 </style>

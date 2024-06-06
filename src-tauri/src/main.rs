@@ -21,9 +21,6 @@ use services::{aria2c, cookies, dh};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
-#[cfg(target_os = "macos")]
-use nix::{sys::signal::{self, Signal}, unistd::{setpgid, Pid}};
-
 lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref WORKING_DIR: PathBuf = dirs_next::data_local_dir().unwrap().join("com.btjawa.bilitools");
@@ -58,6 +55,7 @@ fn init_headers() -> HashMap<String, String> {
         .map(|(key, value)| format!("{}={}", key, value).replace("\"", ""))
         .collect::<Vec<_>>().join("; ") + ";");
     headers.insert("Referer".into(), "https://www.bilibili.com".into());
+    headers.insert("Origin".into(), "https://www.bilibili.com".into());
     return headers
 }
 
@@ -99,7 +97,10 @@ struct DownloadTask {
 struct Settings {
     max_conc: i64,
     temp_dir: String,
-    down_dir: String
+    down_dir: String,
+    df_dms: i64,
+    df_ads: i64,
+    df_cdc: i64
 }
 
 async fn get_buvid() -> Result<String, String> {
@@ -144,7 +145,7 @@ async fn push_back_queue(
     for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
         let purl = Url::parse(&url[0]).map_err(|e| handle_err(e))?;
         let filename = purl.path_segments().unwrap().last().unwrap();
-        let path = TEMP_DIR.read().unwrap().join(format!("{}_{}.bilitools.downloading", date, filename)).join(filename);
+        let path = TEMP_DIR.read().unwrap().join("com.btjawa.bilitools").join(format!("{}_{}", date, filename)).join(filename);
         let init_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.addUri",
@@ -469,21 +470,29 @@ async fn handle_download(gid: String, action: String) -> Result<Value, String> {
 #[tauri::command]
 async fn handle_temp(action: String) -> Result<String, String> {
     let mut bytes = 0;
-    let walker = WalkDir::new(&TEMP_DIR.read().unwrap().clone()).into_iter().filter_map(|e| e.ok())
-    .filter(|e| e.file_name().to_str().map_or(false, |s| s.ends_with(".bilitools.downloading")));
-    for entry in walker {
-        for entry in WalkDir::new(entry.path().to_str().unwrap()) {
-            let entry = entry.unwrap();
+    let target_dir = TEMP_DIR.read().unwrap().join("com.btjawa.bilitools");
+    let walker = WalkDir::new(target_dir).into_iter();
+    for entry in walker.filter_map(Result::ok).filter(|e| e.file_type().is_dir()) {
+        let mut have_aria2 = false;
+        let mut crr_bytes: u64 = 0;
+        for entry in WalkDir::new(entry.path()).into_iter().filter_map(Result::ok) {
             let path = entry.path();
-            if action == "calc" { bytes += fs::metadata(path).unwrap().len(); }
-            else if action == "clear" {
-                if path.is_file() && !path.file_name().unwrap()
-                .to_str().map_or(false, |s| s.ends_with(".aria2")) {
-                    fs::remove_file(&path).map_err(|e| handle_err(e))?;
+            if path.is_file() {
+                let file_name = path.file_name().unwrap().to_str().unwrap();
+                let file_size = fs::metadata(path).unwrap().len();
+                if file_name.ends_with(".aria2") {
+                    have_aria2 = true;
+                }
+                if action == "calc" || (action == "clear" && !have_aria2) {
+                    crr_bytes += file_size;
                 }
             }
         }
-        let _ = fs::remove_dir(&entry.path());
+        if action == "clear" && !have_aria2 {
+            let _ = fs::remove_dir_all(&entry.path());
+        } else {
+            bytes += crr_bytes; 
+        }
     }
     const KIB: u64 = 1024;
     const MIB: u64 = KIB * 1024;
@@ -495,33 +504,40 @@ async fn handle_temp(action: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn rw_config(action: &str, settings: Option<Settings>, secret: String) -> Result<&str, String> {
+fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<&str, String> {
     let window = services::get_window();
     if secret != *SECRET.read().unwrap() {
-        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
-        return Err("403 Forbidden".to_string())
+        return Err("403 Forbidden".into())
     }
     let work_dir = WORKING_DIR.clone();
     let config = Arc::new(StdRwlock::new(Settings {
         temp_dir: TEMP_DIR.read().unwrap().to_string_lossy().into_owned(),
         down_dir: DOWNLOAD_DIR.read().unwrap().to_string_lossy().into_owned(),
-        max_conc: *aria2c::MAX_CONC_DOWNS.read().unwrap()
+        max_conc: *aria2c::MAX_CONC_DOWNS.read().unwrap(),
+        df_dms: 32,
+        df_ads: 30280,
+        df_cdc: 7
     }));
 
-    if action == "init" {
+    let update_config = |source: HashMap<String, Value>| {
+        let mut config = config.write().unwrap();
+        let mut config_json = serde_json::to_value(&*config).unwrap();
+        if let Value::Object(ref mut config_obj) = config_json {
+            for (key, value) in source {
+                config_obj.insert(key, value);
+            }
+        }
+        *config = serde_json::from_value(config_json).unwrap();
+    };
+
+    if action == "init" || action == "read" {
         if let Ok(s) = fs::read_to_string(work_dir.join("config.json")) {
             if let Ok(local_config) = serde_json::from_str::<HashMap<String, Value>>(&s) {
-                let mut d_config = config.write().unwrap();
-                for (key, value) in local_config { match key.as_str() {
-                    "temp_dir" => d_config.temp_dir = value.as_str().unwrap_or_default().to_string(),
-                    "down_dir" => d_config.down_dir = value.as_str().unwrap_or_default().to_string(),
-                    "max_conc" => d_config.max_conc = value.as_i64().unwrap_or_default(),
-                    _ => {}
-                } }
+                update_config(local_config);
             }
         }
     } else if action == "write" {
-        if let Some(s) = settings { *config.write().unwrap() = s }
+        if let Some(new_config) = settings { update_config(new_config) }
     }
 
     let config = config.read().unwrap();
@@ -530,22 +546,15 @@ fn rw_config(action: &str, settings: Option<Settings>, secret: String) -> Result
         *aria2c::MAX_CONC_DOWNS.write().unwrap() = config.max_conc;
         *TEMP_DIR.write().unwrap() = PathBuf::from(&config.temp_dir);
         *DOWNLOAD_DIR.write().unwrap() = PathBuf::from(&config.down_dir);
-        log::info!("Updated MAX_CONC_DOWNS: {}", config.max_conc);
-        log::info!("Updated TEMP_DIR: {}", config.temp_dir);
-        log::info!("Updated DOWNLOAD_DIR: {}", config.down_dir);
+        log::info!("{:?}", config);
     }
-    window.emit("settings", serde_json::json!({
-        "down_dir": config.down_dir,
-        "temp_dir": config.temp_dir,
-        "max_conc": config.max_conc
-    })).unwrap();
+    window.emit("settings", config.clone()).unwrap();
     Ok(action)
 }
 
 #[tauri::command]
-async fn save_file(window: WebviewWindow, content: Vec<u8>, path: String, secret: String) -> Result<String, String> {
+async fn save_file(content: Vec<u8>, path: String, secret: String) -> Result<String, String> {
     if secret != *SECRET.read().unwrap() {
-        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
         return Err("403 Forbidden".into())
     }
     if let Err(e) = fs::write(path.clone(), content) {
@@ -849,10 +858,9 @@ async fn sms_login(
 }
 
 #[tauri::command]
-async fn handle_aria2c(window: WebviewWindow, secret: String, action: String) -> Result<(), String> {
+async fn handle_aria2c(secret: String, action: String) -> Result<(), String> {
     if secret != *SECRET.read().unwrap() {
-        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
-        return Err("403 Forbidden".to_string())
+        return Err("403 Forbidden".into())
     }
     log::info!("Killing aria2c...");
     aria2c::kill().map_err(|e| handle_err(e))?;
@@ -864,11 +872,10 @@ async fn handle_aria2c(window: WebviewWindow, secret: String, action: String) ->
 }
 
 #[tauri::command]
-async fn ready(_window: WebviewWindow) -> Result<String, String> {
+async fn ready() -> Result<String, String> {
     #[cfg(not(debug_assertions))]
     { if *READY.read().unwrap() {
-        _window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
-        return Ok("403 Forbidden".to_string());
+        return Ok("403 Forbidden".into());
     } }
     LOGIN_POLLING.store(false, Ordering::SeqCst);
     *READY.write().unwrap() = true;
@@ -878,8 +885,7 @@ async fn ready(_window: WebviewWindow) -> Result<String, String> {
 #[tauri::command]
 fn init(window: WebviewWindow, secret: String) -> Result<i64, String> {
     if secret != *SECRET.read().unwrap() {
-        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
-        return Err("403 Forbidden".to_string())
+        return Err("403 Forbidden".into())
     }
     rw_config("read", None, secret).map_err(|e| handle_err(e))?;
     let cookies = cookies::load().map_err(|e| handle_err(e))?;
@@ -888,11 +894,10 @@ fn init(window: WebviewWindow, secret: String) -> Result<i64, String> {
 }
 
 #[tauri::command]
-async fn get_dm(window: WebviewWindow, secret: String, oid: i64, date: Option<String>, df_path: String, xml: bool) -> Result<(), String> {
+async fn get_dm(secret: String, oid: i64, date: Option<String>, df_path: String, xml: bool) -> Result<(), String> {
     let app_handle = services::get_app_handle().unwrap();
     if secret != *SECRET.read().unwrap() {
-        window.emit("error", "403 Forbidden<br>\n请重启应用").unwrap();
-        return Err("403 Forbidden".to_string())
+        return Err("403 Forbidden".into())
     }
     let client = init_client();
     let mut url = "https://api.bilibili.com/x/v1/dm/list.so";
@@ -924,9 +929,7 @@ async fn get_dm(window: WebviewWindow, secret: String, oid: i64, date: Option<St
     let path = receiver.recv().map_err(|e| handle_err(e))?;
     if let Some(output) = path {
         let input = if xml { output.clone() } else {
-            TEMP_DIR.read().unwrap().join(format!(
-            "{}.bilitools.downloading", output.file_name()
-            .unwrap().to_string_lossy())).join("input.xml")
+            TEMP_DIR.read().unwrap().join("com.btjawa.bilitools").join(output.file_name().unwrap()).join("input.xml")
         };
         fs::create_dir_all(&input.parent().unwrap()).map_err(|e| handle_err(e))?;
         fs::write(input.clone(), dec_data).map_err(|e| handle_err(e))?;
@@ -951,17 +954,6 @@ async fn get_dm(window: WebviewWindow, secret: String, oid: i64, date: Option<St
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     logger::init_logger().map_err(|e| e.to_string())?;
-    #[cfg(target_os = "windows")]
-    let _job: win32job::Job = {
-        let job = win32job::Job::create()?;
-        let mut info = job.query_extended_limit_info()?;
-        info.limit_kill_on_job_close();
-        job.set_extended_limit_info(&mut info)?;
-        job.assign_current_process()?;
-        job
-    };
-    #[cfg(target_os = "macos")]
-    setpgid(Pid::from_raw(0), Pid::from_raw(0)).unwrap();
     *SECRET.write().unwrap() = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10).map(char::from)
@@ -1002,19 +994,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None).map_err(|e| handle_err(e))?;
             }
             window.listen("stop_login", |_| { LOGIN_POLLING.store(false, Ordering::SeqCst) });
-            window.listen("restart", move |_| {
-                #[cfg(target_os = "macos")]
-                signal::kill(Pid::from_raw(0), Signal::SIGTERM).expect("Failed to send SIGTERM");
-                services::get_app_handle().unwrap().restart()
-            });
             Ok(())
-        })
-        .on_window_event(|_, event| match event {
-            tauri::WindowEvent::Destroyed => {
-                #[cfg(target_os = "macos")]
-                signal::kill(Pid::from_raw(0), Signal::SIGTERM).expect("Failed to send SIGTERM");
-            }
-            _ => {}
         })
         .invoke_handler(tauri::generate_handler![ready, init, exit,
             scan_login, pwd_login, sms_login, open_select, refresh_cookie,

@@ -15,7 +15,7 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
     } else if (type == types.data.MediaType.Lesson) {
         basicUrl = `https://api.bilibili.com/pugv/view/web/season?${id.startsWith('ep') ? 'ep_id' : 'season_id'}=${id.match(/\d+/)[0]}`;
     } else throw new Error(`No type named '${type}'.`);
-    const basicResp = await (await fetch(basicUrl, { headers: store.state.headers })).json();
+    const basicResp = await (await fetch(basicUrl, { headers: store.state.data.headers })).json();
     if (basicResp?.code !== 0) {
         if (basicResp?.code === -404 && type === types.data.MediaType.Bangumi) {
             return getMediaInfo(id, types.data.MediaType.Lesson);
@@ -24,8 +24,8 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
     }
     if (type == types.data.MediaType.Video) {
         const info = (basicResp as types.data.VideoInfo).data.View;
-        store.state.mediaInfo = {
-            cover: info.pic,
+        store.commit('updateState', { 'data.mediaInfo': {
+            cover: info.pic.replace("http:", "https:"),
             title: info.title,
             desc: info.desc,
             type,
@@ -49,7 +49,7 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
             info.ugc_season.sections[0].episodes.map(episode => ({
                 title: episode.title,
                 desc: episode.arc.desc,
-                cover: episode.arc.pic,
+                cover: episode.arc.pic.replace("http:", "https:"),
                 duration: episode.arc.duration,
                 id: episode.aid,
                 cid: episode.cid,
@@ -58,17 +58,17 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
             info.pages.map(page => ({
                 title: page.part || info.title,
                 desc: info.desc,
-                cover: info.pic,
+                cover: info.pic.replace("http:", "https:"),
                 duration: page.duration,
                 id: info.aid,
                 cid: page.cid,
                 ss_title: page.part || info.title
             }))
-        };
+        }});
     } else if (type == types.data.MediaType.Bangumi) {
         const info = (basicResp as types.data.BangumiInfo).result;
-        store.state.mediaInfo = {
-            cover: info.cover,
+        store.commit('updateState', { 'data.mediaInfo': {
+            cover: info.cover.replace("http:", "https:"),
             title: info.title,
             desc: info.evaluate,
             type,
@@ -91,21 +91,21 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
             list: info.episodes.map(episode => ({
                 title: episode.share_copy,
                 desc: info.evaluate,
-                cover: episode.cover,
+                cover: episode.cover.replace("http:", "https:"),
                 duration: episode.duration,
                 id: episode.aid,
                 cid: episode.cid,
                 ss_title: info.season_title
             }))
-        }
+        }});
     } else if (type == types.data.MediaType.Music) {
         const info = (basicResp as types.data.MusicInfo).data;
-        store.state.mediaInfo = {
-            cover: info.cover,
+        store.commit('updateState', { 'data.mediaInfo': {
+            cover: info.cover.replace("http:", "https:"),
             title: info.title,
             desc: info.intro,
             tags: (await (await fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`,
-            { headers: store.state.headers })).json() as types.data.MusicTagsInfo).data.map(item => item.info),
+            { headers: store.state.data.headers })).json() as types.data.MusicTagsInfo).data.map(item => item.info),
             type,
             stat: {
                 play: info.statistic.play,
@@ -123,25 +123,31 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
                 mid: info.uid
             },
             list: []
-        };
+        }});
     } else if (type == types.data.MediaType.Lesson) {
         const info = (basicResp as types.data.LessonInfo).data;
-        const stat: types.data.MediaInfo["stat"] = {
-            play: info.stat.play,
-            danmaku: null,
-            reply: info.release_info,
-            like: null,
-            coin: null,
-            favorite: null,
-            share: null,
-            pubdate: null
-        }
-        const upper: types.data.MediaInfo["upper"] = {
-            avatar: info.up_info.avatar,
-            name: info.up_info.uname,
-            mid: info.up_info.mid
-        }
-        return { cover: info.cover, title: info.title, type, tags: [], stat,
-        desc: `${info.subtitle}<br>${info.faq.title}<br>${info.faq.content}`, upper };
+        store.commit('updateState', { 'data.mediaInfo': {
+            cover: info.cover.replace("http:", "https:"),
+            title: info.title,
+            desc: `${info.subtitle}<br>${info.faq.title}<br>${info.faq.content}`,
+            tags: [],
+            type,
+            stat: {
+                play: info.stat.play,
+                danmaku: null,
+                reply: info.release_info,
+                like: null,
+                coin: null,
+                favorite: null,
+                share: null,
+                pubdate: null
+            },
+            upper: {
+                avatar: info.up_info.avatar,
+                name: info.up_info.uname,
+                mid: info.up_info.mid
+            },
+            list: []
+        }});
     } else throw new Error(`No type named '${type}'.`);
 }

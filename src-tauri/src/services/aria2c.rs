@@ -1,4 +1,4 @@
-use std::{net::{SocketAddr, TcpListener}, process::{Child, Command, Stdio}, sync::{Arc, RwLock}};
+use std::{net::{SocketAddr, TcpListener}, process::{Child, Command, Stdio, self}, sync::{Arc, RwLock}};
 use lazy_static::lazy_static;
 
 #[cfg(target_os = "windows")]
@@ -33,7 +33,31 @@ pub fn init() -> Result<(), String> {
         .stderr(Stdio::piped());
 
     let child = command.spawn().map_err(|e| e.to_string())?;
+    let pid = child.id();
     *ARIA2C_CHILD.write().unwrap() = Some(child);
+    #[cfg(target_os = "windows")]
+    Command::new("powershell.exe")
+        .creation_flags(0x08000000)
+        .arg("-Command")
+        .arg(format!(
+            "while ((Get-Process -Id {} -ErrorAction SilentlyContinue) -ne $null) \
+            {{ Start-Sleep -Milliseconds 500 }}; Stop-Process -Id {} -Force",
+            process::id(),
+            pid
+        ))
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    Command::new("/bin/bash")
+        .arg("-c")
+        .arg(format!(
+            "while kill -0 {} 2>/dev/null; do sleep 0.5; done; kill {}",
+            process::id(),
+            pid
+        ))
+        .spawn()
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 

@@ -30,7 +30,7 @@ export async function wbi(params: any) {
     const getMixinKey = (orig: String) => {
         return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
     };
-    const res = await (await fetch('https://api.bilibili.com/x/web-interface/nav', { headers: store.state.headers })).json() as types.userInfo.NavInfoResp;
+    const res = await (await fetch('https://api.bilibili.com/x/web-interface/nav', { headers: store.state.data.headers })).json() as types.userInfo.NavInfoResp;
     const { img_url, sub_url } = res.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
@@ -99,7 +99,7 @@ export async function bili_ticket() {
 export async function captcha() {
     return new Promise(async resolve => {
         const response = await (await fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header',
-        { method: "GET", headers: store.state.headers })).json() as types.login.GenCaptchaResp;
+        { method: "GET", headers: store.state.data.headers })).json() as types.login.GenCaptchaResp;
         const { token, geetest: { challenge, gt } } = response.data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
@@ -140,12 +140,12 @@ export async function correspondPath(timestamp: number) {
 
 export async function checkRefresh() {
     const response = await (await fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
-    { method: "GET", headers: store.state.headers })).json() as types.login.CookieInfoResp;
+    { method: "GET", headers: store.state.data.headers })).json() as types.login.CookieInfoResp;
     const { refresh, timestamp } = response.data;
     if (refresh) {
         const path = await correspondPath(timestamp);
         const csrfHtml = await (await fetch(`https://www.bilibili.com/correspond/1/${path}`,
-        { method: "GET", headers: store.state.headers })).text() as string;
+        { method: "GET", headers: store.state.data.headers })).text() as string;
         const parser = new DOMParser();
         const doc = parser.parseFromString(csrfHtml, 'text/html');
         const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;

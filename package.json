@@ -34,7 +34,7 @@
     "izitoast": "^1.4.0",
     "jsencrypt": "^3.3.2",
     "md5": "^2.3.0",
-    "qrcodejs2-fix": "^0.0.1",
+    "qrcode-generator": "^1.4.4",
     "sweetalert2": "^11.6.13",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0",

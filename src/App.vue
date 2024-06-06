@@ -1,5 +1,5 @@
 <template>
-    <TitleBar/>
+    <TitleBar />
     <ContextMenu ref="contextMenu" />
     <SideBar />
     <div class="main" @contextmenu.prevent="showMenu">
@@ -34,14 +34,15 @@ export default {
     mounted() {
         this.$router.push("/");
         this.$store.dispatch('init');
-        listen('headers', (e) => this.$store.commit('updateHeaders', e.payload));
+        listen('headers', (e) => this.$store.commit('updateState', { 'data.headers': e.payload }));
         listen('error', (e) => iziError(e.payload as string));
+        listen('settings', (e) => this.$store.commit('updateState', {settings: e.payload }) )
     }
 }
 
 </script>
 
-<style scoped>
+<style>
 .main {
     background-color: rgb(24,24,24);
     display: flex;
@@ -62,6 +63,17 @@ export default {
     justify-content: center;
     position: absolute;
     color: var(--content-color);
+    padding: 24px;
+    overflow: auto;
+}
+
+.page h1 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.page h2 {
+    font-size: 20px;
 }
 
 /* .fade-leave-active, */

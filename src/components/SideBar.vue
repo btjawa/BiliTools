@@ -1,5 +1,5 @@
 <template>
-<ul data-tauri-drag-region @contextmenu.prevent class="sidebar" ref="sidebar">
+<ul @contextmenu.prevent class="sidebar" ref="sidebar">
     <router-link to="/user-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/user-page') }" class="sidebar-item sidebar-user-page"
             @click="inited ? navigate() : iziError('请等待初始化完成');">
@@ -33,6 +33,7 @@
 import { defineComponent } from 'vue';
 import { iziError } from '@/services/utils';
 import { type } from '@tauri-apps/plugin-os';
+import store from '@/store';
 export default defineComponent({
     methods: {
         isActive(path: string): boolean {
@@ -41,8 +42,8 @@ export default defineComponent({
         iziError
     },
     computed: {
-        user() { return this.$store.state.user },
-        inited() { return this.$store.state.inited },
+        user() { return store.state.user },
+        inited() { return store.state.data.inited },
         avatarUrl(): string {
             return this.user.isLogin ? this.user.avatar : new URL('@/assets/img/default-avatar.jpg', import.meta.url).href;
         },
@@ -103,7 +104,7 @@ export default defineComponent({
 }
 
 .sidebar-item:hover, .sidebar-item.active {
-    color: rgb(212,78,125);
+    color: var(--primary-color);
     cursor: pointer;
 }
 

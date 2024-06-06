@@ -21,11 +21,13 @@
 }
 
 :root {
+    --primary-color: rgb(212,78,125);
     --content-color: rgb(233,233,233);
-    --block-color: #3b3b3bc0;
+    --block-color: #333;
     --desc-color: #a2a7ae;
     --block-radius: 8px;
     --split-color: #c4c4c433;
+    --section-color: #1f1f1f;
 }
 
 body {
@@ -41,9 +43,41 @@ body {
     margin: 0;
     padding: 0;
     text-rendering: optimizeLegibility;
+    user-select: none;
+}
+
+hr {
+    border: 1px solid var(--split-color);
+    margin: 8px 0;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    font-size: 12px;
+    transition: 0.1s background;
+    background: var(--block-color);
+    user-select: none !important;
+}
+
+.ellipsis {
+    display: inline-block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    word-break: break-word;
+    white-space: nowrap;
+}
+
+.dis-placeholder {
+    color: #c4c4c450;
+    pointer-events: none;
 }
 
 .iziToast-wrapper-topRight,
 .iziToast-wrapper-topLeft {
     transform: translateY(30px);
+}
+
+.text, .text * {
+    user-select: text;
 }

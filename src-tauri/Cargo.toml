@@ -40,9 +40,3 @@ dirs-next = "2.0"
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-updater = "2.0.0-beta.3"
-
-[target."cfg(target_os = \"windows\")".dependencies]
-win32job = "2.0.0"
-
-[target."cfg(target_os = \"macos\")".dependencies]
-nix = "0.23"

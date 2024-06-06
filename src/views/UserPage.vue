@@ -37,7 +37,7 @@
         <div class="login__scan_wp">
             <div class="login__scan_title">扫描二维码登录</div>
             <div class="login__scan_box">
-                <div class="login__qrcode" ref="qrcodeBox"></div>
+                <canvas id="login__qrcode" ref="qrcodeBox"></canvas>
             </div>
             <div class="login__scan_tips" ref="qrcodeTips"></div>
             <div class="login__scan_desc">
@@ -56,14 +56,15 @@ import { utils, login } from '@/services';
 import { fetch } from '@tauri-apps/plugin-http';
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from "@tauri-apps/api/event";
+import store from '@/store';
 
 export default {
     data() {
         return { base64Img: '' };
     },
     computed: {
-        user() { return this.$store.state.user },
-        headers() { return this.$store.state.headers },
+        user() { return store.state.user },
+        headers() { return store.state.data.headers },
         levelIcon() {
             return new URL(`../assets/img/level/level${this.user.level}.svg`, import.meta.url).href
         },
@@ -81,11 +82,11 @@ export default {
             this.base64Img = `data:image/jpeg;base64,${base64}`;
         },
         async login() {
-            login.scanLogin(this.$refs.qrcodeBox as HTMLElement).then(mid => {
+            login.scanLogin(this.$refs.qrcodeBox as HTMLCanvasElement).then(mid => {
                 if (mid !== 0) {
                     utils.iziInfo('登录成功~')
                     this.$router.push('/');
-                    setTimeout(() => this.$store.dispatch('fetchUser', mid), 300);
+                    setTimeout(() => store.dispatch('fetchUser', mid), 300);
                 }
             })
         },
@@ -95,10 +96,10 @@ export default {
             const mid = Number(await invoke('exit'));
             if (loadingBox) loadingBox.classList.remove('active');
             this.$router.push('/');
-            setTimeout(() => this.$store.dispatch('fetchUser', mid), 300);
+            setTimeout(() => store.dispatch('fetchUser', mid), 300);
         },
     },
-    unmounted() {
+    deactivated() {
         emit('stop_login');
     },
     activated() {
@@ -124,7 +125,7 @@ export default {
 .profile, .login {
     position: relative;
     border-radius: var(--block-radius);
-    background: rgb(23, 23, 23);
+    background: var(--section-color);
     border: #333333 solid 1px;
     height: 240px;
 }
@@ -139,13 +140,11 @@ export default {
     background-position: 0 100%, 100% 100%;
     background-repeat: no-repeat, no-repeat;
     background-size: 14%;
-    user-select: none;
 }
 
 .profile__top_photo, .profile__top_photo img, .profile::after {
     width: 912.75px;
     height: 142.6171875px;
-    user-select: none;
     border-radius: var(--block-radius);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
@@ -174,7 +173,6 @@ export default {
 .profile__avatar_cont, .profile__avatar {
     position: relative;
     height: 90px;
-    user-select: none;
     z-index: 1;
 }
 
@@ -183,7 +181,7 @@ export default {
 }
 
 .profile__avatar {
-    border: rgb(23, 23, 23) 1px solid;
+    border: var(--section-color) 1px solid;
     border-radius: 50%;
 }
 
@@ -218,7 +216,6 @@ export default {
 
 .profile__name img {
     margin-left: 12px;
-    user-select: none;
 }
 
 .profile__level {
@@ -246,7 +243,6 @@ export default {
 
 .profile__operates {
     font-size: 13px;
-    user-select: none;
 }
 
 .profile__operates div {

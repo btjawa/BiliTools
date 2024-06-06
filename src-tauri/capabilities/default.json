@@ -36,9 +36,15 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://*.bilibili.com/*" },
-        { "url": "https://*.hdslb.com/*" },
-        { "url": "https://httpbin.org/*" }
+        {
+          "url": "https://*.bilibili.com/*"
+        },
+        {
+          "url": "https://*.hdslb.com/*"
+        },
+        {
+          "url": "https://httpbin.org/*"
+        }
       ]
     },
     "updater:allow-check",
