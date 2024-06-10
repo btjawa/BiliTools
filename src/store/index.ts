@@ -12,8 +12,8 @@ export default createStore({
             user: {
                 avatar: "", name: "", desc: "",
                 mid: 0, coins: 0, level: 0,
-                vip: "", sex: "", vip_status: false,
-                top_photo: "", isLogin: false,
+                vip: "", sex: "", vipStatus: false,
+                topPhoto: "", isLogin: false
             },
             settings: {
                 down_dir: '加载中...',
@@ -29,6 +29,16 @@ export default createStore({
                 tempCount: '加载中...',
                 headers: {},
                 mediaInfo: {} as MediaInfo,
+                mediaProfile: {
+                    dms: [16],
+                    ads: [30216],
+                    cdc: [7],
+                    currSel: {
+                        dms: 16,
+                        ads: 30216,
+                        cdc: 7,
+                    }
+                }
             }
         };
     },
@@ -57,11 +67,14 @@ export default createStore({
                 const details = await (await fetch('https://api.bilibili.com/x/space/wbi/acc/info?'
                 + signature, { headers: state.data.headers })).json() as types.userInfo.UserInfoResp;
                 if (details.code == 0) {
+                    const arrayBuffer = await (await fetch((details.data.top_photo).replace('http:', 'https:'),
+                    { headers: state.data.headers })).arrayBuffer();
+                    const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
                     const userData = {
                         avatar: details.data.face, name: details.data.name, desc: details.data.sign,
-                        top_photo: (details.data.top_photo).replace('http:', 'https:'),
+                        topPhoto: `data:image/jpeg;base64,${base64}`,
                         vip: (details.data.vip.label.img_label_uri_hans_static).replace('http:', 'https:'),
-                        vip_status: Boolean(details.data.vip.status), coins: details.data.coins,
+                        vipStatus: Boolean(details.data.vip.status), coins: details.data.coins,
                         sex: details.data.sex, level: details.data.level, mid, isLogin: true
                     };
                     commit('updateState', { 'user': userData, 'data.inited': true });

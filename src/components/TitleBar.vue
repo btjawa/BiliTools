@@ -69,77 +69,69 @@ export default defineComponent({
 
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .title-bar {
-    height: 30px;
-    width: calc(100vw - 61px);
-    background: rgba(28,28,28,0.9);
-    border-bottom: #333333 solid 1px;
-    position: absolute;
-    display: flex;
-    right: 0;
-    top: 0;
-    color: #c4c4c4;
+	height: 30px;
+	width: calc(100vw - 61px);
+	background: rgba(28,28,28,0.9);
+	border-bottom: #333333 solid 1px;
+	position: absolute;
+	display: flex;
+	right: 0;
+	top: 0;
+	color: #c4c4c4;
 }
-
 .macos,
 .titlebar-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.1s;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	transition: all 0.1s;
 }
-
 .windows {
-    margin-left: auto;
+	margin-left: auto;
+	.titlebar-button {
+		width: 45px;
+		height: 29px;
+		i {
+			font-size: 12px;
+		}
+		&:hover {
+			background-color: #242424;
+		}
+		&.close {
+			&:hover {
+				background-color: rgb(196,43,28);
+			}
+		}
+	}
 }
-
-.windows .titlebar-button {
-    width: 45px;
-    height: 29px;
-}
-
-.windows .titlebar-button i {
-    font-size: 12px;
-}
-
-.windows .titlebar-button:hover {
-    background-color: #242424;
-}
-
-.windows .titlebar-button.close:hover {
-    background-color: rgb(196,43,28);
-}
-
 .macos {
-    transform: translateX(-100%);
-    padding: 0 3px;
-    z-index: 1;
-}
-
-.macos .titlebar-button {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin: auto 3px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: rgb(255, 84, 77);
-}
-
-.macos .titlebar-button.minimize {
-    background: rgb(255, 189, 46);
-}
-
-.macos .titlebar-button.maximize {
-    background: rgb(40, 201, 63);
-}
-
-.macos .titlebar-button i {
-    display: none;
-    color: rgb(0, 0, 0, 0.6);
-}
-
-.macos:hover i {
-    display: inline-flex;
+	transform: translateX(-100%);
+	padding: 0 3px;
+	z-index: 1;
+	.titlebar-button {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		margin: auto 3px;
+		border: 1px solid rgba(0, 0, 0, 0.12);
+		background: rgb(255, 84, 77);
+		&.minimize {
+			background: rgb(255, 189, 46);
+		}
+		&.maximize {
+			background: rgb(40, 201, 63);
+		}
+		i {
+			display: none;
+			color: rgb(0, 0, 0, 0.6);
+		}
+	}
+	&:hover {
+		i {
+			display: inline-flex;
+		}
+	}
 }
 </style>

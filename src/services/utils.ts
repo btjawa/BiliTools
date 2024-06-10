@@ -23,7 +23,8 @@ export function iziInfo(message = '') {
     });
 }
 
-export function iziError(message = '') {
+export function iziError(msg: any) {
+    const message = msg.toString();
     console.error(message);
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',

@@ -44,6 +44,14 @@ body {
     padding: 0;
     text-rendering: optimizeLegibility;
     user-select: none;
+    -webkit-user-select: none;
+}
+
+input {
+    background: none;
+    outline: none;
+    border: none;
+    margin: 0;
 }
 
 hr {
@@ -58,6 +66,7 @@ button {
     transition: 0.1s background;
     background: var(--block-color);
     user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 .ellipsis {
@@ -80,4 +89,5 @@ button {
 
 .text, .text * {
     user-select: text;
+    -webkit-user-select: text;
 }

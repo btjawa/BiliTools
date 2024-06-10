@@ -33,6 +33,7 @@ export interface MediaInfo {
     duration: number;
     id: number,
     cid: number,
+    eid: number,
     ss_title: string;
   }[]
 }
@@ -1181,4 +1182,313 @@ export interface MusicTagsInfo {
     key: number;
     info: string;
   }[];
+}
+
+export interface VideoPlayUrlInfo  {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    from: string;
+    result: string;
+    message: string;
+    quality: number;
+    format: string;
+    timelength: number;
+    accept_format: string;
+    accept_description: string[];
+    accept_quality: number[];
+    video_codecid: number;
+    seek_param: string;
+    seek_type: string;
+    dash: {
+      duration: number;
+      minBufferTime: number;
+      min_buffer_time: number;
+      video: {
+        id: number;
+        baseUrl: string;
+        base_url: string;
+        backupUrl: string[];
+        backup_url: string[];
+        bandwidth: number;
+        mimeType: string;
+        mime_type: string;
+        codecs: string;
+        width: number;
+        height: number;
+        frameRate: string;
+        frame_rate: string;
+        sar: string;
+        startWithSap: number;
+        start_with_sap: number;
+        SegmentBase: {
+          Initialization: string;
+          indexRange: string;
+        };
+        segment_base: {
+          initialization: string;
+          index_range: string;
+        };
+        codecid: number;
+      }[];
+      audio: {
+        id: number;
+        baseUrl: string;
+        base_url: string;
+        backupUrl: string[];
+        backup_url: string[];
+        bandwidth: number;
+        mimeType: string;
+        mime_type: string;
+        codecs: string;
+        width: number;
+        height: number;
+        frameRate: string;
+        frame_rate: string;
+        sar: string;
+        startWithSap: number;
+        start_with_sap: number;
+        SegmentBase: {
+          Initialization: string;
+          indexRange: string;
+        };
+        segment_base: {
+          initialization: string;
+          index_range: string;
+        };
+        codecid: number;
+      }[];
+      dolby: {
+        type: number;
+        audio: null;
+      };
+      flac: null;
+    };
+    support_formats: {
+      quality: number;
+      format: string;
+      new_description: string;
+      display_desc: string;
+      superscript: string;
+      codecs: string[];
+    }[];
+    high_format: null;
+    last_play_time: number;
+    last_play_cid: number;
+    view_info: null;
+  };
+}
+
+export interface BangumiPlayUrlInfo {
+  code: number;
+  message: string;
+  result: {
+    accept_format: string;
+    code: number;
+    seek_param: string;
+    is_preview: number;
+    fnval: number;
+    video_project: boolean;
+    fnver: number;
+    type: string;
+    bp: number;
+    result: string;
+    seek_type: string;
+    from: string;
+    video_codecid: number;
+    record_info: {
+      record_icon: string;
+      record: string;
+    };
+    is_drm: boolean;
+    no_rexcode: number;
+    format: string;
+    support_formats: {
+      display_desc: string;
+      has_preview: boolean;
+      sub_description: string;
+      superscript: string;
+      need_login: boolean;
+      codecs: string[];
+      format: string;
+      description: string;
+      need_vip: boolean;
+      quality: number;
+      new_description: string;
+    }[];
+    message: string;
+    accept_quality: number[];
+    quality: number;
+    timelength: number;
+    durls: unknown[];
+    has_paid: boolean;
+    dash: {
+      duration: number;
+      minBufferTime: number;
+      min_buffer_time: number;
+      video: {
+        start_with_sap: number;
+        bandwidth: number;
+        sar: string;
+        backupUrl: string[];
+        codecs: string;
+        base_url: string;
+        backup_url: string[];
+        segment_base: {
+          initialization: string;
+          index_range: string;
+        };
+        mimeType: string;
+        frame_rate: string;
+        SegmentBase: {
+          Initialization: string;
+          indexRange: string;
+        };
+        frameRate: string;
+        codecid: number;
+        baseUrl: string;
+        size: number;
+        mime_type: string;
+        width: number;
+        startWithSAP: number;
+        id: number;
+        height: number;
+        md5: string;
+      }[];
+      audio: {
+        start_with_sap: number;
+        bandwidth: number;
+        sar: string;
+        backupUrl: string[];
+        codecs: string;
+        base_url: string;
+        backup_url: string[];
+        segment_base: {
+          initialization: string;
+          index_range: string;
+        };
+        mimeType: string;
+        frame_rate: string;
+        SegmentBase: {
+          Initialization: string;
+          indexRange: string;
+        };
+        frameRate: string;
+        codecid: number;
+        baseUrl: string;
+        size: number;
+        mime_type: string;
+        width: number;
+        startWithSAP: number;
+        id: number;
+        height: number;
+        md5: string;
+      }[];
+      dolby: {
+        audio: unknown[];
+        type: number;
+      };
+    };
+    clip_info_list: {
+      materialNo: number;
+      start: number;
+      end: number;
+      toastText: string;
+      clipType: string;
+    }[];
+    accept_description: string[];
+    status: number;
+  };
+}
+
+export interface LessonPlayUrlInfo {
+  code: number;
+  data: {
+    accept_format: string;
+    code: number;
+    seek_param: string;
+    is_preview: number;
+    no_rexcode: number;
+    format: string;
+    fnval: number;
+    video_project: boolean;
+    fnver: number;
+    support_formats: {
+      display_desc: string;
+      superscript: string;
+      need_login: boolean;
+      codecs: string[];
+      format: string;
+      description: string;
+      quality: number;
+      new_description: string;
+    }[];
+    message: string;
+    type: string;
+    accept_quality: number[];
+    quality: number;
+    timelength: number;
+    result: string;
+    seek_type: string;
+    has_paid: boolean;
+    from: string;
+    dash: {
+      duration: number;
+      min_buffer_time: number;
+      video: {
+        start_with_sap: number;
+        bandwidth: number;
+        sar: string;
+        codecs: string;
+        base_url: string;
+        backup_url: string[];
+        segment_base: {
+          initialization: string;
+          index_range: string;
+        };
+        frame_rate: string;
+        codecid: number;
+        size: number;
+        mime_type: string;
+        width: number;
+        id: number;
+        noRexcode: number;
+        height: number;
+        md5: string;
+      }[];
+      audio: {
+        start_with_sap: number;
+        bandwidth: number;
+        sar: string;
+        codecs: string;
+        base_url: string;
+        backup_url: string[];
+        segment_base: {
+          initialization: string;
+          index_range: string;
+        };
+        frame_rate: string;
+        codecid: number;
+        size: number;
+        mime_type: string;
+        width: number;
+        id: number;
+        noRexcode: number;
+        height: number;
+        md5: string;
+      }[];
+      losslessAudio: {
+        isLosslessAudio: boolean;
+      };
+      dolby: {
+        audio: unknown[];
+        type: string;
+      };
+    };
+    video_codecid: number;
+    accept_description: string[];
+    status: number;
+  };
+  message: string;
 }

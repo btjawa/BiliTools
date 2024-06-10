@@ -92,73 +92,70 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .context-menu {
-    width: 200px;
-    border-radius: 8px;
-    background-color: #2c2c2c;
-    border: solid 1px #666666d3;
-    z-index: 10;
-    flex-direction: column;
-    flex-wrap: wrap;
-    position: fixed;
-    opacity: 0;
-    display: flex;
-    transition: opacity 0.3s;
+	width: 200px;
+	border-radius: 8px;
+	background-color: #2c2c2c;
+	border: solid 1px #666666d3;
+	z-index: 10;
+	flex-direction: column;
+	flex-wrap: wrap;
+	position: fixed;
+	opacity: 0;
+	display: flex;
+	transition: opacity 0.3s;
 }
-
 .context-menu-split {
-    height: 8px;
-    align-self: center;
-    width: 100%;
-    position: relative;
+	height: 8px;
+	align-self: center;
+	width: 100%;
+	position: relative;
+	&::after {
+		content: '';
+		height: 0.5px;
+		width: 96%;
+		left: 2%;
+		top: 50%;
+		position: absolute;
+		background-color: #6666669d;
+	}
 }
-
-.context-menu-split::after {
-    content: '';
-    height: 0.5px;
-    width: 96%;
-    left: 2%;
-    top: 50%;
-    position: absolute;
-    background-color: #6666669d;
-}
-
 .context-menu-item {
-    color: #c4c4c4;
-    height: 35px;
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    font-size: 14px;
-    position: relative;
-    cursor: pointer;
+	color: #c4c4c4;
+	height: 35px;
+	display: flex;
+	align-items: center;
+	padding: 0 10px;
+	font-size: 14px;
+	position: relative;
+	cursor: pointer;
+	&::after {
+		content: '';
+		position: absolute;
+		top: 9%;
+		left: 2%;
+		right: 0;
+		height: 100%;
+		border-radius: 4px;
+		width: 96%;
+		height: 82%;
+		z-index: -1;
+		transition: all 0.2s;
+	}
+	&:hover {
+		&::after {
+			background-color: #6666669d;
+		}
+	}
 }
-
-.context-menu-item::after {
-    content: '';
-    position: absolute;
-    top: 9%;
-    left: 2%;
-    right: 0;
-    height: 100%;
-    border-radius: 4px;
-    width: 96%;
-    height: 82%;
-    z-index: -1;
-    transition: all 0.2s;
-}
-
-.context-menu-item:hover::after { background-color: #6666669d; }
-
 .context-menu-item-key {
-    position: absolute;
-    right: 10px;
-    color: #999;
-    font-size: 12px;
+	position: absolute;
+	right: 10px;
+	color: #999;
+	font-size: 12px;
 }
-
 .context-menu-item-icon {
-    margin-right: 10px;
+	margin-right: 10px;
 }
 </style>

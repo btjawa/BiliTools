@@ -66,7 +66,7 @@ export interface GenCaptchaResp {
     };
 }
 
-export interface VerifiedCaptchaResp {
+export interface Captcha {
     token: string,
     challenge: string,
     validate: string,

@@ -533,7 +533,7 @@ fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: Str
     if action == "init" || action == "read" {
         if let Ok(s) = fs::read_to_string(work_dir.join("config.json")) {
             if let Ok(local_config) = serde_json::from_str::<HashMap<String, Value>>(&s) {
-                update_config(local_config);
+                update_config(local_config)
             }
         }
     } else if action == "write" {
