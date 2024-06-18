@@ -162,7 +162,7 @@ export default {
             cdc_list: [
                 { id: 7, label: 'AVC 编码', login: false },
                 { id: 12, label: 'HEVC 编码', login: false },
-                { id: 13, label: 'AV1 编码', login: false }
+                { id: 13, label: 'AV1 编码', login: false },
             ],
             conc_list: [
                 { id: 1, label: '1个' },
@@ -225,9 +225,6 @@ export default {
 	right: 36px;
 	top: 24px;
 	text-align: center;
-	div {
-		display: flex;
-	}
 	img {
 		&:not(.icon-big-svg) {
 			width: 50px;
@@ -238,6 +235,9 @@ export default {
 		}
 	}
 }
+.setting-page__info div,.setting-page__option section form {
+	display: flex;
+}
 .setting-page__option {
 	margin: 8px 0;
 	padding: 10px 12px;
@@ -247,7 +247,7 @@ export default {
 	min-width: 400px;
 	section {
 		.ellipsis {
-			max-width: 300px;
+			max-width: 290px;
 		}
 		.btn-sec {
 			display: flex;
@@ -271,25 +271,19 @@ export default {
 				background: var(--split-color);
 			}
 		}
-		form {
-			display: flex;
-			gap: 16px;
-		}
 	}
 	div {
 		max-width: 400px;
 	}
 }
-.setting-page__option,
-.setting-page__option section {
+.setting-page__option,.setting-page__option section {
 	display: flex;
 	flex-direction: column;
 	position: relative;
 	gap: 5px;
 	font-size: 13px;
 }
-.radio,
-.radio-btn {
+.radio,.radio-btn {
 	display: inline-flex;
 	align-items: center;
 	cursor: pointer;
@@ -298,9 +292,12 @@ export default {
 }
 .radio {
 	&:nth-child(-n+5) {
-			min-width: 78.8px;
-		}
-	input[type="radio"] {
+        min-width: 94.8px;
+    }
+	&:not(:nth-child(-n+4)) {
+        margin-right: 16px;
+    }
+	input[type=radio] {
 		display: none;
 	}
 	&.dis-placeholder {
@@ -308,11 +305,11 @@ export default {
 			border: 2px solid #c4c4c450;
 		}
 	}
-	input[type="radio"]:checked {
+	input[type=radio]:checked {
 		& + .radio-btn {
 			border: 2px solid var(--primary-color);
 			&::before {
-				content: '';
+				content: "";
 				width: 50%;
 				height: 50%;
 				border-radius: 50%;
@@ -326,7 +323,7 @@ export default {
 	width: 15px;
 	border-radius: 50%;
 	justify-content: center;
-	border: 2px solid #808080;
-	transition: border 0.1s ease-in-out;
+	border: 2px solid gray;
+	transition: border .1s ease-in-out;
 }
 </style>

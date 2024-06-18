@@ -117,7 +117,7 @@ export async function captcha() {
                 const result = captchaObj.getValidate();
                 const validate = result.geetest_validate;
                 const seccode = result.geetest_seccode;
-                return resolve({token, challenge, validate, seccode} as types.login.VerifiedCaptchaResp);
+                return resolve({token, challenge, validate, seccode} as types.login.Captcha);
             })
         });
     })
@@ -141,6 +141,7 @@ export async function correspondPath(timestamp: number) {
 export async function checkRefresh() {
     const response = await (await fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info',
     { method: "GET", headers: store.state.data.headers })).json() as types.login.CookieInfoResp;
+    if (response.code == -101) return -101;
     const { refresh, timestamp } = response.data;
     if (refresh) {
         const path = await correspondPath(timestamp);
@@ -148,7 +149,7 @@ export async function checkRefresh() {
         { method: "GET", headers: store.state.data.headers })).text() as string;
         const parser = new DOMParser();
         const doc = parser.parseFromString(csrfHtml, 'text/html');
-        const refreshCsrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
-        invoke("refresh_cookie", { refreshCsrf });
+        const refresh_csrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
+        await invoke("refresh_cookie", { refresh_csrf });
     } else return refresh;
 }

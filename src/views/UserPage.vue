@@ -140,7 +140,7 @@ export default {
     methods: {
         async login(type: 'scan' | 'pwd' | 'sms') {
             try {
-                let mid = 0;
+				if (this.user.isLogin) return null;
                 if (type === 'sms') {
                     const tel = (this.$refs.smsAccount as HTMLInputElement).value;
                     const code = (this.$refs.smsCode as HTMLInputElement).value;
@@ -148,7 +148,7 @@ export default {
                         iziError('手机号或验证码为空');
                         return null;
                     }
-                    mid = await login.smsLogin(tel, code, this.cid);
+                    await login.smsLogin(tel, code, this.cid);
                 } else if (type === 'pwd') {
                     const account = (this.$refs.pwdAccount as HTMLInputElement).value;
                     const password = (this.$refs.pwdPwd as HTMLInputElement).value;
@@ -156,29 +156,33 @@ export default {
                         iziError('用户名或密码为空');
                         return null;
                     }
-                    mid = await login.pwdLogin(account, password);
+                    await login.pwdLogin(account, password);
                 } else if (type === 'scan') {
 					this.scanStat = 0;
 					emit('stop_login');
-                    mid = await login.scanLogin(this.$refs.qrcodeBox as HTMLCanvasElement);
+					this.cid = await login.getZoneCode();
+                	this.countryList = await login.getCountryList();
+					listen('login-status', e => {
+						if (e.payload == 86090) this.scanStat = 1;
+						else if (e.payload == 86038) this.scanStat = 2;
+					});
+                    await login.scanLogin(this.$refs.qrcodeBox as HTMLCanvasElement);
                 }
-                if (mid != 0) {
-                    utils.iziInfo('登录成功~')
-                    this.$router.push('/');
-                    setTimeout(() => store.dispatch('fetchUser', mid), 300);
-                }
+				utils.iziInfo('登录成功~')
+				invoke('rw_config', { action: 'write', settings: { df_dms: 80 }, secret: store.state.data.secret });
+				this.$router.push('/');
+				store.dispatch('fetchUser', true);
             } catch(err) {
+				if ((err as any).toString() == 86114) return 86114;
                 iziError(err);
                 return null;
             };
         },
         async exit() {
-            const loadingBox = document.querySelector('.loading');
-            if (loadingBox) loadingBox.classList.add('active');
-            const mid = await invoke('exit');
-            if (loadingBox) loadingBox.classList.remove('active');
+            await login.exitLogin();
             this.$router.push('/');
-            setTimeout(() => store.dispatch('fetchUser', mid as number), 300);
+            invoke('rw_config', { action: 'write', settings: { df_dms: 32, df_ads: 30280 }, secret: store.state.data.secret });
+            store.dispatch('fetchUser');
         },
         async sendSms() {
             const tel = (this.$refs.smsAccount as HTMLInputElement).value;
@@ -196,15 +200,7 @@ export default {
     },
     async activated() {
         try {
-            if (!this.user.isLogin) {
-                this.login('scan');
-				listen('login-status', e => {
-					if (e.payload == 86090) this.scanStat = 1;
-					else if (e.payload == 86038) this.scanStat = 2;
-				});
-                this.cid = await login.getZoneCode();
-                this.countryList = await login.getCountryList();
-            }
+            this.login('scan');
         } catch(err) {
             iziError(err);
             return null;
@@ -218,8 +214,11 @@ export default {
 
 <style scoped lang="scss">
 button {
-	background: none;
-	transition: color 0.2s, background 0.2s;
+	background: 0 0;
+	transition: color .2s,background .2s;
+}
+input[type=password]::-ms-clear,input[type=password]::-ms-reveal,input[type=password]::-webkit-inner-spin-button,input[type=password]::-webkit-outer-spin-button {
+	display: none;
 }
 .login__input_btn {
 	height: 40px;
@@ -231,10 +230,7 @@ button {
 		background: var(--primary-color);
 	}
 }
-.login__input_form_item > button:hover,
-.profile__exit_login:hover,
-.login__desc a,
-.login__tab_btn.active {
+.login__desc a,.login__input_form_item>button:hover,.login__tab_btn.active,.profile__exit_login:hover {
 	color: var(--primary-color);
 	text-decoration: none;
 }
@@ -270,7 +266,7 @@ button {
 	background: var(--block-color);
 	z-index: 1;
 	overflow: auto;
-	transition: opacity 0.1s;
+	transition: opacity .1s;
 	pointer-events: none;
 	opacity: 0;
 	&.active {
@@ -284,25 +280,48 @@ button {
 	flex: 1;
 	justify-content: space-between;
 	cursor: pointer;
-	transition: background 0.1s;
+	transition: background .1s;
 	&:hover {
 		background: var(--split-color);
 	}
 }
-.profile .profile__text_area,
-.login__scan_wp, .login__input_wp,
+.profile {
+	.profile__text_area {
+		display: flex;
+		flex-direction: column;
+	}
+	&::after {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		right: 0;
+		border-bottom: #333 solid 1px;
+		background: linear-gradient(to bottom,transparent 0,rgba(0,0,0,.13) 25%,rgba(0,0,0,.26) 50%,rgba(0,0,0,.4) 75%,rgba(0,0,0,.66) 100%);
+	}
+}
+.login__input_wp,.login__scan_wp,.profile__operates {
+	flex-direction: column;
+}
 .profile__operates {
 	display: flex;
-	flex-direction: column;
+	button {
+		padding: var(--block-radius);
+		transition: color .2s;
+	}
+	i {
+		margin-right: 6px;
+	}
 }
 .profile__text_area {
 	flex: 1;
 }
-.profile, .login {
+.login,.profile {
 	position: relative;
 	border-radius: var(--block-radius);
 	background: var(--section-color);
-	border: #333333 solid 1px;
+	border: #333 solid 1px;
 	height: 240px;
 }
 .login {
@@ -310,40 +329,27 @@ button {
 	width: 820px;
 	height: 430px;
 	padding: 52px 65px 29px 92px;
-	background-image: url("../assets/img/22_open.png"),
-                      url("../assets/img/33_open.png");
-	background-position: 0 100%, 100% 100%;
-	background-repeat: no-repeat, no-repeat;
+	background-image: url(../assets/img/22_open.png),url(../assets/img/33_open.png);
+	background-position: 0 100%,100% 100%;
+	background-repeat: no-repeat,no-repeat;
 	background-size: 14%;
 }
-.profile__top_photo, .profile__top_photo img, .profile::after {
+.profile::after,.profile__top_photo,.profile__top_photo img {
 	width: 912.75px;
 	height: 142.6171875px;
 	border-radius: var(--block-radius);
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0;
-	transition: opacity 0.5s;
-}
-.profile {
-	&::after {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		bottom: 0;
-		right: 0;
-		border-bottom: #333333 solid 1px;
-		background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.13) 25%, rgba(0,0,0,0.26) 50%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0.66) 100%);
-	}
+	transition: opacity .5s;
 }
 .profile__details {
 	position: absolute;
 	bottom: 0;
 	width: 100%;
-	padding: 0 30px 15px 30px;
+	padding: 0 30px 15px;
 	display: flex;
 }
-.profile__avatar_cont, .profile__avatar {
+.profile__avatar,.profile__avatar_cont {
 	position: relative;
 	height: 90px;
 	z-index: 1;
@@ -362,7 +368,7 @@ button {
 	right: 0;
 	z-index: 1;
 }
-.profile__name, .profile__exit_login {
+.profile__exit_login,.profile__name {
 	display: flex;
 	margin-top: auto;
 	align-items: center;
@@ -379,8 +385,7 @@ button {
 		margin-left: 12px;
 	}
 }
-.profile__name span,
-.profile__desc {
+.profile__desc,.profile__name span {
 	display: inline-block;
 	white-space: nowrap;
 	overflow: hidden;
@@ -392,13 +397,13 @@ button {
 .profile__vip_label {
 	height: 18px;
 }
-.profile__desc, .profile__desc span {
+.profile__desc,.profile__desc span {
 	font-size: 13px;
 	line-height: 22px;
 	color: var(--desc-color);
 }
-.profile__desc i, .profile__mid {
-	color: rgb(79,82,89);
+.profile__desc i,.profile__mid {
+	color: #4f5259;
 	font-size: 12px;
 }
 .profile__desc {
@@ -406,23 +411,14 @@ button {
 		margin-left: var(--block-radius);
 	}
 }
-.profile__operates {
+.login__scan_warning>span,.profile__operates {
 	font-size: 13px;
-	button {
-		padding: var(--block-radius);
-		transition: color 0.2s;
-	}
-	i {
-		margin-right: 6px;
-	}
 }
-.login__scan_wp, .login__input_wp,
-.login__scan_box {
+.login__input_wp,.login__scan_box,.login__scan_wp {
 	display: flex;
 	align-items: center;
 }
-.login__scan_title,
-.login__tab_wp {
+.login__scan_title,.login__tab_wp {
 	display: flex;
 	line-height: 22.4px;
 	margin-bottom: 26px;
@@ -433,7 +429,7 @@ button {
 	width: 180px;
 	height: 180px;
 	justify-content: center;
-	transition: opacity 0.4s;
+	transition: opacity .4s;
 	z-index: 1;
 	&:hover {
 		opacity: 0;
@@ -450,8 +446,8 @@ button {
 	z-index: 0;
 	transform: translateY(50px);
 	background-size: 100% 100%;
-	background-image: url("@/assets/img/qr-tips.png");
-	transition: opacity 0.4s;
+	background-image: url(@/assets/img/qr-tips.png);
+	transition: opacity .4s;
 }
 .login__scan_warning {
 	border-radius: var(--block-radius);
@@ -460,29 +456,26 @@ button {
 	z-index: 2;
 	height: 180px;
 	transform: translateY(26.7%);
-	background-color: rgba(31, 31, 31, 0.9);
+	background-color: rgba(31,31,31,.9);
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
 	cursor: pointer;
-	& > span {
-		font-size: 13px;
-	}
-	& div {
+	div {
 		width: 56px;
 		height: 56px;
 		border-radius: 50%;
 		background-color: var(--section-color);
 		margin-bottom: 10px;
-		& i {
+		i {
 			padding: 16px;
 			font-size: 24px;
 			color: var(--primary-color);
 		}
 	}
 }
-.login__main_split {
+.login__main_split,.login__small_split {
 	height: 70%;
 	width: 1px;
 	background: var(--split-color);
@@ -490,9 +483,7 @@ button {
 }
 .login__small_split {
 	height: 20px;
-	width: 1px;
 	margin: 0 21px;
-	background: var(--split-color);
 }
 .login__tab_btn {
 	font-size: 18px;

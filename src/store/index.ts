@@ -3,8 +3,16 @@ import { invoke } from '@tauri-apps/api/core';
 import { iziError } from '@/services/utils';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as types from '@/types';
-import * as verify from "../services/auth";
+import * as auth from "../services/auth";
 import { MediaInfo } from '../types/DataTypes';
+import { emit } from '@tauri-apps/api/event';
+
+interface Headers {
+    "User-Agent": string,
+    Referer: string,
+    Origin: string,
+    Cookie: string
+}
 
 export default createStore({
     state() {
@@ -59,27 +67,39 @@ export default createStore({
     actions: {
         async init({ commit, state }) {
             commit('updateState', { 'data.secret': await invoke('ready') });
-            await this.dispatch('fetchUser', await invoke('init', { secret: state.data.secret }));
+            await invoke('init', { secret: state.data.secret });
+            await auth.checkRefresh();
+            await this.dispatch('fetchUser');
+            emit('stop_login');
         },
-        async fetchUser({ commit, state }, mid: number) {
-            if (mid != 0) {
-                const signature = await verify.wbi({ mid });
-                const details = await (await fetch('https://api.bilibili.com/x/space/wbi/acc/info?'
-                + signature, { headers: state.data.headers })).json() as types.userInfo.UserInfoResp;
-                if (details.code == 0) {
-                    const arrayBuffer = await (await fetch((details.data.top_photo).replace('http:', 'https:'),
-                    { headers: state.data.headers })).arrayBuffer();
-                    const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-                    const userData = {
-                        avatar: details.data.face, name: details.data.name, desc: details.data.sign,
-                        topPhoto: `data:image/jpeg;base64,${base64}`,
-                        vip: (details.data.vip.label.img_label_uri_hans_static).replace('http:', 'https:'),
-                        vipStatus: Boolean(details.data.vip.status), coins: details.data.coins,
-                        sex: details.data.sex, level: details.data.level, mid, isLogin: true
-                    };
-                    commit('updateState', { 'user': userData, 'data.inited': true });
-                } else iziError(details.code + ", " + details.message);
-            } else commit('updateState', { 'user.isLogin': false, 'data.inited': true });
+        async fetchUser({ commit, state }, login: Boolean) {
+            const mid = await new Promise(resolve => {
+                let interval: NodeJS.Timeout;
+                const check = () => { const mid = (state.data.headers as Headers).Cookie?.match(/DedeUserID=(\d+);/)?.[1]; if (mid) { clearInterval(interval); resolve(mid) } };
+                if (login) interval = setInterval(check, 100); else resolve((state.data.headers as Headers).Cookie?.match(/DedeUserID=(\d+);/)?.[1] || 0);
+            });
+            if (mid == 0) {
+                commit('updateState', { 'user.isLogin': false, 'data.inited': true });
+                return null;
+            }
+            const signature = await auth.wbi({ mid });
+            const details = await (await fetch('https://api.bilibili.com/x/space/wbi/acc/info?'
+            + signature, { headers: state.data.headers })).json() as types.userInfo.UserInfoResp;
+            if (details.code == 0) {
+                const arrayBuffer = await (await fetch((details.data.top_photo).replace('http:', 'https:'),
+                { headers: state.data.headers })).arrayBuffer();
+                const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+                const userData = {
+                    avatar: details.data.face, name: details.data.name, desc: details.data.sign,
+                    topPhoto: `data:image/jpeg;base64,${base64}`,
+                    vip: (details.data.vip.label.img_label_uri_hans_static).replace('http:', 'https:'),
+                    vipStatus: Boolean(details.data.vip.status), coins: details.data.coins,
+                    sex: details.data.sex, level: details.data.level, mid, isLogin: true
+                };
+                commit('updateState', { 'user': userData, 'data.inited': true });
+            } else {
+                iziError(details.code + ", " + details.message)
+            };
         },
     },
 });

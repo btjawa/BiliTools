@@ -77,10 +77,13 @@ export default {
             if (v.type) {
                 this.elmState.active = true;
                 this.elmState.rootActive = false;
+				const start = Date.now();
                 try {
                     await data.getMediaInfo(v.id, v.type);
                     this.elmState.rootActive = true;
                 } catch(err) {
+					const elapsed = Date.now() - start;
+					if (elapsed < 310) await new Promise(resolve => setTimeout(resolve, 310 - elapsed))
                     this.elmState.active = false;
                     utils.iziError(err);
                     return null;
@@ -152,16 +155,14 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.search,
-.search__input,
-.search__btn {
+.search,.search__btn,.search__input {
 	color: var(--content-color);
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	text-align: center;
 	border-radius: 30px;
-	transition: all 0.5s cubic-bezier(0,1,.6,1);
+	transition: all .3s cubic-bezier(0,1,.9,1);
 }
 .search {
 	background: var(--block-color);
@@ -176,14 +177,13 @@ export default {
 		top: 16px;
 	}
 	&:focus-within {
-		background: var(--content-color);
 		.search__input {
 			color: var(--block-color);
 		}
-		.search__btn {
-			background: var(--content-color);
-		}
 	}
+}
+.search:focus-within,.search:focus-within .search__btn {
+	background: var(--content-color);
 }
 .search__input {
 	width: 100%;
@@ -200,7 +200,7 @@ export default {
 	padding: 10px;
 	cursor: pointer;
 	&:hover {
-		background: #5c5c5c9d;
+		background: #5c5c5c 9d;
 	}
 }
 .media-root {
@@ -212,17 +212,18 @@ export default {
 	opacity: 0;
 	gap: 5px;
 	top: 72px;
-	transition: opacity 0.2s;
+	transition: opacity .2s;
 	&.active {
 		opacity: 1;
 	}
+}
+.media-info,.media-info__cover {
+	border-radius: var(--block-radius);
 }
 .media-info {
 	height: 170px;
 	width: 100%;
 	background-color: var(--block-color);
-	border: none;
-	border-radius: var(--block-radius);
 	align-items: center;
 	display: flex;
 	padding: 16px;
@@ -234,12 +235,10 @@ export default {
 	}
 }
 .media-info__cover {
-	border-radius: var(--block-radius);
 	height: 138px;
 	margin-right: 16px;
 }
-.media-info__data,
-.media-info__meta {
+.media-info__data,.media-info__meta {
 	display: flex;
 	flex-direction: column;
 }
@@ -260,13 +259,11 @@ export default {
 	line-height: 22px;
 }
 .media-info__meta_stat {
-	*:not(span) {
+	:not(span) {
 		margin-right: 16px;
 	}
 }
-.media-info__meta_stat span,
-.media-info__meta,
-.media-info__desc {
+.media-info__desc,.media-info__meta,.media-info__meta_stat span {
 	font-size: 14px;
 }
 .media-info__desc {
@@ -294,8 +291,7 @@ export default {
 		max-width: 68px;
 	}
 }
-.media-thead,
-.media-list__item {
+.media-list__item,.media-thead {
 	border-radius: var(--block-radius);
 	width: 100%;
 	background: var(--block-color);
@@ -331,7 +327,7 @@ export default {
 	}
 	&:not(.options__item):not(:last-child)::after {
 		display: inline-block;
-		content: '';
+		content: "";
 		position: absolute;
 		right: -10px;
 		background: var(--split-color);
@@ -350,7 +346,7 @@ export default {
 		padding: 8px 10px;
 		background-color: #2b2b2b;
 		border-radius: 8px;
-		transition: all 0.3s;
+		transition: all .3s;
 		display: flex;
 		flex-direction: row;
 		align-items: center;

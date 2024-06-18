@@ -48,7 +48,7 @@ export async function scanLogin(canvas: HTMLCanvasElement) {
     }
     const { qrcode_key, url } = response.data;
     createQrcode(canvas, url);
-    const mid = await invoke('scan_login', { qrcodeKey: qrcode_key }) as number
+    const mid = await invoke('scan_login', { qrcode_key }) as number
     return mid;
 }
 
@@ -115,4 +115,12 @@ export async function sendSms(tel: string, cid: string) {
     }
     smsKey = response.data.captcha_key;
     return response;
+}
+
+export async function exitLogin() {
+    const loadingBox = document.querySelector('.loading');
+    if (loadingBox) loadingBox.classList.add('active');
+    const mid = await invoke('exit');
+    if (loadingBox) loadingBox.classList.remove('active');
+    return mid;
 }
