@@ -23,10 +23,10 @@
 :root {
     --primary-color: rgb(212,78,125);
     --content-color: rgb(233,233,233);
-    --block-color: #333;
     --desc-color: #a2a7ae;
     --block-radius: 8px;
     --split-color: #c4c4c433;
+    --block-color: #333;
     --section-color: #1f1f1f;
 }
 
@@ -39,6 +39,7 @@ body {
 
  * {
     font-family: "HarmonyOS_Sans_SC_Regular";
+    /* font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif, Helvetica, "Apple Color Emoji", Arial, "Segoe UI Emoji", "Segoe UI Symbol"; */
     box-sizing: border-box;
     margin: 0;
     padding: 0;

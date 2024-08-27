@@ -12,7 +12,7 @@
     <div class="setting-page__option">
         <section>
             <span>将下载的文件保存到</span>
-            <div class="ellipsis">{{ store.settings.down_dir }}</div>
+            <div class="ellipsis">{{ store.settings.down_dir || '加载中...' }}</div>
             <div class="btn-sec">
                 <button @click="shell.open(store.settings.down_dir)">
                     <i class="fa-regular fa-folder-open"></i>
@@ -27,7 +27,7 @@
         <hr />
         <section>
             <span>将临时产生的数据保存到</span>
-            <div class="ellipsis">{{ store.settings.temp_dir }}</div>
+            <div class="ellipsis">{{ store.settings.temp_dir || '加载中...' }}</div>
             <div class="btn-sec">
                 <button @click="shell.open(store.settings.temp_dir)">
                     <i class="fa-regular fa-folder-open"></i>
@@ -64,7 +64,7 @@
         <section>
             <span>分辨率/画质</span>
             <form>
-                <label v-for="item in dms_list" :key="item.id" :class="[{ 'dis-placeholder': !store.user.isLogin && item.login}, 'radio']">
+                <label v-for="item in store.data.mediaMap.dms" :key="item.id" :class="[{ 'dis-placeholder': !store.user.isLogin && item.login}, 'radio']">
                     <input type="radio" name="dms" :value="item.id" :checked="store.settings.df_dms === item.id"
                     @click="updateRadio('df_dms', item.id)" />
                     <span class="radio-btn"></span>
@@ -76,7 +76,7 @@
         <section>
             <span>比特率/音质</span>
             <form>
-                <label v-for="item in ads_list" :key="item.id" :class="[{ 'dis-placeholder': !store.user.isLogin && item.login}, 'radio']">
+                <label v-for="item in store.data.mediaMap.ads" :key="item.id" :class="[{ 'dis-placeholder': !store.user.isLogin && item.login}, 'radio']">
                     <input type="radio" name="ads" :value="item.id" :checked="store.settings.df_ads === item.id"
                     @click="updateRadio('df_ads', item.id)" />
                     <span class="radio-btn"></span>
@@ -88,7 +88,7 @@
         <section>
             <span>编码格式</span>
             <form>
-                <label v-for="item in cdc_list" :key="item.id" :class="[{ 'dis-placeholder': !store.user.isLogin && item.login}, 'radio']">
+                <label v-for="item in store.data.mediaMap.cdc" :key="item.id" :class="[{ 'dis-placeholder': !store.user.isLogin && item.login}, 'radio']">
                     <input type="radio" name="cdc" :value="item.id" :checked="store.settings.df_cdc === item.id"
                     @click="updateRadio('df_cdc', item.id)" />
                     <span class="radio-btn"></span>
@@ -100,7 +100,7 @@
         <section>
             <span>下载并发数</span>
             <form>
-                <label v-for="item in conc_list" :key="item.id" class="radio">
+                <label v-for="item in concList" :key="item.id" class="radio">
                     <input type="radio" name="conc" :value="item.id" :checked="store.settings.max_conc == item.id"
                     @click="updateRadio('max_conc', item.id)" />
                     <span class="radio-btn"></span>
@@ -140,31 +140,7 @@ import { invoke } from '@tauri-apps/api/core';
 export default {
     data() {
         return {
-            dms_list: [
-                { id: 16, label: '360P 流畅', login: false },
-                { id: 32, label: '480P 清晰', login: false },
-                { id: 64, label: '720P 高清', login: true },
-                { id: 80, label: '1080P 高清', login: true },
-                { id: 112, label: '1080P+ 高码率', login: true },
-                { id: 116, label: '1080P60 高帧率', login: true },
-                { id: 120, label: '4K 超清', login: true },
-                { id: 125, label: 'HDR 真彩', login: true },
-                { id: 126, label: '杜比视界', login: true },
-                { id: 127, label: '8K 超高清', login: true }
-            ],
-            ads_list: [
-                { id: 30216, label: '64K', login: false },
-                { id: 30232, label: '132K', login: false },
-                { id: 30280, label: '192K', login: false },
-                { id: 30250, label: '杜比全景声', login: true },
-                { id: 30251, label: 'Hi-Res无损', login: true }
-            ],
-            cdc_list: [
-                { id: 7, label: 'AVC 编码', login: false },
-                { id: 12, label: 'HEVC 编码', login: false },
-                { id: 13, label: 'AV1 编码', login: false },
-            ],
-            conc_list: [
+            concList: [
                 { id: 1, label: '1个' },
                 { id: 2, label: '2个' },
                 { id: 3, label: '3个' },
@@ -199,7 +175,7 @@ export default {
         }
     },
     activated() {
-        (this.$refs.iconBigSvg as HTMLImageElement).src = "/src/assets/img/icon-big.svg?" + Date.now();
+        (this.$refs.iconBigSvg as HTMLImageElement).src = "/src/assets/img/icon-big.svg?t=" + Date.now();
         getVersion().then(v => this.version = v);
         this.handleTemp("calc");
     },
@@ -272,9 +248,6 @@ export default {
 			}
 		}
 	}
-	div {
-		max-width: 400px;
-	}
 }
 .setting-page__option,.setting-page__option section {
 	display: flex;
@@ -291,12 +264,10 @@ export default {
 	gap: 4px;
 }
 .radio {
-	&:nth-child(-n+5) {
-        min-width: 94.8px;
-    }
-	&:not(:nth-child(-n+4)) {
-        margin-right: 16px;
-    }
+	&:nth-child(-n+5) { min-width: 94px; }
+    &:not(:nth-child(-n+4)) { margin-right: 16px; }
+    &:nth-child(4) { margin-right: 5px; }
+    &:nth-child(5) { margin-right: 13px; }
 	input[type=radio] {
 		display: none;
 	}

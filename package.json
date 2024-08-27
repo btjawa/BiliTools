@@ -1,6 +1,6 @@
 {
   "name": "bilitools",
-  "version": "1.1.2",
+  "version": "1.2.0-dev.12",
   "description": "BiliTools - bilibili工具箱",
   "type": "module",
   "scripts": {

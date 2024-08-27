@@ -29,7 +29,7 @@ pub struct VideoInfo {
     pub output_path: PathBuf,
     pub tasks: Vec<DownloadTask>,
     pub action: String,
-    pub media_data: Value
+    pub queue_info: QueueInfo
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
@@ -39,6 +39,34 @@ pub struct DownloadTask {
     pub url: Vec<String>,
     pub path: PathBuf,
     pub file_type: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+pub struct QueueInfo {
+    pub title: String,
+    pub display_name: String,
+    pub cover: String,
+    pub desc: String,
+    pub duration: i32,
+    pub id: i32,
+    pub cid: i32,
+    pub eid: i32,
+    pub ss_title: String,
+    pub urls: QueueInfoURLs,
+    pub time: String,
+    pub gids: Option<QueueInfoGIDs>
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+pub struct QueueInfoURLs {
+    video: Vec<String>,
+    audio: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+pub struct QueueInfoGIDs {
+    vgid: Option<String>,
+    agid: Option<String>,
 }
 
 pub fn init() -> Result<(), String> {
@@ -94,18 +122,19 @@ pub fn kill() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn push_back_queue(
-    video_url: Option<Vec<String>>, audio_url: Option<Vec<String>>,
-    action: String, media_data: Value, date: String
-) -> Result<Value, String> {
+pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
     let mut tasks = vec![];
     let client = init_client().await.map_err(|e| handle_err(e))?;
-    let ss_dir = &media_data.get("ss_title").unwrap().as_str().unwrap().to_string();
-    let display_name = media_data.get("display_name").unwrap().as_str().unwrap().to_string();
-    for (url, file_type) in vec![(video_url, "video"), (audio_url, "audio")].into_iter().filter_map(|(url, t)| url.map(|u| (u, t))) {
+    let ss_dir = &queue_info.ss_title;
+    let display_name = &queue_info.display_name;
+    let urls = queue_info.urls.clone();
+    let action = if !urls.video.is_empty() && !urls.audio.is_empty() { "media" }
+        else if !urls.video.is_empty() { "video" } else { "audio" }.into();
+    
+    for (url, file_type) in vec![(urls.video, "video"), (urls.audio, "audio")].into_iter() {
         let purl = reqwest::Url::parse(&url[0]).map_err(|e| handle_err(e))?;
         let filename = purl.path_segments().unwrap().last().unwrap();
-        let path = TEMP_DIR.read().unwrap().join("com.btjawa.bilitools").join(format!("{}_{}", date, filename)).join(filename);
+        let path = TEMP_DIR.read().unwrap().join("com.btjawa.bilitools").join(format!("{}_{}", queue_info.time, filename)).join(filename);
         let init_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.addUri",
@@ -113,16 +142,19 @@ pub async fn push_back_queue(
             "params": [
                 format!("token:{}", *SECRET.read().unwrap()),
                 url,
-                {"dir": path.parent().unwrap().to_str().unwrap(), "out": path.file_name().unwrap().to_str().unwrap()}
+                {
+                    "dir": path.parent().unwrap().to_str().unwrap(),
+                    "out": path.file_name().unwrap().to_str().unwrap()
+                }
             ]
         });
-        let init_resp = client
+        let response = client
             .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
             .json(&init_payload)
             .send().await.map_err(|e| handle_err(e))?;
 
-        let init_resp_data: Value = init_resp.json().await.map_err(|e| handle_err(e))?;
-        let gid = init_resp_data["result"].as_str().unwrap().to_string();
+        let body: Value = response.json().await.map_err(|e| handle_err(e))?;
+        let gid = body["result"].as_str().unwrap().to_string();
         handle_download(gid.clone(), "pause").await.map_err(|e| handle_err(e))?;
         tasks.push(DownloadTask {
             gid, url, path,
@@ -132,17 +164,17 @@ pub async fn push_back_queue(
     }
     let vgid = tasks.iter().find(|t| t.file_type == "video").map(|t| &*t.gid).unwrap_or_default();
     let agid = tasks.iter().find(|t| t.file_type == "audio").map(|t| &*t.gid).unwrap_or_default();
-    let gid: Value = json!({"vgid": vgid, "agid": agid});
+    let gids: Value = json!({"vgid": vgid, "agid": agid});
     let info = VideoInfo {
-        gid: gid.clone(),
+        gid: gids.clone(),
         display_name: display_name.clone(),
         video_path: tasks.iter().find(|t| t.file_type == "video").map(|t| t.path.clone()).unwrap_or_default(),
         audio_path: tasks.iter().find(|t| t.file_type == "audio").map(|t| t.path.clone()).unwrap_or_default(),
         output_path:  DOWNLOAD_DIR.read().unwrap().join(ss_dir.clone()),
-        tasks, action, media_data
+        tasks, action, queue_info
     };
     update_queue("push", Some(info), None).await;
-    Ok(gid)
+    Ok(gids)
 }
 
 #[tauri::command]

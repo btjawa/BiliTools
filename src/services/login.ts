@@ -39,28 +39,28 @@ function createQrcode(canvas: HTMLCanvasElement, url: string) { // from bilibili
 export async function scanLogin(canvas: HTMLCanvasElement) {
     emit('stop_login');
     canvas.width = canvas.width; // clear canvas
-    const resp = await fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', {
+    const response = await fetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', {
         headers: store.state.data.headers
     });
-    const response = await resp.json() as LoginTypes.GenQrcodeResp;
-    if (response.code !== 0) {
-        throw new Error(`${response.code}, ${response.message}`);
+    const body = await response.json() as LoginTypes.GenQrcodeResp;
+    if (body.code !== 0) {
+        throw new Error(`${body.code}, ${body.message}`);
     }
-    const { qrcode_key, url } = response.data;
+    const { qrcode_key, url } = body.data;
     createQrcode(canvas, url);
     const mid = await invoke('scan_login', { qrcode_key }) as number
     return mid;
 }
 
 export async function pwdLogin(username: string, rawPwd: string) {
-    const rsaKeysResp = await fetch('https://passport.bilibili.com/x/passport-login/web/key', {
+    const response = await fetch('https://passport.bilibili.com/x/passport-login/web/key', {
         headers: store.state.data.headers
     });
-    const rsaKeys = await rsaKeysResp.json() as LoginTypes.GetPwdLoginKeyResp;
-    if (rsaKeys.code !== 0) {
-        throw new Error(`${rsaKeys.code}, ${rsaKeys.message}`);
+    const body = await response.json() as LoginTypes.GetPwdLoginKeyResp;
+    if (body.code !== 0) {
+        throw new Error(`${body.code}, ${body.message}`);
     }
-    const { hash, key } = rsaKeys.data;
+    const { hash, key } = body.data;
     const enc = new JSEncrypt();
     enc.setPublicKey(key);
     const password = enc.encrypt(hash + rawPwd);
@@ -78,26 +78,26 @@ export async function smsLogin(tel: string, code: string, cid: string) {
 }
 
 export async function getCountryList() {
-    const resp = await fetch('https://passport.bilibili.com/web/generic/country/list', {
+    const response = await fetch('https://passport.bilibili.com/web/generic/country/list', {
         headers: store.state.data.headers
     });
-    const response = await resp.json() as LoginTypes.GetCountryListResp;
-    if (response.code !== 0) {
-        throw new Error(`${response.code.toString()}`);
+    const body = await response.json() as LoginTypes.GetCountryListResp;
+    if (body.code !== 0) {
+        throw new Error(`${body.code.toString()}`);
     }
-    const list = [...response.data.common, ...response.data.others].sort((a, b) => a.id - b.id);
+    const list = [...body.data.common, ...body.data.others].sort((a, b) => a.id - b.id);
     return list;
 }
 
 export async function getZoneCode() {
-    const resp = await fetch('https://api.bilibili.com/x/web-interface/zone', {
+    const response = await fetch('https://api.bilibili.com/x/web-interface/zone', {
         headers: store.state.data.headers
     });
-    const response = await resp.json() as LoginTypes.GetZoneResp;
-    if (response.code !== 0) {
-        throw new Error(`${response.code.toString()}`);
+    const body = await response.json() as LoginTypes.GetZoneResp;
+    if (body.code !== 0) {
+        throw new Error(`${body.code.toString()}`);
     }
-    return String(response.data.country_code);
+    return String(body.data.country_code);
 }
 
 export async function sendSms(tel: string, cid: string) {
@@ -106,15 +106,15 @@ export async function sendSms(tel: string, cid: string) {
         cid, tel, source: 'main-fe-header',
         token, challenge, validate, seccode
     });
-    const resp = await fetch('https://passport.bilibili.com/x/passport-login/web/sms/send?' + params, {
+    const response = await fetch('https://passport.bilibili.com/x/passport-login/web/sms/send?' + params, {
         headers: store.state.data.headers, method: "POST"
     });
-    const response = await resp.json() as LoginTypes.SendSmsResp;
-    if (response.code !== 0) {
-        throw new Error(`${response.code}, ${response.message}`);
+    const body = await response.json() as LoginTypes.SendSmsResp;
+    if (body.code !== 0) {
+        throw new Error(`${body.code}, ${body.message}`);
     }
-    smsKey = response.data.captcha_key;
-    return response;
+    smsKey = body.data.captcha_key;
+    return body;
 }
 
 export async function exitLogin() {

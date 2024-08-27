@@ -1,6 +1,6 @@
 <template>
 <div ref="contextMenu" class="context-menu" v-show="active" @contextmenu.prevent
-    :style="{ opacity: opacity, top: pos.y + 'px', left: pos.x + 'px' }">
+    @transitionend.prevent :style="{ opacity, top: pos.y + 'px', left: pos.x + 'px' }">
     <div @click="handleAction('cut')" class="context-menu-item cut">
         <i class="fa-light fa-cut context-menu-item-icon"></i>
         剪切<a class="context-menu-item-key">Ctrl+X</a>
@@ -37,20 +37,21 @@ export default defineComponent({
             active: false,
             pos: { x: 0, y: 0 },
             opacity: 0,
+            activeElement: null as HTMLInputElement | HTMLTextAreaElement | null,
+            selection: '',
         }
     },
     methods: {
         async handleAction(action: string) {
-            const activeElement = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
             switch (action) {
                 case 'cut':
-                    navigator.clipboard.writeText(this.handleTextUpdate(activeElement));
+                    navigator.clipboard.writeText(this.handleTextUpdate(this.activeElement));
                     break;
                 case 'copy':
-                    navigator.clipboard.writeText(window.getSelection()?.toString() || "");
+                    navigator.clipboard.writeText(this.selection);
                     break;
                 case 'paste':
-                this.handleTextUpdate(activeElement, await navigator.clipboard.readText() || "");
+                    this.handleTextUpdate(this.activeElement, await navigator.clipboard.readText() || "");
                     break;
                 case 'bilibili':
                     utils.bilibili(null, document.querySelector('.search__input'));
@@ -68,11 +69,13 @@ export default defineComponent({
                 element.value = element.value.substring(0, start) + text + element.value.substring(end);
                 const pos = start + text.length;
                 element.setSelectionRange(pos, pos);
-                return element.value.substring(start, end);
+                return element.value.substring(start, end) || this.selection;
             }
             return text;
         },
         showMenu(e: MouseEvent) {
+            this.activeElement = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+            this.selection = window.getSelection()?.toString() || "";
             if (this.active) this.hideMenu();
             requestAnimationFrame(() => {
                 this.active = true;
@@ -98,7 +101,7 @@ export default defineComponent({
 	border-radius: 8px;
 	background-color: #2c2c2c;
 	border: solid 1px #666666d3;
-	z-index: 10;
+	z-index: 99;
 	flex-direction: column;
 	flex-wrap: wrap;
 	position: fixed;

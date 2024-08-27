@@ -28,15 +28,19 @@ export default {
     },
     methods: {
         showMenu(e: MouseEvent) {
-            (this.$refs.contextMenu as any).showMenu(e);
+            (this.$refs.contextMenu as InstanceType<typeof ContextMenu>).showMenu(e);
         }
     },
     mounted() {
         this.$router.push("/");
         this.$store.dispatch('init');
-        listen('headers', (e) => this.$store.commit('updateState', { 'data.headers': e.payload }));
+        listen('headers', (e) => {
+			this.$store.commit('updateState', { 'data.headers': e.payload });
+		});
+        listen('settings', (e) => {
+			this.$store.commit('updateState', { settings: e.payload })
+		});
         listen('error', (e) => iziError(e.payload as string));
-        listen('settings', (e) => this.$store.commit('updateState', { settings: e.payload }) )
     }
 }
 

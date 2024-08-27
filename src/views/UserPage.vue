@@ -7,7 +7,7 @@
                 <img :src="user.avatar" draggable="false" class="profile__avatar" />
                 <img src="@/assets/img/big-vip.svg" draggable="false" class="profile__big_vip" v-if="user.vipStatus" />
             </div>
-            <div class="profile__text_area">
+            <div class="profile__text_area text">
                 <div class="profile__name">
                     <span>{{ user.name }}</span>
                     <img :src="levelIcon" draggable="false" class="profile__level" />
@@ -414,12 +414,11 @@ input[type=password]::-ms-clear,input[type=password]::-ms-reveal,input[type=pass
 .login__scan_warning>span,.profile__operates {
 	font-size: 13px;
 }
-.login__input_wp,.login__scan_box,.login__scan_wp {
+.login__input_wp,.login__scan_box,.login__scan_wp,.login__tab_wp {
 	display: flex;
 	align-items: center;
 }
 .login__scan_title,.login__tab_wp {
-	display: flex;
 	line-height: 22.4px;
 	margin-bottom: 26px;
 }

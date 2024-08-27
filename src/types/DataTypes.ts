@@ -1,8 +1,25 @@
+export enum Queue {
+  Waiting = "waiting",
+  Doing = "doing",
+  Complete = "complete",
+}
+
 export enum MediaType {
   Video = "video",
   Bangumi = "bangumi",
   Music = "music",
   Lesson = "lesson",
+}
+
+export interface MediaInfoListItem {
+  title: string;
+  cover: string;
+  desc: string;
+  duration: number;
+  id: number,
+  cid: number,
+  eid: number,
+  ss_title: string;
 }
 
 export interface MediaInfo {
@@ -26,16 +43,21 @@ export interface MediaInfo {
     name: string | null,
     mid: number | null,
   },
-  list: {
-    title: string;
-    cover: string;
-    desc: string;
-    duration: number;
-    id: number,
-    cid: number,
-    eid: number,
-    ss_title: string;
-  }[]
+  list: MediaInfoListItem[]
+}
+
+
+export interface QueueInfo extends MediaInfoListItem {
+  urls: {
+    video: string[],
+    audio: string[],
+  },
+  display_name: string,
+  time: string,
+  gids?: {
+    vgid?: string,
+    agid?: string,
+  }
 }
 
 export interface VideoInfo {
@@ -1201,70 +1223,7 @@ export interface VideoPlayUrlInfo  {
     video_codecid: number;
     seek_param: string;
     seek_type: string;
-    dash: {
-      duration: number;
-      minBufferTime: number;
-      min_buffer_time: number;
-      video: {
-        id: number;
-        baseUrl: string;
-        base_url: string;
-        backupUrl: string[];
-        backup_url: string[];
-        bandwidth: number;
-        mimeType: string;
-        mime_type: string;
-        codecs: string;
-        width: number;
-        height: number;
-        frameRate: string;
-        frame_rate: string;
-        sar: string;
-        startWithSap: number;
-        start_with_sap: number;
-        SegmentBase: {
-          Initialization: string;
-          indexRange: string;
-        };
-        segment_base: {
-          initialization: string;
-          index_range: string;
-        };
-        codecid: number;
-      }[];
-      audio: {
-        id: number;
-        baseUrl: string;
-        base_url: string;
-        backupUrl: string[];
-        backup_url: string[];
-        bandwidth: number;
-        mimeType: string;
-        mime_type: string;
-        codecs: string;
-        width: number;
-        height: number;
-        frameRate: string;
-        frame_rate: string;
-        sar: string;
-        startWithSap: number;
-        start_with_sap: number;
-        SegmentBase: {
-          Initialization: string;
-          indexRange: string;
-        };
-        segment_base: {
-          initialization: string;
-          index_range: string;
-        };
-        codecid: number;
-      }[];
-      dolby: {
-        type: number;
-        audio: null;
-      };
-      flac: null;
-    };
+    dash: CommonDash;
     support_formats: {
       quality: number;
       format: string;
@@ -1323,73 +1282,7 @@ export interface BangumiPlayUrlInfo {
     timelength: number;
     durls: unknown[];
     has_paid: boolean;
-    dash: {
-      duration: number;
-      minBufferTime: number;
-      min_buffer_time: number;
-      video: {
-        start_with_sap: number;
-        bandwidth: number;
-        sar: string;
-        backupUrl: string[];
-        codecs: string;
-        base_url: string;
-        backup_url: string[];
-        segment_base: {
-          initialization: string;
-          index_range: string;
-        };
-        mimeType: string;
-        frame_rate: string;
-        SegmentBase: {
-          Initialization: string;
-          indexRange: string;
-        };
-        frameRate: string;
-        codecid: number;
-        baseUrl: string;
-        size: number;
-        mime_type: string;
-        width: number;
-        startWithSAP: number;
-        id: number;
-        height: number;
-        md5: string;
-      }[];
-      audio: {
-        start_with_sap: number;
-        bandwidth: number;
-        sar: string;
-        backupUrl: string[];
-        codecs: string;
-        base_url: string;
-        backup_url: string[];
-        segment_base: {
-          initialization: string;
-          index_range: string;
-        };
-        mimeType: string;
-        frame_rate: string;
-        SegmentBase: {
-          Initialization: string;
-          indexRange: string;
-        };
-        frameRate: string;
-        codecid: number;
-        baseUrl: string;
-        size: number;
-        mime_type: string;
-        width: number;
-        startWithSAP: number;
-        id: number;
-        height: number;
-        md5: string;
-      }[];
-      dolby: {
-        audio: unknown[];
-        type: number;
-      };
-    };
+    dash: CommonDash;
     clip_info_list: {
       materialNo: number;
       start: number;
@@ -1433,62 +1326,64 @@ export interface LessonPlayUrlInfo {
     seek_type: string;
     has_paid: boolean;
     from: string;
-    dash: {
-      duration: number;
-      min_buffer_time: number;
-      video: {
-        start_with_sap: number;
-        bandwidth: number;
-        sar: string;
-        codecs: string;
-        base_url: string;
-        backup_url: string[];
-        segment_base: {
-          initialization: string;
-          index_range: string;
-        };
-        frame_rate: string;
-        codecid: number;
-        size: number;
-        mime_type: string;
-        width: number;
-        id: number;
-        noRexcode: number;
-        height: number;
-        md5: string;
-      }[];
-      audio: {
-        start_with_sap: number;
-        bandwidth: number;
-        sar: string;
-        codecs: string;
-        base_url: string;
-        backup_url: string[];
-        segment_base: {
-          initialization: string;
-          index_range: string;
-        };
-        frame_rate: string;
-        codecid: number;
-        size: number;
-        mime_type: string;
-        width: number;
-        id: number;
-        noRexcode: number;
-        height: number;
-        md5: string;
-      }[];
-      losslessAudio: {
-        isLosslessAudio: boolean;
-      };
-      dolby: {
-        audio: unknown[];
-        type: string;
-      };
-    };
+    dash: CommonDash;
     video_codecid: number;
     accept_description: string[];
     status: number;
   };
   message: string;
+}
+
+export interface CommonDash {
+  duration: number;
+  min_buffer_time: number;
+  video: {
+    start_with_sap: number;
+    bandwidth: number;
+    sar: string;
+    codecs: string;
+    base_url: string;
+    backup_url: string[];
+    segment_base: {
+      initialization: string;
+      index_range: string;
+    };
+    frame_rate: string;
+    codecid: number;
+    size: number;
+    mime_type: string;
+    width: number;
+    id: number;
+    noRexcode: number;
+    height: number;
+    md5: string;
+  }[];
+  audio: {
+    start_with_sap: number;
+    bandwidth: number;
+    sar: string;
+    codecs: string;
+    base_url: string;
+    backup_url: string[];
+    segment_base: {
+      initialization: string;
+      index_range: string;
+    };
+    frame_rate: string;
+    codecid: number;
+    size: number;
+    mime_type: string;
+    width: number;
+    id: number;
+    noRexcode: number;
+    height: number;
+    md5: string;
+  }[];
+  losslessAudio: {
+    isLosslessAudio: boolean;
+  };
+  dolby: {
+    audio: unknown[];
+    type: string;
+  };
 }

@@ -20,6 +20,9 @@ use services::{*, storage::*};
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
+#[cfg(target_os = "windows")]
+use window_vibrancy::{apply_acrylic, apply_blur};
+
 lazy_static! {
     static ref WORKING_DIR: PathBuf = dirs_next::data_local_dir().unwrap().join("com.btjawa.bilitools");
     static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(dirs_next::desktop_dir().unwrap()));
@@ -224,6 +227,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)?;
+            #[cfg(target_os = "windows")]
+            match tauri_plugin_os::version() {
+                tauri_plugin_os::Version::Semantic(major, minor, build) => {
+                    if build > 22000 || (major == 10 && build <= 18362) { // Windows 10 & 11 Early Version
+                        apply_acrylic(&window, Some((18, 18, 18, 160)))?;
+                    } else if (build > 18362 && build <= 22000) || (major == 6 && minor == 1) { // Windows 7 & Windows 10 v1903+ to Windows 11 22000
+                        apply_blur(&window, Some((18, 18, 18, 160)))?;
+                    }
+                },
+                _ => log::error!("Failed to determine OS version"),
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![ready, init, rw_config,

@@ -1,8 +1,9 @@
 <template>
-<div class="home-page" @keydown.esc="elmState.active = false;">
+<div class="home-page" @keydown.esc.stop="elmState.active = false;">
+	<PopUp ref="popup" />
     <div class="search" :class="{ 'active': elmState.active }">
         <input class="search__input" type="text" placeholder="链接/AV/BV/SS/EP/AU号..."
-        @keydown.enter="search" autocomplete="off" spellcheck="false" v-model="elmState.searchInput">
+        @keydown.enter="search" autocomplete="off" spellcheck="false" ref="searchInput">
         <button class="fa-solid fa-search search__btn" @click="search"></button>
     </div>
     <div class="media-root" :class="{ 'active': elmState.active && elmState.rootActive }">
@@ -46,7 +47,7 @@
                     <template v-else-if="header.id === 'title'">{{ info.title }}</template>
                     <template v-else-if="header.id === 'time'">{{ utils.duration(info.duration, mediaInfo.type) }}</template>
                     <template v-else-if="header.id === 'options'">
-                        <button v-for="option in options" :key="option.id" @click="handleOptions(option.id, index)"
+                        <button v-for="option in options" :key="option.id" @click="handleOptions(option.id, index, info)"
                         :class="['media-thead__item options__item', option.id]">
                             <i :class="option.icon"></i>{{ option.label }}
                         </button>
@@ -66,14 +67,18 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { transformImage } from "@tauri-apps/api/image";
 import { fetch } from "@tauri-apps/plugin-http";
+import PopUp from "@/components/PopUp.vue";
 import store from "@/store";
 
 export default {
+	components: {
+		PopUp
+	},
     methods: {
         openUpperSpace(mid: number) { shell.open('https://space.bilibili.com/' + mid) },
         dataWidth(e: Event) { this.elmState.dataWidth = `calc(100% - ${(e.target as HTMLElement).offsetWidth}px - 68px)` },
         async search() {
-            const v = auth.id(this.elmState.searchInput);
+            const v = auth.id((this.$refs.searchInput as HTMLInputElement).value);
             if (v.type) {
                 this.elmState.active = true;
                 this.elmState.rootActive = false;
@@ -90,7 +95,7 @@ export default {
                 }
             }
         },
-        handleOptions(type: string, index: number) {
+        async handleOptions(type: string, index: number, info: types.data.MediaInfoListItem) {
             if (type === "cover") {
                 dialog.save({
                     filters: [{
@@ -107,7 +112,25 @@ export default {
                     return null;
                 });
             } else if (type === "media") {
-                data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type);
+				function getUrls(type: 'video' | 'audio') {
+					let base = finalDash[type].filter(item => item?.id == result?.[type == 'audio' ? 'ads' : 'dms']);
+					if (type === 'video') base.filter(item => item?.codecid == result?.cdc);
+					return [base[0]?.base_url, ...base[0]?.backup_url];
+				}
+				const getPlayUrl = () => data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type);
+				const start = Date.now();
+                const firstDash = await getPlayUrl();
+				const result = await (this.$refs.popup as InstanceType<typeof PopUp>).newPopup();
+				const finalDash = (Date.now() - start >= (60 * 15 * 1000) ? await getPlayUrl() : firstDash); // URLs expire after 15 mins
+				await data.pushBackQueue({
+					...info,
+					urls: {
+						video: getUrls('video'),
+						audio: getUrls('audio'),
+					},
+					display_name: this.mediaInfo.title,
+					time: utils.pubdate(new Date(), true)
+				});
             } else if (type === "more") {
                 
             }
@@ -133,7 +156,6 @@ export default {
                 active: false,
                 searchActive: false,
                 rootActive: false,
-                searchInput: '',
                 dataWidth: ''
             },
             utils,
@@ -162,7 +184,7 @@ export default {
 	align-items: center;
 	text-align: center;
 	border-radius: 30px;
-	transition: all .3s cubic-bezier(0,1,.9,1);
+	transition: all .3s cubic-bezier(.23,0,0,1.32);
 }
 .search {
 	background: var(--block-color);
@@ -200,7 +222,7 @@ export default {
 	padding: 10px;
 	cursor: pointer;
 	&:hover {
-		background: #5c5c5c 9d;
+		background: #5c5c5c9d !important;
 	}
 }
 .media-root {
@@ -249,7 +271,7 @@ export default {
 }
 .media-info__title {
 	font-size: 18px;
-	width: 100%;
+	width: calc(100% - 68px);
 }
 .media-info__meta {
 	color: #9e9e9e;

@@ -127,8 +127,8 @@ pub async fn refresh_cookie(refresh_csrf: &str) -> Result<String, String> {
                 return Ok("Successfully refreshed Cookie".into());
             }
             _ => {
-                log::error!("{}", response_data["data"]["message"]);
-                return Err(format!("{}", response_data["data"]["message"]).into());
+                log::error!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]);
+                return Err(format!("{}, {}", response_data["data"]["code"], response_data["data"]["message"]).into());
             },
         }
     }        
