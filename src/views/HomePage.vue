@@ -1,5 +1,4 @@
-<template>
-<div class="home-page" @keydown.esc.stop="elmState.active = false;">
+<template><div @keydown.esc.stop="elmState.active = false;">
 	<PopUp ref="popup" />
     <div class="search" :class="{ 'active': elmState.active }">
         <input class="search__input" type="text" placeholder="链接/AV/BV/SS/EP/AU号..."
@@ -56,8 +55,7 @@
             </div>
         </div>
     </div>
-</div>
-</template>
+</div></template>
 
 <script lang="ts">
 import { auth, data, utils } from "@/services";
@@ -90,7 +88,7 @@ export default {
 					const elapsed = Date.now() - start;
 					if (elapsed < 310) await new Promise(resolve => setTimeout(resolve, 310 - elapsed))
                     this.elmState.active = false;
-                    utils.iziError(err);
+                    utils.iziError(err as Error);
                     return null;
                 }
             }
@@ -222,7 +220,7 @@ export default {
 	padding: 10px;
 	cursor: pointer;
 	&:hover {
-		background: #5c5c5c9d !important;
+		filter: brightness(150%);
 	}
 }
 .media-root {
@@ -234,7 +232,7 @@ export default {
 	opacity: 0;
 	gap: 5px;
 	top: 72px;
-	transition: opacity .2s;
+	transition: opacity .1s;
 	&.active {
 		opacity: 1;
 	}
@@ -368,7 +366,7 @@ export default {
 		padding: 8px 10px;
 		background-color: #2b2b2b;
 		border-radius: 8px;
-		transition: all .3s;
+		transition: all .1s;
 		display: flex;
 		flex-direction: row;
 		align-items: center;
@@ -377,7 +375,7 @@ export default {
 			font-size: 13px;
 		}
 		&:hover {
-			background-color: #262626;
+			filter: brightness(80%);
 		}
 	}
 }

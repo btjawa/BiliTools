@@ -13,7 +13,7 @@ export function id(input: string): { id: string, type: types.data.MediaType | nu
     match = input.match(/au(\d+)/i);
     if (match) return { id: match[0], type: types.data.MediaType.Music }; 
     else {
-        utils.iziError(!input ? "输入不能为空" : "输入不合法！请检查格式");
+        utils.iziError(new Error(!input ? "输入不能为空" : "输入不合法！请检查格式"));
         return { id: input, type: null };
     }
 }

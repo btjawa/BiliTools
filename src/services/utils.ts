@@ -3,6 +3,7 @@ import router from "@/router";
 import store from "@/store";
 import { MediaType } from "../types/DataTypes";
 import * as shell from "@tauri-apps/plugin-shell";
+import * as log from '@tauri-apps/plugin-log';
 import { auth } from "@/services";
 
 iziToast.settings({
@@ -14,6 +15,33 @@ iziToast.settings({
     theme: 'dark'
 });
 
+
+export class ApplicationError extends Error {
+    code?: number | string;
+    constructor(error: Error, code?: number | string | undefined);
+    constructor(message: string, code?: number | string | undefined, options?: ErrorOptions);
+    constructor(msgErr: string | Error, code?: number | string | undefined, options?: ErrorOptions) {
+        if (msgErr instanceof Error) {
+            super(msgErr.message);
+            this.code = code || -108;
+            this.name = msgErr.name;
+            this.stack = msgErr.stack;
+            this.cause = msgErr.cause;
+        } else {
+            super(msgErr, options);
+            this.code = code || -108;
+            this.name = "ApplicationError";
+            this.cause = options?.cause || "Unknown";
+        }
+    }
+    handleError() {
+        const msg = `${this.message}\n"${this.cause}" (${this.code})`;
+        log.error(msg);
+        iziError(new Error(msg));
+        return false;
+    }
+}
+
 export function iziInfo(message = '') {
     console.log(message)
     iziToast.info({
@@ -23,13 +51,13 @@ export function iziInfo(message = '') {
     });
 }
 
-export function iziError(err: any) {
-    const message = err instanceof Error ? err.message : err.toString();
-    console.error(message);
+export function iziError(err: ApplicationError | Error) {
+    const msg = err.message;
+    console.error(msg);
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
         layout: 2, timeout: 10000,
-        title: '警告 / 错误', message
+        title: '警告 / 错误', message: msg.replace('\n', '<br>')
     });
 }
 
@@ -147,4 +175,20 @@ export function codec(codec: string): string {
         return `AV1 ${profileDesc}`;
     }
     return '未知编码格式';    
+}
+
+export function formatEscape(str: string): string {
+    return str
+        .replace(/\n/g, '<br>')
+        .replace(/ /g, '&nbsp;');
+}
+
+export function formatBytes(bytes: number): string {
+    if (bytes < 1024 * 1024) {
+        return (bytes / 1024).toFixed(2) + ' KB';
+    } else if (bytes < 1024 * 1024 * 1024) {
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB'; 
+    } else {
+        return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+    }
 }

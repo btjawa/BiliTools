@@ -2,16 +2,15 @@
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod logger;
 mod services;
 
 use lazy_static::lazy_static;
 use backtrace::Backtrace;
 use sea_orm::FromJsonQueryResult;
-use serde_json::Value;
+use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, env, fs, panic, path::PathBuf, sync::{Arc, RwLock}};
-use tauri::{async_runtime, Manager, WebviewWindow};
+use tauri::{async_runtime, Emitter, Manager, WebviewWindow};
 use tauri_plugin_http::reqwest::{Client, header::{HeaderMap, HeaderName, HeaderValue}};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
@@ -83,39 +82,45 @@ struct Settings {
 }
 
 #[tauri::command]
-async fn handle_temp(action: String) -> Result<String, String> {
-    let mut bytes = 0;
-    let target_dir = TEMP_DIR.read().unwrap().join("com.btjawa.bilitools");
-    let walker = WalkDir::new(target_dir).into_iter();
-    for entry in walker.filter_map(Result::ok).filter(|e| e.file_type().is_dir()) {
-        let mut have_aria2 = false;
-        let mut crr_bytes: u64 = 0;
-        for entry in WalkDir::new(entry.path()).into_iter().filter_map(Result::ok) {
-            let path = entry.path();
-            if path.is_file() {
-                let file_name = path.file_name().unwrap().to_str().unwrap();
-                let file_size = fs::metadata(path).unwrap().len();
-                if file_name.ends_with(".aria2") {
-                    have_aria2 = true;
-                }
-                if action == "calc" || (action == "clear" && !have_aria2) {
-                    crr_bytes += file_size;
-                }
+async fn get_size(path: String, ptype: String) -> Result<usize, String> {
+    let window = get_window();
+    let mut bytes = 0usize;
+    let mut _have_aria2 = false;
+    for entry in WalkDir::new(&path).into_iter().filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_file() {
+            let file_name = path.file_name().unwrap().to_str().unwrap();
+            let file_size = fs::metadata(path).unwrap().len() as usize;
+            if file_name.ends_with(".aria2") {
+                _have_aria2 = true;
             }
-        }
-        if action == "clear" && !have_aria2 {
-            let _ = fs::remove_dir_all(&entry.path());
-        } else {
-            bytes += crr_bytes; 
+            bytes += file_size;
+            window.emit("get_size:bytes", json!({ "bytes": bytes, "ptype": ptype })).unwrap();
         }
     }
-    const KIB: u64 = 1024;
-    const MIB: u64 = KIB * 1024;
-    const GIB: u64 = MIB * 1024;
-    let r = if bytes >= GIB { format!("{:.2} GB", bytes as f64 / GIB as f64) }
-    else if bytes >= MIB { format!("{:.2} MB", bytes as f64 / MIB as f64) }
-    else { format!("{:.2} KB", bytes as f64 / KIB as f64) };
-    Ok(r)
+    Ok(bytes)
+}
+
+#[tauri::command]
+async fn clean_cache(path: String, ptype: String) -> Result<usize, String> {
+    if ptype == "database" {
+        if let Err(_) = fs::remove_file(&path) {}
+    } else {
+        let entries = fs::read_dir(&path).map_err(|e| handle_err(e))?;
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => continue
+            };
+            let path = entry.path();
+            if path.is_dir() {
+                if let Err(_) = fs::remove_dir_all(&path) {}
+            } else {
+                if let Err(_) = fs::remove_file(&path) {}
+            }
+        }
+    }
+    Ok(get_size(path, ptype).await?)
 }
 
 #[tauri::command]
@@ -163,7 +168,7 @@ fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: Str
         *DOWNLOAD_DIR.write().unwrap() = PathBuf::from(&config.down_dir);
         log::info!("{:?}", config);
     }
-    window.emit("settings", config.clone()).unwrap();
+    window.emit("rw_config:settings", &*config).unwrap();
     Ok(action)
 }
 
@@ -199,25 +204,33 @@ async fn init(window: WebviewWindow, secret: String) -> Result<(), String> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    logger::init_logger().map_err(|e| e.to_string())?;
     *SECRET.write().unwrap() = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10).map(char::from)
         .collect();
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_log::Builder::new()
+            .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+            .target(tauri_plugin_log::Target::new(
+                tauri_plugin_log::TargetKind::Webview,
+            ))
+            .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+            .level(log::LevelFilter::Info)
+            .level_for("sqlx::query", log::LevelFilter::Warn)
+        .build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
-            println!("{}, {argv:?}, {cwd}", app.package_info().name);
-            app.emit("single-instance", (argv, cwd)).unwrap();
-            let window = app.get_webview_window("main").unwrap();
-            window.unminimize().unwrap();
-            window.set_focus().unwrap();
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            let windows = app.webview_windows();
+            windows.values().next().expect("Sorry, no window found")
+            .set_focus().expect("Can't Bring Window to Focus");
         }))
         .setup(|app| {
+            log::info!("{:?}", WORKING_DIR.as_os_str());
             panic::set_hook(Box::new(move |e| { handle_err(e); }));
             let app_handle = app.app_handle().clone();
             let window = app_handle.get_webview_window("main").unwrap();
@@ -243,7 +256,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .invoke_handler(tauri::generate_handler![ready, init, rw_config,
             login::exit, login::refresh_cookie, login::scan_login, login::sms_login, login::pwd_login,
             save_file, aria2c::handle_download, aria2c::push_back_queue,
-            aria2c::process_queue, handle_temp, handle_service])
+            aria2c::process_queue, get_size, clean_cache, handle_service])
         .run(tauri::generate_context!())
         .expect("error while running BiliTools");
     Ok(())

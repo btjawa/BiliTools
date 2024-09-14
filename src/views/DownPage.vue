@@ -1,21 +1,19 @@
-<template>
-    <div class="down-page">
-        <div class="down-page__tab_wp">
-            <button :class="['down-page__tab_btn', { 'active': tab == Queue.Waiting }]" @click="tab = Queue.Waiting"> 等待中 </button>
-            <div class="down-page__small_split"></div>
-            <button :class="['down-page__tab_btn', { 'active': tab == Queue.Doing }]" @click="tab = Queue.Doing"> 进行中 </button>
-            <div class="down-page__small_split"></div>
-            <button :class="['down-page__tab_btn', { 'active': tab == Queue.Complete }]" @click="tab = Queue.Complete"> 完成 </button>
-        </div>
-        <div class="down-page__main_split"></div>
-        <div v-show="tab == cont" class="down-page__container" v-for="cont in [Queue.Waiting, Queue.Doing, Queue.Complete]" :class="cont">
-            <img src="@/assets/img/empty.png" draggable="false" v-show="!Object.keys(store.state.queue?.[cont])?.length" />
-            <div class="down-page__container_item" v-for="item in queue[cont]">
-                {{ item?.title }}
-            </div>
+<template><div>
+    <div class="down-page__tab_wp">
+        <button :class="['down-page__tab_btn', { 'active': tab == Queue.Waiting }]" @click="tab = Queue.Waiting"> 等待中 </button>
+        <div class="down-page__small_split"></div>
+        <button :class="['down-page__tab_btn', { 'active': tab == Queue.Doing }]" @click="tab = Queue.Doing"> 进行中 </button>
+        <div class="down-page__small_split"></div>
+        <button :class="['down-page__tab_btn', { 'active': tab == Queue.Complete }]" @click="tab = Queue.Complete"> 完成 </button>
+    </div>
+    <div class="down-page__main_split"></div>
+    <div v-show="tab == cont" class="down-page__container" v-for="cont in [Queue.Waiting, Queue.Doing, Queue.Complete]" :class="cont">
+        <img src="@/assets/img/empty.png" draggable="false" v-show="!Object.keys(store.state.queue?.[cont])?.length" />
+        <div class="down-page__container_item" v-for="item in queue[cont]">
+            {{ item?.title }}
         </div>
     </div>
-</template>
+</div></template>
 
 <script lang="ts">
 import store from '@/store';
@@ -38,7 +36,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.down-page {
+.page {
     flex-direction: column;
 }
 button {

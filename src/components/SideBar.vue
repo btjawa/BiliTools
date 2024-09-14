@@ -2,7 +2,7 @@
 <ul @contextmenu.prevent class="sidebar" ref="sidebar">
     <router-link to="/user-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/user-page') }" class="sidebar-item sidebar-user-page"
-            @click="inited ? navigate() : iziError('请等待初始化完成');">
+            @click="inited ? navigate() : iziError(new Error('请等待初始化完成'));">
             <img class="user-avatar" :src="avatarUrl" draggable="false" />
         </li>
     </router-link>
@@ -32,12 +32,13 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { iziError } from '@/services/utils';
-import { type } from '@tauri-apps/plugin-os';
+import { type as osType } from '@tauri-apps/plugin-os';
+import { useRoute } from 'vue-router';
 import store from '@/store';
 export default defineComponent({
     methods: {
         isActive(path: string): boolean {
-            return this.$route.path == path;
+            return useRoute().path == path;
         },
         iziError
     },
@@ -52,9 +53,7 @@ export default defineComponent({
         },
     },
     mounted() {
-        type().then(os => {
-            if (os == "macos") (this.$refs.sidebar as HTMLElement).classList.add('macos');
-        })
+        if (osType() == "macos") (this.$refs.sidebar as HTMLElement).classList.add('macos');
     }
 });
 </script>
@@ -71,7 +70,8 @@ export default defineComponent({
 	flex-direction: column;
 	user-select: none;
 	padding: 10px 0;
-	transition: padding 0.2s;
+	opacity: 1;
+	transition: padding 0.2s, opacity 0.3s;
 	&.macos {
 		padding-top: 30px;
 	}
@@ -120,5 +120,9 @@ export default defineComponent({
 }
 .sidebar-down-page {
 	margin-bottom: auto;
+}
+@keyframes fade-in {
+    from { mask-position: 0; }
+    to { mask-position: -100vw; }
 }
 </style>

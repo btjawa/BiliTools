@@ -1,6 +1,6 @@
 <template>
-<div data-tauri-drag-region @contextmenu.prevent class="title-bar" @dblclick="toggleMaximize">
-    <div v-if="osType == 'windows'" :class="osType">
+<div data-tauri-drag-region @contextmenu.prevent class="titlebar" @dblclick="toggleMaximize">
+    <div v-if="osType() == 'windows'" :class="osType()">
         <div class="titlebar-button minimize" @click="minimize">
 			<svg width="10"height="1"viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path
@@ -32,7 +32,7 @@
 			</svg>
         </div>
     </div>
-    <div v-if="osType == 'macos'" :class="osType">
+    <div v-if="osType() == 'macos'" :class="osType()">
         <div class="titlebar-button close" @click="close">
             <svg width="6" height="6" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path
@@ -74,29 +74,29 @@
 </template>
 
 <script lang="ts">
-import { getCurrent } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { defineComponent } from 'vue';
 import { debounce } from '../services/utils';
-import { type } from '@tauri-apps/plugin-os';
-const appWindow = getCurrent();
+import { type as osType } from '@tauri-apps/plugin-os';
+const appWindow = getCurrentWindow();
 
 export default defineComponent({
     data() {
         return {
             maxed: false,
             isAltPressed: false,
-            osType: ''
+            osType
         }
     },
     methods: {
         minimize() { appWindow.minimize() },
         async toggleMaximize() {
-            if (this.osType == "macos") {
+            if (this.osType() == "macos") {
                 this.isAltPressed ? appWindow.toggleMaximize()
                 : ( await appWindow.isFullscreen() ? 
                 appWindow.setFullscreen(false) :
                 appWindow.setFullscreen(true) )
-            } else if (this.osType == "windows") appWindow.toggleMaximize()
+            } else if (this.osType() == "windows") appWindow.toggleMaximize()
         },
         close() { appWindow.close() }
     },
@@ -104,7 +104,6 @@ export default defineComponent({
         appWindow.onResized(debounce(async () => {
             this.maxed = await appWindow.isMaximized();
         }, 250));
-        type().then(os => this.osType = os);
         window.addEventListener('keydown', (e) => {
             if (e.altKey) this.isAltPressed = true;
         });
@@ -117,7 +116,7 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
-.title-bar {
+.titlebar {
 	height: 30px;
 	width: calc(100vw - 61px);
 	background: rgba(28,28,28,0.9);
@@ -134,6 +133,11 @@ export default defineComponent({
 	justify-content: center;
 	align-items: center;
 	transition: all 0.1s;
+}
+.windows, .macos {
+	position: relative;
+	z-index: 100;
+	visibility: visible !important;
 }
 .windows {
 	margin-left: auto;

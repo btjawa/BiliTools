@@ -22,7 +22,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent } from 'vue';
 import * as utils from '../services/utils';
 
 export default defineComponent({
@@ -79,7 +79,7 @@ export default defineComponent({
             if (this.active) this.hideMenu();
             requestAnimationFrame(() => {
                 this.active = true;
-                nextTick(() => {
+                this.$nextTick(() => {
                     const contextMenu = this.$refs.contextMenu as HTMLElement;
                     const menuHeight = contextMenu.offsetHeight;
                     const menuWidth = contextMenu.offsetWidth;

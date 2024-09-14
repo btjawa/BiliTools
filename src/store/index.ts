@@ -1,10 +1,9 @@
 import { createStore } from 'vuex';
 import { invoke } from '@tauri-apps/api/core';
-import { iziError } from '@/services/utils';
+import { ApplicationError, iziError } from '@/services/utils';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as types from '@/types';
 import * as auth from "@/services/auth";
-import { checkUpdate } from '@/services/updater';
 import { MediaInfo, QueueInfo } from '../types/DataTypes';
 import { emit } from '@tauri-apps/api/event';
 
@@ -35,9 +34,14 @@ export default createStore({
             data: {
                 inited: false,
                 secret: '',
-                tempCount: '',
                 headers: {},
                 mediaInfo: {} as MediaInfo,
+                cache: {
+                    log: 0,
+                    temp: 0,
+                    webview: 0,
+                    database: 0,
+                },
                 mediaMap: {
                     dms: [
                         { id: 16, label: '360P 流畅', login: false },
@@ -111,19 +115,18 @@ export default createStore({
     actions: {
         async init({ commit, state }) {
             try {
-                checkUpdate();
                 commit('updateState', { 'data.secret': await invoke('ready') });
                 await invoke('init', { secret: state.data.secret });
                 await this.dispatch('fetchUser');
                 emit('stop_login');
             } catch(err) {
-                iziError(err);
+                iziError(err as Error);
                 return null;
             }
         },
         async fetchUser({ commit, state }, login: Boolean) {
             const mid = await new Promise(resolve => {
-                let interval: NodeJS.Timeout;
+                let interval: number;
                 const check = () => { const mid = (state.data.headers as Headers).Cookie?.match(/DedeUserID=(\d+);/)?.[1]; if (mid) { clearInterval(interval); resolve(mid) } };
                 if (login) interval = setInterval(check, 100); else resolve((state.data.headers as Headers).Cookie?.match(/DedeUserID=(\d+);/)?.[1] || 0);
             });
@@ -148,7 +151,7 @@ export default createStore({
                 commit('updateState', { 'user': userData, 'data.inited': true });
                 await auth.checkRefresh();
             } else {
-                iziError(details.code + ", " + details.message)
+                iziError(new ApplicationError(details.message, details.code)) 
             };
         },
     },

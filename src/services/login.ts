@@ -7,6 +7,7 @@ import store from '@/store';
 import * as LoginTypes from '@/types/LoginTypes';
 import * as verify from "@/services/auth";
 import qrcode from 'qrcode-generator';
+import { ApplicationError } from './utils';
 
 let smsKey: string;
 
@@ -111,7 +112,7 @@ export async function sendSms(tel: string, cid: string) {
     });
     const body = await response.json() as LoginTypes.SendSmsResp;
     if (body.code !== 0) {
-        throw new Error(`${body.code}, ${body.message}`);
+        throw new ApplicationError(body.message, body.code);
     }
     smsKey = body.data.captcha_key;
     return body;

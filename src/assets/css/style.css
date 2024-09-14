@@ -39,13 +39,18 @@ body {
 
  * {
     font-family: "HarmonyOS_Sans_SC_Regular";
-    /* font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif, Helvetica, "Apple Color Emoji", Arial, "Segoe UI Emoji", "Segoe UI Symbol"; */
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     text-rendering: optimizeLegibility;
     user-select: none;
     -webkit-user-select: none;
+}
+
+@media (-webkit-max-device-pixel-ratio: 1) {
+    * {
+        font-family: -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif, Helvetica, "Apple Color Emoji", Arial, "Segoe UI Emoji", "Segoe UI Symbol";
+    }
 }
 
 input {
@@ -56,16 +61,25 @@ input {
 }
 
 hr {
-    border: 1px solid var(--split-color);
+    border: 0.5px solid var(--split-color);
     margin: 8px 0;
+}
+
+h2 {
+    font-size: 20px;
+}
+
+h3 {
+    font-weight: 600;
+    margin-bottom: 16px;
 }
 
 button {
     cursor: pointer;
     border: none;
     font-size: 12px;
-    transition: 0.1s background;
-    background: var(--block-color);
+    transition: 0.1s background-color, 0.1s filter;
+    background-color: var(--block-color);
     user-select: none !important;
     -webkit-user-select: none !important;
 }
@@ -76,6 +90,13 @@ button {
     overflow: hidden;
     word-break: break-word;
     white-space: nowrap;
+}
+
+.desc {
+    font-size: 14px;
+    color: var(--desc-color);
+    margin-bottom: 12px;
+    display: inline-block;
 }
 
 .dis-placeholder {

@@ -2,6 +2,7 @@
     <TitleBar />
     <ContextMenu ref="contextMenu" />
     <SideBar />
+	<Updater />
     <div class="main" @contextmenu.prevent="showMenu">
         <div class="loading"></div>
         <router-view v-slot="{ Component }">
@@ -16,15 +17,18 @@
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-import { TitleBar, ContextMenu, SideBar } from "@/components";
+import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { listen } from "@tauri-apps/api/event";
+import { type as osType } from '@tauri-apps/plugin-os';
 import { iziError } from "@/services/utils";
+import { useRouter } from "vue-router";
 
 export default {
     components: {
         TitleBar,
         ContextMenu,
-        SideBar
+        SideBar,
+		Updater
     },
     methods: {
         showMenu(e: MouseEvent) {
@@ -32,31 +36,47 @@ export default {
         }
     },
     mounted() {
-        this.$router.push("/");
+        useRouter().push("/");
         this.$store.dispatch('init');
         listen('headers', (e) => {
 			this.$store.commit('updateState', { 'data.headers': e.payload });
 		});
-        listen('settings', (e) => {
+        listen('rw_config:settings', (e) => {
 			this.$store.commit('updateState', { settings: e.payload })
 		});
-        listen('error', (e) => iziError(e.payload as string));
+        listen('error', (e) => iziError(new Error(e.payload as string)));
+		if (osType() == 'macos') {
+			const style = document.createElement('style');
+			style.textContent = `* { font-family: -apple-system; }`;
+			document.head.appendChild(style);
+		}
     }
 }
 
 </script>
 
 <style lang="scss">
+.main, .updater {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	height: calc(100vh - 30px);
+}
 .main {
 	background-color: rgb(24,24,24);
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	position: absolute;
-	right: 0;
-	bottom: 0;
 	width: calc(100vw - 61px);
-	height: calc(100vh - 30px);
+	mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    mask-image: linear-gradient(
+        to left,
+        transparent 0%,
+        black 0%,
+        black 100%,
+        transparent 100%
+    );
 }
 .page {
 	width: 100%;
@@ -71,9 +91,6 @@ export default {
 	h1 {
 		font-size: 24px;
 		margin-bottom: 8px;
-	}
-	h2 {
-		font-size: 20px;
 	}
 }
 .fade-enter-active {
@@ -106,5 +123,9 @@ export default {
 @keyframes circle {
     0% { transform: rotate(0); }
     100% { transform: rotate(360deg); }
+}
+@keyframes slideIn {
+    from { mask-position: 0; }
+    to { mask-position: -100vw; }
 }
 </style>

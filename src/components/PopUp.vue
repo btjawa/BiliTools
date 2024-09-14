@@ -41,7 +41,7 @@
 </template>
   
 <script lang="ts">
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent } from 'vue';
 import store from '@/store';
 
 export default defineComponent({
@@ -60,7 +60,7 @@ export default defineComponent({
     methods: {
         async newPopup(): Promise<typeof this.currSel> {
             this.active = true;
-            nextTick(() => requestAnimationFrame(() => this.opacity = 1));
+            this.$nextTick(() => requestAnimationFrame(() => this.opacity = 1));
             document.addEventListener('keydown', this.handleEsc, { capture: true });
             this.currSel = {
                 dms: this.getCurr("dms"),

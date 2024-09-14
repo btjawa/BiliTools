@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 use std::{collections::{HashSet, VecDeque}, fs, path::PathBuf, sync::{Arc, RwLock}, time::Instant};
 use serde_json::{json, Value};
-use tauri::{async_runtime, Manager, WebviewWindow};
+use tauri::{async_runtime, Emitter, WebviewWindow};
 use tokio::{fs::File, io::{AsyncBufReadExt, AsyncSeekExt, BufReader, SeekFrom}, select, time::{sleep, Duration}};
 
 use crate::{aria2c::*, get_app_handle, handle_err, CURRENT_BIN};

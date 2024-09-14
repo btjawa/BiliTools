@@ -2,7 +2,7 @@ use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 
 use serde_json::Value;
 use lazy_static::lazy_static;
-use tauri::{http::header, WebviewWindow, Manager};
+use tauri::{http::header, Emitter, Listener, WebviewWindow};
 use tauri_plugin_http::reqwest;
 use tokio::time::{sleep, Duration};
 

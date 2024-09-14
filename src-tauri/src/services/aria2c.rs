@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, process, sync::{Arc, RwLock}, time::Instant};
 use tokio::{sync::{Mutex, Notify}, time::{sleep, Duration}};
-use tauri::{async_runtime, Manager, WebviewWindow};
+use tauri::{async_runtime, Emitter, WebviewWindow};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 

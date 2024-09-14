@@ -1,5 +1,4 @@
-<template>
-<div class="user-page">
+<template><div>
     <div class="profile" v-if="user.isLogin">
         <div class="profile__top_photo" :style="{ opacity: user.topPhoto ? 1 : 0 }"><img :src=user.topPhoto draggable="false" /></div>
         <div class="profile__details">
@@ -106,15 +105,15 @@
             <div class="login__desc">用户数据将仅存储于本地</div>
         </div>
     </div>
-</div>
-</template>
+</div></template>
 
 <script lang="ts">
 import { utils, login } from '@/services';
 import { invoke } from '@tauri-apps/api/core';
 import { emit, listen } from "@tauri-apps/api/event";
 import store from '@/store';
-import { iziError } from '@/services/utils';
+import { ApplicationError, iziError } from '@/services/utils';
+import { useRouter } from 'vue-router';
 
 export default {
     data() {
@@ -145,7 +144,7 @@ export default {
                     const tel = (this.$refs.smsAccount as HTMLInputElement).value;
                     const code = (this.$refs.smsCode as HTMLInputElement).value;
                     if (!tel || !code) {
-                        iziError('手机号或验证码为空');
+                        iziError(new Error('手机号或验证码为空'));
                         return null;
                     }
                     await login.smsLogin(tel, code, this.cid);
@@ -153,7 +152,7 @@ export default {
                     const account = (this.$refs.pwdAccount as HTMLInputElement).value;
                     const password = (this.$refs.pwdPwd as HTMLInputElement).value;
                     if (!account || !password) {
-                        iziError('用户名或密码为空');
+                        iziError(new Error('手机号或验证码为空'));
                         return null;
                     }
                     await login.pwdLogin(account, password);
@@ -170,30 +169,34 @@ export default {
                 }
 				utils.iziInfo('登录成功~')
 				invoke('rw_config', { action: 'write', settings: { df_dms: 80 }, secret: store.state.data.secret });
-				this.$router.push('/');
+				useRouter().push('/');
 				store.dispatch('fetchUser', true);
             } catch(err) {
-				if ((err as any).toString() == 86114) return 86114;
-                iziError(err);
+				if ((err as Error).message === "86114") return 86114;
+				iziError(err as Error);
                 return null;
             };
         },
         async exit() {
             await login.exitLogin();
-            this.$router.push('/');
+            useRouter().push('/');
             invoke('rw_config', { action: 'write', settings: { df_dms: 32, df_ads: 30280 }, secret: store.state.data.secret });
             store.dispatch('fetchUser');
         },
         async sendSms() {
             const tel = (this.$refs.smsAccount as HTMLInputElement).value;
             if (!tel) {
-                iziError('手机号为空');
+                iziError(new Error('手机号为空'));
                 return null;
             }
             try {
                 await login.sendSms(tel, this.cid);
             } catch(err) {
-                iziError(err);
+				if (err instanceof ApplicationError) {
+					(err as ApplicationError).handleError();
+				} else {
+					new ApplicationError(err as Error).handleError();
+				}
                 return null;
             }
         }
@@ -202,7 +205,7 @@ export default {
         try {
             this.login('scan');
         } catch(err) {
-            iziError(err);
+            iziError(err as Error);
             return null;
         }
     },
