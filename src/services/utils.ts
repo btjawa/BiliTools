@@ -18,27 +18,30 @@ iziToast.settings({
 
 export class ApplicationError extends Error {
     code?: number | string;
-    constructor(error: Error, code?: number | string | undefined);
-    constructor(message: string, code?: number | string | undefined, options?: ErrorOptions);
-    constructor(msgErr: string | Error, code?: number | string | undefined, options?: ErrorOptions) {
-        if (msgErr instanceof Error) {
-            super(msgErr.message);
-            this.code = code || -108;
-            this.name = msgErr.name;
-            this.stack = msgErr.stack;
-            this.cause = msgErr.cause;
-        } else {
-            super(msgErr, options);
-            this.code = code || -108;
-            this.name = "ApplicationError";
-            this.cause = options?.cause || "Unknown";
-        }
+    constructor(error: Error, options?: { code?: number | string | undefined }) {
+        console.log(error.stack)
+        super();
+        this.message = error.message;
+        this.code = options?.code || -108;
+        this.name = error.name;
+        this.stack = error.stack ? error.stack
+            .replace(/\n(?!at)/g, function(_, offset, string) {
+                let nextIndex = offset;
+                while (!/^at/.test(string.slice(nextIndex))) {
+                    nextIndex = string.indexOf('\n', nextIndex + 1);
+                    if (nextIndex === -1) break;
+                }
+                return '';
+            })
+            .replace(/at\s+[^\s]+\s+\((?:http:\/\/[^)]+)?(src\/[^)]+)\)/g, 'at $1')
+            .replace(/^.*?(?=at\s)/gm, '')
+        : "Unknown stack trace";
     }
     handleError() {
-        const msg = `${this.message}\n"${this.cause}" (${this.code})`;
+        const msg = `${this.message} (${this.code})\n${this.stack}`;
         log.error(msg);
         iziError(new Error(msg));
-        return false;
+        return msg;
     }
 }
 
@@ -57,7 +60,7 @@ export function iziError(err: ApplicationError | Error) {
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
         layout: 2, timeout: 10000,
-        title: '警告 / 错误', message: msg.replace('\n', '<br>')
+        title: '警告 / 错误', message: msg.replace(/\n/g, '<br>')
     });
 }
 
@@ -191,4 +194,11 @@ export function formatBytes(bytes: number): string {
     } else {
         return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
     }
+}
+
+export function formatProxyUrl(proxy: { addr: string, username?: string, password?: string }): string {
+    const url = new URL(proxy.addr);
+    url.username = proxy.username || '';
+    url.password = proxy.password || '';
+    return url.toString();
 }

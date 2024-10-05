@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import dynamicImport from 'vite-plugin-dynamic-import';
 import viteCompression from 'vite-plugin-compression';
+import autoprefixer from 'autoprefixer'
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -28,4 +29,29 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // build: {
+  //   sourcemap: true,
+  // },
+  css: {
+    // devSourcemap: true,
+    postcss: {
+      plugins: [
+        autoprefixer({
+          overrideBrowserslist: [
+              "Android 4.1",
+              "iOS 7.1",
+              "Chrome > 31",
+              "ff > 31",
+              "ie >= 8"
+          ],
+          grid: true
+        })
+      ]
+    },
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler',
+      },
+    },
+  }
 }));

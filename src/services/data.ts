@@ -3,11 +3,17 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { invoke } from '@tauri-apps/api/core';
 import * as types from '@/types';
 import store from '@/store';
+import { formatProxyUrl } from '@/services/utils';
 
 async function getResponse(baseURL: string, type: types.data.MediaType) {
-    const response = await fetch(baseURL, { headers: store.state.data.headers });
+    const response = await fetch(baseURL, {
+        headers: store.state.data.headers,
+        ...(store.state.settings.proxy.addr && {
+            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+        })
+    });
     const data = await response.json();
-    if (data?.code !== 0) throw new Error(data);
+    if (data?.code !== 0) throw data;
     const typeMappings = {
         [types.data.MediaType.Video]: (data as types.data.VideoInfo)?.data?.View,
         [types.data.MediaType.Bangumi]: (data as types.data.BangumiInfo)?.result,
@@ -121,12 +127,18 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
                 }
                 case types.data.MediaType.Music: {
                     const info = response as types.data.MusicInfo["data"];
+                    const tagsResp = await fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`, {
+                        headers: store.state.data.headers,
+                        ...(store.state.settings.proxy.addr && {
+                            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+                        })
+                    });
+                    const rawTags = await tagsResp.json() as types.data.MusicTagsInfo;
                     const mediaInfo: types.data.MediaInfo = {
                         cover: info?.cover?.replace("http:", "https:"),
                         title: info?.title,
                         desc: info?.intro,
-                        tags: (await (await fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=${id.match(/\d+/)[0]}`,
-                        { headers: store.state.data.headers })).json() as types.data.MusicTagsInfo).data?.map(item => item.info),
+                        tags: rawTags.data?.map(item => item.info),
                         type,
                         stat: {
                             play: info?.statistic?.play,
@@ -197,15 +209,19 @@ export async function getMediaInfo<T extends types.data.MediaType>(rawId: string
 }
 
 export async function getPlayUrl(data: types.data.MediaInfo["list"][0], type: types.data.MediaType): Promise<types.data.CommonDash> {
-    return new Promise(async(resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         const params = {
             avid: data.id, cid: data.cid, fourk: 1,
             fnval: 4048, fnver: 0, ep_id: data.eid
         }
-        const signature = await auth.wbi(params);
         const key = type == "bangumi" ? "pgc/player/web" : (type == "lesson" ? "pugv/player/web" : "x/player/wbi");
-        const basicUrl = `https://api.bilibili.com/${key}/playurl?${signature}`;
-        const resp = await fetch(basicUrl, { headers: store.state.data.headers });
+        const basicUrl = `https://api.bilibili.com/${key}/playurl?${await auth.wbi(params)}`;
+        const resp = await fetch(basicUrl, {
+            headers: store.state.data.headers,
+            ...(store.state.settings.proxy.addr && {
+                proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+            })
+        });
         const basicResp = await resp.json();
         if (basicResp?.code !== 0) {
             return reject(basicResp?.code + ', ' + (basicResp?.message || basicResp?.msg));

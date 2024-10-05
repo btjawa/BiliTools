@@ -1,8 +1,8 @@
 <template>
-<div class="updater" ref="updater" @contextmenu.prevent>
-    <h1><i class="fa-solid fa-wrench"></i>版本更新<span class="desc">当前版本：{{ update?.currentVersion }}</span></h1>
-    <h3>BiliTools v{{ update?.version }}<span class="desc">{{ update?.date }}</span></h3>
-    <span class="desc">您可以在设置 -> 高级页关闭自动更新检查，但不建议这样做</span>
+<div class="updater text" ref="updater" @contextmenu.prevent>
+    <h1 class=""><i class="fa-solid fa-wrench"></i>版本更新<span class="desc">当前版本：{{ update?.currentVersion }}</span></h1>
+    <h3 class="">BiliTools v{{ update?.version }}<span class="desc">{{ update?.date }}</span></h3>
+    <span class="desc">您可以在 "设置 -> 关于 -> 更新" 关闭 “自动检查”，但不建议这样做</span>
     <div class="updater-body" v-html="formatEscape(update?.body)" v-if="update?.body"></div>
     <div class="updater-action" ref="updaterAction">
         <button @click="handleAction(true)"><i class="fa-solid fa-download"></i>下载更新</button>
@@ -24,7 +24,7 @@
 import { defineComponent, markRaw } from 'vue';
 import { check as checkUpdate, Update } from '@tauri-apps/plugin-updater';
 import * as log from '@tauri-apps/plugin-log';
-import { ApplicationError, formatBytes, formatEscape } from '@/services/utils';
+import { ApplicationError, formatBytes, formatEscape, formatProxyUrl } from '@/services/utils';
 import { relaunch } from '@tauri-apps/plugin-process';
 
 export default defineComponent({
@@ -33,25 +33,39 @@ export default defineComponent({
             update: null as Update | null,
             mainElement: {} as HTMLElement,
             sidebarElement: {} as HTMLElement,
-            titlebarElement: {} as HTMLElement,
             updateProgress: {
                 bytes: 0,
                 length: 0,
                 completed: false,
             },
-            formatEscape,
-            formatBytes,
+            store: this.$store.state
         }
     },
     async mounted() {
-        try {
-            const update = await checkUpdate();
+        this.$watch(() => this.store.settings.auto_check_update, async () => {
+            if (!this.store.settings.auto_check_update) return null;
+            try {
+                await this.checkUpdate();
+            } catch(err) {
+                const error = new ApplicationError(new Error(err as string), { code: -101 });
+                error.handleError();
+            }
+        });
+    },
+    methods: {
+        formatEscape,
+        formatBytes,
+        async checkUpdate() {
+            const update = await checkUpdate({
+                ...(this.store.settings.proxy.addr && {
+                    proxy: formatProxyUrl(this.store.settings.proxy)
+                })
+            });
             if (update?.available) {
                 console.log(update)
                 this.update = markRaw(update);
                 this.mainElement = (document.querySelector('.main') as HTMLElement);
                 this.sidebarElement = (document.querySelector('.sidebar') as HTMLElement);
-                this.titlebarElement = (document.querySelector('.titlebar') as HTMLElement);
                 this.mainElement.animate(
                     [ { maskPosition: '0' },
                         { maskPosition: '-100vw' } ],
@@ -60,16 +74,11 @@ export default defineComponent({
                         fill: 'forwards' } );
                 this.sidebarElement.style.opacity = '0';
                 this.sidebarElement.style.pointerEvents = 'none';
-                this.titlebarElement.style.width = '100vw';
                 setTimeout(() => {
                     (this.$refs.updater as HTMLElement).classList.add('active');
                 }, 400);
             }
-        } catch(err) {
-            (new ApplicationError(err as string, -102, { cause: "From Updater" })).handleError();
-        }
-    },
-    methods: {
+        },
         async handleAction(action?: boolean) {
             if (action) {
                 const updaterAction = (this.$refs.updaterAction as HTMLElement);
@@ -94,7 +103,8 @@ export default defineComponent({
                         }
                     });
                 } catch(err) {
-                    (new ApplicationError(err as string, -102, { cause: "From Updater" })).handleError();
+                    const error = new ApplicationError(new Error(err as string), { code: -102 });
+                    error.handleError();
                 }
             } else {
                 this.mainElement.animate(
@@ -105,7 +115,6 @@ export default defineComponent({
                         fill: 'forwards' } );
                 this.sidebarElement.style.opacity = '1';
                 this.sidebarElement.style.pointerEvents = 'all';
-                this.titlebarElement.style.width = 'calc(100vw - 61px)';
                 (this.$refs.updater as HTMLElement).classList.remove('active');
 
             }
@@ -123,7 +132,7 @@ export default defineComponent({
     background: transparent;
     z-index: 99;
     opacity: 0;
-    padding: 32px 48px;
+    padding: 18px 36px 48px;
     width: 100vw;
     flex-direction: column;
     transition: opacity 0.3s;
@@ -133,9 +142,9 @@ export default defineComponent({
         pointer-events: all;
     }
     .updater-body {
-        margin: 8px 0 24px 0;
+        margin: 12px 0 24px 0;
         line-height: 28px;
-        max-height: 420px;
+        max-height: 450px;
         overflow: auto;
     }
     .updater-action, .updater-progress {

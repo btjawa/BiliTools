@@ -73,7 +73,7 @@ export interface Captcha {
     seccode: string;
 }
 
-export interface SendSmsResp {
+export interface SendSmsCodeResp {
     code: 0 | -400 | 1002 | 86203 | 1003 | 1025 | 2400 | 2406;
     message: string;
     ttl: number;
@@ -105,5 +105,35 @@ export interface CookieInfoResp {
     data: {
         refresh: boolean,
         timestamp: number,
+    };
+}
+
+export interface VerifyTelCaptchaResp {
+    code: number;
+    message: string;
+    ttl: number;
+    data: {
+        recaptcha_type: string,
+        recaptcha_token: string,
+        gee_challenge: string,
+        gee_gt: string,
+    };
+}
+
+export interface VerifyTelSendSmsCodeResp {
+    code: number;
+    message: string;
+    ttl: number;
+    data: {
+        captcha_key: string,
+    };
+}
+
+export interface VerifyTelResp {
+    code: number;
+    message: string;
+    ttl: number;
+    data: {
+        code: string,
     };
 }

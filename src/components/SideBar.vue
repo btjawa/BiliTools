@@ -2,8 +2,13 @@
 <ul @contextmenu.prevent class="sidebar" ref="sidebar">
     <router-link to="/user-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/user-page') }" class="sidebar-item sidebar-user-page"
-            @click="inited ? navigate() : iziError(new Error('请等待初始化完成'));">
-            <img class="user-avatar" :src="avatarUrl" draggable="false" />
+            @click="store.data.inited ? navigate() : iziError(new Error('请等待初始化完成'));">
+            <img class="user-avatar"
+				:src="
+					store.user.isLogin ? store.user.avatar : '/src/assets/img/profile/default-avatar.jpg'
+				"
+				draggable="false"
+			/>
         </li>
     </router-link>
     <router-link to="/" custom v-slot="{ navigate }">
@@ -33,23 +38,20 @@
 import { defineComponent } from 'vue';
 import { iziError } from '@/services/utils';
 import { type as osType } from '@tauri-apps/plugin-os';
-import { useRoute } from 'vue-router';
 import store from '@/store';
 export default defineComponent({
     methods: {
-        isActive(path: string): boolean {
-            return useRoute().path == path;
-        },
+        isActive(path: string) { return this.$route.path == path },
         iziError
     },
+	data() {
+		return {
+			store: this.$store.state,
+		}
+	},
     computed: {
-        user() { return store.state.user },
-        inited() { return store.state.data.inited },
         avatarUrl(): string {
-            return this.user.isLogin ? this.user.avatar : new URL('@/assets/img/default-avatar.jpg', import.meta.url).href;
-        },
-        userName(): string {
-            return this.user.isLogin ? this.user.name : '登录';
+            return this.store.user.isLogin ? this.store.user.avatar : new URL('@/assets/img/profile/default-avatar.jpg', import.meta.url).href;
         },
     },
     mounted() {
@@ -64,7 +66,6 @@ export default defineComponent({
 	height: 100vh;
 	bottom: 0;
 	background: transparent;
-	border-right: #333333 solid 1px;
 	position: absolute;
 	display: flex;
 	flex-direction: column;

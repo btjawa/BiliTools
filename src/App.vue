@@ -19,9 +19,14 @@
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { listen } from "@tauri-apps/api/event";
-import { type as osType } from '@tauri-apps/plugin-os';
-import { iziError } from "@/services/utils";
-import { useRouter } from "vue-router";
+import { ApplicationError, iziError } from "@/services/utils";
+import { invoke } from "@tauri-apps/api/core";
+import { getVersion as getAppVersion } from '@tauri-apps/api/app';
+import { fetchUser, checkRefresh } from "@/services/login";
+
+getAppVersion().then(version => {
+    console.log('\n' + ' %c BiliTools v' + version + ' %c https://btjawa.top/bilitools ' + '\n', 'color: rgb(233,233,233) ; background: rgb(212,78,125); padding:5px 0;', 'background: #fadfa3; padding:5px 0;');
+});
 
 export default {
     components: {
@@ -35,20 +40,26 @@ export default {
             (this.$refs.contextMenu as InstanceType<typeof ContextMenu>).showMenu(e);
         }
     },
-    mounted() {
-        useRouter().push("/");
-        this.$store.dispatch('init');
-        listen('headers', (e) => {
+    async mounted() {
+        this.$router.push("/");
+		listen('headers', e => {
 			this.$store.commit('updateState', { 'data.headers': e.payload });
 		});
-        listen('rw_config:settings', (e) => {
+		listen('rw_config:settings', e => {
 			this.$store.commit('updateState', { settings: e.payload })
 		});
-        listen('error', (e) => iziError(new Error(e.payload as string)));
-		if (osType() == 'macos') {
-			const style = document.createElement('style');
-			style.textContent = `* { font-family: -apple-system; }`;
-			document.head.appendChild(style);
+        listen('error', e => iziError(new Error(e.payload as string)));
+        try {
+			this.$store.commit('updateState', { 'data.secret': await invoke('ready') });
+			await invoke('init', { secret: this.$store.state.data.secret });
+			const result = await checkRefresh();
+			if (result === -101) return null;
+			await fetchUser();
+		} catch(err) {
+			const error = err instanceof ApplicationError ? err : new ApplicationError(new Error(err as string));
+			return error.handleError();
+		} finally {
+			this.$store.commit('updateState', { 'data.inited': true });
 		}
     }
 }
@@ -63,7 +74,7 @@ export default {
 	height: calc(100vh - 30px);
 }
 .main {
-	background-color: rgb(24,24,24);
+	background-color: rgba(24,24,24);
 	display: flex;
 	justify-content: center;
 	align-items: center;

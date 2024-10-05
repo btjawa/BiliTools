@@ -13,11 +13,11 @@
         <i class="fa-light fa-paste context-menu-item-icon"></i>
         粘贴<a class="context-menu-item-key">Ctrl+V</a>
     </div>
-    <div class="context-menu-split"></div>
+    <!-- <div class="context-menu-split"></div>
     <div @click="handleAction('bilibili')" class="context-menu-item bilibili">
         <i class="fa-brands fa-bilibili context-menu-item-icon"></i>
         在Bilibili上打开此页
-    </div>
+    </div> -->
 </div>
 </template>
 
@@ -99,8 +99,8 @@ export default defineComponent({
 .context-menu {
 	width: 200px;
 	border-radius: 8px;
-	background-color: #2c2c2c;
-	border: solid 1px #666666d3;
+	background-color: var(--section-color);
+	border: solid 1px var(--split-color);
 	z-index: 99;
 	flex-direction: column;
 	flex-wrap: wrap;
@@ -121,7 +121,7 @@ export default defineComponent({
 		left: 2%;
 		top: 50%;
 		position: absolute;
-		background-color: #6666669d;
+		background-color: var(--split-color);
 	}
 }
 .context-menu-item {
@@ -148,7 +148,7 @@ export default defineComponent({
 	}
 	&:hover {
 		&::after {
-			background-color: #6666669d;
+			background-color: var(--split-color);
 		}
 	}
 }

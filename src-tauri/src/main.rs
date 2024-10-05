@@ -5,13 +5,12 @@
 mod services;
 
 use lazy_static::lazy_static;
-use backtrace::Backtrace;
 use sea_orm::FromJsonQueryResult;
-use serde_json::{Value, json};
+use serde_json::Value;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, env, fs, panic, path::PathBuf, sync::{Arc, RwLock}};
-use tauri::{async_runtime, Emitter, Manager, WebviewWindow};
-use tauri_plugin_http::reqwest::{Client, header::{HeaderMap, HeaderName, HeaderValue}};
+use std::{collections::HashMap, env, fs, panic, backtrace::Backtrace, path::PathBuf, sync::{Arc, RwLock}};
+use tauri::{async_runtime, Emitter, Manager};
+use tauri_plugin_http::reqwest::{Client, header::{HeaderMap, HeaderName, HeaderValue}, Proxy};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
 use services::{*, storage::*};
@@ -23,9 +22,21 @@ use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 use window_vibrancy::{apply_acrylic, apply_blur};
 
 lazy_static! {
-    static ref WORKING_DIR: PathBuf = dirs_next::data_local_dir().unwrap().join("com.btjawa.bilitools");
-    static ref DOWNLOAD_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(dirs_next::desktop_dir().unwrap()));
-    static ref TEMP_DIR: Arc<RwLock<PathBuf>> = Arc::new(RwLock::new(PathBuf::from(env::temp_dir())));
+    static ref WORKING_DIR: PathBuf = get_app_handle().path().app_data_dir().unwrap();
+    static ref CONFIG: Arc<RwLock<Settings>> = Arc::new(RwLock::new(Settings {
+        temp_dir: env::temp_dir(),
+        down_dir: get_app_handle().path().desktop_dir().unwrap(),
+        max_conc: 3,
+        df_dms: 32,
+        df_ads: 30280,
+        df_cdc: 7,
+        auto_check_update: true,
+        proxy: SettingsProxy {
+            addr: String::new(),
+            username: String::new(),
+            password: String::new()
+        }
+    }));
     static ref CURRENT_BIN: PathBuf = {
         let root = env::current_exe().unwrap().parent().unwrap().to_path_buf();
         root.join(if root.join("bin").exists() { "bin" } else { "../Resources/bin" })
@@ -36,25 +47,34 @@ lazy_static! {
 
 fn handle_err<E: std::fmt::Display>(e: E) -> String {
     let err_msg = e.to_string();
-    let bt = Backtrace::new();
-    log::error!("{}\n{:?}", err_msg, bt);
+    let backtrace = Backtrace::force_capture().to_string();
+    let bt: Vec<_> = backtrace
+        .lines()
+        .filter(|line| line.contains("bilitools"))
+        .collect();
+    log::error!("{}\n{}", err_msg, bt.join("\n"));
+    log::error!("{}", err_msg);
     get_window().emit("error", &err_msg).unwrap();
     e.to_string()
 }
 
 async fn init_headers() -> Result<HashMap<String, String>, String> {
     let mut headers = HashMap::new();
-    let cookies = cookies::load().await.map_err(|e| handle_err(e))?;
-    headers.insert("Cookie".into(), cookies.iter()
-    .filter_map(|(_, attr)| {
-        attr.get("value").and_then(Value::as_str).map(|value| {
-            let name = attr.get("name").and_then(Value::as_str).unwrap_or_default();
-            format!("{}={}", name, value)
-        })
-    }).collect::<Vec<_>>().join("; "));
-    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".into());
+    let cookies = cookies::load().await.map_err(|e| e.to_string())?
+        .iter().map(|(name, value)|
+            format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
+        ).collect::<Vec<_>>().join("; ");
+    headers.insert("Accept".into(), "*/*".into());
+    headers.insert("Accept-Language".into(), "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6".into());
+    headers.insert("Connection".into(), "keep-alive".into());
+    headers.insert("Cookie".into(), cookies);
+    headers.insert("Upgrade-Insecure-Requests".into(), "1".into());
+    headers.insert("Sec-Ch-Ua".into(), "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"".into());
+    headers.insert("Sec-Ch-Ua-Mobile".into(), "?0".into());
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36".into());
     headers.insert("Referer".into(), "https://www.bilibili.com".into());
     headers.insert("Origin".into(), "https://www.bilibili.com".into());
+    get_window().emit("headers", &headers).unwrap();
     Ok(headers)
 }
 
@@ -64,26 +84,44 @@ async fn init_client() -> Result<Client, String> {
     headers.insert(
         HeaderName::from_bytes(key.as_bytes()).unwrap(),
         HeaderValue::from_str(&value).unwrap()
-    );}
-    Ok(Client::builder()
-        .default_headers(headers)
-        .build()
-        .unwrap())
+    ); }
+    let config = CONFIG.read().unwrap();
+    let client_builder = Client::builder()
+        .default_headers(headers);
+    let client_builder = if !config.proxy.addr.is_empty() {
+        client_builder.proxy(
+            match config.proxy.addr.starts_with("https") {
+                true => Proxy::https(&config.proxy.addr),
+                false => Proxy::http(&config.proxy.addr),
+            }
+            .map_err(|e| handle_err(e))?
+            .basic_auth(&config.proxy.username, &config.proxy.password)
+        )
+    } else { client_builder };
+    Ok(client_builder.build().unwrap())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 struct Settings {
-    max_conc: i64,
-    temp_dir: String,
-    down_dir: String,
-    df_dms: i64,
-    df_ads: i64,
-    df_cdc: i64
+    max_conc: usize,
+    temp_dir: PathBuf,
+    down_dir: PathBuf,
+    df_dms: usize,
+    df_ads: usize,
+    df_cdc: usize,
+    auto_check_update: bool,
+    proxy: SettingsProxy
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+struct SettingsProxy {
+    addr: String,
+    username: String,
+    password: String
 }
 
 #[tauri::command]
-async fn get_size(path: String, ptype: String) -> Result<usize, String> {
-    let window = get_window();
+async fn get_size(path: String, event: tauri::ipc::Channel<usize>) -> Result<usize, String> {
     let mut bytes = 0usize;
     let mut _have_aria2 = false;
     for entry in WalkDir::new(&path).into_iter().filter_map(Result::ok) {
@@ -95,14 +133,14 @@ async fn get_size(path: String, ptype: String) -> Result<usize, String> {
                 _have_aria2 = true;
             }
             bytes += file_size;
-            window.emit("get_size:bytes", json!({ "bytes": bytes, "ptype": ptype })).unwrap();
+            event.send(bytes).unwrap();
         }
     }
     Ok(bytes)
 }
 
 #[tauri::command]
-async fn clean_cache(path: String, ptype: String) -> Result<usize, String> {
+async fn clean_cache(path: String, ptype: String) -> Result<(), String> {
     if ptype == "database" {
         if let Err(_) = fs::remove_file(&path) {}
     } else {
@@ -120,87 +158,65 @@ async fn clean_cache(path: String, ptype: String) -> Result<usize, String> {
             }
         }
     }
-    Ok(get_size(path, ptype).await?)
+    Ok(())
 }
 
 #[tauri::command]
-fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<&str, String> {
+async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<&str, String> {
     let window = get_window();
     if secret != *SECRET.read().unwrap() {
         return Err("403 Forbidden".into())
     }
-    let work_dir = WORKING_DIR.clone();
-    let config = Arc::new(RwLock::new(Settings {
-        temp_dir: TEMP_DIR.read().unwrap().to_string_lossy().into_owned(),
-        down_dir: DOWNLOAD_DIR.read().unwrap().to_string_lossy().into_owned(),
-        max_conc: *aria2c::MAX_CONC_DOWNS.read().unwrap(),
-        df_dms: 32,
-        df_ads: 30280,
-        df_cdc: 7
-    }));
-
     let update_config = |source: HashMap<String, Value>| {
-        let mut config = config.write().unwrap();
+        let mut config = CONFIG.write().unwrap();
         let mut config_json = serde_json::to_value(&*config).unwrap();
         if let Value::Object(ref mut config_obj) = config_json {
             for (key, value) in source {
-                config_obj.insert(key, value);
+                config_obj.insert(key.clone(), value.clone());
+                async_runtime::spawn(async move {
+                    config::insert(key, value).await.map_err(|e| handle_err(e)).unwrap();
+                });
             }
         }
-        *config = serde_json::from_value(config_json).unwrap();
+        *config = serde_json::from_value(config_json).map_err(|e| handle_err(e)).unwrap();
     };
-
     if action == "init" || action == "read" {
-        if let Ok(s) = fs::read_to_string(work_dir.join("config.json")) {
-            if let Ok(local_config) = serde_json::from_str::<HashMap<String, Value>>(&s) {
-                update_config(local_config)
-            }
-        }
+        update_config(config::load().await.map_err(|e| handle_err(e))?);
     } else if action == "write" {
-        if let Some(new_config) = settings { update_config(new_config) }
+        if let Some(new_config) = settings { update_config(new_config.clone()) }
     }
-
-    let config = config.read().unwrap();
+    let config = CONFIG.read().unwrap().clone();
     if action != "read" {
-        fs::write(work_dir.join("config.json"), serde_json::to_string_pretty(&*config).unwrap()).map_err(|e| handle_err(e))?;
-        *aria2c::MAX_CONC_DOWNS.write().unwrap() = config.max_conc;
-        *TEMP_DIR.write().unwrap() = PathBuf::from(&config.temp_dir);
-        *DOWNLOAD_DIR.write().unwrap() = PathBuf::from(&config.down_dir);
-        log::info!("{:?}", config);
+        if let Value::Object(map) = serde_json::to_value(&config).unwrap() {
+            update_config(map.into_iter().collect::<HashMap<String, Value>>());
+        }
+        #[cfg(debug_assertions)]
+        log::info!("{:?}", config)
     }
-    window.emit("rw_config:settings", &*config).unwrap();
+    window.emit("rw_config:settings", config).unwrap();
     Ok(action)
-}
-
-#[tauri::command]
-async fn save_file(content: Vec<u8>, path: String, secret: String) -> Result<String, String> {
-    if secret != *SECRET.read().unwrap() {
-        return Err("403 Forbidden".into())
-    }
-    if let Err(e) = fs::write(path.clone(), content) {
-        handle_err(e.to_string());
-        Err(e.to_string())
-    } else { Ok(path) }
 }
 
 #[tauri::command]
 async fn ready() -> Result<String, String> {
     #[cfg(not(debug_assertions))]
-    { if *READY.read().unwrap() {
+    if *READY.read().unwrap() {
         return Ok("403 Forbidden".into());
-    } }
+    }
     *READY.write().unwrap() = true;
     Ok(SECRET.read().unwrap().to_string())
 }
 
 #[tauri::command]
-async fn init(window: WebviewWindow, secret: String) -> Result<(), String> {
+async fn init(secret: String) -> Result<(), Value> {
     if secret != *SECRET.read().unwrap() {
         return Err("403 Forbidden".into())
     }
-    rw_config("read", None, secret)?;
-    window.emit("headers", init_headers().await?).unwrap();
-    return Ok(());
+    rw_config("read", None, secret).await?;
+    init_headers().await?;
+    login::stop_login();
+    login::get_extra_cookies().await?;
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -221,6 +237,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_process::init())
@@ -230,7 +247,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .set_focus().expect("Can't Bring Window to Focus");
         }))
         .setup(|app| {
-            log::info!("{:?}", WORKING_DIR.as_os_str());
+            const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+            log::info!("BiliTools v{}", VERSION.unwrap_or("unkown"));
             panic::set_hook(Box::new(move |e| { handle_err(e); }));
             let app_handle = app.app_handle().clone();
             let window = app_handle.get_webview_window("main").unwrap();
@@ -238,25 +256,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 services::init(app_handle).await.map_err(|e| handle_err(e))?;
                 Ok::<(), String>(())
             });
-            #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)?;
-            #[cfg(target_os = "windows")]
             match tauri_plugin_os::version() {
-                tauri_plugin_os::Version::Semantic(major, minor, build) => {
-                    if build > 22000 || (major == 10 && build <= 18362) { // Windows 10 & 11 Early Version
+                tauri_plugin_os::Version::Semantic(major, _minor, build) => {
+                    #[cfg(target_os = "windows")]
+                    if major == 10 && build >= 1903 {
                         apply_acrylic(&window, Some((18, 18, 18, 160)))?;
-                    } else if (build > 18362 && build <= 22000) || (major == 6 && minor == 1) { // Windows 7 & Windows 10 v1903+ to Windows 11 22000
+                    } else {
                         apply_blur(&window, Some((18, 18, 18, 160)))?;
+                    }
+                    #[cfg(target_os = "macos")]
+                    if major >= 10 {
+                        apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)?;
                     }
                 },
                 _ => log::error!("Failed to determine OS version"),
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![ready, init, rw_config,
-            login::exit, login::refresh_cookie, login::scan_login, login::sms_login, login::pwd_login,
-            save_file, aria2c::handle_download, aria2c::push_back_queue,
-            aria2c::process_queue, get_size, clean_cache, handle_service])
+        .invoke_handler(tauri::generate_handler![
+            ready, init, rw_config, get_size, clean_cache,
+            login::exit, login::sms_login, login::pwd_login, login::switch_cookie, login::scan_login, login::refresh_cookie,
+            aria2c::handle_download, aria2c::push_back_queue, aria2c::process_queue])
         .run(tauri::generate_context!())
         .expect("error while running BiliTools");
     Ok(())

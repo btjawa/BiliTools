@@ -12,9 +12,7 @@ use crate::services::STORAGE_PATH;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub name: String,
-    pub value: String,
-    pub path: String,
-    pub domain: String,
+    pub value: JsonValue,
     pub expires: String,
 }
 
@@ -35,27 +33,27 @@ pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn parse_cookie_header(cookie_header: &str) -> Result<Model, Box<dyn Error>> {
-    let re = Regex::new(r"([^=;]+)=([^;]*)")?;
-    let mut cookie_map: HashMap<String, String> = HashMap::new();
-    for cap in re.captures_iter(cookie_header) {
-        let key = cap.get(1).map_or("", |m| m.as_str()).trim().to_string();
-        let value = cap.get(2).map_or("", |m| m.as_str()).trim().to_string();
-        cookie_map.insert(key.clone(), value);
+fn parse_cookie_header(cookie: String) -> Result<Model, Box<dyn Error>> {
+    let re_name_value = Regex::new(r"^([^=]+)=([^;]+);?")?;
+    let re_attribute = Regex::new(r"([^=]+)=([^;]+);?")?;
+
+    let captures = re_name_value.captures(&cookie).unwrap();
+    let name = captures.get(1).unwrap().as_str().trim().to_string();
+    let value: JsonValue = captures.get(2).unwrap().as_str().trim().into();
+
+    let mut attributes: HashMap<String, String> = HashMap::new();
+
+    for cap in re_attribute.captures_iter(&cookie) {
+        let key = cap.get(1).unwrap().as_str().trim().to_string();
+        let value = cap.get(2).unwrap().as_str().trim().to_string();
+        attributes.insert(key, value);
     }
-    let path = cookie_map.remove(&cookie_map.keys().find(|&k| k.to_lowercase() == "path").cloned().unwrap_or_else(|| String::new()))
-        .unwrap_or_else(|| "/".into());
-    let domain = cookie_map.remove(&cookie_map.keys().find(|&k| k.to_lowercase() == "domain").cloned().unwrap_or_else(|| String::new()))
-        .unwrap_or_else(|| String::new());
-    let expires = cookie_map.remove(&cookie_map.keys().find(|&k| k.to_lowercase() == "expires").cloned().unwrap_or_else(|| String::new()))
-        .unwrap_or_else(|| String::new());
-    let name = cookie_map.keys().next().ok_or("Missing cookie name")?.to_string();
-    let value = cookie_map.get(&name).ok_or("Missing cookie value")?.to_string();
+
+    let expires = attributes.get("Expires").cloned().unwrap_or_else(|| String::new());
+
     Ok(Model {
         name,
         value,
-        path,
-        domain,
         expires,
     })
 }
@@ -65,18 +63,18 @@ pub async fn load() -> Result<HashMap<String, JsonValue>, Box<dyn Error>> {
     let cookies = Entity::find().all(&db).await?;
     let mut result = HashMap::new();
     for cookie in cookies {
-        result.insert(cookie.name.clone(), serde_json::to_value(cookie)?);
+        result.insert(cookie.name, cookie.value);
     }
     Ok(result)
 }
 
-pub async fn insert(cookie_str: &str) -> Result<(), Box<dyn Error>> {
+pub async fn insert(cookie: String) -> Result<(), Box<dyn Error>> {
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
-    let parsed_cookie = parse_cookie_header(cookie_str)?.into_active_model();
+    let parsed_cookie = parse_cookie_header(cookie)?.into_active_model();
     Entity::insert(parsed_cookie)
         .on_conflict(
         OnConflict::column(Column::Name)
-            .update_columns([Column::Value, Column::Path, Column::Domain, Column::Expires])
+            .update_columns([Column::Value, Column::Expires])
             .to_owned())
         .exec(&db)
         .await?;
@@ -84,11 +82,10 @@ pub async fn insert(cookie_str: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub async fn delete(cookie_str: &str) -> Result<(), Box<dyn Error>> {
+pub async fn delete(cookie: String) -> Result<(), Box<dyn Error>> {
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
-    let parsed_cookie = parse_cookie_header(cookie_str)?;
     Entity::delete_many()
-        .filter(Column::Name.eq(parsed_cookie.name))
+        .filter(Column::Name.eq(cookie))
         .exec(&db)
         .await?;
 

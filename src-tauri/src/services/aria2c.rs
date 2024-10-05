@@ -8,10 +8,9 @@ use tauri::{async_runtime, Emitter, WebviewWindow};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 
-use crate::{downloads, ffmpeg, get_app_handle, handle_err, init_client, CURRENT_BIN, DOWNLOAD_DIR, SECRET, TEMP_DIR};
+use crate::{downloads, ffmpeg, get_app_handle, handle_err, init_client, CURRENT_BIN, SECRET, CONFIG};
 
 lazy_static! {
-    pub static ref MAX_CONC_DOWNS: Arc<RwLock<i64>> = Arc::new(RwLock::new(3));
     pub static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     pub static ref DOING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
     pub static ref COMPLETE_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
@@ -83,7 +82,7 @@ pub fn init() -> Result<(), String> {
             format!("--conf-path={}", CURRENT_BIN.join("aria2.conf").to_string_lossy()),
             format!("--rpc-listen-port={}", port),
             format!("--rpc-secret={}", &SECRET.read().unwrap()),
-            format!("--max-concurrent-downloads={}", MAX_CONC_DOWNS.read().unwrap())
+            format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
         ]).spawn().map_err(|e| handle_err(e))?;
 
     let pid = child.pid();
@@ -134,7 +133,7 @@ pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
     for (url, file_type) in vec![(urls.video, "video"), (urls.audio, "audio")].into_iter() {
         let purl = reqwest::Url::parse(&url[0]).map_err(|e| handle_err(e))?;
         let filename = purl.path_segments().unwrap().last().unwrap();
-        let path = TEMP_DIR.read().unwrap().join("com.btjawa.bilitools").join(format!("{}_{}", queue_info.time, filename)).join(filename);
+        let path = CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", queue_info.time, filename)).join(filename);
         let init_payload = json!({
             "jsonrpc": "2.0",
             "method": "aria2.addUri",
@@ -170,7 +169,7 @@ pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
         display_name: display_name.clone(),
         video_path: tasks.iter().find(|t| t.file_type == "video").map(|t| t.path.clone()).unwrap_or_default(),
         audio_path: tasks.iter().find(|t| t.file_type == "audio").map(|t| t.path.clone()).unwrap_or_default(),
-        output_path:  DOWNLOAD_DIR.read().unwrap().join(ss_dir.clone()),
+        output_path: CONFIG.read().unwrap().down_dir.join(ss_dir.clone()),
         tasks, action, queue_info
     };
     update_queue("push", Some(info), None).await;
@@ -201,8 +200,8 @@ pub async fn process_queue(window: WebviewWindow, date: String) -> Result<(), St
     let mut waiting_len = { WAITING_QUEUE.lock().await.len() as i64 };
     loop {
         if waiting_len == 0 { break; }
-        let max_conc = *MAX_CONC_DOWNS.read().unwrap();
-        let doing_len = { DOING_QUEUE.lock().await.len() as i64 };
+        let max_conc = CONFIG.read().unwrap().max_conc;
+        let doing_len = { DOING_QUEUE.lock().await.len() };
         for _ in 0..max_conc.saturating_sub(doing_len) {
             if let Some(info) = update_queue("waiting", None, Some(&date)).await {
                 let window_clone = window.clone();

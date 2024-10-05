@@ -61,12 +61,11 @@
 import { auth, data, utils } from "@/services";
 import * as types from "@/types";
 import * as shell from "@tauri-apps/plugin-shell";
-import * as dialog from "@tauri-apps/plugin-dialog";
-import { invoke } from "@tauri-apps/api/core";
-import { transformImage } from "@tauri-apps/api/image";
+import { BaseDirectory, writeFile } from "@tauri-apps/plugin-fs";
 import { fetch } from "@tauri-apps/plugin-http";
 import PopUp from "@/components/PopUp.vue";
 import store from "@/store";
+import { ApplicationError, formatProxyUrl } from "@/services/utils";
 
 export default {
 	components: {
@@ -88,27 +87,27 @@ export default {
 					const elapsed = Date.now() - start;
 					if (elapsed < 310) await new Promise(resolve => setTimeout(resolve, 310 - elapsed))
                     this.elmState.active = false;
-                    utils.iziError(err as Error);
-                    return null;
+					(new ApplicationError(
+						new Error(typeof err == 'string' ? err : (err as any).message),
+						{ code: (err as any).code || -101 }
+					)).handleError();
                 }
             }
         },
         async handleOptions(type: string, index: number, info: types.data.MediaInfoListItem) {
             if (type === "cover") {
-                dialog.save({
-                    filters: [{
-                        name: 'PNG Image',
-                        extensions: ['png']
-                    }],
-                    defaultPath: `${this.store.settings.down_dir}/封面_${this.mediaInfo.title}_${utils.pubdate(new Date(), true)}`
-                }).then(async path => {
-                    if (!path) return null;
-                    const coverData = await (await fetch(this.mediaInfo.cover)).arrayBuffer();
-                    invoke('save_file', { content: transformImage(coverData), path, secret: this.store.data.secret });
-                }).catch(err => {
-                    utils.iziError(err);
-                    return null;
-                });
+				const response = await fetch(this.mediaInfo.cover, {
+					headers: this.store.data.headers,
+					...(this.store.settings.proxy.addr && {
+						proxy: { all: formatProxyUrl(this.store.settings.proxy) }
+					})
+				});
+				const filename = `封面_${this.mediaInfo.title}_${utils.pubdate(new Date(), true)}.${this.mediaInfo.cover.slice(-3)}`;
+				const cover = new Uint8Array(await response.arrayBuffer());
+				await writeFile(filename, cover, {
+					baseDir: BaseDirectory.Desktop
+				});
+                    // invoke('save_file', { content: transformImage(cover), path, secret: this.store.data.secret });
             } else if (type === "media") {
 				function getUrls(type: 'video' | 'audio') {
 					let base = finalDash[type].filter(item => item?.id == result?.[type == 'audio' ? 'ads' : 'dms']);

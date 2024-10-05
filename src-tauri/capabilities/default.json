@@ -52,6 +52,15 @@
     "updater:allow-check",
     "updater:allow-download",
     "updater:allow-install",
-    "log:default"
+    "log:default",
+    "fs:allow-write-file",
+    {
+      "identifier": "fs:default",
+      "allow": [
+        {
+          "path": "$DESKTOP/*"
+        }
+      ]
+    }
   ]
 }

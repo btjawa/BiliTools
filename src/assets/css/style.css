@@ -2,12 +2,12 @@
 
 ::-webkit-scrollbar {
     width: 7.5px;
-    height: 7.5px;
     border-radius: 6px;
+    visibility: hidden;
 }
 
 ::-webkit-scrollbar-track {
-    background: #58585c;
+    /* background: #58585c; */
     border-radius: 6px;
 }
 
@@ -38,13 +38,12 @@ body {
 }
 
  * {
-    font-family: "HarmonyOS_Sans_SC_Regular";
+    font-family: -apple-system, "HarmonyOS_Sans_SC_Regular";
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     text-rendering: optimizeLegibility;
     user-select: none;
-    -webkit-user-select: none;
 }
 
 @media (-webkit-max-device-pixel-ratio: 1) {
@@ -77,11 +76,11 @@ h3 {
 button {
     cursor: pointer;
     border: none;
+    outline: none;
     font-size: 12px;
     transition: 0.1s background-color, 0.1s filter;
     background-color: var(--block-color);
     user-select: none !important;
-    -webkit-user-select: none !important;
 }
 
 .ellipsis {
@@ -111,5 +110,4 @@ button {
 
 .text, .text * {
     user-select: text;
-    -webkit-user-select: text;
 }

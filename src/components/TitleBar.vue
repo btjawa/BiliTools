@@ -85,10 +85,10 @@ export default defineComponent({
         return {
             maxed: false,
             isAltPressed: false,
-            osType
         }
     },
     methods: {
+		osType, 
         minimize() { appWindow.minimize() },
         async toggleMaximize() {
             if (this.osType() == "macos") {
@@ -119,8 +119,9 @@ export default defineComponent({
 .titlebar {
 	height: 30px;
 	width: calc(100vw - 61px);
-	background: rgba(28,28,28,0.9);
-	border-bottom: #333333 solid 1px;
+	// background: rgba(28,28,28,0.9);
+	// border-bottom: var(--block-color) solid 1px;
+	background-color: transparent;
 	position: absolute;
 	display: flex;
 	right: 0;

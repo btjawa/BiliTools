@@ -1,8 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
 import { fetch } from '@tauri-apps/plugin-http';
 import store from "@/store";
 import { utils } from "@/services";
 import * as types from "@/types";
+import { ApplicationError, formatProxyUrl } from "./utils";
 import md5 from "md5";
 
 export function id(input: string): { id: string, type: types.data.MediaType | null } {
@@ -20,105 +20,56 @@ export function id(input: string): { id: string, type: types.data.MediaType | nu
 
 declare function initGeetest(params: any, callback: (captchaObj: any) => void): Promise<void>;
 
-export async function wbi(params: any) {
+export async function wbi(params: { [key: string]: string | number | object }) {
     const mixinKeyEncTab = [
         46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
         33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
         61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
         36, 20, 34, 44, 52
     ];
-    const getMixinKey = (orig: String) => {
-        return mixinKeyEncTab.map(n => orig[n]).join('').slice(0, 32);
-    };
     const response = await fetch('https://api.bilibili.com/x/web-interface/nav', {
-        headers: store.state.data.headers
+        headers: store.state.data.headers,
+        ...(store.state.settings.proxy.addr && {
+            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+        })
     });
     const body = await response.json() as types.userInfo.NavInfoResp;
     if (body?.code !== 0) {
-        throw new Error(`${body.code}, ${body.message}`);
+        throw new ApplicationError(new Error(body?.message), { code: body?.code });
     }
     const { img_url, sub_url } = body.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
-    const mixinKey = getMixinKey(imgKey + subKey);
-    const currTime = Math.round(Date.now() / 1000);
-    const chrFilter = /[!'()*]/g;
-    Object.assign(params, { wts: currTime });
-    const query = Object.keys(params).sort().map(key => {
-        const value = params[key].toString().replace(chrFilter, '');
+    const mixinKey = mixinKeyEncTab.map(n => (imgKey + subKey)[n]).join('').slice(0, 32),
+        curr_time = Math.round(Date.now() / 1000),
+        chr_filter = /[!'()*]/g;
+    Object.assign(params, { wts: curr_time });
+    const query = Object.keys(params).sort().map((key) => {
+        const value = params[key].toString().replace(chr_filter, '');
         return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
     }).join('&');
     const wbiSign = md5(query + mixinKey);
     return query + '&w_rid=' + wbiSign;
 }
 
-export function uuid() {
-    function a(e: number) {
-        let t = "";
-        for (let r = 0; r < e; r++) {
-            t += o(Math.random() * 16);
-        }
-        return s(t, e);
-    }
-    function s(e: string, t: number) {
-        let r = "";
-        if (e.length < t) {
-            for (let n = 0; n < t - e.length; n++) {
-                r += "0";
+export async function captcha(gt?: string, challenge?: string): Promise<types.login.Captcha> {
+    return new Promise(async (resolve) => {
+        let token: string; // 定义 token
+        if (!gt || !challenge) {
+            const response = await fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header', {
+                headers: store.state.data.headers,
+                ...(store.state.settings.proxy.addr && {
+                    proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+                })
+            });
+            const body = await response.json() as types.login.GenCaptchaResp;
+            if (body?.code !== 0) {
+                throw new ApplicationError(new Error(body?.message), { code: body?.code });
             }
+            token = body.data.token;
+            gt = body.data.geetest.gt;
+            challenge = body.data.geetest.challenge;
         }
-        return r + e;
-    }
-    function o(e: number) { return Math.ceil(e).toString(16).toUpperCase(); }
-    let e = a(8);
-    let t = a(4);
-    let r = a(4);
-    let n = a(4);
-    let i = a(12);
-    let currentTime = (new Date()).getTime();
-    return e + "-" + t + "-" + r + "-" + n + "-" + i + s((currentTime % 100000).toString(), 5) + "infoc";    
-}
-
-export async function bili_ticket() {
-    const key = "XgwSnGZ1p";
-    const message = "ts" + Math.floor(Date.now() / 1000);
-    const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(key);
-    const messageBytes = encoder.encode(message);
-    const cryptoKey = await crypto.subtle.importKey(
-        "raw", keyBytes, 
-        { name: "HMAC", hash: "SHA-256" }, 
-        false, ["sign"]
-    );
-    const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageBytes);
-    const hexSignature =  Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
-    const params = new URLSearchParams({
-        key_id: "ec02",
-        hexsign: hexSignature,
-        "context[ts]": Math.floor(Date.now() / 1000).toString(),
-        csrf: ""
-    });
-    const response = await fetch(`https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket?${params.toString()}`, {
-        method: "POST"
-    });
-    const body = await response.json() as types.login.GenWebTicketResp;
-    if (body?.code !== 0) {
-        throw new Error(`${body.code}, ${body.message}`);
-    }
-    return body;
-}
-
-export async function captcha() {
-    return new Promise(async resolve => {
-        const response = await fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header', {
-            headers: store.state.data.headers,
-            method: "GET",
-        });
-        const body = await response.json() as types.login.GenCaptchaResp;
-        if (body?.code !== 0) {
-            throw new Error(`${body.code}, ${body.message}`);
-        }
-        const { token, geetest: { challenge, gt } } = body.data;
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
             gt: gt,
@@ -150,30 +101,8 @@ export async function correspondPath(timestamp: number) {
         }, { name: "RSA-OAEP", hash: "SHA-256" },
         true,
         ["encrypt"],
-    )
+    );
     const data = new TextEncoder().encode(`refresh_${timestamp}`);
     const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
     return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
-}
-
-export async function checkRefresh() {
-    const response = await fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info', {
-        headers: store.state.data.headers,
-        method: "GET",
-    });
-    const body = await response.json() as types.login.CookieInfoResp;
-    if (body?.code !== 0) {
-        if (body?.code === -101) return -101
-        else throw new Error(`${body.code}, ${body.message}`);
-    }
-    const { refresh, timestamp } = body.data;
-    if (refresh) {
-        const path = await correspondPath(timestamp);
-        const csrfHtml = await (await fetch(`https://www.bilibili.com/correspond/1/${path}`,
-        { method: "GET", headers: store.state.data.headers })).text() as string;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(csrfHtml, 'text/html');
-        const refresh_csrf = (doc.evaluate('//div[@id="1-name"]/text()', doc, null, XPathResult.STRING_TYPE, null)).stringValue;
-        await invoke("refresh_cookie", { refresh_csrf });
-    } else return refresh;
 }

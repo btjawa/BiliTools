@@ -1,523 +1,620 @@
 <template><div>
-    <div class="profile" v-if="user.isLogin">
-        <div class="profile__top_photo" :style="{ opacity: user.topPhoto ? 1 : 0 }"><img :src=user.topPhoto draggable="false" /></div>
-        <div class="profile__details">
-            <div class="profile__avatar_cont">
-                <img :src="user.avatar" draggable="false" class="profile__avatar" />
-                <img src="@/assets/img/big-vip.svg" draggable="false" class="profile__big_vip" v-if="user.vipStatus" />
+    <div class="profile" v-if="store.user.isLogin">
+        <div class="profile__top_photo" :style="{ opacity: store.user.topPhoto ? 1 : 0 }">
+            <img :src=store.user.topPhoto draggable="false" />
+        </div>
+        <div class="profile__meta">
+            <div class="avatar">
+                <img :src="store.user.avatar + '@100w_100h'" />
+                <img v-if="store.user.vipLabel" class="avatar_vip" src="/src/assets/img/profile/big-vip.svg" />
             </div>
-            <div class="profile__text_area text">
-                <div class="profile__name">
-                    <span>{{ user.name }}</span>
-                    <img :src="levelIcon" draggable="false" class="profile__level" />
-                    <img :src="user.vip" draggable="false" class="profile__vip_label" />
+            <div class="details">
+                <div>
+                    <h2>{{ store.user.name }}</h2>
+                    <img class="details__level" :src="`/src/assets/img/profile/level/level${store.user.level}.svg`" />
+                    <img v-if="store.user.vipLabel" class="details__vip" :src="store.user.vipLabel" />
                 </div>
-                <span class="profile__desc"><div>{{ user.desc }}</div>
-                    <i :class="'fa-regular fa-' + sexDesc"></i>
-                    <span class="profile__mid">
-                        <i class="fa-regular fa-id-card"></i>
-                        {{ user.mid }}
-                    </span>
-                    <span class="profile__coin">
-                        <i class="fa-regular fa-coin-front"></i>
-                        {{ user.coins }}
-                    </span>
-                </span>
+                <span>{{ store.user.desc }}</span>
             </div>
-            <div class="profile__operates">
-                <button class="profile__exit_login" @click="exit">
-                    <i class="fa-regular fa-arrow-right-from-arc"></i>
-                    <span>退出登录</span>
-                </button>
+            <div class="stat">
+                <div class="stat__item">
+                    <span>硬币数</span>
+                    <span>{{ store.user.stat.coins }}</span>
+                </div>
+                <div class="stat__item">
+                    <span>关注数</span>
+                    <span>{{ store.user.stat.following }}</span>
+                </div>
+                <div class="stat__item">
+                    <span>粉丝数</span>
+                    <span>{{ store.user.stat.follower }}</span>
+                </div>
+                <div class="stat__item">
+                    <span>动态数</span>
+                    <span>{{ store.user.stat.dynamic_count }}</span>
+                </div>
+            </div>
+            <button @click="exit()">退出登录</button>
+        </div>
+    </div>
+    <div class="login" v-if="!store.user.isLogin">
+        <div class="scan">
+            <h3>扫描二维码登录</h3>
+            <div class="scan__box">                
+                <img src="/src/assets/img/login/loadTV.gif" />
+                <canvas ref="loginQrcode"></canvas>
+                <div class="scan__tips" v-if="scan.code === 86038" @click="scanLogin()">
+                    <div class="icon">
+                        <i class="fa-solid fa-arrow-rotate-right"></i>
+                    </div>
+                    <span>二维码已过期</span>
+                    <span>请点击刷新</span>
+                </div>
+                <div class="scan__tips" v-if="scan.code === 86090">
+                    <div class="icon">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <span>扫码成功</span>
+                    <span>请在手机上确认</span>
+                </div>
+            </div>
+            <span class="desc">
+                请使用 <a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端</a>
+                <br>扫码登录或扫码下载APP
+            </span>
+        </div>
+        <div class="split"></div>
+        <div class="others">
+            <div class="others__tab">
+                <!-- <h3 class="temp_disable" @click="othersPage = 0" :class="othersPage !== 0 || 'active'">密码登录</h3> -->
+                <h3
+                    :class="othersPage !== 0 || 'active'" :style="{ color: 'var(--split-color)' }"
+                    @click="iziInfo('密码登录目前风控率较大，维护中')"
+                >
+                    密码登录
+                </h3>
+                <div class="split"></div>
+                <h3 @click="othersPage = 1" :class="othersPage !== 1 || 'active'">短信登录</h3>
+            </div>
+            <div class="others__page" ref="othersPage">
+                <form class="input_form">
+                    <div class="form_item">
+                        <span v-if="othersPage === 0">账号</span>
+                        <div v-if="othersPage === 1">
+                            +{{ sms.cid }}
+                            <img src="/src/assets/img/login/select_arrow.svg" />
+                        </div>
+                        <select v-if="othersPage === 1" @change="($event) => {
+                            sms.cid = Number(($event.target as HTMLSelectElement).value);
+                        }">
+                            <option
+                                v-for="country in countryList"
+                                :value="country.country_id"
+                            >
+                                {{ country.cname }} +{{ country.country_id }}
+                            </option>
+                        </select>
+                        <input v-model="pwd.username" v-if="othersPage === 0"
+                            oninput="value=value.replace(/\s+/g, '')"
+                            placeholder="请输入账号"
+                            spellcheck="false"
+                        />
+                        <input v-model="sms.tel" v-if="othersPage === 1"
+                            oninput="value=value.replace(/[^\d]/g, '')"
+                            placeholder="请输入手机号"
+                            spellcheck="false"
+                        />
+                    </div>
+                    <div class="form_item">
+                        <span>{{ othersPage ? '验证码' : '密码' }}</span>
+                        <input v-model="pwd.pwd" v-if="othersPage === 0"
+                            oninput="value=value.replace(/\s+/g, '')"
+                            placeholder="请输入密码"
+                            type="password"
+                            spellcheck="false"
+                        />
+                        <template v-if="othersPage === 1">
+                            <input v-model="sms.code"
+                                oninput="value=value.replace(/[^\d]/g, '')"
+                                placeholder="请输入验证码"
+                                spellcheck="false"
+                            />
+                            <div class="split"></div>
+                            <button type="button" @click="sendSmsCode()">获取验证码</button>
+                        </template>
+                    </div>
+                </form>
+                <button @click="othersPage ? smsLogin() : pwdLogin()">登录</button>
+            </div>
+            <div class="agreement">
+                <span class="desc">该应用产生与获取的所有数据将仅存储于用户本地</span>
+                <span class="desc">登录即代表你同意 <a href="https://www.bilibili.com" target="_blank">哔哩哔哩</a>
+                的 <a href="https://www.bilibili.com/protocal/licence.html" target="_blank">用户协议</a>
+                和 <a href="https://www.bilibili.com/blackboard/privacy-pc.html" target="_blank">隐私政策</a>
+                </span>
             </div>
         </div>
     </div>
-    <div class="login" v-if="!user.isLogin">
-        <div class="login__scan_wp">
-            <div class="login__scan_title">扫描二维码登录</div>
-            <div class="login__scan_box">
-                <canvas id="login__qrcode" ref="qrcodeBox"></canvas>
+    <div class="verify_tel" :class="{ 'active': telVerify.need }">
+        <span>为了您的账号安全，需要验证您的手机号</span>
+        <form class="input_form">
+            <div class="form_item">
+                <span>验证码</span>
+                <input v-model="telVerify.code"
+                    oninput="value=value.replace(/[^\d]/g, '')"
+                    placeholder="请输入验证码"
+                    spellcheck="false"
+                />
+                <div class="split"></div>
+                <button type="button" @click="sendVerifyTelSmsCode()">获取验证码</button>
             </div>
-            <div class="login__scan_tips" ref="qrcodeTips"></div>
-            <div class="login__scan_warning" v-if="scanStat" @click="scanStat == 2 ? login('scan') : null">
-				<template v-if="scanStat == 1">
-					<div><i class="fa-regular fa-octagon-check"></i></div>
-					<span>扫码成功</span>
-					<span>请在手机上确认</span>
-				</template>
-				<template v-if="scanStat == 2">
-					<div><i class="fa-solid fa-rotate-right"></i></div>
-					<span>二维码已过期</span>
-					<span>点击刷新</span>
-				</template>
-			</div>
-            <div class="login__desc">
-                <p>请使用 <a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端</a></p>
-                <p>扫码登录或扫码下载APP</p>
-            </div>
-        </div>
-        <div class="login__main_split"></div>
-        <div class="login__input_wp">
-            <div class="login__tab_wp">
-                <button :class="['login__tab_btn', { 'active': tab == 'pwd' }]" @click="tab = 'pwd'"> 密码登录 </button>
-                <div class="login__small_split"></div>
-                <button :class="['login__tab_btn', { 'active': tab == 'sms' }]" @click="tab = 'sms'"> 短信登录 </button>
-            </div>
-            <div class="login__input_form" v-if="tab == 'pwd'">
-                <div class="login__input_form_item">
-                    <span>账号</span>
-                    <input autocomplete="on" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入账号" type="text" ref="pwdAccount">
-                </div>
-                <div class="login__input_form_split"></div>
-                <div class="login__input_form_item">
-                    <span>密码</span>
-                    <input autocomplete="on" maxlength="32" oninput="value=value.replace(/\s+/g, '')" placeholder="请输入密码"
-                    :type="pwdVisible ? 'text' : 'password'" ref="pwdPwd" @keydown.enter="login('pwd')">
-                    <button @click="pwdVisible = !pwdVisible">
-                        <i :class="['fa-solid', pwdVisible ? 'fa-eye' : 'fa-eye-slash']"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="login__input_form" v-if="tab == 'sms'">
-                <div class="login__input_form_item">
-                    <div class="login__drop">
-                        <span> +{{ cid }} </span>
-                        <button @click="drop = !drop"><img src="@/assets/img/select_arrow.svg" draggable="false" /></button>
-                        <div class="login__drop_box" :class="{ active: drop }">
-                            <div class="login__drop_item" v-for="country in countryList" @click="cid = country.country_id; drop = false">
-                                <span>{{ country.cname }}</span>
-                                <span>{{ '+' + country.country_id }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <input autocomplete="on" maxlength="32" oninput="value=value.replace(/[^\d]/g, '')" placeholder="请输入手机号" type="text" ref="smsAccount">
-                    <div class="login__small_split"></div>
-                    <button @click="sendSms">获取验证码</button>
-                </div>
-                <div class="login__input_form_split"></div>
-                <div class="login__input_form_item">
-                    <span>验证码</span>
-                    <input autocomplete="on" maxlength="32" oninput="value=value.replace(/[^\d]/g, '')" placeholder="请输入验证码"
-                    type="text" ref="smsCode" @keydown.enter="login('pwd')">
-                </div>
-            </div>
-            <button class="login__input_btn" @click="login(tab)">登录</button>
-            <div class="login__desc">用户数据将仅存储于本地</div>
-        </div>
+        </form>
+        <button @click="othersPage ? smsLogin() : pwdLogin()">登录</button>
     </div>
 </div></template>
 
 <script lang="ts">
-import { utils, login } from '@/services';
-import { invoke } from '@tauri-apps/api/core';
-import { emit, listen } from "@tauri-apps/api/event";
-import store from '@/store';
-import { ApplicationError, iziError } from '@/services/utils';
-import { useRouter } from 'vue-router';
+import { ApplicationError, iziError, iziInfo } from '@/services/utils';
+import { emit } from '@tauri-apps/api/event';
+import * as login from '@/services/login';
 
 export default {
     data() {
         return {
-            pwdVisible: false,
-            tab: 'pwd' as 'pwd' | 'sms',
-            cid: '86',
-            drop: false,
-            countryList: [] as { id: number; cname: string; country_id: string; }[],
-			scanStat: 0
+            store: this.$store.state,
+            pwd: {
+                username: '',
+                pwd: '',
+            },
+            sms: {
+                tel: '',
+                code: '',
+                captchaKey: "",
+                cid: 86,
+            },
+            scan: {
+                code: 0,
+            },
+            countryList: [] as {
+                id: number;
+                cname: string;
+                country_id: string;
+            }[],
+            telVerify: {
+                need: false,
+                code: '',
+                captchaKey: '',
+                tmpCode: '',
+                requestId: ''
+            },
+            othersPage: 1,
         }
-    },
-    computed: {
-        user() { return store.state.user },
-        levelIcon() {
-            return new URL(`../assets/img/level/level${this.user.level}.svg`, import.meta.url).href
-        },
-        sexDesc() {
-            const sex = this.user.sex;
-            return sex == '男' ? 'mars' : sex == '女' ? 'venus' : 'question';
-        },
     },
     methods: {
-        async login(type: 'scan' | 'pwd' | 'sms') {
-            try {
-				if (this.user.isLogin) return null;
-                if (type === 'sms') {
-                    const tel = (this.$refs.smsAccount as HTMLInputElement).value;
-                    const code = (this.$refs.smsCode as HTMLInputElement).value;
-                    if (!tel || !code) {
-                        iziError(new Error('手机号或验证码为空'));
-                        return null;
-                    }
-                    await login.smsLogin(tel, code, this.cid);
-                } else if (type === 'pwd') {
-                    const account = (this.$refs.pwdAccount as HTMLInputElement).value;
-                    const password = (this.$refs.pwdPwd as HTMLInputElement).value;
-                    if (!account || !password) {
-                        iziError(new Error('手机号或验证码为空'));
-                        return null;
-                    }
-                    await login.pwdLogin(account, password);
-                } else if (type === 'scan') {
-					this.scanStat = 0;
-					emit('stop_login');
-					this.cid = await login.getZoneCode();
-                	this.countryList = await login.getCountryList();
-					listen('login-status', e => {
-						if (e.payload == 86090) this.scanStat = 1;
-						else if (e.payload == 86038) this.scanStat = 2;
-					});
-                    await login.scanLogin(this.$refs.qrcodeBox as HTMLCanvasElement);
+        iziInfo,
+        async scanLogin() {
+            await this.handleError(async () => {
+                this.scan.code = 0;
+                (this.$refs.loginQrcode as HTMLCanvasElement).height = 160;
+                const qrcodeKey = await login.genQrcode(this.$refs.loginQrcode as HTMLCanvasElement);
+                return await login.scanLogin(qrcodeKey, ({ code }) => {
+                    this.scan.code = code;
+                    if (code === 86114) return null; // USER CANCELD
+                });
+            }, { login: true });
+        },
+        async pwdLogin() {
+            await this.handleError(async () => {
+                return await login.pwdLogin(this.pwd.username, this.pwd.pwd);
+            }, { login: true });
+        },
+        async verifyTel() {
+            await this.handleError(async () => {
+                return await login.verifyTel(this.telVerify.tmpCode, this.telVerify.captchaKey, this.telVerify.code, this.telVerify.requestId);
+            }, { login: true });
+        },
+        async sendVerifyTelSmsCode() {
+            await this.handleError(async () => {
+                this.telVerify.captchaKey = await login.verifyTelSendSmsCode(this.telVerify.tmpCode);
+            });
+        },
+        async sendSmsCode() {
+            await this.handleError(async () => {
+                if (!this.sms.tel) {
+                    iziError(new Error('手机号为空'));
+                    return null;
                 }
-				utils.iziInfo('登录成功~')
-				invoke('rw_config', { action: 'write', settings: { df_dms: 80 }, secret: store.state.data.secret });
-				useRouter().push('/');
-				store.dispatch('fetchUser', true);
-            } catch(err) {
-				if ((err as Error).message === "86114") return 86114;
-				iziError(err as Error);
-                return null;
-            };
+                this.sms.captchaKey = await login.sendSmsCode(this.sms.cid, this.sms.tel);
+            });
+        },
+        async smsLogin() {
+            await this.handleError(async () => {
+                return await login.smsLogin(this.sms.cid, this.sms.tel, this.sms.code, this.sms.captchaKey);
+            }, { login: true });
         },
         async exit() {
-            await login.exitLogin();
-            useRouter().push('/');
-            invoke('rw_config', { action: 'write', settings: { df_dms: 32, df_ads: 30280 }, secret: store.state.data.secret });
-            store.dispatch('fetchUser');
+            await this.handleError(async () => {
+                return await login.exitLogin();
+            }, { login: true });
         },
-        async sendSms() {
-            const tel = (this.$refs.smsAccount as HTMLInputElement).value;
-            if (!tel) {
-                iziError(new Error('手机号为空'));
-                return null;
-            }
+        async handleError(func: Function, options?: { login: boolean }) {
             try {
-                await login.sendSms(tel, this.cid);
-            } catch(err) {
-				if (err instanceof ApplicationError) {
-					(err as ApplicationError).handleError();
-				} else {
-					new ApplicationError(err as Error).handleError();
-				}
-                return null;
+                const code = await func();
+                if (options?.login && code === 0) {
+                    this.$router.push('/');
+                    login.fetchUser();
+                }
+            } catch (err) {
+                if (err instanceof ApplicationError) {
+                    err.handleError();
+                } else if (typeof err === 'string') {
+                    (new ApplicationError(new Error(err as string), { code: -101 })).handleError();
+                } else if ((err as any)?.tmp_code && (err as any)?.request_id) {
+                    (new ApplicationError(new Error((err as any).message), { code: (err as any).code })).handleError();
+                    this.telVerify.need = true;
+                    this.telVerify.tmpCode = (err as any).tmp_code;
+                    this.telVerify.requestId = (err as any).request_id;
+                    console.log(this.telVerify)
+                }
             }
-        }
+        },
     },
     async activated() {
-        try {
-            this.login('scan');
-        } catch(err) {
-            iziError(err as Error);
-            return null;
+        this.telVerify.need = false;
+        if (!this.store.user.isLogin) {
+            this.scanLogin();
+            await this.handleError(async () => {
+                this.sms.cid = await login.getZoneCode();
+                this.countryList = await login.getCountryList();
+            });
         }
     },
     deactivated() {
         emit('stop_login');
     }
-};
+
+}
+
 </script>
 
-<style scoped lang="scss">
-button {
-	background: 0 0;
-	transition: color .2s,background .2s;
-}
-input[type=password]::-ms-clear,input[type=password]::-ms-reveal,input[type=password]::-webkit-inner-spin-button,input[type=password]::-webkit-outer-spin-button {
-	display: none;
-}
-.login__input_btn {
-	height: 40px;
-	border-radius: var(--block-radius);
-	border: 1px solid var(--split-color);
-	margin-top: 20px;
-	width: 100%;
-	&:hover {
-		background: var(--primary-color);
-	}
-}
-.login__desc a,.login__input_form_item>button:hover,.login__tab_btn.active,.profile__exit_login:hover {
-	color: var(--primary-color);
-	text-decoration: none;
-}
-.login__desc {
-	font-size: 13px;
-	position: absolute;
-	bottom: 100px;
-	text-align: center;
-}
-.login__drop {
-	min-width: 42px;
-	position: relative;
-	& + input {
-		width: 169px;
-	}
-	img {
-		position: absolute;
-		right: -12px;
-		top: 5px;
-	}
-}
-.login__drop_box {
-	border: 1px solid var(--split-color);
-	padding: 6px 0;
-	display: flex;
-	flex-direction: column;
-	width: 220px;
-	max-height: 200px;
-	position: absolute;
-	left: -23px;
-	top: 32px;
-	border-radius: var(--block-radius);
-	background: var(--block-color);
-	z-index: 1;
-	overflow: auto;
-	transition: opacity .1s;
-	pointer-events: none;
-	opacity: 0;
-	&.active {
-		opacity: 1;
-		pointer-events: all;
-	}
-}
-.login__drop_item {
-	padding: 6px 12px;
-	display: flex;
-	flex: 1;
-	justify-content: space-between;
-	cursor: pointer;
-	transition: background .1s;
-	&:hover {
-		background: var(--split-color);
-	}
-}
+<style lang="scss">
 .profile {
-	.profile__text_area {
-		display: flex;
-		flex-direction: column;
-	}
-	&::after {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		bottom: 0;
-		right: 0;
-		border-bottom: #333 solid 1px;
-		background: linear-gradient(to bottom,transparent 0,rgba(0,0,0,.13) 25%,rgba(0,0,0,.26) 50%,rgba(0,0,0,.4) 75%,rgba(0,0,0,.66) 100%);
-	}
-}
-.login__input_wp,.login__scan_wp,.profile__operates {
-	flex-direction: column;
-}
-.profile__operates {
-	display: flex;
-	button {
-		padding: var(--block-radius);
-		transition: color .2s;
-	}
-	i {
-		margin-right: 6px;
-	}
-}
-.profile__text_area {
-	flex: 1;
-}
-.login,.profile {
-	position: relative;
-	border-radius: var(--block-radius);
-	background: var(--section-color);
-	border: #333 solid 1px;
-	height: 240px;
+    width: 100%;
+    position: absolute;
+    max-width: 1280px;
+    background-color: var(--section-color);
+    border-top: #333 solid 1px;
+    border-bottom: #333 solid 1px;
+    .profile__top_photo {
+        position: relative;
+        img {
+            width: 100%;
+            display: block;
+        }
+        &:after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            border-bottom: #333 solid 1px;
+            background: linear-gradient(to bottom,transparent 0,rgba(0,0,0,.13) 25%,rgba(0,0,0,.26) 50%,rgba(0,0,0,.4) 75%,rgba(0,0,0,.66) 100%);
+        }
+    }
+    .profile__meta {
+        margin: 0 40px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        .avatar {
+            transform: translateY(-10px);
+            border: 2px solid rgba(255,255,255,0.4);
+            box-sizing: content-box;
+            display: block;
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background-image: url("/src/assets/img/profile/default-avatar.jpg");
+            background-size: cover;
+            background-clip: padding-box;
+            border-radius: 50%;
+            img {
+                border-radius: 50%;
+            }
+            .avatar_vip {
+                width: 30px;
+                position: absolute;
+                bottom: 0;
+                right: 0;
+            }
+        }
+        .details {
+            position: absolute;
+            top: 10px;
+            margin-left: 120px;
+            span {
+                color: var(--desc-color);
+                font-size: 14px;
+            }
+            & > div {
+                margin-bottom: 6px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                .details__level {
+                    height: 14px;
+                }
+                .details__vip {
+                    height: 20px;
+                }
+            }
+            & > span {
+                width: 530px;
+                word-break: break-all;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                line-clamp: 2;
+                overflow: hidden;
+            }
+        }
+        .stat {
+            margin: 0 24px 0 auto;
+            .stat__item {
+                font-size: 12px;
+                display: inline-flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 0 5px;
+                span:first-child {
+                    color: var(--desc-color);
+                    margin-bottom: 5px;
+                }
+            }
+        }
+        button {
+            padding: 10px 12px;
+            border-radius: 8px;
+            &:hover {
+                background-color: var(--primary-color);
+            }
+        }
+    }
 }
 .login {
-	display: flex;
-	width: 820px;
-	height: 430px;
-	padding: 52px 65px 29px 92px;
-	background-image: url(../assets/img/22_open.png),url(../assets/img/33_open.png);
-	background-position: 0 100%,100% 100%;
-	background-repeat: no-repeat,no-repeat;
-	background-size: 14%;
+    padding: 52px 65px 29px 92px;
+    display: flex;
+    position: relative;
+    min-height: 430px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background-color: var(--section-color);
+    background-image: url("/src/assets/img/login/22_open.png"), url("/src/assets/img/login/33_open.png");
+    background-position: 0 100%, 100% 100%;
+    background-repeat: no-repeat, no-repeat;
+    background-size: 14%;
+    .desc {
+        font-size: 13px;
+        text-align: center;
+        width: 100%;
+        margin-bottom: 0;
+    }
+    h3 {
+        font-weight: 400;
+        text-align: center;
+    }
+    .scan {
+        height: 290px;
+        h3 {
+            margin-bottom: 26px;
+        }
+        .scan__box {
+            width: 160px;
+            height: 160px;
+            padding: 5px;
+            border: solid var(--desc-color) 1px;
+            border-radius: 8px;
+            box-sizing: content-box;
+            position: relative;
+            img {
+                position: absolute;
+                filter: invert(1);
+                margin: 29px;
+                z-index: 0;
+            }
+            canvas {
+                position: relative;
+                z-index: 1;
+            }
+            .scan__tips {
+                width: 172px;
+                height: 172px;
+                position: absolute;
+                z-index: 2;
+                background-color: rgba(24,24,24,0.9);
+                top: -1px;
+                left: -1px;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+                display: flex;
+                border-radius: 6px;
+                .icon {
+                    width: 24px;
+                    height: 24px;
+                    padding: 16px;
+                    border-radius: 50%;
+                    box-sizing: content-box;
+                    background-color: rgba(24,24,24);
+                    i {
+                        color: var(--primary-color);
+                        font-size: 24px;
+                    }
+                    margin-bottom: 10px;
+                }
+                span {
+                    font-size: 13px;
+                    line-height: 19px;
+                }
+            }
+        }
+        .desc {
+            margin-top: 18px;
+        }
+    }
+    & > .split {
+        width: 1px;
+        background-color: var(--split-color);
+        margin: 51px 45px 0 45px;
+        height: 228px;
+    }
+    .others {
+        display: flex;
+        height: 290px;
+        width: 400px;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        .others__tab {
+            display: flex;
+            margin-bottom: 26px;
+            height: fit-content;
+            align-items: center;
+            h3 {
+                margin: unset;
+                transition: color .1s;
+                &.active {
+                    color: var(--primary-color);
+                }
+                &:hover {
+                    cursor: pointer;
+                }
+            }
+            .split {
+                width: 1px;
+                background-color: var(--split-color);
+                height: 20px;
+                margin: 0 21px;
+            }
+        }
+        .others__page {
+            width: 100%;
+            .input_form {
+                border-radius: 8px;
+                border: 1px solid var(--split-color);
+                .form_item {
+                    display: flex;
+                    padding: 12px 20px;
+                    font-size: 14px;
+                    input {
+                        margin-left: 20px;
+                        display: flex;
+                        flex: 1;
+                    }
+                    & > div {
+                        width: 42px;
+                        position: relative;
+                        img {
+                            position: absolute;
+                            top: 5px;
+                            left: 42px;
+                            width: 12px;
+                        }
+                    }
+                    select {
+                        position: absolute;
+                        opacity: 0;
+                        width: 54px;
+                        &:hover {
+                            cursor: pointer;
+                        }
+                    }
+                    &:first-child {
+                        border-bottom: 1px solid var(--split-color);
+                    }
+                    .split {
+                        height: 19px;
+                        width: 1px;
+                        margin: 0 20px;
+                        background-color: var(--split-color);
+                    }
+                    button {
+                        background-color: unset;
+                    }
+                }
+            }
+            & > button {
+                margin-top: 20px;
+                border-radius: 8px;
+                height: 40px;
+                width: 100%;
+                &:hover {
+                    background-color: var(--primary-color);
+                }
+            }
+        }
+        .agreement {
+            position: absolute;
+            bottom: 14px;
+        }
+    }
 }
-.profile::after,.profile__top_photo,.profile__top_photo img {
-	width: 912.75px;
-	height: 142.6171875px;
-	border-radius: var(--block-radius);
-	border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
-	transition: opacity .5s;
-}
-.profile__details {
-	position: absolute;
-	bottom: 0;
-	width: 100%;
-	padding: 0 30px 15px;
-	display: flex;
-}
-.profile__avatar,.profile__avatar_cont {
-	position: relative;
-	height: 90px;
-	z-index: 1;
-}
-.profile__avatar_cont {
-	margin-right: 20px;
-}
-.profile__avatar {
-	border: var(--section-color) 1px solid;
-	border-radius: 50%;
-}
-.profile__big_vip {
-	position: absolute;
-	height: 25px;
-	bottom: 0;
-	right: 0;
-	z-index: 1;
-}
-.profile__exit_login,.profile__name {
-	display: flex;
-	margin-top: auto;
-	align-items: center;
-}
-.profile__name {
-	width: 100%;
-	span {
-		font-size: 20px;
-		font-weight: 700;
-		max-width: 40%;
-		margin-top: auto;
-	}
-	img {
-		margin-left: 12px;
-	}
-}
-.profile__desc,.profile__name span {
-	display: inline-block;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.profile__level {
-	height: 15px;
-}
-.profile__vip_label {
-	height: 18px;
-}
-.profile__desc,.profile__desc span {
-	font-size: 13px;
-	line-height: 22px;
-	color: var(--desc-color);
-}
-.profile__desc i,.profile__mid {
-	color: #4f5259;
-	font-size: 12px;
-}
-.profile__desc {
-	span {
-		margin-left: var(--block-radius);
-	}
-}
-.login__scan_warning>span,.profile__operates {
-	font-size: 13px;
-}
-.login__input_wp,.login__scan_box,.login__scan_wp,.login__tab_wp {
-	display: flex;
-	align-items: center;
-}
-.login__scan_title,.login__tab_wp {
-	line-height: 22.4px;
-	margin-bottom: 26px;
-}
-.login__scan_box {
-	border-radius: var(--block-radius);
-	border: solid #444 2px;
-	width: 180px;
-	height: 180px;
-	justify-content: center;
-	transition: opacity .4s;
-	z-index: 1;
-	&:hover {
-		opacity: 0;
-		& + .login__scan_tips {
-			opacity: 1;
-		}
-	}
-}
-.login__scan_tips {
-	position: absolute;
-	opacity: 0;
-	height: 173px;
-	width: 330px;
-	z-index: 0;
-	transform: translateY(50px);
-	background-size: 100% 100%;
-	background-image: url(@/assets/img/qr-tips.png);
-	transition: opacity .4s;
-}
-.login__scan_warning {
-	border-radius: var(--block-radius);
-	position: absolute;
-	width: 180px;
-	z-index: 2;
-	height: 180px;
-	transform: translateY(26.7%);
-	background-color: rgba(31,31,31,.9);
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	cursor: pointer;
-	div {
-		width: 56px;
-		height: 56px;
-		border-radius: 50%;
-		background-color: var(--section-color);
-		margin-bottom: 10px;
-		i {
-			padding: 16px;
-			font-size: 24px;
-			color: var(--primary-color);
-		}
-	}
-}
-.login__main_split,.login__small_split {
-	height: 70%;
-	width: 1px;
-	background: var(--split-color);
-	margin: 43px 44px 0 45px;
-}
-.login__small_split {
-	height: 20px;
-	margin: 0 21px;
-}
-.login__tab_btn {
-	font-size: 18px;
-}
-.login__input_wp {
-	& > span {
-		font-size: 12px;
-		margin-top: 60px;
-		align-self: center;
-	}
-}
-.login__input_form {
-	width: 390px;
-	border: 1px solid var(--split-color);
-	font-size: 14px;
-	border-radius: var(--block-radius);
-}
-.login__input_form_split {
-	flex: 1;
-	height: 1px;
-	background: var(--split-color);
-}
-.login__input_form_item {
-	padding: 12px 22px;
-	display: flex;
-	* {
-		line-height: 20px;
-		font-size: 14px;
-	}
-	input {
-		margin-left: 20px;
-		flex: 1;
-	}
+.verify_tel {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--section-color);
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.2s;
+    width: 100%;
+    & > span {
+        margin-bottom: 20px;
+    }
+    .input_form {
+        width: 400px;
+        border-radius: 8px;
+        border: 1px solid var(--split-color);
+        .form_item {
+            display: flex;
+            padding: 12px 20px;
+            font-size: 14px;
+            input {
+                margin-left: 20px;
+                display: flex;
+                flex: 1;
+            }
+            .split {
+                height: 19px;
+                width: 1px;
+                margin: 0 20px;
+                background-color: var(--split-color);
+            }
+            button {
+                background-color: unset;
+            }
+        }
+    }
+    & > button {
+        width: 400px;
+        margin-top: 20px;
+        border-radius: 8px;
+        height: 40px;
+        &:hover {
+            background-color: var(--primary-color);
+        }
+    }
+    &.active {
+        opacity: 1;
+        pointer-events: all;
+    }
 }
 </style>

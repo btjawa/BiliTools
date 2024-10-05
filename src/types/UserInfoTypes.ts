@@ -108,3 +108,14 @@ export interface NavInfoResp {
         is_jury: boolean;
     };
 }
+
+export interface UserStatResp {
+    code: number;
+    message: string;
+    ttl: number;
+    data: {
+        following: number;
+        follower: number;
+        dynamic_count: number;
+    };
+}
