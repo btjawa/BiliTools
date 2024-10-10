@@ -26,14 +26,14 @@
         </li>
     </router-link>
     <router-link to="/fav-page" custom v-slot="{ navigate }">
-        <li class="sidebar-item !mb-auto" @click="navigate"
+        <li class="sidebar-item" @click="navigate"
             :class="{ 'active': isActive('/fav-page') }">
             <i :class="{ 'fa-duotone': isActive('/fav-page'), 'fa-regular': !isActive('/fav-page'), }"
             class="fa-bookmark"></i>
         </li>
     </router-link>
     <router-link to="/setting-page" custom v-slot="{ navigate }">
-        <li class="sidebar-item sidebar-setting-page" @click="navigate"
+        <li class="sidebar-item !mt-auto" @click="navigate"
             :class="{ 'active': isActive('/setting-page') }">
             <i :class="{ 'fa-duotone': isActive('/setting-page'), 'fa-regular': !isActive('/setting-page'), }"
             class="fa-gear"></i>

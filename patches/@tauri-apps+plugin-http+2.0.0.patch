@@ -1,28 +1,27 @@
 diff --git a/node_modules/@tauri-apps/plugin-http/dist-js/index.js b/node_modules/@tauri-apps/plugin-http/dist-js/index.js
-index 25b211d..7b1aa84 100644
+index e3e56b9..44866e8 100644
 --- a/node_modules/@tauri-apps/plugin-http/dist-js/index.js
 +++ b/node_modules/@tauri-apps/plugin-http/dist-js/index.js
-@@ -42,6 +42,9 @@ const ERROR_REQUEST_CANCELLED = "Request canceled";
+@@ -42,6 +42,8 @@ const ERROR_REQUEST_CANCELLED = 'Request canceled';
   * @since 2.0.0
   */
  async function fetch(input, init) {
 +    // Custom Loading Box while requesting - btjawa
 +    const loadingBox = document.querySelector('.loading');
-+
      // abort early here if needed
      const signal = init?.signal;
      if (signal?.aborted) {
-@@ -107,12 +110,16 @@ async function fetch(input, init) {
+@@ -107,12 +109,16 @@ async function fetch(input, init) {
          throw new Error(ERROR_REQUEST_CANCELLED);
      }
-     signal?.addEventListener("abort", () => void abort());
+     signal?.addEventListener('abort', () => void abort());
 +    // Before request, make custom loading box active - btjawa
 +    if (loadingBox) loadingBox.classList.add('active');
-     const { status, statusText, url, headers: responseHeaders, rid: responseRid, } = await invoke("plugin:http|fetch_send", {
-         rid,
+     const { status, statusText, url, headers: responseHeaders, rid: responseRid } = await invoke('plugin:http|fetch_send', {
+         rid
      });
-     const body = await invoke("plugin:http|fetch_read_body", {
-         rid: responseRid,
+     const body = await invoke('plugin:http|fetch_read_body', {
+         rid: responseRid
      });
 +    // After request, make custom loading box inactive - btjawa
 +    if (loadingBox) loadingBox.classList.remove('active');

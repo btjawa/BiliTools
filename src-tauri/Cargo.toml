@@ -15,18 +15,18 @@ opt-level = "z" # Optimize for binary size
 strip = true # Remove debug symbols
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-rc", features = [] }
+tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc", features = ["macos-private-api"] }
-tauri-plugin-single-instance = "2.0.0-rc"
-tauri-plugin-shell = "2.0.0-rc"
-tauri-plugin-dialog = "2.0.0-rc"
-tauri-plugin-log = "2.0.0-rc"
-tauri-plugin-os = "2.0.0-rc"
-tauri-plugin-fs = "2.0.0-rc"
-tauri-plugin-process = "2.0.0-rc"
-tauri-plugin-http = { version = "2.0.0-rc", features = ["unsafe-headers", "rustls-tls", "stream", "gzip", "brotli", "blocking"] }
+tauri = { version = "2.0.0", features = ["macos-private-api"] }
+tauri-plugin-single-instance = "2.0.0"
+tauri-plugin-shell = "2.0.0"
+tauri-plugin-dialog = "2.0.0"
+tauri-plugin-log = "2.0.0"
+tauri-plugin-os = "2.0.0"
+tauri-plugin-fs = "2.0.0"
+tauri-plugin-process = "2.0.0"
+tauri-plugin-http = { version = "2.0.0", features = ["unsafe-headers", "rustls-tls", "stream", "gzip", "brotli", "blocking"] }
 sea-orm = { version = "0.12", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros" ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -40,4 +40,4 @@ window-vibrancy = "0.5.0"
 ring = "0.17.8"
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
-tauri-plugin-updater = "2.0.0-rc"
+tauri-plugin-updater = "2.0.0"
