@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { UserPage, HomePage, DownPage, SettingPage } from '@/views';
+import { UserPage, HomePage, DownPage, FavPage, SettingPage } from '@/views';
 
 const routes = [
   {
@@ -16,6 +16,11 @@ const routes = [
     path: '/down-page',
     name: 'DownPage',
     component: DownPage,
+  },
+  {
+    path: '/fav-page',
+    name: 'FavPage',
+    component: FavPage,
   },
   {
     path: '/setting-page',

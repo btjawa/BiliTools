@@ -1,4 +1,17 @@
 @import url("./iziToast.min.css");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    h1, h2 {
+        @apply font-bold;
+    }
+    h2 {
+        font-size: 20px;
+    }
+    
+}
 
 ::-webkit-scrollbar {
     width: 7.5px;
@@ -64,23 +77,20 @@ hr {
     margin: 8px 0;
 }
 
-h2 {
-    font-size: 20px;
-}
-
-h3 {
-    font-weight: 600;
-    margin-bottom: 16px;
+button, select, input {
+    @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
+    @apply bg-[color:var(--block-color)] text-[color:var(--content-color)];
+    @apply hover:brightness-[85%];
+    @apply transition !select-none;
 }
 
 button {
-    cursor: pointer;
-    border: none;
-    outline: none;
-    font-size: 12px;
-    transition: 0.1s background-color, 0.1s filter;
-    background-color: var(--block-color);
-    user-select: none !important;
+    @apply hover:cursor-pointer;
+}
+
+select {
+    @apply hover:cursor-pointer;
+    min-width: 152px;
 }
 
 .ellipsis {
@@ -94,7 +104,6 @@ button {
 .desc {
     font-size: 14px;
     color: var(--desc-color);
-    margin-bottom: 12px;
     display: inline-block;
 }
 

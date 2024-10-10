@@ -1,22 +1,26 @@
 <template><div>
-    <div class="profile" v-if="store.user.isLogin">
-        <div class="profile__top_photo" :style="{ opacity: store.user.topPhoto ? 1 : 0 }">
-            <img :src=store.user.topPhoto draggable="false" />
+    <div v-if="store.user.isLogin"
+        class="profile w-full absolute max-w-7xl bg-[color:var(--section-color)]"
+    >
+        <div class="profile__top_photo relative" :style="{ opacity: store.user.topPhoto ? 1 : 0 }">
+            <img :src=store.user.topPhoto draggable="false" class="w-full block" />
         </div>
-        <div class="profile__meta">
-            <div class="avatar">
-                <img :src="store.user.avatar + '@100w_100h'" />
-                <img v-if="store.user.vipLabel" class="avatar_vip" src="/src/assets/img/profile/big-vip.svg" />
+        <div class="profile__meta relative flex items-center mx-10">
+            <div
+                class="avatar -translate-y-2.5 box-content block relative w-[100px] h-[100px] rounded-[50%] border-2 border-solid border-[rgba(255,255,255,0.4)]"
+            >
+                <img :src="store.user.avatar + '@100w_100h'" class="rounded-[50%]" />
+                <img v-if="store.user.vipLabel" class="w-[30px] absolute right-0 bottom-0" src="/src/assets/img/profile/big-vip.svg" />
             </div>
-            <div class="details">
-                <div>
+            <div class="details absolute top-[10px] ml-[120px]">
+                <div class="mb-[6px] flex items-center gap-2">
                     <h2>{{ store.user.name }}</h2>
-                    <img class="details__level" :src="`/src/assets/img/profile/level/level${store.user.level}.svg`" />
-                    <img v-if="store.user.vipLabel" class="details__vip" :src="store.user.vipLabel" />
+                    <img class="h-[14px]" :src="`/src/assets/img/profile/level/level${store.user.level}.svg`" />
+                    <img class="h-5" v-if="store.user.vipLabel" :src="store.user.vipLabel" />
                 </div>
-                <span>{{ store.user.desc }}</span>
+                <span class="text-[var(--desc-color)] text-sm w-[530px] block">{{ store.user.desc }}</span>
             </div>
-            <div class="stat">
+            <div class="stat ml-auto mr-6">
                 <div class="stat__item">
                     <span>硬币数</span>
                     <span>{{ store.user.stat.coins }}</span>
@@ -34,38 +38,38 @@
                     <span>{{ store.user.stat.dynamic_count }}</span>
                 </div>
             </div>
-            <button @click="exit()">退出登录</button>
+            <button @click="exit()"
+                class="px-3 py-2.5 rounded-lg hover:bg-[color:var(--primary-color)]"
+            >退出登录</button>
         </div>
     </div>
-    <div class="login" v-if="!store.user.isLogin">
-        <div class="scan">
-            <h3>扫描二维码登录</h3>
-            <div class="scan__box">                
-                <img src="/src/assets/img/login/loadTV.gif" />
-                <canvas ref="loginQrcode"></canvas>
-                <div class="scan__tips" v-if="scan.code === 86038" @click="scanLogin()">
-                    <div class="icon">
-                        <i class="fa-solid fa-arrow-rotate-right"></i>
-                    </div>
-                    <span>二维码已过期</span>
-                    <span>请点击刷新</span>
-                </div>
-                <div class="scan__tips" v-if="scan.code === 86090">
-                    <div class="icon">
-                        <i class="fa-solid fa-check"></i>
-                    </div>
-                    <span>扫码成功</span>
-                    <span>请在手机上确认</span>
+    <div v-if="!store.user.isLogin"
+        class="login flex relative border border-solid border-[#333] rounded-lg"
+    >
+        <div class="scan h-[290px]">
+            <h3 class="mb-[26px]">扫描二维码登录</h3>
+            <div class="scan__box relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg">                
+                <img src="/src/assets/img/login/loadTV.gif" class="absolute invert m-[30px] z-0" />
+                <canvas ref="loginQrcode" class="relative z-1"></canvas>
+                <div v-if="scan.code === 86038 || scan.code === 86090" @click="scanLogin()"
+                    class="scan__tips absolute flex w-[172px] h-[172px] z-2 bg-[#18181890] -top-px -left-px
+                    flex-col justify-center items-center cursor-pointer rounded-md text-sm"
+                >
+                    <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scan.code === 86038, 'fa-check': scan.code === 86090}"
+                        class="w-14 h-14 p-4 text-[24px] bg-[var(--block-color)] text-[var(--primary-color)] mb-[10px] rounded-[50%]"
+                    ></i>
+                    <span>{{ { 86038: '二维码已过期', 86090: '扫码成功' }[scan.code] }}</span>
+                    <span>{{ { 86038: '请点击刷新', 86090: '请在手机上确认' }[scan.code] }}</span>
                 </div>
             </div>
-            <span class="desc">
+            <span class="desc mt-[18px]">
                 请使用 <a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端</a>
                 <br>扫码登录或扫码下载APP
             </span>
         </div>
-        <div class="split"></div>
-        <div class="others">
-            <div class="others__tab">
+        <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
+        <div class="others flex relative h-[290px] w-[400px] flex-col items-center">
+            <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
                 <!-- <h3 class="temp_disable" @click="othersPage = 0" :class="othersPage !== 0 || 'active'">密码登录</h3> -->
                 <h3
                     :class="othersPage !== 0 || 'active'" :style="{ color: 'var(--split-color)' }"
@@ -73,20 +77,25 @@
                 >
                     密码登录
                 </h3>
-                <div class="split"></div>
+                <div class="split h-5 mx-[21px]"></div>
                 <h3 @click="othersPage = 1" :class="othersPage !== 1 || 'active'">短信登录</h3>
             </div>
-            <div class="others__page" ref="othersPage">
-                <form class="input_form">
-                    <div class="form_item">
+            <div class="others__page w-full" ref="othersPage">
+                <form class="input_form rounded-lg border boredr-solid border-[var(--split-color)]">
+                    <div class="form_item border-b-[color:var(--split-color)] border-b border-solid">
                         <span v-if="othersPage === 0">账号</span>
-                        <div v-if="othersPage === 1">
+                        <div v-if="othersPage === 1" class="w-[42px] relative">
                             +{{ sms.cid }}
-                            <img src="/src/assets/img/login/select_arrow.svg" />
+                            <svg class="absolute opacity-0 h-[22px] p-0 hover:cursor-pointer" viewBox="0 0 13.4 8.1">
+                                <path d="M6.8 8.1L0 1.75 1.36.3l5.38 5L11.97 0l1.42 1.4-6.6 6.7z" fill="var(--primary-color)"></path>
+                            </svg>
                         </div>
-                        <select v-if="othersPage === 1" @change="($event) => {
-                            sms.cid = Number(($event.target as HTMLSelectElement).value);
-                        }">
+                        <select v-if="othersPage === 1"
+                            class="absolute opacity-0 h-[22px] p-0 hover:cursor-pointer"
+                            @change="($event) => {
+                                sms.cid = Number(($event.target as HTMLSelectElement).value);
+                            }"
+                        >
                             <option
                                 v-for="country in countryList"
                                 :value="country.country_id"
@@ -119,14 +128,18 @@
                                 placeholder="请输入验证码"
                                 spellcheck="false"
                             />
-                            <div class="split"></div>
-                            <button type="button" @click="sendSmsCode()">获取验证码</button>
+                            <div class="split h-[22px] mx-[20px]"></div>
+                            <button type="button" @click="sendSmsCode()"
+                                class="bg-[color:unset] p-0 h-fit leading-[22px]"
+                            >获取验证码</button>
                         </template>
                     </div>
                 </form>
-                <button @click="othersPage ? smsLogin() : pwdLogin()">登录</button>
+                <button @click="othersPage ? smsLogin() : pwdLogin()"
+                    class="mt-5 rounded-lg h-10 w-full hover:bg-[color:var(--primary-color)]"
+                >登录</button>
             </div>
-            <div class="agreement">
+            <div class="agreement absolute bottom-2 text-sm">
                 <span class="desc">该应用产生与获取的所有数据将仅存储于用户本地</span>
                 <span class="desc">登录即代表你同意 <a href="https://www.bilibili.com" target="_blank">哔哩哔哩</a>
                 的 <a href="https://www.bilibili.com/protocal/licence.html" target="_blank">用户协议</a>
@@ -134,22 +147,6 @@
                 </span>
             </div>
         </div>
-    </div>
-    <div class="verify_tel" :class="{ 'active': telVerify.need }">
-        <span>为了您的账号安全，需要验证您的手机号</span>
-        <form class="input_form">
-            <div class="form_item">
-                <span>验证码</span>
-                <input v-model="telVerify.code"
-                    oninput="value=value.replace(/[^\d]/g, '')"
-                    placeholder="请输入验证码"
-                    spellcheck="false"
-                />
-                <div class="split"></div>
-                <button type="button" @click="sendVerifyTelSmsCode()">获取验证码</button>
-            </div>
-        </form>
-        <button @click="othersPage ? smsLogin() : pwdLogin()">登录</button>
     </div>
 </div></template>
 
@@ -277,344 +274,72 @@ export default {
 
 </script>
 
-<style lang="scss">
-.profile {
-    width: 100%;
-    position: absolute;
-    max-width: 1280px;
-    background-color: var(--section-color);
-    border-top: #333 solid 1px;
-    border-bottom: #333 solid 1px;
-    .profile__top_photo {
-        position: relative;
-        img {
-            width: 100%;
-            display: block;
-        }
-        &:after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            border-bottom: #333 solid 1px;
-            background: linear-gradient(to bottom,transparent 0,rgba(0,0,0,.13) 25%,rgba(0,0,0,.26) 50%,rgba(0,0,0,.4) 75%,rgba(0,0,0,.66) 100%);
-        }
-    }
-    .profile__meta {
-        margin: 0 40px;
-        position: relative;
-        display: flex;
-        align-items: center;
-        .avatar {
-            transform: translateY(-10px);
-            border: 2px solid rgba(255,255,255,0.4);
-            box-sizing: content-box;
-            display: block;
-            position: relative;
-            width: 100px;
-            height: 100px;
-            background-image: url("/src/assets/img/profile/default-avatar.jpg");
-            background-size: cover;
-            background-clip: padding-box;
-            border-radius: 50%;
-            img {
-                border-radius: 50%;
-            }
-            .avatar_vip {
-                width: 30px;
-                position: absolute;
-                bottom: 0;
-                right: 0;
-            }
-        }
-        .details {
-            position: absolute;
-            top: 10px;
-            margin-left: 120px;
-            span {
-                color: var(--desc-color);
-                font-size: 14px;
-            }
-            & > div {
-                margin-bottom: 6px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                .details__level {
-                    height: 14px;
-                }
-                .details__vip {
-                    height: 20px;
-                }
-            }
-            & > span {
-                width: 530px;
-                word-break: break-all;
-                text-overflow: ellipsis;
-                display: -webkit-box;
-                -webkit-box-orient: vertical;
-                -webkit-line-clamp: 2;
-                line-clamp: 2;
-                overflow: hidden;
-            }
-        }
-        .stat {
-            margin: 0 24px 0 auto;
-            .stat__item {
-                font-size: 12px;
-                display: inline-flex;
-                flex-direction: column;
-                align-items: center;
-                margin: 0 5px;
-                span:first-child {
-                    color: var(--desc-color);
-                    margin-bottom: 5px;
-                }
-            }
-        }
-        button {
-            padding: 10px 12px;
-            border-radius: 8px;
-            &:hover {
-                background-color: var(--primary-color);
-            }
-        }
-    }
-}
+<style lang="scss" scoped>
 .login {
     padding: 52px 65px 29px 92px;
-    display: flex;
-    position: relative;
-    min-height: 430px;
-    border: 1px solid #333;
-    border-radius: 8px;
     background-color: var(--section-color);
     background-image: url("/src/assets/img/login/22_open.png"), url("/src/assets/img/login/33_open.png");
     background-position: 0 100%, 100% 100%;
     background-repeat: no-repeat, no-repeat;
     background-size: 14%;
-    .desc {
-        font-size: 13px;
-        text-align: center;
-        width: 100%;
-        margin-bottom: 0;
-    }
-    h3 {
-        font-weight: 400;
-        text-align: center;
-    }
-    .scan {
-        height: 290px;
-        h3 {
-            margin-bottom: 26px;
-        }
-        .scan__box {
-            width: 160px;
-            height: 160px;
-            padding: 5px;
-            border: solid var(--desc-color) 1px;
-            border-radius: 8px;
-            box-sizing: content-box;
-            position: relative;
-            img {
-                position: absolute;
-                filter: invert(1);
-                margin: 29px;
-                z-index: 0;
-            }
-            canvas {
-                position: relative;
-                z-index: 1;
-            }
-            .scan__tips {
-                width: 172px;
-                height: 172px;
-                position: absolute;
-                z-index: 2;
-                background-color: rgba(24,24,24,0.9);
-                top: -1px;
-                left: -1px;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                cursor: pointer;
-                display: flex;
-                border-radius: 6px;
-                .icon {
-                    width: 24px;
-                    height: 24px;
-                    padding: 16px;
-                    border-radius: 50%;
-                    box-sizing: content-box;
-                    background-color: rgba(24,24,24);
-                    i {
-                        color: var(--primary-color);
-                        font-size: 24px;
-                    }
-                    margin-bottom: 10px;
-                }
-                span {
-                    font-size: 13px;
-                    line-height: 19px;
-                }
-            }
-        }
-        .desc {
-            margin-top: 18px;
-        }
-    }
-    & > .split {
-        width: 1px;
-        background-color: var(--split-color);
-        margin: 51px 45px 0 45px;
-        height: 228px;
-    }
-    .others {
-        display: flex;
-        height: 290px;
-        width: 400px;
-        flex-direction: column;
-        align-items: center;
-        position: relative;
-        .others__tab {
-            display: flex;
-            margin-bottom: 26px;
-            height: fit-content;
-            align-items: center;
-            h3 {
-                margin: unset;
-                transition: color .1s;
-                &.active {
-                    color: var(--primary-color);
-                }
-                &:hover {
-                    cursor: pointer;
-                }
-            }
-            .split {
-                width: 1px;
-                background-color: var(--split-color);
-                height: 20px;
-                margin: 0 21px;
-            }
-        }
-        .others__page {
-            width: 100%;
-            .input_form {
-                border-radius: 8px;
-                border: 1px solid var(--split-color);
-                .form_item {
-                    display: flex;
-                    padding: 12px 20px;
-                    font-size: 14px;
-                    input {
-                        margin-left: 20px;
-                        display: flex;
-                        flex: 1;
-                    }
-                    & > div {
-                        width: 42px;
-                        position: relative;
-                        img {
-                            position: absolute;
-                            top: 5px;
-                            left: 42px;
-                            width: 12px;
-                        }
-                    }
-                    select {
-                        position: absolute;
-                        opacity: 0;
-                        width: 54px;
-                        &:hover {
-                            cursor: pointer;
-                        }
-                    }
-                    &:first-child {
-                        border-bottom: 1px solid var(--split-color);
-                    }
-                    .split {
-                        height: 19px;
-                        width: 1px;
-                        margin: 0 20px;
-                        background-color: var(--split-color);
-                    }
-                    button {
-                        background-color: unset;
-                    }
-                }
-            }
-            & > button {
-                margin-top: 20px;
-                border-radius: 8px;
-                height: 40px;
-                width: 100%;
-                &:hover {
-                    background-color: var(--primary-color);
-                }
-            }
-        }
-        .agreement {
-            position: absolute;
-            bottom: 14px;
-        }
+}
+.desc {
+    font-size: 13px;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 0;
+}
+.split {
+    width: 1px;
+    background-color: var(--split-color);
+}
+h3 {
+    font-size: 18px;
+    text-align: center;
+}
+a {
+    color: var(--primary-color);
+}
+.others__tab h3.active {
+    color: var(--primary-color);
+}
+.others__page .form_item {
+    display: flex;
+    padding: 12px 20px;
+    font-size: 14px;
+    input {
+        @apply flex flex-1 h-fit leading-[22px] ml-5 p-[unset] bg-[color:unset];
     }
 }
-.verify_tel {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: var(--section-color);
-    z-index: 2;
-    opacity: 0;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    transition: opacity 0.2s;
-    width: 100%;
-    & > span {
-        margin-bottom: 20px;
+.profile__top_photo:after {
+    @apply content-[""] absolute border-b-[#333] border-b-[1px] border-solid inset-0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0,
+        rgba(0, 0, 0, 0.13) 25%,
+        rgba(0, 0, 0, 0.26) 50%,
+        rgba(0, 0, 0, 0.4) 75%,
+        rgba(0, 0, 0, 0.66) 100%
+    );
+}
+.profile__meta {
+    .avatar {
+        @apply bg-cover bg-clip-padding;
+        background-image: url("/src/assets/img/profile/default-avatar.jpg");
     }
-    .input_form {
-        width: 400px;
-        border-radius: 8px;
-        border: 1px solid var(--split-color);
-        .form_item {
-            display: flex;
-            padding: 12px 20px;
-            font-size: 14px;
-            input {
-                margin-left: 20px;
-                display: flex;
-                flex: 1;
-            }
-            .split {
-                height: 19px;
-                width: 1px;
-                margin: 0 20px;
-                background-color: var(--split-color);
-            }
-            button {
-                background-color: unset;
-            }
+    .details span {
+        @apply overflow-hidden text-ellipsis;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+    }
+    .stat .stat__item {
+        @apply text-xs inline-flex flex-col items-center mx-[5px];
+        span:first-child {
+            color: var(--desc-color);
+            margin-bottom: 5px;
         }
-    }
-    & > button {
-        width: 400px;
-        margin-top: 20px;
-        border-radius: 8px;
-        height: 40px;
-        &:hover {
-            background-color: var(--primary-color);
-        }
-    }
-    &.active {
-        opacity: 1;
-        pointer-events: all;
     }
 }
 </style>

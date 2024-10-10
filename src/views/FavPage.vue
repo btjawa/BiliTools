@@ -1,6 +1,6 @@
 <template><div>
     <h1 class="text-center">
-        DownPage.vue<br>
+        FavPage.vue<br>
         Work in progress
     </h1>
 </div></template>

@@ -2,7 +2,8 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import dynamicImport from 'vite-plugin-dynamic-import';
 import viteCompression from 'vite-plugin-compression';
-import autoprefixer from 'autoprefixer'
+import autoprefixer from 'autoprefixer';
+import tailwindcss from "tailwindcss";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -45,6 +46,9 @@ export default defineConfig(async () => ({
               "ie >= 8"
           ],
           grid: true
+        }),
+        tailwindcss({
+          content: ['./src/**/*.{vue,js,ts,jsx,tsx}'],
         })
       ]
     },

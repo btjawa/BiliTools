@@ -1,26 +1,37 @@
-<template><div>
+<template><div class="flex-col items-start justify-start">
     <h1>设置</h1>
     <hr />
-    <div class="setting-page__sub">
-        <div class="setting-page__sub-page" ref="subPage">
+    <div class="setting-page__sub flex w-full">
+        <div
+            class="setting-page__sub-page flex flex-col flex-1 max-h-[calc(100vh-160px)] mr-6"
+            ref="subPage"
+        >
             <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
-                <h3 v-if="item.type !== 'reference'">{{ item.name }}</h3>
+                <h3 v-if="item.type !== 'reference'" class="font-semibold">{{ item.name }}</h3>
                 <template v-if="'desc' in item">
                     <span class="desc">{{ item.desc }}</span>
                 </template>
                 <div v-if="item.type === 'section'" class="units">
-                    <div v-for="unit in item.data" :class=unit.type>
-                        <span>{{ unit.name }}</span>
+                    <div v-for="unit in item.data" :class=unit.type class="mt-3">
+                        <h3>{{ unit.name }}</h3>
                         <span v-if="'desc' in unit" class="desc">{{ unit.desc }}</span>
-                        <div v-if="unit.type === 'path'">
+                        <div v-if="unit.type === 'path'" class="h-8 mt-2">
                             <button @click="shell.open((store.settings as any)[unit.data])"
-                                class="ellipsis"
-                            >
-                                {{ (store.settings as any)[unit.data] }}
-                            </button>
-                            <button @click="updatePath(unit.data)">
-                                <i class="fa-light fa-folder-open"></i>
-                            </button>
+                                class="ellipsis max-w-[420px] rounded-r-none"
+                            >{{ (store.settings as any)[unit.data] }}</button>
+                            <button @click="updatePath(unit.data)"
+                                class="bg-[color:var(--primary-color)] rounded-l-none"
+                            ><i class="fa-light fa-folder-open"></i></button>
+                        </div>
+                        <div v-if="unit.type === 'cache'">
+                            <button @click="getPath(unit.data).then(p => shell.open(p))"
+                                :class="unit.data"
+                                class="ellipsis max-w-[120px] min-w-24 rounded-r-none"
+                            >{{ formatBytes((store.data.cache as any)[unit.data]) }}</button>
+                            <button @click="getPath(unit.data).then(path =>
+                                invoke('clean_cache', { path, ptype: unit.data }))"
+                                class="bg-[color:var(--primary-color)] rounded-l-none"
+                            ><i class="fa-light fa-broom-wide"></i></button>
                         </div>
                         <input v-if="unit.type === 'input'"
                             :type="unit.data === 'password' ? 'password' : 'text'"
@@ -29,23 +40,12 @@
                             :value="(store.settings.proxy as any)[unit.data]"
                             autocorrect="off" spellcheck="false" autocapitalize="off"
                         />
-                        <div v-if="unit.type === 'cache'">
-                            <button @click="getPath(unit.data).then(p => shell.open(p))"
-                                :class="unit.data"
-                            >
-                                {{ formatBytes((store.data.cache as any)[unit.data]) }}
-                            </button>
-                            <button @click="getPath(unit.data).then(path =>
-                                invoke('clean_cache', { path, ptype: unit.data }))"
-                            >
-                                <i class="fa-light fa-broom-wide"></i>
-                            </button>
-                        </div>
                         <button v-if="unit.type === 'switch'"
                             @click="updateSettings('auto_check_update', !(store.settings as any)[unit.data])"
                             :class="{ 'active': (store.settings as any)[unit.data] }"
+                            class="inline-block w-11 h-[22px] relative delay-100 p-[3px] rounded-xl hover:brightness-150"
                         >
-                            <div class="circle"></div>
+                            <div class="circle h-4 w-4 rounded-lg bg-[color:var(--desc-color)] absolute left-[3px] top-[3px]"></div>
                         </button>
                         <button v-if="unit.type === 'button' && 'action' in unit"
                             @click=" unit.data === 'function' ?
@@ -58,8 +58,7 @@
                             "
                             :class="unit.type"
                         >
-                            {{ unit.name }}
-                            <i class="fa-solid" :class="'icon' in unit ? unit.icon : ''"></i>
+                            {{ unit.name }}<i class="fa-solid ml-2" :class="'icon' in unit ? unit.icon : ''"></i>
                         </button>
                         <template v-if="unit.type === 'dropdown'">
                             <select :name="unit.data" v-if="'drop' in unit" @change="($event) => {
@@ -70,34 +69,32 @@
                                     <option v-for="option in (store.data.mediaMap as any)[unit.drop]"
                                         :value="JSON.stringify({ id: option.id, data: unit.data })"
                                         :selected="option.id === (store.settings as any)[unit.data]"
-                                    >
-                                        {{ option.label }}
-                                    </option>
+                                    >{{ option.label }}</option>
                                 </template>
                                 <template v-else>
                                     <option v-for="option in unit.drop"
                                         :value="JSON.stringify({ id: option.id, data: unit.data })"
                                         :selected="option.id === (store.settings as any)[unit.data]"
-                                    >
-                                        {{ option.name }}
-                                    </option>
+                                    >{{ option.name }}</option>
                                 </template>
                             </select>
-                            <svg class="dropdown-arrow" viewBox="0 0 13.4 8.1" >
+                            <svg class="w-3 inline-block -translate-x-6" viewBox="0 0 13.4 8.1">
                                 <path d="M6.8 8.1L0 1.75 1.36.3l5.38 5L11.97 0l1.42 1.4-6.6 6.7z" fill="var(--primary-color)"></path>
                             </svg>
                         </template>
-                        <div v-if="unit.type === 'icon'" :class="unit.type">
-                            <img src="@/assets/img/icon.svg" draggable="false" />
-                            <img src="@/assets/img/icon-big.svg" draggable="false" />
+                        <div v-if="unit.type === 'icon'" :class="unit.type" class="flex items-center">
+                            <img class="h-16 mr-6 w-auto inline" src="@/assets/img/icon.svg" draggable="false" />
+                            <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
-                        <div v-if="unit.type === 'version'" :class="unit.type" >
-                            版本：<span @click="shell.open('https://github.com/btjawa/BiliTools/releases/tag/' + version)"
+                        <div v-if="unit.type === 'version'" :class="unit.type" class="my-[6px]" >
+                            版本：<span
+                                @click="shell.open('https://github.com/btjawa/BiliTools/releases/tag/' + version)"
+                                class="text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
                             >{{ version }}</span>
                         </div>
                     </div>
                 </div>
-                <div v-if="item.type === 'reference'" class="reference desc">
+                <div v-if="item.type === 'reference'" class="desc">
                     Copyright &copy; {{(new Date()).getFullYear()}} btjawa, MIT License<br>
                     该应用产生与获取的所有数据将仅存储于用户本地<br>
                     觉得好用的话，点个Star吧！ご利用感謝いたします~
@@ -105,12 +102,16 @@
                 <hr v-if="index < (settings.find(item => item.id == subPage)?.content.length! - 1)" />
             </section>
         </div>
-        <div class="setting-page__sub-tab">
-            <div v-for="item in settings" @click="subPage = item.id" :class="subPage !== item.id || 'active'">
-                <span>{{ item.name }}</span>
-                <i :class="'fa-light ' + item.icon"></i>
-                <label></label>
-            </div>
+        <div class="setting-page__sub-tab flex flex-col items-start gap-1">
+            <button v-for="item in settings" @click="subPage = item.id" :class="subPage !== item.id || 'active'"
+                class="p-[8px_0] w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[#33333380]"
+            >
+                <span class="text-base">{{ item.name }}</span>
+                <i :class="'fa-light ' + item.icon"
+                    class="min-w-4 ml-2"
+                ></i>
+                <label class="w-[3px] rounded-md h-4 bg-[color:var(--primary-color)] invisible"></label>
+            </button>
         </div>
     </div>
 </div></template>
@@ -154,11 +155,11 @@ export default {
                                 { id: 5, name: "5个" },
                         ] },
                     ] },
-                    { name: "网络代理", type: "section", desc: "暂仅支持 HTTP(S) 协议，修改完成后建议重启应用", data: [
-                        { name: "检查代理连通性", type: "button", data: "function", action: { type: "checkConnection" }, icon: "fa-cloud-question" },
+                    { name: "网络代理", type: "section", desc: "暂仅支持 HTTP(S) 协议，修改完成后建议重启应用以全局生效", data: [
                         { name: "地址", type: "input", data: "addr", placeholder: "http(s)://server:port" },
                         { name: "用户名", type: "input", data: "username", placeholder: "可选" },
                         { name: "密码", type: "input", data: "password", placeholder: "可选" },
+                        { name: "检查代理连通性", type: "button", data: "function", action: { type: "checkConnection" }, icon: "fa-cloud-question" },
                     ] }
                 ] },
                 { id: "about", name: "关于", icon: "fa-circle-info", content: [
@@ -254,10 +255,11 @@ export default {
                     iziInfo("通过测试：" + timestamp);
                     return timestamp;
                 } else {
-                    return (new ApplicationError(new Error('测试失败：\n' + body?.message), { code: body?.code })).handleError();
+                    throw new ApplicationError(new Error('测试失败：\n' + body?.message), { code: body?.code });
                 }
             } catch(err) {
-                return (new ApplicationError(new Error('测试失败：\n' + err as string), { code: -101 })).handleError();
+                err instanceof ApplicationError ? err.handleError() :
+                (new ApplicationError(new Error('测试失败：\n' + err as string), { code: -101 })).handleError();
             }
         }
     },
@@ -279,246 +281,40 @@ export default {
     }
 };
 </script>
-<style scoped lang="scss">
-.page {
-	flex-direction: column;
-	align-items: flex-start;
-	justify-content: flex-start;
-    overflow: hidden;
-	& > span {
-		&:not(.desc) {
-			margin: 16px 2px 2px;
-		}
-		&.desc {
-			font-size: 12px;
-		}
-	}
-}
+<style lang="scss" scoped>
 hr {
-    width: 100%;
-    margin: 16px 0;
-    height: 1px;
+    @apply w-full my-4;
 }
-button {
-    height: 32px;
-    border-radius: 8px;
-    font-size: 14px;
-    padding: 6px 10px;
-    &:hover {
-        filter: brightness(85%);
+.page span.desc {
+    @apply text-xs;
+}
+.setting-page__sub-tab button.active {
+    @apply bg-[#33333380];
+    label {
+        @apply visible animate-[slide_0.2s_cubic-bezier(0,1,1,1)];
     }
 }
-.setting-page__sub {
-    display: flex;
-    width: 100%;
-}
-.setting-page__sub-tab {
-    display: flex;
-    flex-direction: column;
-    align-self: flex-start;
-    gap: 4px;
-    div {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding: 8px 0;
-        width: 240px;
-        transition: background-color .1s;
-        border-radius: 5px;
-        gap: 12px;
-        i {
-            margin-left: 8px;
-            min-width: 16px;
-        }
-        span {
-            font-size: 16px;
-        }
-        label {
-            width: 3px;
-            border-radius: 6px;
-            height: 16px;
-            background-color: var(--primary-color);
-            visibility: hidden;
-        }
-        &.active label {
-            visibility: visible;
-            animation: slide 0.2s cubic-bezier(0,1,1,1);
-        }
-        &:hover, &.active {
-            background-color: #33333380;
-        }
+.cache, .dropdown, .input, .button, .switch {
+    & > div {
+        @apply inline-block;
+    }
+    h3 {
+        @apply inline-block w-[140px];
     }
 }
-.setting-page__sub-page {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    max-height: calc(100vh - 160px);
-    margin-right: 24px;
-    overflow: auto;
-    hr {
-        width: 200px;
+.switch button {
+    &:hover .circle {
+        transform: scale(112%);
     }
-    section {
-        .units {
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 9px;
-            .path, .cache {
-                & > div {
-                    height: 32px;
-                    button {
-                        max-width: 420px;
-                        border-radius: 8px 0 0 8px;
-                        &:has(i) {
-                            padding: unset;
-                            border-radius: 0 8px 8px 0;
-                            background-color: var(--primary-color);
-                            i {
-                                font-size: 15px;
-                                padding: 8px;
-                            }
-                        }
-                    }
-                }
-            }
-            .path, .dropdown, .input {
-                span {
-                    display: block;
-                    margin-bottom: 12px;
-                }
-            }
-            .cache, .dropdown {
-                span {
-                    display: inline-block;
-                    width: 140px;
-                }
-                button:not(:has(i)) {
-                    min-width: 90px;
-                }
-                & > div {
-                    display: inline-block;
-                }
-            }
-            .switch {
-                display: flex;
-                span {
-                    display: inline-block;
-                    width: 120px;
-                }
-                button {
-                    display: inline-block;
-                    padding: 3px;
-                    width: 44px;
-                    height: 22px;
-                    position: relative;
-                    border-radius: 12px;
-                    transition: background-color 0.2s, filter 0.1s;
-                    &:hover {
-                        filter: brightness(150%);
-                        .circle {
-                            transform: scale(112%);
-                        }
-                    }
-                    .circle {
-                        height: 16px;
-                        width: 16px;
-                        border-radius: 8px;
-                        transition: left 0.2s cubic-bezier(0,1,.6,1), transform 0.2s;
-                        background-color: var(--desc-color);
-                        position: absolute;
-                        top: 3px;
-                        left: 3px;
-                    }
-                    &.active {
-                        background-color: var(--primary-color);
-                        .circle {
-                            background-color: var(--content-color);
-                            left: 25px;
-                        }
-                    }
-                }
-            }
-            .button {
-                span {
-                    display: none;
-                }
-                i {
-                    margin-left: 8px;
-                }
-            }
-            .input {
-                input {
-                    border-radius: 8px;
-                    min-height: 32px;
-                    font-size: 14px;
-                    padding: 6px 10px;
-                    background-color: var(--block-color);
-                    &:hover {
-                        filter: brightness(85%);
-                    }
-                }
-            }
-            .icon {
-                display: flex;
-                align-items: center;
-                img {
-                    display: inline-block;
-                    height: 40px;
-                    width: auto;
-                    &:first-child {
-                        height: 60px;
-                        margin-right: 20px;
-                    }
-                }
-            }
-            .version {
-                margin: 6px 0;
-                span {
-                    color: var(--primary-color);
-                    font-weight: 600;
-                    text-shadow: var(--primary-color) 0 0 12px;
-                    cursor: pointer;
-                }
-            }
+    .circle {
+        transition: left 0.2s cubic-bezier(0,1,.6,1), transform 0.2s;
+    }
+    &.active {
+        background-color: var(--primary-color);
+        .circle {
+            background-color: var(--content-color);
+            left: 25px;
         }
-        .reference {
-            line-height: 24px;
-            margin: unset;
-        }
-    }
-}
-@keyframes slide {
-    0% {
-        height: 8px;
-        opacity: 0;
-    }
-    100% {
-        height: 16px;
-        opacity: 1;
-    }
-}
-select {
-    transition: filter 0.1s;
-    appearance: none;
-    border: none;
-    outline: none;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background-color: var(--block-color);
-    font-size: 14px;
-    color: var(--content-color);
-    min-height: 32px;
-    position: relative;
-    min-width: 152px;
-    & + .dropdown-arrow {
-        width: 12px;
-        transform: translateX(-24px);
-    }
-    &:hover {
-        filter: brightness(85%);
-        cursor: pointer;
     }
 }
 </style>

@@ -1,25 +1,22 @@
 <template>
-<div ref="contextMenu" class="context-menu" v-show="active" @contextmenu.prevent
-    @transitionend.prevent :style="{ opacity, top: pos.y + 'px', left: pos.x + 'px' }">
-    <div @click="handleAction('cut')" class="context-menu-item cut">
-        <i class="fa-light fa-cut context-menu-item-icon"></i>
-        剪切<a class="context-menu-item-key">Ctrl+X</a>
+<div ref="contextMenu" v-show="active" @contextmenu.prevent
+    class="context-menu flex fixed flex-col overflow-hidden w-[200px] rounded-lg transition-opacity 
+    bg-[color:var(--section-color)] border border-solid border-[var(--split-color)] z-[99]"
+    @transitionend.prevent :style="{ opacity, top: pos.y + 'px', left: pos.x + 'px' }"
+>
+    <div @click="handleAction('cut')" class="context-menu__item">
+        <i class="fa-light fa-cut item__icon"></i>
+        剪切<a class="item__key">Ctrl+X</a>
     </div>
-    <div @click="handleAction('copy')" class="context-menu-item copy">
-        <i class="fa-light fa-copy context-menu-item-icon"></i>
-        复制<a class="context-menu-item-key">Ctrl+C</a>
+    <div @click="handleAction('copy')" class="context-menu__item ">
+        <i class="fa-light fa-copy item__icon"></i>
+        复制<a class="item__key">Ctrl+C</a>
     </div>
-    <div @click="handleAction('paste')" class="context-menu-item paste">
-        <i class="fa-light fa-paste context-menu-item-icon"></i>
-        粘贴<a class="context-menu-item-key">Ctrl+V</a>
+    <div @click="handleAction('paste')" class="context-menu__item">
+        <i class="fa-light fa-paste item__icon"></i>
+        粘贴<a class="item__key">Ctrl+V</a>
     </div>
-    <!-- <div class="context-menu-split"></div>
-    <div @click="handleAction('bilibili')" class="context-menu-item bilibili">
-        <i class="fa-brands fa-bilibili context-menu-item-icon"></i>
-        在Bilibili上打开此页
-    </div> -->
-</div>
-</template>
+</div></template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
@@ -96,69 +93,27 @@ export default defineComponent({
 </script>
 
 <style scoped lang="scss">
-.context-menu {
-	width: 200px;
-	border-radius: 8px;
-	background-color: var(--section-color);
-	border: solid 1px var(--split-color);
-	z-index: 99;
-	flex-direction: column;
-	flex-wrap: wrap;
-	position: fixed;
-	opacity: 0;
-	display: flex;
-	transition: opacity 0.3s;
-}
-.context-menu-split {
-	height: 8px;
-	align-self: center;
-	width: 100%;
-	position: relative;
-	&::after {
-		content: '';
-		height: 0.5px;
-		width: 96%;
-		left: 2%;
-		top: 50%;
-		position: absolute;
-		background-color: var(--split-color);
-	}
-}
-.context-menu-item {
+.context-menu__item {
 	color: #c4c4c4;
 	height: 35px;
 	display: flex;
 	align-items: center;
-	padding: 0 10px;
+	padding: 10px;
 	font-size: 14px;
 	position: relative;
 	cursor: pointer;
-	&::after {
-		content: '';
-		position: absolute;
-		top: 9%;
-		left: 2%;
-		right: 0;
-		height: 100%;
-		border-radius: 4px;
-		width: 96%;
-		height: 82%;
-		z-index: -1;
-		transition: all 0.2s;
-	}
 	&:hover {
-		&::after {
-			background-color: var(--split-color);
-		}
+		transition: background-color 0.2s;
+        background-color: var(--split-color);
 	}
-}
-.context-menu-item-key {
-	position: absolute;
-	right: 10px;
-	color: #999;
-	font-size: 12px;
-}
-.context-menu-item-icon {
-	margin-right: 10px;
+    .item__key {
+        position: absolute;
+        right: 10px;
+        color: #999;
+        font-size: 12px;
+    }
+    .item__icon {
+        margin-right: 10px;
+    }
 }
 </style>

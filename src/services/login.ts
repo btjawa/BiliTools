@@ -279,9 +279,7 @@ export async function exitLogin(): Promise<number> {
 }
 
 export async function checkRefresh(): Promise<number> {
-    const csrf = new Headers(store.state.data.headers).get('Cookie')?.match(/bili_jct=(\d+);/)?.[1];
-    if (!csrf) return -101;
-    const cookie_info_resp = await fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info?csrf=' + csrf, {
+    const cookie_info_resp = await fetch('https://passport.bilibili.com/x/passport-login/web/cookie/info', {
         headers: store.state.data.headers,
         ...(store.state.settings.proxy.addr && {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }

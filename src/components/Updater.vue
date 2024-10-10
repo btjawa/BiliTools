@@ -1,21 +1,35 @@
 <template>
-<div class="updater text" ref="updater" @contextmenu.prevent>
-    <h1 class=""><i class="fa-solid fa-wrench"></i>版本更新<span class="desc">当前版本：{{ update?.currentVersion }}</span></h1>
-    <h3 class="">BiliTools v{{ update?.version }}<span class="desc">{{ update?.date }}</span></h3>
-    <span class="desc">您可以在 "设置 -> 关于 -> 更新" 关闭 “自动检查”，但不建议这样做</span>
-    <div class="updater-body" v-html="formatEscape(update?.body)" v-if="update?.body"></div>
-    <div class="updater-action" ref="updaterAction">
-        <button @click="handleAction(true)"><i class="fa-solid fa-download"></i>下载更新</button>
+<div ref="updater" @contextmenu.prevent
+    class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9"
+>
+    <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>版本更新<span class="desc ml-3">当前版本：{{ update?.currentVersion }}</span></h1>
+    <h3 class="text-lg">BiliTools v{{ update?.version }}<span class="desc ml-3">{{ update?.date }}</span></h3>
+    <span class="desc">您可以在 "设置 -> 关于 -> 更新" 关闭 "自动检查", 但不建议这样做</span>
+    <div v-html="formatEscape(update?.body)" v-if="update?.body"
+        class="updater-body leading-7 max-h-[450px] overflow-auto mt-3 mb-6"
+    ></div>
+    <div ref="updaterAction"
+        class="updater-action inline-block relative transition-opacity z-[2]"
+    >
+        <button @click="handleAction(true)"
+            class="bg-[color:var(--primary-color)]"
+        ><i class="fa-solid fa-download"></i>下载更新</button>
         <button @click="handleAction()">取消</button>
     </div>
-    <div class="updater-progress" ref="updaterProgress">
-        <span>{{
+    <div ref="updaterProgress"
+        class="updater-progress opacity-0 inline-block absolute z-[1] left-12 transition-opacity leading-8"
+    >
+        <span class="inline-block">{{
             updateProgress.length ? 
             (updateProgress.bytes * 100 / updateProgress.length).toFixed(2) + ' %'
             : formatBytes(updateProgress.bytes)
         }}</span>
-        <div class="updater-progress-bar" :style="'--progress-width: ' + updateProgress.bytes * 160 / updateProgress.length + 'px;'"></div>
-        <button @click="updateProgress.completed ? install() : null"><i class="fa-solid" :class="updateProgress.completed ? 'fa-rocket-launch' : 'fa-ban'"></i>安装更新</button>
+        <div :style="'--progress-width: ' + updateProgress.bytes * 160 / updateProgress.length + 'px;'"
+            class="updater-progress-bar inline-block ml-3 relative h-1.5 bg-[color:var(--block-color)] w-40 rounded-[3px]"
+        ></div>
+        <button @click="updateProgress.completed ? install() : null"
+            class="ml-4 bg-[color:var(--primary-color)]"
+        ><i class="fa-solid" :class="updateProgress.completed ? 'fa-rocket-launch' : 'fa-ban'"></i>安装更新</button>
     </div>
 </div>
 </template>
@@ -35,7 +49,7 @@ export default defineComponent({
             sidebarElement: {} as HTMLElement,
             updateProgress: {
                 bytes: 0,
-                length: 0,
+                length: 1,
                 completed: false,
             },
             store: this.$store.state
@@ -128,103 +142,28 @@ export default defineComponent({
 </script>
     
 <style scoped lang="scss">
-.updater {
-    background: transparent;
-    z-index: 99;
-    opacity: 0;
-    padding: 18px 36px 48px;
-    width: 100vw;
-    flex-direction: column;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    &.active {
-        opacity: 1;
-        pointer-events: all;
-    }
-    .updater-body {
-        margin: 12px 0 24px 0;
-        line-height: 28px;
-        max-height: 450px;
-        overflow: auto;
-    }
-    .updater-action, .updater-progress {
-        button {
-            margin-right: 16px;
-            display: inline-block;
-            min-height: 32px;
-            border-radius: 8px;
-            font-size: 14px;
-            padding: 6px 10px;
-            &:hover {
-                filter: brightness(80%);
-            }
-            i {
-                margin-right: 8px;
-            }
-        }
-    }
-    .updater-action {
-        display: inline-block;
-        position: relative;
-        transition: opacity 0.2s;
-        z-index: 2;
-        button {
-            &:first-child {
-                background-color: var(--primary-color);
-            }
-        }
-    }
-    .updater-progress {
-        opacity: 0;
-        display: inline-block;
-        position: absolute;
-        z-index: 1;
-        left: 48px;
-        transition: opacity .2s;
-        line-height: 32px;
-        &.active {
-            opacity: 1;
-        }
-        span {
-            display: inline-block;
-        }
-        .updater-progress-bar {
-            display: inline-block;
-            margin-left: 12px;
-            position: relative;
-            height: 6px;
-            background-color: var(--block-color);
-            width: 160px;
-            border-radius: 3px;
-            &::after {
-                content: '';
-                position: absolute;
-                width: var(--progress-width);
-                height: 6px;
-                bottom: 0;
-                left: 0;
-                border-radius: 3px;
-                background-color: var(--primary-color);
-            }
-            & ~ button {
-                margin-left: 16px;
-                background-color: var(--primary-color);
-            }
-        }
-    }
+.updater.active, .updater-progress.active {
+    opacity: 1;
+    pointer-events: all;
 }
-h1, h3 {
-    span {
-        margin: 0 0 0 8px;
-    }
-}
-h1 {
-    margin-bottom: 16px;
+button {
+    margin-right: 16px;
+    display: inline-block;
+    min-height: 32px;
+    border-radius: 8px;
+    font-size: 14px;
+    padding: 6px 10px;
     i {
         margin-right: 8px;
     }
 }
-h3 {
-    margin-bottom: 8px;
+.updater-progress-bar::after {
+    content: '';
+    position: absolute;
+    width: var(--progress-width);
+    height: 6px;
+    inset: 0;
+    border-radius: 3px;
+    background-color: var(--primary-color);
 }
 </style>
