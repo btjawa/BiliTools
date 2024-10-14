@@ -1,20 +1,38 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import store from "@/store";
-import { utils } from "@/services";
 import * as types from "@/types";
 import { ApplicationError, formatProxyUrl } from "./utils";
 import md5 from "md5";
 
-export function id(input: string): { id: string, type: types.data.MediaType | null } {
-    let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-    if (match) return { id: match[0], type: types.data.MediaType.Video };
-    match = input.match(/ep(\d+)|ss(\d+)/i);
-    if (match) return { id: match[0], type: types.data.MediaType.Bangumi }; 
-    match = input.match(/au(\d+)/i);
-    if (match) return { id: match[0], type: types.data.MediaType.Music }; 
-    else {
-        utils.iziError(new Error(!input ? "输入不能为空" : "输入不合法！请检查格式"));
-        return { id: input, type: null };
+export function id(input: string) {
+    try {
+        const url = new URL(input);
+        if (url.hostname === 'b23.tv') {
+            throw new ApplicationError("暂不支持 b23.tv 链接", { noStack: true });
+        }
+        if (url.pathname) {
+            let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
+            if (match) return { id: match[1] || match[0], type: types.data.MediaType.Video };
+            match = input.match(/ep(\d+)|ss(\d+)/i);
+            if (match) return { id: match[0], type: types.data.MediaType.Bangumi }; 
+            match = input.match(/au(\d+)/i);
+            if (match) return { id: match[0], type: types.data.MediaType.Music }; 
+        }
+        throw new ApplicationError("无法解析输入", { noStack: true });
+    } catch(_) { // NOT URL
+        if (!/^(av|ep|ss|au)\d+|(bv)(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]+/i.test(input)) {
+            throw new ApplicationError("无法解析输入", { noStack: true });
+        }
+        const map = {
+            'av': types.data.MediaType.Video,
+            'bv': types.data.MediaType.Video,
+            'ep': types.data.MediaType.Bangumi,
+            'ss': types.data.MediaType.Bangumi,
+            'au': types.data.MediaType.Music
+        };
+        const prefix = input.slice(0, 2).toLowerCase();
+        const id = prefix === 'av' || prefix === 'au' ? input.slice(2) : input;
+        return { id: id, type: (map as any)[prefix] || null };
     }
 }
 
@@ -35,7 +53,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
     });
     const body = await response.json() as types.userInfo.NavInfoResp;
     if (body?.code !== 0) {
-        throw new ApplicationError(new Error(body?.message), { code: body?.code });
+        throw new ApplicationError(body?.message, { code: body?.code });
     }
     const { img_url, sub_url } = body.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
@@ -52,28 +70,12 @@ export async function wbi(params: { [key: string]: string | number | object }) {
     return query + '&w_rid=' + wbiSign;
 }
 
-export async function captcha(gt?: string, challenge?: string): Promise<types.login.Captcha> {
+export async function captcha(gt: string, challenge: string): Promise<types.login.Captcha> {
     return new Promise(async (resolve) => {
-        let token: string; // 定义 token
-        if (!gt || !challenge) {
-            const response = await fetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header', {
-                headers: store.state.data.headers,
-                ...(store.state.settings.proxy.addr && {
-                    proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-                })
-            });
-            const body = await response.json() as types.login.GenCaptchaResp;
-            if (body?.code !== 0) {
-                throw new ApplicationError(new Error(body?.message), { code: body?.code });
-            }
-            token = body.data.token;
-            gt = body.data.geetest.gt;
-            challenge = body.data.geetest.challenge;
-        }
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
-            gt: gt,
-            challenge: challenge,
+            gt,
+            challenge,
             offline: false,
             new_captcha: true,
             product: "bind",
@@ -86,7 +88,7 @@ export async function captcha(gt?: string, challenge?: string): Promise<types.lo
                 const result = captchaObj.getValidate();
                 const validate = result.geetest_validate;
                 const seccode = result.geetest_seccode;
-                return resolve({token, challenge, validate, seccode} as types.login.Captcha);
+                return resolve({ challenge, validate, seccode });
             })
         });
     })

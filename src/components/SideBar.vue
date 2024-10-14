@@ -5,7 +5,7 @@
 >
     <router-link to="/user-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/user-page') }" class="sidebar-item mb-3"
-            @click="store.data.inited ? navigate() : iziError(new Error('请等待初始化完成'));">
+            @click="store.data.inited ? navigate() : new ApplicationError('请等待初始化完成', { noStack: true }).handleError();">
             <img class="user-avatar w-[37px] h-[37px] rounded-[50%] cursor-pointer"
 				:src="store.user.isLogin ? store.user.avatar : '/src/assets/img/profile/default-avatar.jpg'"
 				draggable="false"
@@ -43,12 +43,12 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { iziError } from '@/services/utils';
 import { type as osType } from '@tauri-apps/plugin-os';
+import { ApplicationError } from '@/services/utils';
 export default defineComponent({
     methods: {
         isActive(path: string) { return this.$route.path == path },
-        iziError
+        ApplicationError
     },
 	data() {
 		return {

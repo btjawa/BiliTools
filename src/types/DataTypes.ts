@@ -36,7 +36,6 @@ export interface MediaInfo {
     coin: number | null,
     favorite: number | null,
     share: number | null,
-    pubdate: number | string | null
   },
   upper: {
     avatar: string | null,
@@ -1337,53 +1336,45 @@ export interface LessonPlayUrlInfo {
 export interface CommonDash {
   duration: number;
   min_buffer_time: number;
-  video: {
-    start_with_sap: number;
-    bandwidth: number;
-    sar: string;
-    codecs: string;
-    base_url: string;
-    backup_url: string[];
-    segment_base: {
-      initialization: string;
-      index_range: string;
-    };
-    frame_rate: string;
-    codecid: number;
-    size: number;
-    mime_type: string;
-    width: number;
-    id: number;
-    noRexcode: number;
-    height: number;
-    md5: string;
-  }[];
-  audio: {
-    start_with_sap: number;
-    bandwidth: number;
-    sar: string;
-    codecs: string;
-    base_url: string;
-    backup_url: string[];
-    segment_base: {
-      initialization: string;
-      index_range: string;
-    };
-    frame_rate: string;
-    codecid: number;
-    size: number;
-    mime_type: string;
-    width: number;
-    id: number;
-    noRexcode: number;
-    height: number;
-    md5: string;
-  }[];
+  video: CommonDashData[];
+  audio: CommonDashData[];
   losslessAudio: {
     isLosslessAudio: boolean;
   };
   dolby: {
-    audio: unknown[];
-    type: string;
+    type: number;
+    audio: CommonDashData[] | null;
   };
+  flac: {
+    display: boolean;
+    audio: CommonDashData;
+  } | null;
+}
+
+export interface CommonDashData {
+  start_with_sap: number;
+  bandwidth: number;
+  sar: string;
+  codecs: string;
+  base_url: string;
+  backup_url: string[];
+  segment_base: {
+    initialization: string;
+    index_range: string;
+  };
+  frame_rate: string;
+  codecid: number;
+  size: number;
+  mime_type: string;
+  width: number;
+  id: number;
+  noRexcode: number;
+  height: number;
+  md5: string;
+};
+
+export interface DashInfo {
+  duration: number,
+  video: CommonDashData[],
+  audio: CommonDashData[],
 }

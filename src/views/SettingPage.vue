@@ -58,7 +58,8 @@
                             "
                             :class="unit.type"
                         >
-                            {{ unit.name }}<i class="fa-solid ml-2" :class="'icon' in unit ? unit.icon : ''"></i>
+                            <span>{{ unit.name }}</span>
+                            <i class="fa-solid" :class="'icon' in unit ? unit.icon : ''"></i>
                         </button>
                         <template v-if="unit.type === 'dropdown'">
                             <select :name="unit.data" v-if="'drop' in unit" @change="($event) => {
@@ -107,8 +108,9 @@
                 class="p-[8px_0] w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[#33333380]"
             >
                 <span class="text-base">{{ item.name }}</span>
-                <i :class="'fa-light ' + item.icon"
-                    class="min-w-4 ml-2"
+                <i 
+                    class="min-w-4"
+                    :class="['fa-light', 'min-w-4', item.icon]"
                 ></i>
                 <label class="w-[3px] rounded-md h-4 bg-[color:var(--primary-color)] invisible"></label>
             </button>
@@ -216,7 +218,7 @@ export default {
                 if (!path) return null;
                 this.updateSettings(type, path);
             }).catch(err => {
-                (new ApplicationError(err)).handleError();
+                new ApplicationError(err).handleError();
             })
         },
         updateProxy(event: Event, key: keyof typeof this.store.settings.proxy) {
@@ -255,11 +257,11 @@ export default {
                     iziInfo("通过测试：" + timestamp);
                     return timestamp;
                 } else {
-                    throw new ApplicationError(new Error('测试失败：\n' + body?.message), { code: body?.code });
+                    throw new ApplicationError('测试失败：\n' + body?.message, { code: body?.code });
                 }
             } catch(err) {
                 err instanceof ApplicationError ? err.handleError() :
-                (new ApplicationError(new Error('测试失败：\n' + err as string), { code: -101 })).handleError();
+                new ApplicationError('测试失败：\n' + err as string).handleError();
             }
         }
     },

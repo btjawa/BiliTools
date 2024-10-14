@@ -157,32 +157,18 @@ pub fn stop_login() {
 
 pub async fn get_extra_cookies() -> Result<(), Value> {
     let client = init_client().await?;
-    let buvid3_resp = client
-        .get("https://www.bilibili.com")
-        .send().await.map_err(|e| e.to_string())?;
-    if buvid3_resp.status() != StatusCode::OK {
-        return Err(Value::from(buvid3_resp.status().to_string()));
-    }
-    let buvid3_cookies: Vec<String> = buvid3_resp.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
-        .map(|s| s.to_string())
-        .collect();
-    for cookie in buvid3_cookies {
-        cookies::insert(cookie).await.map_err(|e| e.to_string())?;
-    }
-    init_headers().await?;
-
-    let buvid4_resp = client
+    let buvid_resp = client
         .get("https://api.bilibili.com/x/frontend/finger/spi")
         .send().await.map_err(|e| e.to_string())?;
-    if buvid4_resp.status() != StatusCode::OK {
-        return Err(Value::from(buvid4_resp.status().to_string()));
+    if buvid_resp.status() != StatusCode::OK {
+        return Err(Value::from(buvid_resp.status().to_string()));
     }
-    let buvid4_body: BuvidResponse = buvid4_resp.json().await.map_err(|e| e.to_string())?;
-    if buvid4_body.code != 0 {
-        return Err(json!({ "code": buvid4_body.code, "message": buvid4_body.message }));
+    let buvid_body: BuvidResponse = buvid_resp.json().await.map_err(|e| e.to_string())?;
+    if buvid_body.code != 0 {
+        return Err(json!({ "code": buvid_body.code, "message": buvid_body.message }));
     }
-    cookies::insert(format!("buvid4={}", buvid4_body.data.b_4)).await.map_err(|e| e.to_string())?;
+    cookies::insert(format!("buvid3={}", buvid_body.data.b_3)).await.map_err(|e| e.to_string())?;
+    cookies::insert(format!("buvid4={}", buvid_body.data.b_4)).await.map_err(|e| e.to_string())?;
     init_headers().await?;
 
     let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
@@ -444,7 +430,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> Result<isize, Value> {
     cookies::insert(format!("refresh_token={}", refresh_token_body.data.refresh_token)).await.map_err(|e| e.to_string())?;
     init_headers().await?;
     let confirm_refresh_resp = client
-        .post("https://passport.bilibili.com/x/passport-login/web/cookie/refresh")
+        .post("https://passport.bilibili.com/x/passport-login/web/confirm/refresh")
         .query(&[
             ("csrf", bili_csrf),
             ("refresh_token", refresh_token.into()),

@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use tauri::{async_runtime, Emitter, WebviewWindow};
 use tokio::{fs::File, io::{AsyncBufReadExt, AsyncSeekExt, BufReader, SeekFrom}, select, time::{sleep, Duration}};
 
-use crate::{aria2c::*, get_app_handle, handle_err, CURRENT_BIN};
+use crate::{aria2c::*, get_app_handle, CURRENT_BIN};
 
 lazy_static! {
     static ref FFMPEG_CHILD: Arc<RwLock<Option<CommandChild>>> = Arc::new(RwLock::new(None));
@@ -39,7 +39,7 @@ pub async fn init_merge(window: &WebviewWindow, info: &VideoInfo) -> Result<(), 
                 progress_path.to_str().unwrap(), "-y"
             ])
             .status().await
-            .map_err(|e| handle_err(e.to_string()))?;
+            .map_err(|e| e.to_string())?;
 
         if status.success() {
             Ok(())
@@ -62,8 +62,8 @@ async fn monitor_progress(window: &WebviewWindow, info: &VideoInfo, progress_pat
         let mut printed_keys = HashSet::new();
         let metadata = fs::metadata(&progress_path).unwrap();
         if metadata.len() > last_size {
-            let mut file = File::open(&progress_path).await.map_err(|e| handle_err(e))?;
-            file.seek(SeekFrom::Start(last_size)).await.map_err(|e| handle_err(e))?;
+            let mut file = File::open(&progress_path).await.map_err(|e| e.to_string())?;
+            file.seek(SeekFrom::Start(last_size)).await.map_err(|e| e.to_string())?;
             let mut reader = BufReader::new(file);
             let mut line = String::new();
             while reader.read_line(&mut line).await.unwrap() != 0 {
@@ -111,7 +111,7 @@ async fn monitor_progress(window: &WebviewWindow, info: &VideoInfo, progress_pat
             log::info!("{:?}", formatted_array.join(" | "));
             last_log_time = Instant::now();
         }
-        window.emit("progress", &formatted_values).map_err(|e| handle_err(e))?;
+        window.emit("progress", &formatted_values).map_err(|e| e.to_string())?;
         if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
             return Ok(());
         }

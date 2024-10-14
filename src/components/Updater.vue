@@ -61,8 +61,7 @@ export default defineComponent({
             try {
                 await this.checkUpdate();
             } catch(err) {
-                const error = new ApplicationError(new Error(err as string), { code: -101 });
-                error.handleError();
+                new ApplicationError(err as string).handleError();
             }
         });
     },
@@ -117,8 +116,7 @@ export default defineComponent({
                         }
                     });
                 } catch(err) {
-                    const error = new ApplicationError(new Error(err as string), { code: -102 });
-                    error.handleError();
+                    new ApplicationError(err as string).handleError();
                 }
             } else {
                 this.mainElement.animate(

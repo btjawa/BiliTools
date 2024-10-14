@@ -1,5 +1,5 @@
 import { createStore } from 'vuex';
-import { MediaInfo, QueueInfo } from '../types/DataTypes';
+import { DashInfo, MediaInfo, QueueInfo } from '../types/DataTypes';
 
 export default createStore({
     state() {
@@ -36,6 +36,7 @@ export default createStore({
                 secret: '',
                 headers: {},
                 mediaInfo: {} as MediaInfo,
+                dashInfo: {} as DashInfo,
                 cache: {
                     log: 0,
                     temp: 0,
@@ -68,11 +69,6 @@ export default createStore({
                         { id: 13, label: 'AV1 编码', login: false },
                     ],        
                 },
-                mediaProfile: {
-                    dms: [16],
-                    ads: [30216],
-                    cdc: [7],
-                }
             },
             queue: {
                 waiting: [] as QueueInfo[],

@@ -8,7 +8,7 @@ use tauri::{async_runtime, Emitter, WebviewWindow};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 
-use crate::{downloads, ffmpeg, get_app_handle, handle_err, init_client, CURRENT_BIN, SECRET, CONFIG};
+use crate::{downloads, ffmpeg, get_app_handle, init_client, CURRENT_BIN, SECRET, CONFIG};
 
 lazy_static! {
     pub static ref WAITING_QUEUE: Mutex<VecDeque<VideoInfo>> = Mutex::new(VecDeque::new());
@@ -83,7 +83,7 @@ pub fn init() -> Result<(), String> {
             format!("--rpc-listen-port={}", port),
             format!("--rpc-secret={}", &SECRET.read().unwrap()),
             format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
-        ]).spawn().map_err(|e| handle_err(e))?;
+        ]).spawn().map_err(|e| e.to_string())?;
 
     let pid = child.pid();
     *ARIA2C_CHILD.write().unwrap() = Some(child);
@@ -97,7 +97,7 @@ pub fn init() -> Result<(), String> {
                 process::id(),
                 pid
             )
-        ]).spawn().map_err(|e| handle_err(e))?;
+        ]).spawn().map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "macos")]
     app.shell().sidecar("/bin/bash").unwrap()
@@ -123,7 +123,7 @@ pub fn kill() -> Result<(), String> {
 #[tauri::command]
 pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
     let mut tasks = vec![];
-    let client = init_client().await.map_err(|e| handle_err(e))?;
+    let client = init_client().await.map_err(|e| e.to_string())?;
     let ss_dir = &queue_info.ss_title;
     let display_name = &queue_info.display_name;
     let urls = queue_info.urls.clone();
@@ -131,7 +131,7 @@ pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
         else if !urls.video.is_empty() { "video" } else { "audio" }.into();
     
     for (url, file_type) in vec![(urls.video, "video"), (urls.audio, "audio")].into_iter() {
-        let purl = reqwest::Url::parse(&url[0]).map_err(|e| handle_err(e))?;
+        let purl = reqwest::Url::parse(&url[0]).map_err(|e| e.to_string())?;
         let filename = purl.path_segments().unwrap().last().unwrap();
         let path = CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", queue_info.time, filename)).join(filename);
         let init_payload = json!({
@@ -150,11 +150,11 @@ pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
         let response = client
             .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
             .json(&init_payload)
-            .send().await.map_err(|e| handle_err(e))?;
+            .send().await.map_err(|e| e.to_string())?;
 
-        let body: Value = response.json().await.map_err(|e| handle_err(e))?;
+        let body: Value = response.json().await.map_err(|e| e.to_string())?;
         let gid = body["result"].as_str().unwrap().to_string();
-        handle_download(gid.clone(), "pause").await.map_err(|e| handle_err(e))?;
+        handle_download(gid.clone(), "pause").await.map_err(|e| e.to_string())?;
         tasks.push(DownloadTask {
             gid, url, path,
             display_name: display_name.clone(), 
@@ -178,7 +178,7 @@ pub async fn push_back_queue(queue_info: QueueInfo) -> Result<Value, String> {
 
 #[tauri::command]
 pub async fn handle_download(gid: String, action: &str) -> Result<Value, String> {
-    let client = init_client().await.map_err(|e| handle_err(e))?;
+    let client = init_client().await.map_err(|e| e.to_string())?;
     let payload = json!({
         "jsonrpc": "2.0",
         "method": format!("aria2.{}", action),
@@ -188,9 +188,9 @@ pub async fn handle_download(gid: String, action: &str) -> Result<Value, String>
     let resp = client
         .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
         .json(&payload)
-        .send().await.map_err(|e| handle_err(e))?;
+        .send().await.map_err(|e| e.to_string())?;
 
-    let resp_data: Value = resp.json().await.map_err(|e| handle_err(e))?;
+    let resp_data: Value = resp.json().await.map_err(|e| e.to_string())?;
     Ok(json!(resp_data))
 }
 
@@ -217,19 +217,19 @@ pub async fn process_queue(window: WebviewWindow, date: String) -> Result<(), St
 }
 
 async fn process_download(window: &WebviewWindow, info: &VideoInfo) -> Result<(), String> {
-    fs::create_dir_all(&info.output_path.parent().unwrap()).map_err(|e| handle_err(e))?;
+    fs::create_dir_all(&info.output_path.parent().unwrap()).map_err(|e| e.to_string())?;
     let action = &info.action;
     for task in &info.tasks {
         if let Ok(_) = download_file(&window, &task, &info.gid).await {
             if *action == "only" {
                 fs::rename(&task.path, &info.output_path)
-                .map_err(|e| handle_err(e))?;
+                .map_err(|e| e.to_string())?;
             }
         }
     }
     if *action == "multi" {
         ffmpeg::init_merge(&window, &info).await
-        .map_err(|e| handle_err(e))?;
+        .map_err(|e| e.to_string())?;
     }
     update_queue("doing", None, None).await;
     Ok(())
@@ -271,7 +271,7 @@ async fn update_queue(action: &str, info: Option<VideoInfo>, date: Option<&Strin
                 let info = if let Some(date) = date {
                     add_timestamp(org_info, date)
                 } else { org_info };
-                downloads::insert(info.clone()).await.map_err(|e| handle_err(e)).unwrap();
+                downloads::insert(info.clone()).await.map_err(|e| e.to_string()).unwrap();
                 complete_queue.push_back(info.clone());
                 log::info!("Finished. Notifying process_queue...");
                 DOWNLOAD_COMPLETED_NOTIFY.notify_one();
@@ -291,8 +291,8 @@ async fn update_queue(action: &str, info: Option<VideoInfo>, date: Option<&Strin
 
 async fn download_file(window: &WebviewWindow, task: &DownloadTask, gid: &Value) -> Result<String, String> {
     log::info!("Start download: {}", &task.display_name);
-    let client = init_client().await.map_err(|e| handle_err(e))?;
-    handle_download(task.gid.clone(), "unpause").await.map_err(|e| handle_err(e))?;
+    let client = init_client().await.map_err(|e| e.to_string())?;
+    handle_download(task.gid.clone(), "unpause").await.map_err(|e| e.to_string())?;
     let mut last_log_time = Instant::now();
     loop {
         let status_payload = json!({
@@ -304,14 +304,13 @@ async fn download_file(window: &WebviewWindow, task: &DownloadTask, gid: &Value)
         let status_resp = client
             .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
             .json(&status_payload)
-            .send().await.map_err(|e| handle_err(e))?;
+            .send().await.map_err(|e| e.to_string())?;
 
-        let status_resp_data: Value = status_resp.json().await.map_err(|e| handle_err(e))?;
+        let status_resp_data: Value = status_resp.json().await.map_err(|e| e.to_string())?;
         if let Some(e) = status_resp_data["error"].as_object() {
             let error_code = e.get("code").and_then(|c| c.as_i64()).unwrap();
             let error_message = e.get("message").and_then(|m| m.as_str()).unwrap();
             let err = format!("Error code {}: {}", error_code, error_message);
-            handle_err(&err);
             return Err(err);
         }
         let completed_length = status_resp_data["result"]["completedLength"].as_str().unwrap().parse::<f64>().unwrap();

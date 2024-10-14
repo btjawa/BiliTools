@@ -1,7 +1,7 @@
 <template>
 <div ref="contextMenu" v-show="active" @contextmenu.prevent
     class="context-menu flex fixed flex-col overflow-hidden w-[200px] rounded-lg transition-opacity 
-    bg-[color:var(--section-color)] border border-solid border-[var(--split-color)] z-[99]"
+    bg-[color:var(--section-color)] border border-solid border-[var(--split-color)] z-[99] shadow-lg"
     @transitionend.prevent :style="{ opacity, top: pos.y + 'px', left: pos.x + 'px' }"
 >
     <div @click="handleAction('cut')" class="context-menu__item">
@@ -20,7 +20,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import * as utils from '../services/utils';
 
 export default defineComponent({
     mounted() {
@@ -49,9 +48,6 @@ export default defineComponent({
                     break;
                 case 'paste':
                     this.handleTextUpdate(this.activeElement, await navigator.clipboard.readText() || "");
-                    break;
-                case 'bilibili':
-                    utils.bilibili(null, document.querySelector('.search__input'));
                     break;
             }
         },

@@ -151,7 +151,7 @@
 </div></template>
 
 <script lang="ts">
-import { ApplicationError, iziError, iziInfo } from '@/services/utils';
+import { ApplicationError, iziInfo } from '@/services/utils';
 import { emit } from '@tauri-apps/api/event';
 import * as login from '@/services/login';
 
@@ -218,7 +218,7 @@ export default {
         async sendSmsCode() {
             await this.handleError(async () => {
                 if (!this.sms.tel) {
-                    iziError(new Error('手机号为空'));
+                    new ApplicationError('手机号为空', { noStack: true }).handleError();
                     return null;
                 }
                 this.sms.captchaKey = await login.sendSmsCode(this.sms.cid, this.sms.tel);
@@ -245,9 +245,9 @@ export default {
                 if (err instanceof ApplicationError) {
                     err.handleError();
                 } else if (typeof err === 'string') {
-                    (new ApplicationError(new Error(err as string), { code: -101 })).handleError();
+                    new ApplicationError(err).handleError();
                 } else if ((err as any)?.tmp_code && (err as any)?.request_id) {
-                    (new ApplicationError(new Error((err as any).message), { code: (err as any).code })).handleError();
+                    new ApplicationError((err as any).message, { code: (err as any).code }).handleError();
                     this.telVerify.need = true;
                     this.telVerify.tmpCode = (err as any).tmp_code;
                     this.telVerify.requestId = (err as any).request_id;

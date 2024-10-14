@@ -1,10 +1,8 @@
-import iziToast from "izitoast";
-import router from "@/router";
-import store from "@/store";
-import { MediaType } from "../types/DataTypes";
-import * as shell from "@tauri-apps/plugin-shell";
 import * as log from '@tauri-apps/plugin-log';
-import { auth } from "@/services";
+import * as auth from '@/services/auth';
+import { fetch } from '@tauri-apps/plugin-http';
+import iziToast from "izitoast";
+import store from "@/store";
 
 iziToast.settings({
     closeOnEscape: true,
@@ -15,37 +13,32 @@ iziToast.settings({
     theme: 'dark'
 });
 
-
 export class ApplicationError extends Error {
     code?: number | string;
-    constructor(error: Error, options?: { code?: number | string | undefined }) {
-        console.log(error.stack)
-        super();
-        this.message = error.message;
-        this.code = options?.code || -108;
-        this.name = error.name;
-        this.stack = error.stack ? error.stack
-            .replace(/\n(?!at)/g, function(_, offset, string) {
-                let nextIndex = offset;
-                while (!/^at/.test(string.slice(nextIndex))) {
-                    nextIndex = string.indexOf('\n', nextIndex + 1);
-                    if (nextIndex === -1) break;
-                }
-                return '';
-            })
-            .replace(/at\s+[^\s]+\s+\((?:http:\/\/[^)]+)?(src\/[^)]+)\)/g, 'at $1')
-            .replace(/^.*?(?=at\s)/gm, '')
-        : "Unknown stack trace";
+    noStack?: boolean;
+    constructor(message: string, options?: { code?: number | string | undefined, noStack?: boolean }) {
+        super(message);
+        this.code = options?.code;
+        this.noStack = options?.noStack;
+        (Error as any).captureStackTrace(this, this.constructor);
+        this.stack = this.cleanStack(this.stack);
+    }
+    private cleanStack(stack?: string): string {
+        return stack ? stack
+            .split('\n')
+            .map(line => line.replace(/(https?:\/\/[^\s]+?)(\/[^)]+)(:\d+:\d+)/g, '$2$3'))
+            .filter(line => line.includes('src/') && !line.includes('node_modules'))
+            .join('\n') : "Unkown stack trace";
     }
     handleError() {
-        const msg = `${this.message} (${this.code})\n${this.stack}`;
+        const msg = this.noStack ? this.message : `${this.message} ${this.code ? `(${this.code})` : ''}\n${this.stack}`;
         log.error(msg);
-        iziError(new Error(msg));
+        iziError(msg);
         return msg;
     }
 }
 
-export function iziInfo(message = '') {
+export function iziInfo(message: string) {
     console.log(message)
     iziToast.info({
         icon: 'fa-solid fa-circle-info',
@@ -54,14 +47,85 @@ export function iziInfo(message = '') {
     });
 }
 
-export function iziError(err: ApplicationError | Error) {
-    const msg = err.message;
-    console.error(msg);
+function iziError(message: string) {
+    console.error(message);
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
         layout: 2, timeout: 10000,
-        title: '警告 / 错误', message: msg.replace(/\n/g, '<br>')
+        title: '警告 / 错误', message: message.replace(/\n/g, '<br>')
     });
+}
+
+export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number }) {
+    let grisk_id: string = '';
+    for (let i = 0; i < (options?.times ?? 3); i++) {
+        const rawParams = {
+            ...options?.params, 
+            ...(grisk_id && { gaia_vtoken: grisk_id })
+        };
+        console.log(rawParams)
+        let params;
+        if (options?.wbi) {
+            params = '?' + await auth.wbi(rawParams);  
+        } else if (options?.params) {
+            params = '?' + new URLSearchParams(rawParams).toString();
+        } else params = '';
+        const response = await fetch(url + params, {
+            headers: store.state.data.headers,
+            ...(store.state.settings.proxy.addr && {
+                proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+            })
+        });
+        const body = await response.json();
+        if (body.code !== 0) {
+            if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
+                const csrf = new Headers(store.state.data.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
+                const captchaParams = new URLSearchParams({
+                    v_voucher: body.data.v_voucher, ...(csrf && { csrf })
+                }).toString();
+                const captchaResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/register?' + captchaParams, {
+                    headers: store.state.data.headers,
+                    method: 'POST',
+                    ...(store.state.settings.proxy.addr && {
+                        proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+                    })
+                });
+                const captchaBody = await captchaResp.json();
+                console.log(captchaBody);
+                if (captchaBody.code !== 0) {
+                    throw new ApplicationError(captchaBody.message, { code: captchaBody.code });
+                }
+                const { token, geetest: { gt = '', challenge = '' } } = captchaBody.data;
+                if (!token || !gt || !challenge) {
+                    throw new ApplicationError(body.message || body.msg, { code: body.code });
+                }
+                iziInfo('触发风控，请进行验证');
+                const captcha = await auth.captcha(gt, challenge);
+
+                const validateParams = new URLSearchParams({
+                    token, ...captcha, ...(csrf && { csrf })
+                }).toString();
+                const validateResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/validate?' + validateParams, {
+                    headers: store.state.data.headers,
+                    method: 'POST',
+                    ...(store.state.settings.proxy.addr && {
+                        proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+                    })
+                });
+                const validateBody = await validateResp.json();
+                console.log(validateBody)
+                if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
+                    throw new ApplicationError(validateBody.message, { code: validateBody.code });
+                }
+                grisk_id = validateBody.data.grisk_id;
+                await new Promise(resolve => setTimeout(resolve, 250));
+                continue;
+            } else {
+                throw new ApplicationError(body.message || body.msg, { code: body.code });
+            };
+        }
+        return body;
+    }
 }
 
 export function debounce(fn: any, wait: number) {
@@ -74,27 +138,6 @@ export function debounce(fn: any, wait: number) {
         }, wait);
         fn.apply(this, args);
     };
-}
-
-export async function bilibili(ts: number | null, input: HTMLInputElement | null) {
-    if (router.currentRoute.value.name == "UserPage") {
-        shell.open(`https://space.bilibili.com/${store.state.user.mid}`);
-        return null;
-    } else {
-        if (router.currentRoute.value.name == "HomePage" && input) {
-            const data = auth.id(input?.value);
-            if (data.type) {
-                const path = function() {
-                    if (data.type == MediaType.Video) return 'video'
-                    else if (data.type == MediaType.Bangumi) return 'bangumi/play'
-                    else if (data.type == MediaType.Lesson) return 'cheese/play'
-                    else if (data.type == MediaType.Music) return 'audio'
-                }();
-                shell.open(`https://www.bilibili.com/${path}/${data.id}/${typeof ts=="number"?`?t=${ts}`:''}`);
-                return null;
-            }
-        };
-    }
 }
 
 export function stat(num: number|string): string {

@@ -88,9 +88,21 @@ button {
     @apply hover:cursor-pointer;
 }
 
+button.selected {
+    @apply brightness-[85%];
+}
+
+button i + span, button span + i {
+    margin-left: 8px;
+}
+
 select {
     @apply hover:cursor-pointer;
     min-width: 152px;
+}
+
+.bcc-iconfont {
+	font-style: normal;
 }
 
 .ellipsis {

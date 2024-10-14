@@ -8,7 +8,7 @@ use lazy_static::lazy_static;
 use sea_orm::FromJsonQueryResult;
 use serde_json::Value;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, env, fs, panic, backtrace::Backtrace, path::PathBuf, sync::{Arc, RwLock}};
+use std::{collections::HashMap, env, fs, panic, path::PathBuf, sync::{Arc, RwLock}};
 use tauri::{async_runtime, Emitter, Manager};
 use tauri_plugin_http::reqwest::{Client, header::{HeaderMap, HeaderName, HeaderValue}, Proxy};
 use rand::{distributions::Alphanumeric, Rng};
@@ -45,33 +45,14 @@ lazy_static! {
     static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
 }
 
-fn handle_err<E: std::fmt::Display>(e: E) -> String {
-    let err_msg = e.to_string();
-    let backtrace = Backtrace::force_capture().to_string();
-    let bt: Vec<_> = backtrace
-        .lines()
-        .filter(|line| line.contains("bilitools"))
-        .collect();
-    log::error!("{}\n{}", err_msg, bt.join("\n"));
-    log::error!("{}", err_msg);
-    get_window().emit("error", &err_msg).unwrap();
-    e.to_string()
-}
-
 async fn init_headers() -> Result<HashMap<String, String>, String> {
     let mut headers = HashMap::new();
     let cookies = cookies::load().await.map_err(|e| e.to_string())?
         .iter().map(|(name, value)|
             format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
         ).collect::<Vec<_>>().join("; ");
-    headers.insert("Accept".into(), "*/*".into());
-    headers.insert("Accept-Language".into(), "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6".into());
-    headers.insert("Connection".into(), "keep-alive".into());
     headers.insert("Cookie".into(), cookies);
-    headers.insert("Upgrade-Insecure-Requests".into(), "1".into());
-    headers.insert("Sec-Ch-Ua".into(), "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"".into());
-    headers.insert("Sec-Ch-Ua-Mobile".into(), "?0".into());
-    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36".into());
+    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36".into());
     headers.insert("Referer".into(), "https://www.bilibili.com".into());
     headers.insert("Origin".into(), "https://www.bilibili.com".into());
     get_window().emit("headers", &headers).unwrap();
@@ -94,7 +75,7 @@ async fn init_client() -> Result<Client, String> {
                 true => Proxy::https(&config.proxy.addr),
                 false => Proxy::http(&config.proxy.addr),
             }
-            .map_err(|e| handle_err(e))?
+            .map_err(|e| e.to_string())?
             .basic_auth(&config.proxy.username, &config.proxy.password)
         )
     } else { client_builder };
@@ -144,7 +125,7 @@ async fn clean_cache(path: String, ptype: String) -> Result<(), String> {
     if ptype == "database" {
         if let Err(_) = fs::remove_file(&path) {}
     } else {
-        let entries = fs::read_dir(&path).map_err(|e| handle_err(e))?;
+        let entries = fs::read_dir(&path).map_err(|e| e.to_string())?;
         for entry in entries {
             let entry = match entry {
                 Ok(entry) => entry,
@@ -174,14 +155,14 @@ async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secre
             for (key, value) in source {
                 config_obj.insert(key.clone(), value.clone());
                 async_runtime::spawn(async move {
-                    config::insert(key, value).await.map_err(|e| handle_err(e)).unwrap();
+                    config::insert(key, value).await.map_err(|e| e.to_string()).unwrap();
                 });
             }
         }
-        *config = serde_json::from_value(config_json).map_err(|e| handle_err(e)).unwrap();
+        *config = serde_json::from_value(config_json).map_err(|e| e.to_string()).unwrap();
     };
     if action == "init" || action == "read" {
-        update_config(config::load().await.map_err(|e| handle_err(e))?);
+        update_config(config::load().await.map_err(|e| e.to_string())?);
     } else if action == "write" {
         if let Some(new_config) = settings { update_config(new_config.clone()) }
     }
@@ -249,11 +230,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .setup(|app| {
             const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
             log::info!("BiliTools v{}", VERSION.unwrap_or("unkown"));
-            panic::set_hook(Box::new(move |e| { handle_err(e); }));
+            panic::set_hook(Box::new(move |e| { e.to_string(); }));
             let app_handle = app.app_handle().clone();
             let window = app_handle.get_webview_window("main").unwrap();
             async_runtime::spawn(async move {
-                services::init(app_handle).await.map_err(|e| handle_err(e))?;
+                services::init(app_handle).await.map_err(|e| e.to_string())?;
                 Ok::<(), String>(())
             });
             match tauri_plugin_os::version() {
