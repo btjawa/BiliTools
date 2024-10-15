@@ -1,52 +1,87 @@
-# BiliTools
+# BiliTools - 哔哩哔哩工具箱
 
 ![bilitools.png](https://cdn.jsdelivr.net/gh/btjawa/btjawa/assets/bilitools.png)
 
-# 介绍
+## 介绍
 
-基于 [Tauri](https://github.com/tauri-apps/tauri) & [Rust](https://github.com/rust-lang/rust) 实现的 bilibili 第三方轻量工具箱；项目仅作学习用途。
+基于 [Tauri v2](https://v2.tauri.app) 实现的哔哩哔哩工具箱
 
-# 功能
+目前大致实现了资源下载：支持 `视频、番剧、课程、音乐` 下载， 自动刷新登录信息等等
 
-## 目前已实现
+未来还会陆续支持更多功能，尽情期待~
 
-- 获取大会员/付费资源
-- 风控验证 - `WBI / _uuid / buvid3/4 / bili_ticket / 极验行为验证`
-- 多线程下载 / 断点续传 - `aria2`
-- 音视频下载 - `视频 / 合集 / 互动视频 / 课程 / 番剧 (AV + BV + SS + EP)`
-    - 画质最高支持：`8K + HDR + 杜比视界`
-    - 伴音音质最高支持：`192K + HiRes无损(48kHz) + 杜比全景声(384K)`
-    - 帧率最高支持：`120FPS`
-    - 编码支持：`AVC (H.264) + HEVC (H.265) + AV1`
-    - 互动视频支持：`回溯 / 控制剧情图 + 下载剧情分P`
-    - 支持 FLV 下载
-- 音乐下载 - `AU`
-    - 音质最高支持：`320K + 无损SQ FLAC`
-- 弹幕获取 - `XML+ASS: 实时弹幕 / 历史弹幕`
-- 视频AI总结
-- 三种登录方式 + 自动刷新登录状态
-    - 扫码登录
-    - 密码登录
-    - 短信登录: 多国家区号支持
+将会优先适配 `Windows`, 次为 `macOS`
 
-# 更新
+## 功能
 
-应用将在每次启动时自动检查并更新
+### 当前版本 - v1.3.0-dev.3
 
-手动更新可移步 [Releases](https://github.com/btjawa/BiliTools/releases/latest)
+### 下列部分未实现功能都将在 v1.3.0 正式版中实现
 
-# 更多信息
+### 风控验证
 
-可转至 [Blog](https://btjawa.top/bilitools)
+ - [x] Wbi 签名
+ - [x] bili_ticket
+ - [ ] v_voucher (不稳定)
+ - [ ] buvid (不稳定)
 
-# 感谢
+### 登录
 
-[Tauri](https://github.com/tauri-apps/tauri)
+ - [x] 扫码登录
+ - [ ] 密码登录 (不稳定)
+ - [x] 短信登录
+ - [ ] 第三方登录 (TODO)
 
-[哔哩哔哩-API收集整理](https://github.com/SocialSisterYi/bilibili-API-collect)
+### 音频 / 视频
 
-[FFmpeg](https://github.com/FFmpeg/FFmpeg)
+ - [x] 120 FPS
+ - [x] 480P ~ 8K
+ - [x] HDR 真彩
+ - [x] 杜比视界
+ - [ ] 互动视频 （`v1.3.0-dev` 暂未实现，但 `v1.1.2` 有此功能的不稳定版本)
+ - [x] 64K ~ 192K
+ - [x] 杜比全景声
+ - [x] Hi-Res 无损
 
-[aria2](https://github.com/aria2/aria2)
+### 其他下载
 
-[DanmakuFactory](https://github.com/hihkm/DanmakuFactory)
+ - [x] 封面
+ - [ ] 弹幕 (`v1.3.0-dev` 暂未实现，但 `v1.1.2` 有此功能的不稳定版本)
+ - [ ] AI总结 (`v1.3.0-dev` 暂未实现，但 `v1.1.2` 有此功能的不稳定版本)
+
+## 开发
+
+```shell
+git clone https://github.com/btjawa/BiliTools.git
+cd BiliTools
+npm install // You can use pnpm, yarn as replacement
+npm run tauri dev
+```
+
+## 参与贡献 / 提交报错
+
+欢迎成为该项目的下一个贡献者~
+
+项目仍有许多模块未完全完成或不稳定，个人维护精力不足
+
+> [!IMPORTANT]
+>
+> 对于提交报错， 推荐以下几种方式：
+> - 在弹出错误通知时，截图窗口，并贴图至 Issue
+> - 将 `BiliTools.log` (对于 Windows, 位于 `%LOCALAPPDATA%/com.btjawa.bilitools/logs`) 作为附件上传至 Issue
+> 
+> 如果可以的话，请尽量描述复现方式与场景
+
+## 本项目使用的其他开源项目
+
+ - [aria2c](https://github.com/aria2/aria2c)
+
+ - [ffmpeg](https://git.ffmpeg.org/ffmpeg.git)
+
+ - 其余可查看 `package.json` 与 `src-tauri/Cargo.toml`
+
+## 引用文档
+
+ - [哔哩哔哩-API收集整理](https://socialsisteryi.github.io/bilibili-API-collect/)
+
+ - [aria2 Documentation](https://aria2.github.io/manual/en/html/aria2c.html)
