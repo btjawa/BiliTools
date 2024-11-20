@@ -49,6 +49,20 @@
  - [ ] 弹幕 (`v1.3.0-dev` 暂未实现，但 `v1.1.2` 有此功能的不稳定版本)
  - [ ] AI总结 (`v1.3.0-dev` 暂未实现，但 `v1.1.2` 有此功能的不稳定版本)
 
+## 声明
+
+本项目的代码部分依据 [MIT 许可证](https://opensource.org/license/mit) 授权，请参考项目根目录下的 `LICENSE` 文件。
+
+本项目参考了 [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 项目的内容，由 [SocialSisterYi](https://github.com/SocialSisterYi) 根据 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.en) 协议发布，并仅限于非商业用途。
+
+### 其他开源项目
+
+ - [aria2c](https://github.com/aria2/aria2c)
+
+ - [ffmpeg](https://git.ffmpeg.org/ffmpeg.git)
+
+ - 其余可查看 `package.json` 与 `src-tauri/Cargo.toml`
+
 ## 开发
 
 ```shell
@@ -71,17 +85,3 @@ npm run tauri dev
 > - 将 `BiliTools.log` (对于 Windows, 位于 `%LOCALAPPDATA%/com.btjawa.bilitools/logs`) 作为附件上传至 Issue
 > 
 > 如果可以的话，请尽量描述复现方式与场景
-
-## 本项目使用的其他开源项目
-
- - [aria2c](https://github.com/aria2/aria2c)
-
- - [ffmpeg](https://git.ffmpeg.org/ffmpeg.git)
-
- - 其余可查看 `package.json` 与 `src-tauri/Cargo.toml`
-
-## 引用文档
-
- - [哔哩哔哩-API收集整理](https://socialsisteryi.github.io/bilibili-API-collect/)
-
- - [aria2 Documentation](https://aria2.github.io/manual/en/html/aria2c.html)
