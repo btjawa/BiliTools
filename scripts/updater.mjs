@@ -39,8 +39,8 @@ async function updater() {
   // 需要生成的静态 json 文件数据，根据自己的需要进行调整
   const updateData = {
     version: tag.name,
-    // 使用 UPDATE_LOG.md，如果不需要版本更新日志，则将此字段置空
-    notes: updatelog(tag.name),
+    // 使用 CHANGELOG.md，如果不需要版本更新日志，则将此字段置空
+    notes: '您也可以到仓库的 Release 自行下载更新\n\n' + updatelog(tag.name),
     pub_date: new Date().toISOString(),
     platforms: {
       win64: { signature: '', url: '' }, // compatible with older formats
@@ -52,7 +52,7 @@ async function updater() {
   const setAsset = async (asset, reg, platforms) => {
     let sig = '';
     if (/.sig$/.test(asset.name)) {
-      sig = await getSignature(`https://gh.con.sh/${asset.browser_download_url}`);
+      sig = await getSignature(`https://ghp.ci/${asset.browser_download_url}`);
     }
     platforms.forEach((platform) => {
       if (reg.test(asset.name)) {
@@ -62,7 +62,7 @@ async function updater() {
           return;
         }
         // 设置下载链接
-        updateData.platforms[platform].url = `https://gh.con.sh/${asset.browser_download_url}`;
+        updateData.platforms[platform].url = `https://ghp.ci/${asset.browser_download_url}`;
       }
     });
   };

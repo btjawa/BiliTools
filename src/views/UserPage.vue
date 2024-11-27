@@ -86,7 +86,7 @@
                         <span v-if="othersPage === 0">账号</span>
                         <div v-if="othersPage === 1" class="w-[42px] relative">
                             +{{ sms.cid }}
-                            <svg class="absolute opacity-0 h-[22px] p-0 hover:cursor-pointer" viewBox="0 0 13.4 8.1">
+                            <svg class="absolute left-[42px] top-2 w-[12px] p-0 hover:cursor-pointer" viewBox="0 0 13.4 8.1">
                                 <path d="M6.8 8.1L0 1.75 1.36.3l5.38 5L11.97 0l1.42 1.4-6.6 6.7z" fill="var(--primary-color)"></path>
                             </svg>
                         </div>

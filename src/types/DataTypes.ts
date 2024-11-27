@@ -11,11 +11,16 @@ export enum MediaType {
   Lesson = "lesson",
 }
 
+export enum StreamCodecType {
+  Dash = "dash",
+  Mp4 = "mp4",
+  Flv = "flv", // INOP
+}
+
 export interface MediaInfoListItem {
   title: string;
   cover: string;
   desc: string;
-  duration: number;
   id: number,
   cid: number,
   eid: number,
@@ -45,19 +50,29 @@ export interface MediaInfo {
   list: MediaInfoListItem[]
 }
 
-
-export interface QueueInfo extends MediaInfoListItem {
-  urls: {
-    video: string[],
-    audio: string[],
-  },
-  display_name: string,
-  time: string,
-  gids?: {
-    vgid?: string,
-    agid?: string,
-  }
+export interface TasksInfo {
+  tasks: {
+    urls: string[];
+    gid: string;
+    media_type: "video" | "audio";
+    path: string;
+  }[];
+  output: string;
 }
+
+export interface QueueInfo extends TasksInfo {
+  info: MediaInfoListItem;
+}
+
+export type DownloadEvent = 
+  | { status: "Started"; gid: string; media_type: "video" | "audio"; }
+  | { status: "Progress"; gid: string; content_length: number; chunk_length: number }
+  | { status: "Finished"; gid: string };
+
+export type QueueEvent =
+  | { type: 'Waiting'; data: QueueInfo[] }
+  | { type: 'Doing'; data: QueueInfo[] }
+  | { type: 'Complete'; data: QueueInfo[] };
 
 export interface VideoInfo {
   code: number;
@@ -1223,6 +1238,7 @@ export interface VideoPlayUrlInfo  {
     seek_param: string;
     seek_type: string;
     dash: CommonDash;
+    durl: CommonDurl[];
     support_formats: {
       quality: number;
       format: string;
@@ -1352,29 +1368,56 @@ export interface CommonDash {
 }
 
 export interface CommonDashData {
-  start_with_sap: number;
-  bandwidth: number;
-  sar: string;
-  codecs: string;
+  id: number;
+  baseUrl: string;
   base_url: string;
+  backupUrl: string[];
   backup_url: string[];
+  bandwidth: number;
+  mimeType: string;
+  mime_type: string;
+  codecs: string;
+  width: number;
+  height: number;
+  frameRate: string;
+  frame_rate: string;
+  sar: string;
+  startWithSap: number;
+  start_with_sap: number;
+  SegmentBase: {
+    Initialization: string;
+    indexRange: string;
+  };
   segment_base: {
     initialization: string;
     index_range: string;
   };
-  frame_rate: string;
   codecid: number;
+};
+
+export interface CommonDurl {
+  order: number;
+  length: number;
   size: number;
-  mime_type: string;
-  width: number;
+  ahead: string;
+  vhead: string;
+  url: string;
+  backup_url: string[];
+}
+
+export interface CommonDurlData {
   id: number;
-  noRexcode: number;
-  height: number;
-  md5: string;
+  size: number;
+  base_url: string;
+  codecid: number;
+  backup_url: string[];
 };
 
 export interface DashInfo {
-  duration: number,
-  video: CommonDashData[],
-  audio: CommonDashData[],
+  video: CommonDashData[];
+  audio: CommonDashData[];
+}
+
+export interface DurlInfo {
+  video: CommonDurlData[];
 }

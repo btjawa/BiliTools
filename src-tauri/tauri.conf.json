@@ -1,6 +1,6 @@
 {
   "productName": "BiliTools",
-  "version": "1.3.0-dev.3",
+  "version": "1.3.0-dev.4",
   "identifier": "com.btjawa.bilitools",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -73,9 +73,8 @@
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQTUzQTQ3NDY3RUZEMjgKUldRby9YNUdSenFsN3JJYklTL0g5RUd2QkhUWklqQUxydVZXdFA4c25ZazI0YjJIbTFFM0JiNjkK",
       "endpoints": [
-        "https://gh.con.sh/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://cdn.jsdelivr.net/gh/btjawa/BiliTools/install.json",
+        "https://raw.gitmirror.com/btjawa/BiliTools/master/install.json",
+        "https://ghp.ci/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
         "https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json"
       ]
     }

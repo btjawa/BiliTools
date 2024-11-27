@@ -4,39 +4,25 @@ import * as types from "@/types";
 import { ApplicationError, formatProxyUrl } from "./utils";
 import md5 from "md5";
 
-export function id(input: string) {
-    try {
-        const url = new URL(input);
-        if (url.hostname === 'b23.tv') {
-            throw new ApplicationError("暂不支持 b23.tv 链接", { noStack: true });
-        }
-        if (url.pathname) {
-            let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-            if (match) return { id: match[1] || match[0], type: types.data.MediaType.Video };
-            match = input.match(/ep(\d+)|ss(\d+)/i);
-            if (match) return { id: match[0], type: types.data.MediaType.Bangumi }; 
-            match = input.match(/au(\d+)/i);
-            if (match) return { id: match[0], type: types.data.MediaType.Music }; 
-        }
-        throw new ApplicationError("无法解析输入", { noStack: true });
-    } catch(_) { // NOT URL
-        if (!/^(av|ep|ss|au)\d+|(bv)(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]+/i.test(input)) {
-            throw new ApplicationError("无法解析输入", { noStack: true });
-        }
-        const map = {
-            'av': types.data.MediaType.Video,
-            'bv': types.data.MediaType.Video,
-            'ep': types.data.MediaType.Bangumi,
-            'ss': types.data.MediaType.Bangumi,
-            'au': types.data.MediaType.Music
-        };
-        const prefix = input.slice(0, 2).toLowerCase();
-        const id = prefix === 'av' || prefix === 'au' ? input.slice(2) : input;
-        return { id: id, type: (map as any)[prefix] || null };
-    }
-}
-
 declare function initGeetest(params: any, callback: (captchaObj: any) => void): Promise<void>;
+
+function getWebGLFingerPrint() {
+    let dm_img_str = "bm8gd2ViZ2", dm_cover_img_str = "bm8gd2ViZ2wgZXh0ZW5zaW";
+    const gl = document.createElement("canvas").getContext("webgl");
+    if (gl) {
+        const version = gl.getParameter(gl.VERSION);
+        dm_img_str = version ? btoa(version).slice(0, -2) : dm_img_str;
+        const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+        if (debugInfo) {
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+            if (renderer && vendor) {
+                dm_cover_img_str = btoa(renderer + vendor).slice(0, -2);
+            }
+        }
+    }
+    return { dm_img_str, dm_cover_img_str };
+}
 
 export async function wbi(params: { [key: string]: string | number | object }) {
     const mixinKeyEncTab = [
@@ -51,6 +37,9 @@ export async function wbi(params: { [key: string]: string | number | object }) {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
         })
     });
+    if (!response.ok) {
+        throw new ApplicationError(response.statusText, { code: response.status });
+    }
     const body = await response.json() as types.userInfo.NavInfoResp;
     if (body?.code !== 0) {
         throw new ApplicationError(body?.message, { code: body?.code });
@@ -61,7 +50,8 @@ export async function wbi(params: { [key: string]: string | number | object }) {
     const mixinKey = mixinKeyEncTab.map(n => (imgKey + subKey)[n]).join('').slice(0, 32),
         curr_time = Math.round(Date.now() / 1000),
         chr_filter = /[!'()*]/g;
-    Object.assign(params, { wts: curr_time });
+    const { dm_img_str, dm_cover_img_str } = getWebGLFingerPrint();
+    Object.assign(params, { wts: curr_time, dm_img_str, dm_cover_img_str, dm_img_list: '[]' });
     const query = Object.keys(params).sort().map((key) => {
         const value = params[key].toString().replace(chr_filter, '');
         return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;

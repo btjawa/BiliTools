@@ -43,16 +43,14 @@
 			>
 				<span class="min-w-6">{{ index + 1 }}</span>
 				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<span class="w-[45%] ellipsis">{{ item.title }}</span>
+				<span class="flex flex-1 ellipsis">{{ item.title }}</span>
 				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<span class="w-[52px]">{{ duration(item.duration, mediaInfo.type) }}</span>
-				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<div class="download_options flex justify-around flex-1">
-					<button @click="popup(1, index)">
+				<div class="flex gap-2">
+					<button @click="updateDash(index).then(_ => popupActive = 1)">
 						<i class="fa-solid fa-file-arrow-down"></i>
 						<span>下载音视频</span>
 					</button>
-					<button @click="popup(2, index)">
+					<button @click=""> 
 						<i class="fa-solid fa-file-export"></i>
 						<span>下载其他</span>
 					</button>
@@ -63,43 +61,77 @@
 	<div @click="popupActive = 0" :style="{ 'opacity': popupActive ? 1 : 0, 'pointerEvents': popupActive ? 'all' : 'none' }"
 		class="popup_container absolute flex items-center justify-center w-full h-full bg-opacity-50 bg-black cursor-pointer"
 	>
-		<div @click.stop v-if="dashInfo.video"
+		<div @click.stop
 			class="popup min-w-[768px] relative h-96 p-4 rounded-xl bg-[color:var(--block-color)] cursor-default"
 		>
-			<h3 class="block mb-2">分辨率/画质</h3>
+			<template v-if="playUrlInfo.video">
+				<h3 class="block mb-2">分辨率/画质</h3>
+				<div class="flex gap-1">
+					<button v-for="id in [...(new Set(playUrlInfo.video.map(item => item.id)))]"
+						:class="{ 'selected': currentSelect.video_quality === id }"
+						@click="currentSelect.video_quality = id"
+					>
+						<!-- <i :class="[ 'fa-solid', id >= 64 ? 'fa-high-definition' : 'fa-standard-definition' ]"></i> -->
+						<i class="fa-solid fa-file-video"></i>
+						<span>{{ mediaMap.dms.find(map => map.id === id)?.label }}</span>
+					</button>
+				</div>
+				<hr class="my-[15px]" />
+			</template>
+			<template v-if="'audio' in playUrlInfo && playUrlInfo.audio">
+				<h3 class="block mb-2">比特率/音质</h3>
+				<div class="flex gap-1">
+					<button v-for="id in playUrlInfo.audio.map(item => item.id)"
+						:class="{ 'selected': currentSelect.audio_quality === id }"
+						@click="currentSelect.audio_quality = id"
+					>
+						<i class="fa-solid fa-file-audio"></i>
+						<span>{{ mediaMap.ads.find(map => map.id === id)?.label }}</span>
+					</button>
+				</div>
+				<hr class="my-[15px]" />
+			</template>
+			<template v-if="playUrlInfo.video">
+				<h3 class="block mb-2">编码格式</h3>
+				<div class="flex gap-1">
+					<button v-for="item in playUrlInfo.video.filter(item => item.id === currentSelect.video_quality)"
+						:class="{ 'selected': currentSelect.video_codec === item.codecid }"
+						@click="currentSelect.video_codec = item.codecid"
+					>
+						<i class="fa-solid fa-file-code"></i>
+						<span>{{ mediaMap.cdc.find(map => map.id === item.codecid)?.label }}</span>
+					</button>
+				</div>
+				<hr class="my-[15px]" />
+			</template>
+			<h3 class="block mb-2">
+				流媒体格式
+				<i @click="shell.open('https://www.btjawa.top/bilitools#关于-DASH-FLV-MP4')"
+					class="fa-regular fa-circle-question question"
+				></i>
+			</h3>
 			<div class="flex gap-1">
-				<button v-for="id in [...(new Set(dashInfo.video.map(item => item.id)))]"
-					:class="{ 'selected': currentSelect.video_quality === id }"
-					@click="currentSelect.video_quality = id"
-				>
-					<!-- <i :class="[ 'fa-solid', id >= 64 ? 'fa-high-definition' : 'fa-standard-definition' ]"></i> -->
-					<i class="fa-solid fa-file-video"></i>
-					<span>{{ mediaMap.dms.find(map => map.id === id)?.label }}</span>
-				</button>
-			</div>
-			<hr class="my-4" />
-			<h3 class="block mb-2">比特率/音质</h3>
-			<div class="flex gap-1">
-				<button v-for="id in dashInfo.audio.map(item => item.id)"
-					:class="{ 'selected': currentSelect.audio_quality === id }"
-					@click="currentSelect.audio_quality = id"
-				>
-					<i class="fa-solid fa-file-audio"></i>
-					<span>{{ mediaMap.ads.find(map => map.id === id)?.label }}</span>
-				</button>
-			</div>
-			<hr class="my-4" />
-			<h3 class="block mb-2">编码格式</h3>
-			<div class="flex gap-1">
-				<button v-for="item in dashInfo.video.filter(item => item.id === currentSelect.video_quality)"
-					:class="{ 'selected': currentSelect.video_codec === item.codecid }"
-					@click="currentSelect.video_codec = item.codecid"
+				<button
+					:class="{ 'selected': stream_codec === 0 }"
+					@click="stream_codec = 0"
 				>
 					<i class="fa-solid fa-file-code"></i>
-					<span>{{ mediaMap.cdc.find(map => map.id === item.codecid)?.label }}</span>
+					<span>DASH 格式</span>
+				</button>
+				<button
+					:class="{ 'selected': stream_codec === 1 }"
+					@click="stream_codec = 1"
+				>
+					<i class="fa-solid fa-file-code"></i>
+					<span>MP4 格式</span>
 				</button>
 			</div>
-			<button @click="popupActive = 0"
+			<span v-if="typeof getSize() === 'number'"
+				class="absolute bottom-4 right-[100px] leading-8 desc"
+			>
+				~ {{ formatBytes(getSize() as number) }}
+			</span>
+			<button @click="pushBackQueue()"
 				class="absolute bottom-4 right-4 bg-[color:var(--primary-color)]"
 			>
 				<i class="fa-solid fa-right"></i>
@@ -110,10 +142,10 @@
 </div></template>
 
 <script lang="ts">
-import * as auth from '@/services/auth';
 import * as data from '@/services/data';
 import * as shell from '@tauri-apps/plugin-shell';
-import { ApplicationError, stat, duration } from '@/services/utils';
+import { ApplicationError, stat, formatBytes, parseId } from '@/services/utils';
+import { DashInfo, DurlInfo, StreamCodecType } from '@/types/DataTypes';
 import store from '@/store';
 
 export default {
@@ -135,10 +167,13 @@ export default {
 			currentSelect: {
 				video_quality: this.$store.state.settings.df_dms,
 				video_codec: this.$store.state.settings.df_cdc,
-				audio_quality: this.$store.state.settings.df_ads
+				audio_quality: this.$store.state.settings.df_ads,
 			},
+			stream_codec: 0,
+			index: 0,
+			playUrlInfo: {} as DashInfo | DurlInfo,
 			shell,
-			store: store.state
+			store: store.state,
 		}
 	},
 	computed: {
@@ -148,10 +183,13 @@ export default {
 		mediaMap() {
 			return this.store.data.mediaMap;
 		},
-		dashInfo() {
-			return this.store.data.dashInfo;
-		}
 	},
+	watch: {
+		stream_codec(newCodec, oldCodec) {
+			if (newCodec === oldCodec) return;
+			newCodec ? this.updateDurl(this.index) : this.updateDash(this.index);
+		}
+    },
 	methods: {
 		async search() {
 			if (!this.searchInput) return null;
@@ -160,8 +198,9 @@ export default {
 			try {
 				this.$store.commit('updateState', { 'data.mediaInfo': {} });
 				this.searchActive = true;
-				const { id, type } = auth.id(this.searchInput);
+				const { id, type } = await parseId(this.searchInput);
 				const info = await data.getMediaInfo(id, type);
+				console.log(info)
 				this.$store.commit('updateState', { 'data.mediaInfo': info });
 				this.mediaRootActive = true;
 			} catch(err) {
@@ -171,19 +210,60 @@ export default {
 				this.searchActive = false;
 			}
 		},
-		async popup(type: number, index: number) {
+		updateDefault(ids: number[], df: keyof typeof this.store.settings, opt: keyof typeof this.currentSelect) {
+			this.currentSelect[opt] = ids.includes(this.store.settings[df] as number) ? this.store.settings[df] : ids[0];
+		},
+		async updateDash(index: number) {
 			try {
-				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type);
-				console.log(info)
+				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as any;
+				this.stream_codec = 0;
+				this.index = index;
+				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, StreamCodecType.Dash);
 				this.$store.commit('updateState', { 'data.dashInfo': info });
-				this.popupActive = type;
+				this.playUrlInfo = info as DashInfo;
+				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "video_quality");
+				this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "audio_quality");
+				this.updateDefault(this.playUrlInfo.video.map(item => item.codecid), "df_cdc", "video_codec");
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
 			}
 		},
+		async updateDurl(index: number) {
+			try {
+				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as any;
+				this.stream_codec = 1;
+				this.index = index;
+				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, StreamCodecType.Mp4);
+				this.$store.commit('updateState', { 'data.durlInfo': info });
+				this.playUrlInfo = info as DurlInfo;
+				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "video_quality");
+				this.updateDefault(this.playUrlInfo.video.map(item => item.codecid), "df_cdc", "video_codec");
+			} catch(err) {
+				err instanceof ApplicationError ? err.handleError() :
+				new ApplicationError(err as string).handleError();
+			}
+		},
+		async pushBackQueue() {
+			this.popupActive = 0;
+			try {
+				const video = this.playUrlInfo.video.find(item => item.id === this.currentSelect.video_quality && item.codecid === this.currentSelect.video_codec);
+				const audio = (this.playUrlInfo as DashInfo).audio ? (this.playUrlInfo as DashInfo).audio.find(item => item.id === this.currentSelect.audio_quality) : null;
+				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], video, ...(audio && { audio }) });
+				this.$router.push('/down-page');
+			} catch(err) {
+				err instanceof ApplicationError ? err.handleError() :
+				new ApplicationError(err as string).handleError();
+			}
+		},
+		getSize() {
+			if (!this.playUrlInfo.video) return null;
+			const info = this.playUrlInfo.video.find(item => item.id === this.currentSelect.video_quality);
+			if (info && 'size' in info) { return info.size }
+			else { return null }
+		},
 		stat,
-		duration,
+		formatBytes,
 	},
 }
 </script>

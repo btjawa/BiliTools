@@ -1,11 +1,11 @@
-use std::{collections::HashMap, fs::File, error::Error};
+use std::{collections::HashMap, error::Error};
 use regex::Regex;
 use serde::{Serialize, Deserialize};
 
 use sea_orm::{Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement};
 use sea_orm::entity::prelude::*;
 use sea_orm::sea_query::{OnConflict, SqliteQueryBuilder, TableCreateStatement};
-use crate::services::STORAGE_PATH;
+use crate::shared::STORAGE_PATH;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "cookies")]
@@ -22,7 +22,6 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
-    if !STORAGE_PATH.exists() { File::create(&*STORAGE_PATH)?; }
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();

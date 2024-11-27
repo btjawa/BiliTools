@@ -1,5 +1,10 @@
 <template><div class="flex-col items-start justify-start">
-    <h1>设置</h1>
+    <h1>
+        设置
+        <i @click="shell.open('https://www.btjawa.top/bilitools#设置')"
+            class="question fa-regular fa-circle-question"
+        ></i>
+    </h1>
     <hr />
     <div class="setting-page__sub flex w-full">
         <div
@@ -29,7 +34,7 @@
                                 class="ellipsis max-w-[120px] min-w-24 rounded-r-none"
                             >{{ formatBytes((store.data.cache as any)[unit.data]) }}</button>
                             <button @click="getPath(unit.data).then(path =>
-                                invoke('clean_cache', { path, ptype: unit.data }))"
+                                invoke('clean_cache', { path }))"
                                 class="bg-[color:var(--primary-color)] rounded-l-none"
                             ><i class="fa-light fa-broom-wide"></i></button>
                         </div>
@@ -251,6 +256,9 @@ export default {
                         proxy: { all: formatProxyUrl(this.store.settings.proxy) }
                     })
                 });
+                if (!response.ok) {
+                    throw new ApplicationError('测试失败：\n' + response.statusText, { code: response.status });
+                }
                 const body = await response.json();
                 const timestamp = JSON.stringify(body?.data);
                 if (timestamp) {
@@ -268,7 +276,7 @@ export default {
     async activated() {
         Object.entries(this.store.data.cache).forEach(async type => {
             (this.store.data.cache as any)[type[0]] = 0;
-            const event = new Channel<number>();
+            const event = new Channel<bigint>();
             event.onmessage = (bytes) => {
                 (this.store.data.cache as any)[type[0]] = bytes;
             }

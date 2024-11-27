@@ -1,5 +1,5 @@
 import { createStore } from 'vuex';
-import { DashInfo, MediaInfo, QueueInfo } from '../types/DataTypes';
+import { DashInfo, DurlInfo, MediaInfo, QueueInfo } from '../types/DataTypes';
 
 export default createStore({
     state() {
@@ -37,14 +37,16 @@ export default createStore({
                 headers: {},
                 mediaInfo: {} as MediaInfo,
                 dashInfo: {} as DashInfo,
+                durlInfo: {} as DurlInfo,
                 cache: {
-                    log: 0,
-                    temp: 0,
-                    webview: 0,
-                    database: 0,
+                    log: '',
+                    temp: '',
+                    webview: '',
+                    database: '',
                 },
                 mediaMap: {
                     dms: [
+                        { id: 6, label: '240P 极速', login: false },
                         { id: 16, label: '360P 流畅', login: false },
                         { id: 32, label: '480P 清晰', login: false },
                         { id: 64, label: '720P 高清', login: true },
@@ -67,10 +69,33 @@ export default createStore({
                         { id: 7, label: 'AVC 编码', login: false },
                         { id: 12, label: 'HEVC 编码', login: false },
                         { id: 13, label: 'AV1 编码', login: false },
+                        { id: -1, label: '未知', login: false },
                     ],        
                 },
             },
             queue: {
+                // waiting: [
+                //     {
+                //         tasks: [
+                //             {
+                //                 urls: ["url1", "url2"],
+                //                 path: "path",
+                //                 gid: "gid0",
+                //                 media_type: "video"
+                //             },
+                //         ],
+                //         output: "output",
+                //         info: {
+                //             title: "标题",
+                //             cover: "/src/assets/img/empty.png",
+                //             desc: "简介",
+                //             id: 114514,
+                //             cid: 114514,
+                //             eid: 114514,
+                //             ss_title: "ss_title"
+                //         }
+                //     }
+                // ] as QueueInfo[],
                 waiting: [] as QueueInfo[],
                 doing: [] as QueueInfo[],
                 complete: [] as QueueInfo[],

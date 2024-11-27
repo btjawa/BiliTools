@@ -1,4 +1,4 @@
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::{SystemTime, UNIX_EPOCH}};
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use serde::{Serialize, Deserialize};
 use serde_json::{json, Value};
 use rand::Rng;
@@ -6,9 +6,7 @@ use tauri::{http::{header, StatusCode}, Listener, Url};
 use lazy_static::lazy_static;
 use tokio::time::{sleep, Duration};
 use ring::hmac;
-use crate::{cookies, init_client, init_headers};
-
-use super::get_window;
+use crate::{cookies, init_headers, shared::{get_window, init_client, get_ts}};
 
 lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
@@ -40,7 +38,7 @@ struct BiliTicketResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: BiliTicketResponseData
+    data: Option<BiliTicketResponseData>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -55,7 +53,7 @@ struct BiliTicketResponseData {
 #[derive(Serialize, Deserialize, Debug)]
 struct SmsLoginResponse {
     code: isize,
-    data: SmsLoginResponseData
+    data: Option<SmsLoginResponseData>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -74,7 +72,7 @@ struct SmsLoginResponseData {
 struct PwdLoginResponse {
     code: isize,
     message: String,
-    data: PwdLoginResponseData
+    data: Option<PwdLoginResponseData>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -93,7 +91,7 @@ struct SwitchCookieResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: SwitchCookieResponseData
+    data: Option<SwitchCookieResponseData>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -107,7 +105,7 @@ struct ScanLoginResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: ScanLoginResponseData
+    data: Option<ScanLoginResponseData>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -124,7 +122,7 @@ struct RefreshCookieResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: RefreshCookieResponseData
+    data: Option<RefreshCookieResponseData>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -169,9 +167,8 @@ pub async fn get_extra_cookies() -> Result<(), Value> {
     }
     cookies::insert(format!("buvid3={}", buvid_body.data.b_3)).await.map_err(|e| e.to_string())?;
     cookies::insert(format!("buvid4={}", buvid_body.data.b_4)).await.map_err(|e| e.to_string())?;
-    init_headers().await?;
 
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let ts = get_ts(false);
     let hex_sign = hmac_sha256("XgwSnGZ1p", &format!("ts{}", ts));
     let cookies = cookies::load().await.map_err(|e| e.to_string())?;
     let bili_csrf = cookies.get("bili_jct").and_then(Value::as_str).unwrap_or("");
@@ -188,11 +185,10 @@ pub async fn get_extra_cookies() -> Result<(), Value> {
         return Err(Value::from(bili_ticket_resp.status().to_string()));
     }
     let bili_ticket_body: BiliTicketResponse = bili_ticket_resp.json().await.map_err(|e| e.to_string())?;
-    if bili_ticket_body.code != 0 {
+    if bili_ticket_body.code != 0 || bili_ticket_body.data.is_none() {
         return Err(json!({ "code": bili_ticket_body.code, "message": bili_ticket_body.message }));
     }
-    cookies::insert(format!("bili_ticket={}", bili_ticket_body.data.ticket)).await.map_err(|e| e.to_string())?;
-    init_headers().await?;
+    cookies::insert(format!("bili_ticket={}", bili_ticket_body.data.unwrap().ticket)).await.map_err(|e| e.to_string())?;
 
     fn a(e: usize) -> String {
         let mut rng = rand::thread_rng();
@@ -205,7 +201,7 @@ pub async fn get_extra_cookies() -> Result<(), Value> {
             "0".repeat(t - e.len()) + &e
         } else { e }
     }
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let ts = get_ts(true);
     cookies::insert(format!(
         "_uuid={}-{}-{}-{}-{}{}infoc",
         a(8), a(4), a(4), a(4), a(12), s((ts % 100000).to_string(), 5)
@@ -262,7 +258,7 @@ pub async fn sms_login(cid: isize, tel: String, code: String, captcha_key: Strin
         .map(|s| s.to_string())
         .collect();
     let body: SmsLoginResponse = response.json().await.map_err(|e| e.to_string())?;
-    if body.code != 0 {
+    if body.code != 0 || body.data.is_none() {
         let message = match body.code {
             -400 => "请求错误",
             1006 => "请输入正确的短信验证码",
@@ -274,7 +270,7 @@ pub async fn sms_login(cid: isize, tel: String, code: String, captcha_key: Strin
     for cookie in cookies {
         cookies::insert(cookie).await.map_err(|e| e.to_string())?;
     }
-    cookies::insert(format!("refresh_token={}", body.data.refresh_token)).await.map_err(|e| e.to_string())?;
+    cookies::insert(format!("refresh_token={}", body.data.unwrap().refresh_token)).await.map_err(|e| e.to_string())?;
     init_headers().await?;
     Ok(body.code)
 }
@@ -302,28 +298,29 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
         .map(|s| s.to_string())
         .collect();
     let body: PwdLoginResponse = response.json().await.map_err(|e| e.to_string())?;
-    if body.code != 0 {
+    if body.code != 0 || body.data.is_none() {
         return Err(json!({ "code": body.code, "message": body.message }));
     }
-    if body.data.refresh_token.is_empty() || body.data.status != 0 {
-        let tmp_code = Url::parse(&body.data.url).ok().and_then(|url| {
+    let data = body.data.unwrap();
+    if data.refresh_token.is_empty() || data.status != 0 {
+        let tmp_code = Url::parse(&data.url).ok().and_then(|url| {
             url.clone().query_pairs()
             .find(|(key, _)| key == "tmp_token")
             .map(|(_, value)| value.to_string())
         }).unwrap_or_default();
-        let request_id = Url::parse(&body.data.url).ok().and_then(|url| {
+        let request_id = Url::parse(&data.url).ok().and_then(|url| {
             url.clone().query_pairs()
             .find(|(key, _)| key == "request_id")
             .map(|(_, value)| value.to_string())
         }).unwrap_or_default();
-        return Err(json!({ "code": body.data.status, "message": body.data.message, "tmp_code": tmp_code, "request_id": request_id }));
+        return Err(json!({ "code": data.status, "message": data.message, "tmp_code": tmp_code, "request_id": request_id }));
     }
     for cookie in cookies {
         cookies::insert(cookie).await.map_err(|e| e.to_string())?;
     }
-    cookies::insert(format!("refresh_token={}", body.data.refresh_token)).await.map_err(|e| e.to_string())?;
+    cookies::insert(format!("refresh_token={}", data.refresh_token)).await.map_err(|e| e.to_string())?;
     init_headers().await?;
-    Ok(body.data.status)
+    Ok(data.status)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -343,13 +340,13 @@ pub async fn switch_cookie(switch_code: String) -> Result<isize, Value> {
         .map(|s| s.to_string())
         .collect();
     let body: SwitchCookieResponse = response.json().await.map_err(|e| e.to_string())?;
-    if body.code != 0 {
+    if body.code != 0 || body.data.is_none() {
         return Err(json!({ "code": body.code, "message": body.message }));
     }
     for cookie in cookies {
         cookies::insert(cookie).await.map_err(|e| e.to_string())?;
     }
-    cookies::insert(format!("refresh_token={}", body.data.refresh_token)).await.map_err(|e| e.to_string())?;
+    cookies::insert(format!("refresh_token={}", body.data.unwrap().refresh_token)).await.map_err(|e| e.to_string())?;
     init_headers().await?;
     Ok(body.code)
 }
@@ -373,24 +370,25 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
             .map(|s| s.to_string())
             .collect();
         let body: ScanLoginResponse = response.json().await.map_err(|e| e.to_string())?;
-        if body.code != 0 {
+        if body.code != 0 || body.data.is_none() {
             return Err(json!({ "code": body.code, "message": body.message }));
         }
-        event.send(body.data.code).unwrap();
-        match body.data.code {
+        let data = body.data.unwrap();
+        event.send(data.code).unwrap();
+        match data.code {
             0 => {
                 for cookie in cookies {
                     cookies::insert(cookie).await.map_err(|e| e.to_string())?;
                 }
-                cookies::insert(format!("refresh_token={}", body.data.refresh_token)).await.map_err(|e| e.to_string())?;
+                cookies::insert(format!("refresh_token={}", data.refresh_token)).await.map_err(|e| e.to_string())?;
                 log::info!("{}: {}", masked_key, "扫码登录成功");
                 init_headers().await?;
-                return Ok(body.data.code);
+                return Ok(data.code);
             }
-            86101 | 86090 => log::info!("{masked_key}: {}", body.data.message),
+            86101 | 86090 => log::info!("{masked_key}: {}", data.message),
             _ => {
-                log::error!("{masked_key}: {}, {}", body.data.code, body.data.message);
-                return Err(json!({ "code": body.data.code, "message": body.data.message }));
+                log::error!("{masked_key}: {}, {}", data.code, data.message);
+                return Err(json!({ "code": data.code, "message": data.message }));
             },
         }
         sleep(Duration::from_secs(1)).await;
@@ -421,13 +419,13 @@ pub async fn refresh_cookie(refresh_csrf: String) -> Result<isize, Value> {
         .map(|s| s.to_string())
         .collect();
     let refresh_token_body: RefreshCookieResponse = refresh_token_resp.json().await.map_err(|e| e.to_string())?;
-    if refresh_token_body.code != 0 {
+    if refresh_token_body.code != 0 || refresh_token_body.data.is_none() {
         return Err(json!({ "code": refresh_token_body.code, "message": refresh_token_body.message }));
     }
     for cookie in cookies {
         cookies::insert(cookie).await.map_err(|e| e.to_string())?;
     }
-    cookies::insert(format!("refresh_token={}", refresh_token_body.data.refresh_token)).await.map_err(|e| e.to_string())?;
+    cookies::insert(format!("refresh_token={}", refresh_token_body.data.unwrap().refresh_token)).await.map_err(|e| e.to_string())?;
     init_headers().await?;
     let confirm_refresh_resp = client
         .post("https://passport.bilibili.com/x/passport-login/web/confirm/refresh")

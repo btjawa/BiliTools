@@ -34,7 +34,8 @@
 }
 
 :root {
-    --primary-color: rgb(212,78,125);
+    /* --primary-color: rgb(212,78,125); */
+    --primary-color: rgb(0, 161, 214);
     --content-color: rgb(233,233,233);
     --desc-color: #a2a7ae;
     --block-radius: 8px;
@@ -90,6 +91,10 @@ button {
 
 button.selected {
     @apply brightness-[85%];
+}
+
+i.question {
+    @apply hover:cursor-pointer hover:brightness-[85%] text-[color:var(--desc-color)] ml-2;
 }
 
 button i + span, button span + i {
