@@ -41,7 +41,8 @@ export default {
 			this.$store.commit('updateState', { 'data.headers': e.payload });
 		});
 		listen('rw_config:settings', e => {
-			this.$store.commit('updateState', { settings: e.payload })
+			this.$store.commit('updateState', { settings: e.payload });
+			this.$i18n.locale = this.$store.state.settings.language;
 		});
         try {
 			this.$store.commit('updateState', { 'data.secret': await invoke('ready') });

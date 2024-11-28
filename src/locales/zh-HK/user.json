@@ -1,0 +1,27 @@
+{
+    "scan": {
+        "title": "掃描二維碼登錄",
+        "desc": "請使用 <a href=\"https://app.bilibili.com/\" style=\"color:var(--primary-color)\" target=\"_blank\">哔哩哔哩客戶端</a><br>掃碼登錄或掃碼下載APP",
+        "code_0": {
+            "86038": "二維碼已過期",
+            "86090": "掃碼成功"
+        },
+        "code_1": {
+            "86038": "請點擊刷新",
+            "86090": "請在手機上確認"
+        }
+    },
+    "others": {
+        "pwd": "密碼登錄",
+        "sms": "短信登錄",
+        "pleaseInput": "請輸入{0}",
+        "get": "獲取{0}",
+        "exempt": "該應用程式所產生及獲取的所有數據將僅存儲於用戶本地"
+    },
+    "stat": {
+        "coins": "硬幣数",
+        "following": "關注數",
+        "follwer": "粉絲數",
+        "dynamic": "動態數"
+    }
+}

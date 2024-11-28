@@ -10,7 +10,8 @@ use config::rw_config;
 use lazy_static::lazy_static;
 use serde_json::Value;
 use shared::{init_headers, APP_HANDLE, SECRET};
-use std::{env, fs, panic, sync::{Arc, RwLock}};
+use std::{env, panic, sync::{Arc, RwLock}};
+use tokio::fs;
 use tauri::{async_runtime, Manager};
 use rand::{distributions::Alphanumeric, Rng};
 use walkdir::WalkDir;
@@ -30,34 +31,40 @@ lazy_static! {
 #[tauri::command]
 async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> Result<(), String> {
     let mut bytes = 0u64;
+    let mut count = 0;
     for entry in WalkDir::new(&path).into_iter().filter_map(Result::ok) {
         let path = entry.path();
         if path.is_file() {
             // let file_name = path.file_name().unwrap().to_str().unwrap();
-            let file_size = fs::metadata(path).unwrap().len() as u64;
-            bytes += file_size;
-            event.send(bytes).unwrap();
+            match fs::metadata(path).await {
+                Ok(meta) => {
+                    bytes += meta.len();
+                    count += 1;
+                    if count > 200 {
+                        event.send(bytes).unwrap();
+                        count = 0;
+                    }
+                },
+                Err(_) => continue
+            }
         }
     }
+    event.send(bytes).unwrap();
     Ok(())
 }
 
 #[tauri::command]
 async fn clean_cache(path: String) -> Result<(), String> {
     if path.ends_with("Storage") {
-        if let Err(_) = fs::remove_file(&path) {}
+        let _ = fs::remove_file(&path).await;
     } else {
-        let entries = fs::read_dir(&path).map_err(|e| e.to_string())?;
-        for entry in entries {
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(_) => continue
-            };
+        let mut entries = fs::read_dir(&path).await.map_err(|e| e.to_string())?;
+        while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
             let path = entry.path();
             if path.is_dir() {
-                if let Err(_) = fs::remove_dir_all(&path) {}
+                async_runtime::spawn(async move { let _ = fs::remove_dir_all(&path).await; });
             } else {
-                if let Err(_) = fs::remove_file(&path) {}
+                async_runtime::spawn(async move { let _ = fs::remove_file(&path).await; });
             }
         }
     }

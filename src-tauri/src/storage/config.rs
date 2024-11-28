@@ -26,7 +26,8 @@ pub struct Settings {
     pub df_ads: usize,
     pub df_cdc: usize,
     pub auto_check_update: bool,
-    pub proxy: SettingsProxy
+    pub proxy: SettingsProxy,
+    pub language: String
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]

@@ -1,7 +1,8 @@
 <template><div class="flex-col items-start justify-start">
-    <h1>
-        设置
-        <i @click="shell.open('https://www.btjawa.top/bilitools#设置')"
+    <h1 class="ml-auto">
+        <i class="fa-solid fa-gear mr-2"></i>
+        {{ $t('settings.title') }}
+        <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"
             class="question fa-regular fa-circle-question"
         ></i>
     </h1>
@@ -12,16 +13,19 @@
             ref="subPage"
         >
             <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
-                <h3 v-if="item.type !== 'reference'" class="font-semibold">{{ item.name }}</h3>
-                <template v-if="'desc' in item">
+                <h3 v-if="item.type !== 'reference'" class="font-semibold">
+                    <i v-if="'icon' in item" class="fa-solid mr-1" :class="item.icon"></i>
+                    {{ item.name }}
+                </h3>
+                <template v-if="'desc' in item && item.desc">
                     <span class="desc">{{ item.desc }}</span>
                 </template>
                 <div v-if="item.type === 'section'" class="units">
                     <div v-for="unit in item.data" :class=unit.type class="mt-3">
                         <h3>{{ unit.name }}</h3>
-                        <span v-if="'desc' in unit" class="desc">{{ unit.desc }}</span>
+                        <span v-if="'desc' in unit && unit.desc" class="desc">{{ unit.desc }}</span>
                         <div v-if="unit.type === 'path'" class="h-8 mt-2">
-                            <button @click="shell.open((store.settings as any)[unit.data])"
+                            <button @click="openPath((store.settings as any)[unit.data])"
                                 class="ellipsis max-w-[420px] rounded-r-none"
                             >{{ (store.settings as any)[unit.data] }}</button>
                             <button @click="updatePath(unit.data)"
@@ -29,12 +33,11 @@
                             ><i class="fa-light fa-folder-open"></i></button>
                         </div>
                         <div v-if="unit.type === 'cache'">
-                            <button @click="getPath(unit.data).then(p => shell.open(p))"
+                            <button @click="openPath({ getPath: true, pathName: unit.data })"
                                 :class="unit.data"
                                 class="ellipsis max-w-[120px] min-w-24 rounded-r-none"
                             >{{ formatBytes((store.data.cache as any)[unit.data]) }}</button>
-                            <button @click="getPath(unit.data).then(path =>
-                                invoke('clean_cache', { path }))"
+                            <button @click="cleanCache(unit.data)"
                                 class="bg-[color:var(--primary-color)] rounded-l-none"
                             ><i class="fa-light fa-broom-wide"></i></button>
                         </div>
@@ -55,9 +58,9 @@
                         <button v-if="unit.type === 'button' && 'action' in unit"
                             @click=" unit.data === 'function' ?
                                 unit.action?.type === 'url' ?
-                                shell.open((unit.action as any).url) :
-                                unit.action?.type === 'checkConnection' ?
-                                checkConnection() : 
+                                openPath({ path: (unit.action as any).url }) :
+                                unit.action?.type === 'checkProxy' ?
+                                checkProxy() : 
                                 unit.action?.type === 'checkUpdate' ? 
                                 (checkUpdate as any)() : '' : ''
                             "
@@ -75,7 +78,7 @@
                                     <option v-for="option in (store.data.mediaMap as any)[unit.drop]"
                                         :value="JSON.stringify({ id: option.id, data: unit.data })"
                                         :selected="option.id === (store.settings as any)[unit.data]"
-                                    >{{ option.label }}</option>
+                                    >{{ $t(`common.default.${unit.drop}.data.${option.id}`) }}</option>
                                 </template>
                                 <template v-else>
                                     <option v-for="option in unit.drop"
@@ -93,8 +96,8 @@
                             <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
                         <div v-if="unit.type === 'version'" :class="unit.type" class="my-[6px]" >
-                            版本：<span
-                                @click="shell.open('https://github.com/btjawa/BiliTools/releases/tag/' + version)"
+                            {{ $t('common.version') }} - <span
+                                @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/' + version })"
                                 class="text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
                             >{{ version }}</span>
                         </div>
@@ -102,8 +105,8 @@
                 </div>
                 <div v-if="item.type === 'reference'" class="desc">
                     Copyright &copy; {{(new Date()).getFullYear()}} btjawa, MIT License<br>
-                    该应用产生与获取的所有数据将仅存储于用户本地<br>
-                    觉得好用的话，点个Star吧！ご利用感謝いたします~
+                    {{ $t('common.exempt') }}<br>
+                    {{ $t('settings.about.thanks') }}
                 </div>
                 <hr v-if="index < (settings.find(item => item.id == subPage)?.content.length! - 1)" />
             </section>
@@ -126,69 +129,81 @@
 import { ApplicationError, formatBytes, formatProxyUrl, iziInfo } from '@/services/utils';
 import { Channel, invoke } from '@tauri-apps/api/core';
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
+import { type as osType } from '@tauri-apps/plugin-os';
+import { fetch } from '@tauri-apps/plugin-http';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import * as shell from '@tauri-apps/plugin-shell';
-import { type as osType } from '@tauri-apps/plugin-os';
-import { fetch } from '@tauri-apps/plugin-http';
 
 export default {
     data() {
         return {
             subPage: "storage",
-            settings: [
-                { id: "storage", name: "存储", icon: "fa-database", content: [
-                    { name: "保存路径", type: "section", data: [
-                        { name: "下载文件", type: "path", data: "down_dir" },
-                        { name: "未处理完成的文件", type: "path", desc: "下载文件时，首先下载至此文件夹，随后经过处理转移至输出文件夹", data: "temp_dir" },
+            store: this.$store.state,
+            version: '',
+            abortGetSize: false,
+        }
+    },
+    computed: {
+        settings() {
+            const t = this.$t;
+            return [
+                { id: "storage", name: t('settings.storage.name'), icon: "fa-database", content: [
+                    { name: t('settings.storage.paths.name'), type: "section", icon: "fa-folder", data: [
+                        { name: t('settings.label.down_dir'), type: "path", data: "down_dir" },
+                        { name: t('settings.label.temp_dir'), type: "path", desc: t('settings.storage.paths.temp_dir.desc'), data: "temp_dir" },
                     ] },
-                    { name: "缓存", type: "section", desc: "用户数据库存有登录信息、下载记录等数据，切勿随意删除", data: [
-                        { name: "日志", type: "cache", data: "log" },
-                        { name: "临时文件", type: "cache", data: "temp" },
-                        { name: "WebView", type: "cache", data: "webview" },
-                        { name: "用户数据库", type: "cache", data: "database" },
+                    { name: t('settings.storage.cache.name'), type: "section", icon: "fa-database", desc: t('settings.storage.cache.desc'), data: [
+                        { name: t('settings.label.log'), type: "cache", data: "log" },
+                        { name: t('settings.label.temp'), type: "cache", data: "temp" },
+                        { name: t('settings.label.webview'), type: "cache", data: "webview" },
+                        { name: t('settings.label.database'), type: "cache", data: "database" },
+                    ] },
+                    { name: t('settings.storage.language.name'), type: "section", icon: "fa-earth-americas", data: [
+                        { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: [
+                            { id: 'zh-CN', name: "简体中文" },
+                            { id: 'zh-HK', name: "繁體中文" },
+                            { id: 'en-US', name: "English" },
+                            { id: 'ja-JP', name: "日本語" },
+                        ] }
                     ] },
                 ] },
-                { id: "download", name: "下载", icon: "fa-download", content: [
-                    { name: "默认参数", type: "section", desc: "若某资源无此选择的参数，将会使用资源最高可用参数", data: [
-                        { name: "分辨率/画质", type: "dropdown", data: "df_dms", drop: "dms" },
-                        { name: "比特率/音质", type: "dropdown", data: "df_ads", drop: "ads" },
-                        { name: "编码格式", type: "dropdown", data: "df_cdc", drop: "cdc" },
-                        { name: "下载并发数", type: "dropdown", data: "max_conc", drop: [
-                                { id: 1, name: "1个" },
-                                { id: 2, name: "2个" },
-                                { id: 3, name: "3个" },
-                                { id: 4, name: "4个" },
-                                { id: 5, name: "5个" },
+                { id: "download", name: t('settings.download.name'), icon: "fa-download", content: [
+                    { name: t('settings.download.default.name'), type: "section", icon: "fa-user", desc: t('settings.download.default.desc'), data: [
+                        { name: t('common.default.dms.name'), type: "dropdown", data: "df_dms", drop: "dms" },
+                        { name: t('common.default.ads.name'), type: "dropdown", data: "df_ads", drop: "ads" },
+                        { name: t('common.default.cdc.name'), type: "dropdown", data: "df_cdc", drop: "cdc" },
+                        { name: t('settings.label.max_conc'), type: "dropdown", data: "max_conc", drop: [
+                            { id: 1, name: "1" },
+                            { id: 2, name: "2" },
+                            { id: 3, name: "3" },
+                            { id: 4, name: "4" },
+                            { id: 5, name: "5" },
                         ] },
                     ] },
-                    { name: "网络代理", type: "section", desc: "暂仅支持 HTTP(S) 协议，修改完成后建议重启应用以全局生效", data: [
-                        { name: "地址", type: "input", data: "addr", placeholder: "http(s)://server:port" },
-                        { name: "用户名", type: "input", data: "username", placeholder: "可选" },
-                        { name: "密码", type: "input", data: "password", placeholder: "可选" },
-                        { name: "检查代理连通性", type: "button", data: "function", action: { type: "checkConnection" }, icon: "fa-cloud-question" },
+                    { name: t('settings.download.proxy.name'), type: "section", icon: "fa-globe", desc: t('settings.download.proxy.desc'), data: [
+                        { name: t('common.address'), type: "input", data: "addr", placeholder: "http(s)://server:port" },
+                        { name: t('common.username'), type: "input", data: "username", placeholder: t('common.optional') },
+                        { name: t('common.password'), type: "input", data: "password", placeholder: t('common.optional') },
+                        { name: t('settings.label.checkProxy'), type: "button", data: "function", action: { type: "checkProxy" }, icon: "fa-cloud-question" },
                     ] }
                 ] },
-                { id: "about", name: "关于", icon: "fa-circle-info", content: [
+                { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
                     { name: null, type: "section", data: [
                         { name: null, type: "icon", data: '' },
                         { name: null, type: "version", data: '' }
                     ] },
-                    { name: "更新", type: "section", data: [
-                        { name: "自动检查", type: "switch", data: "auto_check_update" },
-                        { name: "检查更新", type: "button", data: "function", action: { type: "checkUpdate" }, icon: "fa-wrench" },
+                    { name: t('settings.about.update.name'), type: "section", icon: "fa-upload", data: [
+                        { name: t('settings.label.auto_check_update'), type: "switch", data: "auto_check_update" },
+                        { name: t('settings.label.checkUpdate'), type: "button", data: "function", action: { type: "checkUpdate" }, icon: "fa-wrench" },
                     ] },
-                    { name: "相关链接", type: "section", data: [
-                        { name: "文档", type: "button", data: "function", action: { type: "url", url: "https://btjawa.top/bilitools" }, icon: "fa-book" },
-                        { name: "反馈", type: "button", data: "function", action: { type: "url", url: "https://github.com/btjawa/BiliTools/issues/new/choose"}, icon: "fa-comment-exclamation" }
+                    { name: t('settings.about.links.name'), type: "section", icon: "fa-link", data: [
+                        { name: t('settings.label.documentation'), type: "button", data: "function", action: { type: "url", url: "https://btjawa.top/bilitools" }, icon: "fa-book" },
+                        { name: t('settings.label.feedback'), type: "button", data: "function", action: { type: "url", url: "https://github.com/btjawa/BiliTools/issues/new/choose"}, icon: "fa-comment-exclamation" }
                     ] },
                     { type: "reference" }
                 ] }
-            ],
-            store: this.$store.state,
-            version: '',
-            abortGetSize: false,
-            shell
+            ];
         }
     },
     watch: {
@@ -202,14 +217,11 @@ export default {
                     subPage.style.opacity = '1';
                 }));
             }
-        }
+        },
     },
     methods: {
         invoke,
         formatBytes,
-        openURL(url: string) {
-            shell.open(url);
-        },
         checkUpdate() {
             const status = this.store.settings.auto_check_update;
             this.updateSettings('auto_check_update', !status);
@@ -243,12 +255,12 @@ export default {
                 return path.join(await path.tempDir(), 'com.btjawa.bilitools');
                 // return await path.tempDir();
             } else if (type === 'webview') {
-                return osType() === "windows" ? path.join(workiingDir, 'EBWebView') : path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
+                return osType() === "windows" ? path.join(await path.appLocalDataDir(), 'EBWebView') : path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
             } else if (type === 'database') {
                 return path.join(workiingDir, 'Storage');
             } else return '';
         },
-        async checkConnection() {
+        async checkProxy() {
             try {
                 const response = await fetch('https://api.bilibili.com/x/click-interface/click/now', {
                     headers: this.store.data.headers,
@@ -257,31 +269,44 @@ export default {
                     })
                 });
                 if (!response.ok) {
-                    throw new ApplicationError('测试失败：\n' + response.statusText, { code: response.status });
+                    throw new ApplicationError(response.statusText, { code: response.status });
                 }
                 const body = await response.json();
                 const timestamp = JSON.stringify(body?.data);
                 if (timestamp) {
-                    iziInfo("通过测试：" + timestamp);
+                    iziInfo(this.$t('common.iziToast.success') + ': ' + timestamp);
                     return timestamp;
                 } else {
-                    throw new ApplicationError('测试失败：\n' + body?.message, { code: body?.code });
+                    throw new ApplicationError(body?.message, { code: body?.code });
                 }
             } catch(err) {
                 err instanceof ApplicationError ? err.handleError() :
-                new ApplicationError('测试失败：\n' + err as string).handleError();
+                new ApplicationError(err as string).handleError();
             }
+        },
+        async openPath(options: { path?: string, getPath?: boolean, pathName?: string }) {
+            if (!options.path) {
+                if (!options?.getPath || !options.pathName) return;
+                const path = await this.getPath(options.pathName);
+                return shell.open(path);
+            }
+            return shell.open(options.path);
+        },
+        async getSize(pathName: string) {
+            (this.store.data.cache as any)[pathName] = 0;
+            const event = new Channel<number>();
+            event.onmessage = (bytes) => {
+                (this.store.data.cache as any)[pathName] = bytes;
+            }
+            await invoke('get_size', { path: await this.getPath(pathName), event });
+        },
+        async cleanCache(pathName: string) {
+            await invoke('clean_cache', { path: await this.getPath(pathName) });
+            await this.getSize(pathName)
         }
     },
     async activated() {
-        Object.entries(this.store.data.cache).forEach(async type => {
-            (this.store.data.cache as any)[type[0]] = 0;
-            const event = new Channel<bigint>();
-            event.onmessage = (bytes) => {
-                (this.store.data.cache as any)[type[0]] = bytes;
-            }
-            invoke('get_size', { path: await this.getPath(type[0]), event });
-        });
+        Object.entries(this.store.data.cache).forEach(async type => this.getSize(type[0]));
     },
     deactivated() {
         this.abortGetSize = true;
@@ -296,7 +321,7 @@ hr {
     @apply w-full my-4;
 }
 .page span.desc {
-    @apply text-xs;
+    @apply text-sm;
 }
 .setting-page__sub-tab button.active {
     @apply bg-[#33333380];

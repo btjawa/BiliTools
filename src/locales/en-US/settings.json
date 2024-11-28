@@ -1,0 +1,54 @@
+{
+    "title": "Settings",
+    "storage": {
+        "name": "Storage",
+        "paths": {
+            "name": "Paths",
+            "temp_dir": {
+                "desc": "We download files here, then move processed files to the Output Files folder."
+            }
+        },
+        "cache": {
+            "name": "Cache",
+            "desc": "User Database contains important data. Do not delete it carelessly."
+        },
+        "language": {
+            "name": "Language"
+        }
+    },
+    "download": {
+        "name": "Downloads",
+        "default": {
+            "name": "Default Options",
+            "desc": "If the options below are unavailable in the searched resource, the highest available ones will be used."
+        },
+        "proxy": {
+            "name": "Network Proxy",
+            "desc": "Only HTTP(S) is supported yet. Restart the app for global changes to take effect."
+        }
+    },
+    "about": {
+        "name": "About",
+        "thanks": "If you find it useful, please give me a Star on GitHub!",
+        "update": {
+            "name": "Update"
+        },
+        "links": {
+            "name": "Related Links"
+        }
+    },
+    "label": {
+        "log": "Logs",
+        "temp": "Temp Files",
+        "webview": "Webview",
+        "database": "User Database",
+        "down_dir": "Output Files",
+        "temp_dir": "Temp Files",
+        "max_conc": "Concurrent Downloads",
+        "checkProxy": "Check proxy",
+        "auto_check_update": "Auto Check",
+        "checkUpdate": "Check Update",
+        "documentation": "Documentation",
+        "feedback": "Feedback"
+    }
+}

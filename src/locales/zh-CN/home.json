@@ -1,0 +1,8 @@
+{
+    "inputPlaceholder": "哔哩哔哩链接/AV/BV/SS/EP/AU号...",
+    "downloadOptions": {
+        "audioVisual": "下载音视频",
+        "others": "下载其他"
+    }
+
+}

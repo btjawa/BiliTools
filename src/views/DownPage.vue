@@ -1,5 +1,9 @@
 <template><div class="flex-col">
-    <div class="queue__tab flex mt-[26px] mb-[13px] h-fit items-center hover:cursor-pointer">
+    <!-- This is a temporary announcement -->
+    <h3 class="absolute right-6 top-6 font-semibold mt-[7px]">
+        This page has no transitions yet.
+    </h3>
+    <div class="queue__tab flex mt-[7px] mb-[13px] h-fit items-center hover:cursor-pointer">
         <h3 @click="queuePage = 0" :class="queuePage !== 0 || 'active'">等待中</h3>
         <div class="split h-5 mx-[21px]"></div>
         <h3 @click="queuePage = 1" :class="queuePage !== 1 || 'active'">进行中</h3>

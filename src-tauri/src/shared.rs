@@ -16,6 +16,7 @@ lazy_static! {
         df_dms: 32,
         df_ads: 30280,
         df_cdc: 7,
+        language: sys_locale::get_locale().unwrap_or_else(|| String::from("en-US")),
         auto_check_update: true,
         proxy: SettingsProxy {
             addr: String::new(),

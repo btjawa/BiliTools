@@ -1,0 +1,54 @@
+{
+    "title": "設置",
+    "storage": {
+        "name": "儲存",
+        "paths": {
+            "name": "保存路徑",
+            "temp_dir": {
+                "desc": "應用程式首先下載至此資料夾，隨後經過處理轉移至輸出資料夾。"
+            }
+        },
+        "cache": {
+            "name": "快取",
+            "desc": "用戶資料庫存有登錄信息、下載記錄等重要數據，請勿隨意刪除。"
+        },
+        "language": {
+            "name": "語言"
+        }
+    },
+    "download": {
+        "name": "下載",
+        "default": {
+            "name": "默認選項",
+            "desc": "若搜尋的資源沒有此處的默認選項，將使用該資源支持的最高可用選項。"
+        },
+        "proxy": {
+            "name": "網絡代理",
+            "desc": "暫僅支持 HTTP(S) 協議，修改完成後建議重啟應用程式以全局生效。"
+        }
+    },
+    "about": {
+        "name": "關於",
+        "thanks": "覺得好用的話，在GitHub點個Star吧！",
+        "update": {
+            "name": "更新"
+        },
+        "links": {
+            "name": "相關鏈接"
+        }
+    },
+    "label": {
+        "log": "日誌",
+        "temp": "臨時文件",
+        "webview": "Webview",
+        "database": "用戶資料庫",
+        "down_dir": "輸出文件",
+        "temp_dir": "臨時文件",
+        "max_conc": "下載並發數",
+        "checkProxy": "檢查代理連通性",
+        "auto_check_update": "自動檢查",
+        "checkUpdate": "檢查更新",
+        "documentation": "文檔",
+        "feedback": "反饋"
+    }
+}

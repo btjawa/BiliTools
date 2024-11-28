@@ -4,9 +4,12 @@ import { ApplicationError, formatProxyUrl, tryFetch } from "@/services/utils";
 import store from "@/store";
 import qrcode from "qrcode-generator";
 import JSEncrypt from "jsencrypt";
+import i18n from "@/i18n";
 import * as LoginTypes from "@/types/LoginTypes";
 import * as UserInfoTypes from "@/types/UserInfoTypes";
 import * as auth from "@/services/auth";
+
+const t = i18n.global.t;
 
 export async function fetchUser() {
     const mid = new Headers(store.state.data.headers).get('Cookie')?.match(/DedeUserID=(\d+);/)?.[1];
@@ -83,7 +86,7 @@ export async function getCountryList() {
     }
     const body = await response.json() as LoginTypes.GetCountryListResp;
     if (body?.code !== 0) {
-        throw new ApplicationError("获取国际冠字码失败", { code: body?.code });
+        throw new ApplicationError(t('error.countryListFailed'), { code: body?.code });
     }
     return [...body?.data?.common, ...body?.data?.others];
 }
@@ -323,7 +326,7 @@ export async function checkRefresh(): Promise<number> {
     console.log('检查刷新状态', cookie_info_body)
     if (cookie_info_body?.code !== 0) {
         throw new ApplicationError(
-            cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / 登录状态已过期' : ''),
+            cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / ' + t('error.loginExpired') : ''),
             { code: cookie_info_body?.code });
     }
     if (!cookie_info_body.data.refresh) return 0;

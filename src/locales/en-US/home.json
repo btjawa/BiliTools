@@ -1,0 +1,7 @@
+{
+    "inputPlaceholder": "BiliBili link/AV/BV/SS/EP/AU ID...",
+    "downloadOptions": {
+        "audioVisual": "Audio-Visual",
+        "others": "Others"
+    }
+}

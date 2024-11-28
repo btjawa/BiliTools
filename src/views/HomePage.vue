@@ -3,7 +3,7 @@
 		class="search_input absolute flex h-[52px] w-[640px] rounded-[26px] p-2.5 bg-[color:var(--block-color)]"
 	>
         <input
-			type="text" placeholder="哔哩哔哩链接/AV/BV/SS/EP/AU号..."
+			type="text" :placeholder="$t('home.inputPlaceholder')"
 			@keydown.enter="search" @keydown.esc.stop="searchActive = false; mediaRootActive = false"
 			autocomplete="off" spellcheck="false"
 			@input="searchInput=searchInput.replace(/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g, '')"
@@ -48,11 +48,11 @@
 				<div class="flex gap-2">
 					<button @click="updateDash(index).then(_ => popupActive = 1)">
 						<i class="fa-solid fa-file-arrow-down"></i>
-						<span>下载音视频</span>
+						<span>{{ $t('home.downloadOptions.audioVisual') }}</span>
 					</button>
 					<button @click=""> 
 						<i class="fa-solid fa-file-export"></i>
-						<span>下载其他</span>
+						<span>{{ $t('home.downloadOptions.others') }}</span>
 					</button>
 				</div>
 			</div>
@@ -65,7 +65,7 @@
 			class="popup min-w-[768px] relative h-96 p-4 rounded-xl bg-[color:var(--block-color)] cursor-default"
 		>
 			<template v-if="playUrlInfo.video">
-				<h3 class="block mb-2">分辨率/画质</h3>
+				<h3 class="block mb-2">{{ $t(`common.default.dms.name`) }}</h3>
 				<div class="flex gap-1">
 					<button v-for="id in [...(new Set(playUrlInfo.video.map(item => item.id)))]"
 						:class="{ 'selected': currentSelect.video_quality === id }"
@@ -73,57 +73,50 @@
 					>
 						<!-- <i :class="[ 'fa-solid', id >= 64 ? 'fa-high-definition' : 'fa-standard-definition' ]"></i> -->
 						<i class="fa-solid fa-file-video"></i>
-						<span>{{ mediaMap.dms.find(map => map.id === id)?.label }}</span>
+						<span>{{ $t('common.default.dms.data.' + id) }}</span>
 					</button>
 				</div>
 				<hr class="my-[15px]" />
 			</template>
 			<template v-if="'audio' in playUrlInfo && playUrlInfo.audio">
-				<h3 class="block mb-2">比特率/音质</h3>
+				<h3 class="block mb-2">{{ $t('common.default.ads.name') }}</h3>
 				<div class="flex gap-1">
 					<button v-for="id in playUrlInfo.audio.map(item => item.id)"
 						:class="{ 'selected': currentSelect.audio_quality === id }"
 						@click="currentSelect.audio_quality = id"
 					>
 						<i class="fa-solid fa-file-audio"></i>
-						<span>{{ mediaMap.ads.find(map => map.id === id)?.label }}</span>
+						<span>{{ $t('common.default.ads.data.' + id) }}</span>
 					</button>
 				</div>
 				<hr class="my-[15px]" />
 			</template>
 			<template v-if="playUrlInfo.video">
-				<h3 class="block mb-2">编码格式</h3>
+				<h3 class="block mb-2">{{ $t('common.default.cdc.name') }}</h3>
 				<div class="flex gap-1">
 					<button v-for="item in playUrlInfo.video.filter(item => item.id === currentSelect.video_quality)"
 						:class="{ 'selected': currentSelect.video_codec === item.codecid }"
 						@click="currentSelect.video_codec = item.codecid"
 					>
 						<i class="fa-solid fa-file-code"></i>
-						<span>{{ mediaMap.cdc.find(map => map.id === item.codecid)?.label }}</span>
+						<span>{{ $t('common.default.cdc.data.' + item.codecid) }}</span>
 					</button>
 				</div>
 				<hr class="my-[15px]" />
 			</template>
 			<h3 class="block mb-2">
-				流媒体格式
+				{{ $t('common.default.fmt.name') }}
 				<i @click="shell.open('https://www.btjawa.top/bilitools#关于-DASH-FLV-MP4')"
 					class="fa-regular fa-circle-question question"
 				></i>
 			</h3>
 			<div class="flex gap-1">
-				<button
-					:class="{ 'selected': stream_codec === 0 }"
-					@click="stream_codec = 0"
+				<button v-for="item in mediaMap.fmt"
+					:class="{ 'selected': stream_codec === item.id }"
+					@click="stream_codec = item.id"
 				>
 					<i class="fa-solid fa-file-code"></i>
-					<span>DASH 格式</span>
-				</button>
-				<button
-					:class="{ 'selected': stream_codec === 1 }"
-					@click="stream_codec = 1"
-				>
-					<i class="fa-solid fa-file-code"></i>
-					<span>MP4 格式</span>
+					<span>{{ $t('common.default.fmt.data.' + item.id) }}</span>
 				</button>
 			</div>
 			<span v-if="typeof getSize() === 'number'"
@@ -135,7 +128,7 @@
 				class="absolute bottom-4 right-4 bg-[color:var(--primary-color)]"
 			>
 				<i class="fa-solid fa-right"></i>
-				<span>确认</span>
+				<span>{{ $t('common.confirm') }}</span>
 			</button>
 		</div>
 	</div>

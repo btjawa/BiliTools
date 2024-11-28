@@ -1,0 +1,27 @@
+{
+    "scan": {
+        "title": "Scan QR Code to Log In",
+        "desc": "Please use the <a href=\"https://app.bilibili.com/\" style=\"color:var(--primary-color)\" target=\"_blank\">Bilibili App</a><br>to scan the QR code",
+        "code_0": {
+            "86038": "QR code has expired",
+            "86090": "Scan successful"
+        },
+        "code_1": {
+            "86038": "Please click to refresh",
+            "86090": "Please confirm on your phone"
+        }
+    },
+    "others": {
+        "pwd": "Password Login",
+        "sms": "SMS Login",
+        "pleaseInput": "Please enter {0}",
+        "get": "Get {0}",
+        "exempt": "Data will be stored solely on the user's device."
+    },
+    "stat": {
+        "coins": "Coin",
+        "following": "Following",
+        "follwer": "Follower",
+        "dynamic": "Dynamic"
+    }
+}

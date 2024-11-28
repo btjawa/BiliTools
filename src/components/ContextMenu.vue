@@ -6,15 +6,15 @@
 >
     <div @click="handleAction('cut')" class="context-menu__item">
         <i class="fa-light fa-cut item__icon"></i>
-        剪切<a class="item__key">Ctrl+X</a>
+        {{ $t('common.context_menu.cut') }}<a class="item__key">Ctrl+X</a>
     </div>
     <div @click="handleAction('copy')" class="context-menu__item ">
         <i class="fa-light fa-copy item__icon"></i>
-        复制<a class="item__key">Ctrl+C</a>
+        {{ $t('common.context_menu.copy') }}<a class="item__key">Ctrl+C</a>
     </div>
     <div @click="handleAction('paste')" class="context-menu__item">
         <i class="fa-light fa-paste item__icon"></i>
-        粘贴<a class="item__key">Ctrl+V</a>
+        {{ $t('common.context_menu.paste') }}<a class="item__key">Ctrl+V</a>
     </div>
 </div></template>
 

@@ -22,19 +22,19 @@
             </div>
             <div class="stat ml-auto mr-6">
                 <div class="stat__item">
-                    <span>硬币数</span>
+                    <span>{{ $t('user.stat.coins') }}</span>
                     <span>{{ store.user.stat.coins }}</span>
                 </div>
                 <div class="stat__item">
-                    <span>关注数</span>
+                    <span>{{ $t('user.stat.following') }}</span>
                     <span>{{ store.user.stat.following }}</span>
                 </div>
                 <div class="stat__item">
-                    <span>粉丝数</span>
+                    <span>{{ $t('user.stat.follwer') }}</span>
                     <span>{{ store.user.stat.follower }}</span>
                 </div>
                 <div class="stat__item">
-                    <span>动态数</span>
+                    <span>{{ $t('user.stat.dynamic') }}</span>
                     <span>{{ store.user.stat.dynamic_count }}</span>
                 </div>
             </div>
@@ -46,8 +46,8 @@
     <div v-if="!store.user.isLogin"
         class="login flex relative border border-solid border-[#333] rounded-lg"
     >
-        <div class="scan h-[290px]">
-            <h3 class="mb-[26px]">扫描二维码登录</h3>
+        <div class="scan h-[350px]">
+            <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
             <div class="scan__box relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg">                
                 <img src="/src/assets/img/login/loadTV.gif" class="absolute invert m-[30px] z-0" />
                 <canvas ref="loginQrcode" class="relative z-1"></canvas>
@@ -58,32 +58,28 @@
                     <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scan.code === 86038, 'fa-check': scan.code === 86090}"
                         class="w-14 h-14 p-4 text-[24px] bg-[var(--block-color)] text-[var(--primary-color)] mb-[10px] rounded-[50%]"
                     ></i>
-                    <span>{{ { 86038: '二维码已过期', 86090: '扫码成功' }[scan.code] }}</span>
-                    <span>{{ { 86038: '请点击刷新', 86090: '请在手机上确认' }[scan.code] }}</span>
+                    <span>{{ $t('user.scan.code_0.' + scan.code) }}</span>
+                    <span>{{ $t('user.scan.code_1.' + scan.code) }}</span>
                 </div>
             </div>
-            <span class="desc mt-[18px]">
-                请使用 <a href="https://app.bilibili.com/" target="_blank">哔哩哔哩客户端</a>
-                <br>扫码登录或扫码下载APP
-            </span>
+            <span class="desc mt-[18px]" v-html="$t('user.scan.desc')"></span>
         </div>
         <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
         <div class="others flex relative h-[290px] w-[400px] flex-col items-center">
             <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
-                <!-- <h3 class="temp_disable" @click="othersPage = 0" :class="othersPage !== 0 || 'active'">密码登录</h3> -->
-                <h3
-                    :class="othersPage !== 0 || 'active'" :style="{ color: 'var(--split-color)' }"
-                    @click="iziInfo('密码登录目前风控率较大，维护中')"
-                >
-                    密码登录
+                <!-- <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'"> -->
+                <h3 @click.prevent :class="othersPage !== 0 || 'active'">
+                    {{ $t('user.others.pwd') }}
                 </h3>
                 <div class="split h-5 mx-[21px]"></div>
-                <h3 @click="othersPage = 1" :class="othersPage !== 1 || 'active'">短信登录</h3>
+                <h3 @click="othersPage = 1" :class="othersPage !== 1 || 'active'">
+                    {{ $t('user.others.sms') }}
+                </h3>
             </div>
             <div class="others__page w-full" ref="othersPage">
                 <form class="input_form rounded-lg border boredr-solid border-[var(--split-color)]">
                     <div class="form_item border-b-[color:var(--split-color)] border-b border-solid">
-                        <span v-if="othersPage === 0">账号</span>
+                        <span v-if="othersPage === 0">{{ $t('common.account') }}</span>
                         <div v-if="othersPage === 1" class="w-[42px] relative">
                             +{{ sms.cid }}
                             <svg class="absolute left-[42px] top-2 w-[12px] p-0 hover:cursor-pointer" viewBox="0 0 13.4 8.1">
@@ -105,33 +101,33 @@
                         </select>
                         <input v-model="pwd.username" v-if="othersPage === 0"
                             oninput="value=value.replace(/\s+/g, '')"
-                            placeholder="请输入账号"
+                            :placeholder="$t('user.others.pleaseInput', [$t('common.account')])"
                             spellcheck="false"
                         />
                         <input v-model="sms.tel" v-if="othersPage === 1"
                             oninput="value=value.replace(/[^\d]/g, '')"
-                            placeholder="请输入手机号"
+                            :placeholder="$t('user.others.pleaseInput', [$t('common.telephone')])"
                             spellcheck="false"
                         />
                     </div>
                     <div class="form_item">
-                        <span>{{ othersPage ? '验证码' : '密码' }}</span>
+                        <span>{{ othersPage ? $t('common.verifyCode') : $t('common.password') }}</span>
                         <input v-model="pwd.pwd" v-if="othersPage === 0"
                             oninput="value=value.replace(/\s+/g, '')"
-                            placeholder="请输入密码"
+                            :placeholder="$t('user.others.pleaseInput', [$t('common.password')])"
                             type="password"
                             spellcheck="false"
                         />
                         <template v-if="othersPage === 1">
                             <input v-model="sms.code"
                                 oninput="value=value.replace(/[^\d]/g, '')"
-                                placeholder="请输入验证码"
+                                :placeholder="$t('user.others.pleaseInput', [$t('common.verifyCode')])"
                                 spellcheck="false"
                             />
                             <div class="split h-[22px] mx-[20px]"></div>
                             <button type="button" @click="sendSmsCode()"
                                 class="bg-[color:unset] p-0 h-fit leading-[22px]"
-                            >获取验证码</button>
+                            >{{ $t('user.others.get', [$t('common.verifyCode')]) }}</button>
                         </template>
                     </div>
                 </form>
@@ -140,7 +136,7 @@
                 >登录</button>
             </div>
             <div class="agreement absolute bottom-2 text-sm">
-                <span class="desc">该应用产生与获取的所有数据将仅存储于用户本地</span>
+                <span class="desc">{{ $t('user.others.exempt') }}</span>
                 <span class="desc">登录即代表你同意 <a href="https://www.bilibili.com" target="_blank">哔哩哔哩</a>
                 的 <a href="https://www.bilibili.com/protocal/licence.html" target="_blank">用户协议</a>
                 和 <a href="https://www.bilibili.com/blackboard/privacy-pc.html" target="_blank">隐私政策</a>
@@ -296,9 +292,6 @@ export default {
 h3 {
     font-size: 18px;
     text-align: center;
-}
-a {
-    color: var(--primary-color);
 }
 .others__tab h3.active {
     color: var(--primary-color);

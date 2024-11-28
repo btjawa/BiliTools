@@ -1,9 +1,12 @@
+import { fetch } from '@tauri-apps/plugin-http';
+import { MediaType } from '@/types/DataTypes';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
-import { fetch } from '@tauri-apps/plugin-http';
 import iziToast from "izitoast";
 import store from "@/store";
-import { MediaType } from '@/types/DataTypes';
+import i18n from '@/i18n';
+
+const t = i18n.global.t;
 
 iziToast.settings({
     transitionIn: 'fadeInLeft',
@@ -43,7 +46,7 @@ export function iziInfo(message: string) {
     iziToast.info({
         icon: 'fa-solid fa-circle-info',
         layout: 2, timeout: 4000,
-        title: '提示', message
+        title: t('common.iziToast.info'), message
     });
 }
 
@@ -52,7 +55,7 @@ function iziError(message: string) {
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
         layout: 2, timeout: 10000,
-        title: '警告 / 错误', message: message.replace(/\n/g, '<br>')
+        title: t('common.iziToast.error'), message: message.replace(/\n/g, '<br>')
     });
 }
 
@@ -102,7 +105,7 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
                 if (!token || !gt || !challenge) {
                     throw new ApplicationError(body.message || body.msg, { code: body.code });
                 }
-                iziInfo('触发风控，请进行验证');
+                iziInfo(t('error.risk'));
                 const captcha = await auth.captcha(gt, challenge);
 
                 const validateParams = new URLSearchParams({
@@ -155,10 +158,10 @@ export async function parseId(input: string) {
                 }
             }
         }
-        throw new ApplicationError("无法解析输入", { noStack: true });
+        throw new ApplicationError(t('error.invalidInput'), { noStack: true });
     } catch(_) { // NOT URL
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{9}$)/i.test(input)) {
-            throw new ApplicationError("无法解析输入", { noStack: true });
+            throw new ApplicationError(t('error.invalidInput'), { noStack: true });
         }
         const map = {
             'av': MediaType.Video,
@@ -185,13 +188,38 @@ export function debounce(fn: any, wait: number) {
     };
 }
 
-export function stat(num: number|string): string {
+export function stat(num: number | string): string {
+    const locale = store.state.settings.language;
     if (typeof num == "string") return num;
-    if (num >= 100000000) {
-        return (num / 100000000).toFixed(1) + '亿';
-    } else if (num >= 10000) {
-        return (num / 10000).toFixed(1) + '万';
-    } else return num.toString();
+    if (locale === 'zh-CN') {
+        if (num >= 100000000) {
+            return (num / 100000000).toFixed(1) + '亿';
+        } else if (num >= 10000) {
+            return (num / 10000).toFixed(1) + '万';
+        } else {
+            return num.toString();
+        }
+    }
+    if (locale === 'en-US') {
+        // 英文格式：使用K和M
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        } else {
+            return num.toString();
+        }
+    }
+    if (locale === 'ja-JP') {
+        if (num >= 100000000) {
+            return (num / 100000000).toFixed(1) + '億';
+        } else if (num >= 10000) {
+            return (num / 10000).toFixed(1) + '万';
+        } else {
+            return num.toString();
+        }
+    }
+    return num.toString();
 }
 
 export function duration(n: number|string, type: string): string {
@@ -223,16 +251,13 @@ export function formatEscape(str: string): string {
         .replace(/ /g, '&nbsp;');
 }
 
-export function formatBytes(bytes: number | bigint): string {
-    const KB = 1024n;
-    const MB = KB * 1024n;
-    const GB = MB * 1024n;
-    if (bytes < MB) {
-        return (Number(bytes) / Number(KB)).toFixed(2) + ' KB';
-    } else if (bytes < GB) {
-        return (Number(bytes) / Number(MB)).toFixed(2) + ' MB';
+export function formatBytes(bytes: number): string {
+    if (bytes < 1024 * 1024) {
+        return (bytes / 1024).toFixed(2) + ' KB';
+    } else if (bytes < 1024 * 1024 * 1024) {
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB'; 
     } else {
-        return (Number(bytes) / Number(GB)).toFixed(2) + ' GB';
+        return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
     }
 }
 

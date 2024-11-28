@@ -1,5 +1,7 @@
 import { createStore } from 'vuex';
 import { DashInfo, DurlInfo, MediaInfo, QueueInfo } from '../types/DataTypes';
+import i18n from '@/i18n';
+const t = i18n.global.t;
 
 export default createStore({
     state() {
@@ -24,6 +26,7 @@ export default createStore({
                 df_dms: 32,
                 df_ads: 30280,
                 df_cdc: 7,
+                language: window.navigator.language,
                 auto_check_update: false,
                 proxy: {
                     addr: '',
@@ -46,31 +49,21 @@ export default createStore({
                 },
                 mediaMap: {
                     dms: [
-                        { id: 6, label: '240P 极速', login: false },
-                        { id: 16, label: '360P 流畅', login: false },
-                        { id: 32, label: '480P 清晰', login: false },
-                        { id: 64, label: '720P 高清', login: true },
-                        { id: 80, label: '1080P 高清', login: true },
-                        { id: 112, label: '1080P+ 高码率', login: true },
-                        { id: 116, label: '1080P60 高帧率', login: true },
-                        { id: 120, label: '4K 超清', login: true },
-                        { id: 125, label: 'HDR 真彩', login: true },
-                        { id: 126, label: '杜比视界', login: true },
-                        { id: 127, label: '8K 超高清', login: true }
+                        { id: 6 }, { id: 16 }, { id: 32 }, { id: 64 },
+                        { id: 80 }, { id: 112 }, { id: 116 }, { id: 120 },
+                        { id: 125 }, { id: 126 }, { id: 127 },
                     ],
                     ads: [
-                        { id: 30216, label: '64K', login: false },
-                        { id: 30232, label: '132K', login: false },
-                        { id: 30280, label: '192K', login: false },
-                        { id: 30250, label: '杜比全景声', login: true },
-                        { id: 30251, label: 'Hi-Res无损', login: true }
+                        { id: 30216 }, { id: 30232 }, { id: 30280 },
+                        { id: 30250 }, { id: 30251 },
                     ],
                     cdc: [
-                        { id: 7, label: 'AVC 编码', login: false },
-                        { id: 12, label: 'HEVC 编码', login: false },
-                        { id: 13, label: 'AV1 编码', login: false },
-                        { id: -1, label: '未知', login: false },
-                    ],        
+                        { id: 7 }, { id: 12 }, { id: 13 }, { id: -1 },
+                    ],
+                    fmt: [
+                        // { id: -1 }, { id: 0 }, { id: 1 }
+                        { id: 0 }, { id: 1 }
+                    ]
                 },
             },
             queue: {
