@@ -1,0 +1,16 @@
+{
+    "tab": {
+        "waiting": "等待中",
+        "doing": "進行中",
+        "complete": "已完成"
+    },
+    "label": {
+        "waiting": "等待",
+        "video": "影片",
+        "audio": "音頻",
+        "merge": "合併",
+        "complete": "完成",
+        "startDownload": "開始下載"
+    },
+    "empty": "此隊列為空～"
+}

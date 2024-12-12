@@ -1,5 +1,5 @@
 pub mod aria2c;
-// pub mod ffmpeg;
+pub mod ffmpeg;
 pub mod login;
 
 use crate::{rw_config, shared::SECRET};

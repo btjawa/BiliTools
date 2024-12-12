@@ -8,9 +8,10 @@ pub mod shared;
 
 use config::rw_config;
 use lazy_static::lazy_static;
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use shared::{init_headers, APP_HANDLE, SECRET};
-use std::{env, panic, sync::{Arc, RwLock}};
+use std::{collections::VecDeque, env, panic, sync::{Arc, RwLock}};
 use tokio::fs;
 use tauri::{async_runtime, Manager};
 use rand::{distributions::Alphanumeric, Rng};
@@ -26,6 +27,12 @@ use window_vibrancy::{apply_acrylic, apply_blur};
 
 lazy_static! {
     static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InitData<'a> {
+    downloads: VecDeque<aria2c::QueueInfo>,
+    hash: &'a str,
 }
 
 #[tauri::command]
@@ -82,7 +89,7 @@ async fn ready() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn init(secret: String) -> Result<(), Value> {
+async fn init(secret: String) -> Result<InitData<'static>, Value> {
     if secret != *SECRET.read().unwrap() {
         return Err("403 Forbidden".into())
     }
@@ -90,7 +97,10 @@ async fn init(secret: String) -> Result<(), Value> {
     login::stop_login();
     login::get_extra_cookies().await?;
     init_headers().await?;
-    Ok(())
+    downloads::load().await.map_err(|e| e.to_string())?;
+    let downloads = aria2c::COMPLETE_QUEUE.read().await.clone();
+    let hash = env!("GIT_HASH");
+    Ok(InitData { downloads, hash })
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -145,9 +155,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(debug_assertions)]
             window.open_devtools();
             match tauri_plugin_os::version() {
-                tauri_plugin_os::Version::Semantic(major, _minor, build) => {
+                tauri_plugin_os::Version::Semantic(major, _minor, _build) => {
                     #[cfg(target_os = "windows")]
-                    if major == 10 && build >= 1903 {
+                    if major == 10 && _build >= 1903 {
                         apply_acrylic(&window, Some((18, 18, 18, 160)))?;
                     } else {
                         apply_blur(&window, Some((18, 18, 18, 160)))?;

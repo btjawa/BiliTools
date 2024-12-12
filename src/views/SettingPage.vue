@@ -1,9 +1,9 @@
 <template><div class="flex-col items-start justify-start">
-    <h1 class="ml-auto">
+    <h1>
         <i class="fa-solid fa-gear mr-2"></i>
         {{ $t('settings.title') }}
         <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"
-            class="question fa-regular fa-circle-question"
+            class="question fa-light fa-circle-question text-xl"
         ></i>
     </h1>
     <hr />
@@ -44,7 +44,7 @@
                         <input v-if="unit.type === 'input'"
                             :type="unit.data === 'password' ? 'password' : 'text'"
                             :placeholder="'placeholder' in unit ? unit.placeholder : ''"
-                            @blur="updateProxy($event, unit.data)"
+                            @blur="updateProxy($event, unit.data as typeof store.settings.proxy)"
                             :value="(store.settings.proxy as any)[unit.data]"
                             autocorrect="off" spellcheck="false" autocapitalize="off"
                         />
@@ -95,11 +95,14 @@
                             <img class="h-16 mr-6 w-auto inline" src="@/assets/img/icon.svg" draggable="false" />
                             <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
-                        <div v-if="unit.type === 'version'" :class="unit.type" class="my-[6px]" >
-                            {{ $t('common.version') }} - <span
-                                @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/' + version })"
-                                class="text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
+                        <div v-if="unit.type === 'version'" :class="unit.type" class="my-[6px] relative">
+                            {{ $t('common.version') }}: <span @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/v' + version })"
+                                class="mx-2 text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
                             >{{ version }}</span>
+                            <span class="text desc ml-2">
+                                <i class="fa-solid fa-code-commit"></i>
+                                {{ store.data.hash.slice(0, 7) }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -131,6 +134,8 @@ import { Channel, invoke } from '@tauri-apps/api/core';
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { fetch } from '@tauri-apps/plugin-http';
+import locales from '@/locales/index.json';
+import store from '@/store';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import * as shell from '@tauri-apps/plugin-shell';
@@ -139,7 +144,7 @@ export default {
     data() {
         return {
             subPage: "storage",
-            store: this.$store.state,
+            store: store.state,
             version: '',
             abortGetSize: false,
         }
@@ -160,12 +165,10 @@ export default {
                         { name: t('settings.label.database'), type: "cache", data: "database" },
                     ] },
                     { name: t('settings.storage.language.name'), type: "section", icon: "fa-earth-americas", data: [
-                        { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: [
-                            { id: 'zh-CN', name: "简体中文" },
-                            { id: 'zh-HK', name: "繁體中文" },
-                            { id: 'en-US', name: "English" },
-                            { id: 'ja-JP', name: "日本語" },
-                        ] }
+                        { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: locales.languages.map(lang => ({
+                            id: lang.id,
+                            name: `${lang.name} ${lang.flag}`
+                        })) }
                     ] },
                 ] },
                 { id: "download", name: t('settings.download.name'), icon: "fa-download", content: [
@@ -245,19 +248,18 @@ export default {
             this.updateSettings('proxy', this.store.settings.proxy);
         },
         updateSettings(key: string, item: any) {
+            if (key === "df_cdc" && item as number < 0) return;
             invoke('rw_config', { action: 'write', settings: { [key]: item }, secret: this.store.data.secret });
         },
         async getPath(type: string) {
-            const workiingDir = await path.appDataDir();
             if (type === 'log') {
                 return await path.appLogDir();
             } else if (type === 'temp') {
                 return path.join(await path.tempDir(), 'com.btjawa.bilitools');
-                // return await path.tempDir();
             } else if (type === 'webview') {
                 return osType() === "windows" ? path.join(await path.appLocalDataDir(), 'EBWebView') : path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
             } else if (type === 'database') {
-                return path.join(workiingDir, 'Storage');
+                return path.join(await path.appDataDir(), 'Storage');
             } else return '';
         },
         async checkProxy() {
@@ -301,8 +303,10 @@ export default {
             await invoke('get_size', { path: await this.getPath(pathName), event });
         },
         async cleanCache(pathName: string) {
+            const result = await dialog.ask(this.$t('settings.askDelete'), { 'kind': osType() === "windows" ? 'warning' : 'error' });
+            if (!result) return;
             await invoke('clean_cache', { path: await this.getPath(pathName) });
-            await this.getSize(pathName)
+            await this.getSize(pathName);
         }
     },
     async activated() {

@@ -10,7 +10,7 @@
 
 未来还会陆续支持更多功能，尽情期待~
 
-将会优先适配 `Windows`, 次为 `macOS`
+将会优先适配 `Windows`, 次为 `macOS`, 暂不支持 `Apple Silicon`
 
 关于应用使用说明，可以查看[博客](https://www.btjawa.top/bilitools)，其中也包含各种问题的解决方法
 
@@ -87,5 +87,7 @@ npm run tauri dev
  - [aria2](https://github.com/aria2/aria2)
 
  - [ffmpeg](https://git.ffmpeg.org/ffmpeg.git)
+
+ - [DanmakuFactory](https://github.com/hihkm/DanmakuFactory)
 
  - 其余可查看 `package.json` 与 `src-tauri/Cargo.toml`

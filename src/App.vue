@@ -22,6 +22,7 @@ import { listen } from "@tauri-apps/api/event";
 import { ApplicationError } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { fetchUser, checkRefresh } from "@/services/login";
+import { InitData } from "./types/DataTypes";
 
 export default {
     components: {
@@ -45,8 +46,11 @@ export default {
 			this.$i18n.locale = this.$store.state.settings.language;
 		});
         try {
-			this.$store.commit('updateState', { 'data.secret': await invoke('ready') });
-			await invoke('init', { secret: this.$store.state.data.secret });
+			const secret = await invoke('ready');
+			const data: InitData = await invoke('init', { secret });
+			this.$store.commit('updateState', { 'data.secret': secret });
+			this.$store.commit('updateState', { 'queue.complete': data.downloads });
+			this.$store.commit('updateState', { 'data.hash': data.hash });
 			await checkRefresh();
 			await fetchUser();
 		} catch(err) {
@@ -110,7 +114,7 @@ export default {
 	width: 30px;
 	height: 30px;
 	top: 0;
-	left: 0;
+	right: 0;
 	z-index: 99;
 	margin: 24px;
 	opacity: 0;

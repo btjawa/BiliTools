@@ -1,7 +1,8 @@
 {
     "scan": {
         "title": "扫描二维码登录",
-        "desc": "请使用 <a href=\"https://app.bilibili.com/\" style=\"color:var(--primary-color)\" target=\"_blank\">哔哩哔哩客户端</a><br>扫码登录或扫码下载APP",
+        "desc": "请使用 {link}扫码登录或扫码下载APP",
+        "client": "哔哩哔哩客户端",
         "code_0": {
             "86038": "二维码已过期",
             "86090": "扫码成功"
@@ -16,12 +17,17 @@
         "sms": "短信登录",
         "pleaseInput": "请输入{0}",
         "get": "获取{0}",
-        "exempt": "该应用产生与获取的所有数据将仅存储于用户本地"
+        "exempt": "该应用产生与获取的所有数据将仅存储于用户本地",
+        "agree": "登录即代表你同意 {bilibili} 的 {licence} 和 {privacy}",
+        "licence": "用户协议",
+        "privacy": "隐私政策"
     },
     "stat": {
         "coins": "硬币数",
         "following": "关注数",
         "follwer": "粉丝数",
         "dynamic": "动态数"
-    }
+    },
+    "login": "登录",
+    "exit": "退出登录"
 }

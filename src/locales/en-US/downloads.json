@@ -1,0 +1,16 @@
+{
+    "tab": {
+        "waiting": "Waiting",
+        "doing": "Progress",
+        "complete": "Complete"
+    },
+    "label": {
+        "waiting": "Waiting",
+        "video": "Video",
+        "audio": "Audio",
+        "merge": "Merge",
+        "complete": "Complete",
+        "startDownload": "Start Download"
+    },
+    "empty": "This queue is empty~"
+}

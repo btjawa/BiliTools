@@ -50,5 +50,6 @@
         "checkUpdate": "检查更新",
         "documentation": "文档",
         "feedback": "反馈"
-    }
+    },
+    "askDelete": "此操作无法撤销。您确定吗？"
 }

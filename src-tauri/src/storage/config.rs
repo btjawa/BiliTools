@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 use std::{collections::HashMap, error::Error};
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
@@ -43,6 +43,7 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
+    if !STORAGE_PATH.exists() { fs::write(STORAGE_PATH.as_path(), &[])?; }
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();

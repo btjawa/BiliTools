@@ -2,5 +2,6 @@
     "risk": "リスク管理をトリガーする、検証を実施してください",
     "invalidInput": "入力を解析できません",
     "loginExpired": "ログインの有効期限が切れています",
-    "countryListFailed": "国際電話番号の取得に失敗しました"
+    "countryListFailed": "国際電話番号の取得に失敗しました",
+    "tryManualUpdate": "GitHub から手動で更新をダウンロードしてください"
 }

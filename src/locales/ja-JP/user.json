@@ -1,7 +1,8 @@
 {
     "scan": {
         "title": "QRコードでログイン",
-        "desc": "<a href=\"https://app.bilibili.com/\" style=\"color:var(--primary-color)\" target=\"_blank\">ビリビリアプリ</a><br>でスキャンしてください",
+        "desc": "{link}でスキャンしてください",
+        "client": "ビリビリアプリ",
         "code_0": {
             "86038": "QRコードは期限切れです",
             "86090": "スキャン成功"
@@ -16,12 +17,17 @@
         "sms": "SMSログイン",
         "pleaseInput": "{0}を入力してください",
         "get": "{0}を取得",
-        "exempt": "データは、ユーザーのデバイスにのみローカルで保存されます"
+        "exempt": "データは、ユーザーのデバイスにのみローカルで保存されます",
+        "agree": "{bilibili} の {licence} と {privacy} に同意します",
+        "licence": "利用規約",
+        "privacy": "プライバシーポリシー"
     },
     "stat": {
         "coins": "コイン",
         "following": "フォロー",
         "follwer": "フォロワー",
         "dynamic": "ダイナミック"
-    }
+    },
+    "login": "ログイン",
+    "exit": "ログアウト"
 }

@@ -2,9 +2,9 @@
 <div ref="updater" @contextmenu.prevent
     class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9"
 >
-    <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>版本更新<span class="desc ml-3">当前版本：{{ update?.currentVersion }}</span></h1>
+    <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>{{ $t('updater.title') }}<span class="desc ml-3">{{ $t('updater.current', [update?.currentVersion]) }}</span></h1>
     <h3 class="text-lg">BiliTools v{{ update?.version }}<span class="desc ml-3">{{ update?.date }}</span></h3>
-    <span class="desc">您可以在 "设置 -> 关于 -> 更新" 关闭 "自动检查", 但不建议这样做</span>
+    <span class="desc">{{ $t('updater.disableUpdate') }}</span>
     <div v-html="formatEscape(update?.body)" v-if="update?.body"
         class="updater-body leading-7 max-h-[450px] overflow-auto mt-3 mb-6"
     ></div>
@@ -13,8 +13,8 @@
     >
         <button @click="handleAction(true)"
             class="bg-[color:var(--primary-color)]"
-        ><i class="fa-solid fa-download"></i>下载更新</button>
-        <button @click="handleAction()">取消</button>
+        ><i class="fa-solid fa-download"></i>{{ $t('updater.download') }}</button>
+        <button @click="handleAction()">{{ $t('common.cancel') }}</button>
     </div>
     <div ref="updaterProgress"
         class="updater-progress opacity-0 inline-block absolute z-[1] left-12 transition-opacity leading-8"
@@ -29,7 +29,7 @@
         ></div>
         <button @click="updateProgress.completed ? install() : null"
             class="ml-4 bg-[color:var(--primary-color)]"
-        ><i class="fa-solid" :class="updateProgress.completed ? 'fa-rocket-launch' : 'fa-ban'"></i>安装更新</button>
+        ><i class="fa-solid" :class="updateProgress.completed ? 'fa-rocket-launch' : 'fa-ban'"></i>{{ $t('updater.install') }}</button>
     </div>
 </div>
 </template>
@@ -55,15 +55,20 @@ export default defineComponent({
             store: this.$store.state
         }
     },
-    async mounted() {
-        this.$watch(() => this.store.settings.auto_check_update, async () => {
-            if (!this.store.settings.auto_check_update) return null;
+    computed: {
+        auto_check_update() {
+            return this.store.settings.auto_check_update;
+        }
+    },
+    watch: {
+        async auto_check_update(v, _) {
+            if (!v) return null;
             try {
                 await this.checkUpdate();
             } catch(err) {
-                new ApplicationError(err as string).handleError();
+                new ApplicationError(err as string + '\n' + this.$t('error.tryManualUpdate')).handleError();
             }
-        });
+        }
     },
     methods: {
         formatEscape,
@@ -74,8 +79,8 @@ export default defineComponent({
                     proxy: formatProxyUrl(this.store.settings.proxy)
                 })
             });
+            console.log('Update:', update);
             if (update?.available) {
-                console.log(update)
                 this.update = markRaw(update);
                 this.mainElement = (document.querySelector('.main') as HTMLElement);
                 this.sidebarElement = (document.querySelector('.sidebar') as HTMLElement);

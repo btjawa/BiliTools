@@ -40,7 +40,7 @@
             </div>
             <button @click="exit()"
                 class="px-3 py-2.5 rounded-lg hover:bg-[color:var(--primary-color)]"
-            >退出登录</button>
+            >{{ $t('user.exit') }}</button>
         </div>
     </div>
     <div v-if="!store.user.isLogin"
@@ -62,13 +62,17 @@
                     <span>{{ $t('user.scan.code_1.' + scan.code) }}</span>
                 </div>
             </div>
-            <span class="desc mt-[18px]" v-html="$t('user.scan.desc')"></span>
+            <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]">
+            <template v-slot:link>
+                <a href="https://app.bilibili.com/" target="_blank">{{ $t('user.scan.client') }}</a><br>
+            </template>
+            </i18n-t>
         </div>
         <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
         <div class="others flex relative h-[290px] w-[400px] flex-col items-center">
             <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
                 <!-- <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'"> -->
-                <h3 @click.prevent :class="othersPage !== 0 || 'active'">
+                <h3 @click="iziInfo('Login via password is temporarily unavailable')" :class="othersPage !== 0 || 'active'">
                     {{ $t('user.others.pwd') }}
                 </h3>
                 <div class="split h-5 mx-[21px]"></div>
@@ -133,14 +137,21 @@
                 </form>
                 <button @click="othersPage ? smsLogin() : pwdLogin()"
                     class="mt-5 rounded-lg h-10 w-full hover:bg-[color:var(--primary-color)]"
-                >登录</button>
+                >{{ $t('user.login') }}</button>
             </div>
             <div class="agreement absolute bottom-2 text-sm">
                 <span class="desc">{{ $t('user.others.exempt') }}</span>
-                <span class="desc">登录即代表你同意 <a href="https://www.bilibili.com" target="_blank">哔哩哔哩</a>
-                的 <a href="https://www.bilibili.com/protocal/licence.html" target="_blank">用户协议</a>
-                和 <a href="https://www.bilibili.com/blackboard/privacy-pc.html" target="_blank">隐私政策</a>
-                </span>
+                <i18n-t keypath="user.others.agree" tag="span" class="desc">
+                <template v-slot:bilibili>
+                    <a href="https://www.bilibili.com" target="_blank">{{ $t('common.bilibili') }}</a>
+                </template>
+                <template v-slot:licence>
+                    <a href="https://www.bilibili.com/protocal/licence.html" target="_blank">{{ $t('user.others.licence') }}</a>
+                </template>
+                <template v-slot:privacy>
+                    <a href="https://www.bilibili.com/blackboard/privacy-pc.html" target="_blank">{{ $t('user.others.privacy') }}</a>
+                </template>
+                </i18n-t>
             </div>
         </div>
     </div>
@@ -292,6 +303,9 @@ export default {
 h3 {
     font-size: 18px;
     text-align: center;
+}
+a {
+    color: var(--primary-color);
 }
 .others__tab h3.active {
     color: var(--primary-color);

@@ -1,0 +1,16 @@
+{
+    "tab": {
+        "waiting": "待機中",
+        "doing": "進行中",
+        "complete": "完了"
+    },
+    "label": {
+        "waiting": "待機",
+        "video": "ビデオ",
+        "audio": "オーディオ",
+        "merge": "マージ",
+        "complete": "完了",
+        "startDownload": "ダウンロード開始"
+    },
+    "empty": "このキューは空です～"
+}

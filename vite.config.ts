@@ -6,7 +6,7 @@ import autoprefixer from 'autoprefixer';
 import tailwindcss from "tailwindcss";
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [
     vue(),
     dynamicImport(),
@@ -30,11 +30,11 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-  // build: {
-  //   sourcemap: true,
-  // },
+  build: {
+    sourcemap: true,
+  },
   css: {
-    // devSourcemap: true,
+    devSourcemap: true,
     postcss: {
       plugins: [
         autoprefixer({
@@ -58,4 +58,4 @@ export default defineConfig(async () => ({
       },
     },
   }
-}));
+});

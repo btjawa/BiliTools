@@ -1,7 +1,8 @@
 {
     "scan": {
         "title": "掃描二維碼登錄",
-        "desc": "請使用 <a href=\"https://app.bilibili.com/\" style=\"color:var(--primary-color)\" target=\"_blank\">哔哩哔哩客戶端</a><br>掃碼登錄或掃碼下載APP",
+        "desc": "請使用 {link}掃碼登錄或掃碼下載APP",
+        "client": "哔哩哔哩客戶端",
         "code_0": {
             "86038": "二維碼已過期",
             "86090": "掃碼成功"
@@ -16,12 +17,17 @@
         "sms": "短信登錄",
         "pleaseInput": "請輸入{0}",
         "get": "獲取{0}",
-        "exempt": "該應用程式所產生及獲取的所有數據將僅存儲於用戶本地"
+        "exempt": "該應用程式所產生及獲取的所有數據將僅存儲於用戶本地",
+        "agree": "登入即代表你同意 {bilibili} 的 {licence} 和 {privacy}",
+        "licence": "用戶協議",
+        "privacy": "隱私政策"
     },
     "stat": {
         "coins": "硬幣数",
         "following": "關注數",
         "follwer": "粉絲數",
         "dynamic": "動態數"
-    }
+    },
+    "login": "登錄",
+    "exit": "退出登錄"
 }

@@ -2,5 +2,6 @@
     "risk": "Risk control has been triggered, please verify",
     "invalidInput": "Unable to parse input",
     "loginExpired": "Login session has expired",
-    "countryListFailed": "Failed to retrieve the international dialing code"
+    "countryListFailed": "Failed to retrieve the international dialing code",
+    "tryManualUpdate": "Try to manually download updates from GitHub"
 }

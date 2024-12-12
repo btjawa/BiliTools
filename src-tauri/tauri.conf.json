@@ -1,6 +1,6 @@
 {
   "productName": "BiliTools",
-  "version": "1.3.0-dev.4",
+  "version": "1.3.0-dev.5",
   "identifier": "com.btjawa.bilitools",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -9,25 +9,9 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "fullscreen": false,
-        "resizable": true,
-        "minWidth": 1100,
-        "minHeight": 750,
-        "title": "BiliTools",
-        "label": "main",
-        "width": 1100,
-        "height": 750,
-        "decorations": false,
-        "transparent": true,
-        "theme": "Dark"
-      }
-    ],
     "security": {
       "csp": null
-    },
-    "macOSPrivateApi": true
+    }
   },
   "bundle": {
     "active": true,

@@ -50,5 +50,6 @@
         "checkUpdate": "Check Update",
         "documentation": "Documentation",
         "feedback": "Feedback"
-    }
+    },
+    "askDelete": "This action cannot be reverted. Are you sure?"
 }

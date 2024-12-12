@@ -14,28 +14,28 @@
     </router-link>
     <router-link to="/" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/') }" class="sidebar-item" @click="navigate">
-            <i :class="{ 'fa-duotone': isActive('/'), 'fa-regular': !isActive('/'), }"
-            class="fa-house-chimney-user"></i>
+            <i :class="{ 'fa-solid': isActive('/'), 'fa-light': !isActive('/'), }"
+            class="fa-magnifying-glass"></i>
         </li>
     </router-link>
 	<router-link to="/down-page" custom v-slot="{ navigate }">
         <li class="sidebar-item" @click="navigate"
             :class="{ 'active': isActive('/down-page') }">
-            <i :class="{ 'fa-duotone': isActive('/down-page'), 'fa-regular': !isActive('/down-page'), }"
+            <i :class="{ 'fa-solid': isActive('/down-page'), 'fa-light': !isActive('/down-page'), }"
             class="fa-bars-progress"></i>
         </li>
     </router-link>
     <router-link to="/fav-page" custom v-slot="{ navigate }">
         <li class="sidebar-item" @click="navigate"
             :class="{ 'active': isActive('/fav-page') }">
-            <i :class="{ 'fa-duotone': isActive('/fav-page'), 'fa-regular': !isActive('/fav-page'), }"
+            <i :class="{ 'fa-solid': isActive('/fav-page'), 'fa-light': !isActive('/fav-page'), }"
             class="fa-bookmark"></i>
         </li>
     </router-link>
     <router-link to="/setting-page" custom v-slot="{ navigate }">
         <li class="sidebar-item !mt-auto" @click="navigate"
             :class="{ 'active': isActive('/setting-page') }">
-            <i :class="{ 'fa-duotone': isActive('/setting-page'), 'fa-regular': !isActive('/setting-page'), }"
+            <i :class="{ 'fa-solid': isActive('/setting-page'), 'fa-light': !isActive('/setting-page'), }"
             class="fa-gear"></i>
         </li>
     </router-link>

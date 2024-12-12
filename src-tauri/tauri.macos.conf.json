@@ -1,4 +1,23 @@
 {
+  "app": {
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "minWidth": 1100,
+        "minHeight": 750,
+        "title": "",
+        "label": "main",
+        "width": 1100,
+        "height": 750,
+        "transparent": true,
+        "titleBarStyle": "Overlay",
+        "theme": "Dark",
+        "backgroundColor": "#181818"
+      }
+    ],
+    "macOSPrivateApi": true
+  },
   "bundle": {
     "resources": [
       "bin/aria2.conf",

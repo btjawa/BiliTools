@@ -41,14 +41,11 @@ export default defineComponent({
         async handleAction(action: string) {
             switch (action) {
                 case 'cut':
-                    navigator.clipboard.writeText(this.handleTextUpdate(this.activeElement));
-                    break;
+                    return document.execCommand('cut');
                 case 'copy':
-                    navigator.clipboard.writeText(this.selection);
-                    break;
+                    return document.execCommand('copy');
                 case 'paste':
-                    this.handleTextUpdate(this.activeElement, await navigator.clipboard.readText() || "");
-                    break;
+                    return this.handleTextUpdate(this.activeElement, await navigator.clipboard.readText() || "");
             }
         },
         hideMenu() {

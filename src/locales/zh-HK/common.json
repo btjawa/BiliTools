@@ -8,7 +8,9 @@
     "password": "密碼",
     "verifyCode": "驗證碼",
     "confirm": "確認",
+    "cancel": "取消",
     "exempt": "該應用程式所產生及獲取的所有數據將僅存儲於用戶本地",
+    "bilibili": "哔哩哔哩",
     "iziToast": {
         "info": "提示",
         "success": "成功",

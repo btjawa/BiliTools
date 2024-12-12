@@ -160,7 +160,7 @@ export async function parseId(input: string) {
         }
         throw new ApplicationError(t('error.invalidInput'), { noStack: true });
     } catch(_) { // NOT URL
-        if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{9}$)/i.test(input)) {
+        if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
             throw new ApplicationError(t('error.invalidInput'), { noStack: true });
         }
         const map = {

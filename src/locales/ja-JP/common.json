@@ -8,7 +8,9 @@
     "password": "パスワード",
     "verifyCode": "コード",
     "confirm": "確認",
+    "cancel": "キャンセル",
     "exempt": "生成および取得されたデータは、ユーザーのデバイスにのみローカルで保存されます。",
+    "bilibili": "ビリビリ",
     "iziToast": {
         "info": "提示",
         "success": "成功",

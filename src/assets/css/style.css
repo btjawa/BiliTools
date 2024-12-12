@@ -74,7 +74,9 @@ input {
 }
 
 hr {
-    border: 0.5px solid var(--split-color);
+    background-color: var(--split-color);
+    border: none;
+    height: 1px;
     margin: 8px 0;
 }
 

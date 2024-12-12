@@ -28,6 +28,7 @@
     "core:webview:allow-internal-toggle-devtools",
     "dialog:allow-open",
     "dialog:allow-save",
+    "dialog:allow-ask",
     "os:allow-arch",
     "os:allow-os-type",
     "process:allow-restart",

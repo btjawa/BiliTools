@@ -1,7 +1,5 @@
 import { createStore } from 'vuex';
 import { DashInfo, DurlInfo, MediaInfo, QueueInfo } from '../types/DataTypes';
-import i18n from '@/i18n';
-const t = i18n.global.t;
 
 export default createStore({
     state() {
@@ -23,10 +21,10 @@ export default createStore({
                 down_dir: null,
                 temp_dir: null,
                 max_conc: -1,
-                df_dms: 32,
+                df_dms: 80,
                 df_ads: 30280,
                 df_cdc: 7,
-                language: window.navigator.language,
+                language: null,
                 auto_check_update: false,
                 proxy: {
                     addr: '',
@@ -37,6 +35,7 @@ export default createStore({
             data: {
                 inited: false,
                 secret: '',
+                hash: '',
                 headers: {},
                 mediaInfo: {} as MediaInfo,
                 dashInfo: {} as DashInfo,
@@ -65,30 +64,9 @@ export default createStore({
                         { id: 0 }, { id: 1 }
                     ]
                 },
+                queuePage: 0,
             },
             queue: {
-                // waiting: [
-                //     {
-                //         tasks: [
-                //             {
-                //                 urls: ["url1", "url2"],
-                //                 path: "path",
-                //                 gid: "gid0",
-                //                 media_type: "video"
-                //             },
-                //         ],
-                //         output: "output",
-                //         info: {
-                //             title: "标题",
-                //             cover: "/src/assets/img/empty.png",
-                //             desc: "简介",
-                //             id: 114514,
-                //             cid: 114514,
-                //             eid: 114514,
-                //             ss_title: "ss_title"
-                //         }
-                //     }
-                // ] as QueueInfo[],
                 waiting: [] as QueueInfo[],
                 doing: [] as QueueInfo[],
                 complete: [] as QueueInfo[],

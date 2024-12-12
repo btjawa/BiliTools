@@ -62,12 +62,19 @@ export interface TasksInfo {
 
 export interface QueueInfo extends TasksInfo {
   info: MediaInfoListItem;
+  currentSelect: CurrentSelect;
+}
+
+export interface InitData {
+  downloads: QueueInfo[];
+  hash: String;
 }
 
 export type DownloadEvent = 
-  | { status: "Started"; gid: string; media_type: "video" | "audio"; }
+  | { status: "Started"; gid: string; media_type: "video" | "audio" | "merge"; }
   | { status: "Progress"; gid: string; content_length: number; chunk_length: number }
-  | { status: "Finished"; gid: string };
+  | { status: "Finished"; gid: string }
+  | { status: "Error"; code: number; message: string };
 
 export type QueueEvent =
   | { type: 'Waiting'; data: QueueInfo[] }
@@ -1420,4 +1427,10 @@ export interface DashInfo {
 
 export interface DurlInfo {
   video: CommonDurlData[];
+}
+
+export interface CurrentSelect {
+  dms: number;
+  ads: number;
+  cdc: number;
 }

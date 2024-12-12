@@ -4,6 +4,9 @@ export async function loadLanguage() {
     const modules = import.meta.glob('../locales/*/*.json');
     const messages: Record<string, any> = {};
     for (const path in modules) {
+        if (path.includes('locales/index.json')) {
+            continue;
+        }
         const parts = path.split('/');
         const code = parts[2];
         if (!messages[code]) {

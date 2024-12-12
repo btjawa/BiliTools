@@ -13,10 +13,20 @@ lazy_static! {
         temp_dir: env::temp_dir(),
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
         max_conc: 3,
-        df_dms: 32,
+        df_dms: 80,
         df_ads: 30280,
         df_cdc: 7,
-        language: sys_locale::get_locale().unwrap_or_else(|| String::from("en-US")),
+        language: sys_locale::get_locale()
+            .map(|c| {
+                let code = c.to_lowercase();
+                if code.as_str().starts_with("en") {
+                    "en-US".into()
+                } else if code.as_str().starts_with("zh") {
+                    if code.as_str().ends_with("MO") || code.as_str().ends_with("TW") {
+                        "zh-HK".into()
+                    } else { "zh-CN".into() }
+                } else { c }
+            }).unwrap_or_else(|| "en-US".into()),
         auto_check_update: true,
         proxy: SettingsProxy {
             addr: String::new(),

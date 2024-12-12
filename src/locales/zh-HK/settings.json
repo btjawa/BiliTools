@@ -50,5 +50,6 @@
         "checkUpdate": "檢查更新",
         "documentation": "文檔",
         "feedback": "反饋"
-    }
+    },
+    "askDelete": "此操作無法還原。您確定嗎？"
 }

@@ -1,121 +1,177 @@
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Map, Value};
+use tauri::{async_runtime, ipc::Channel, Manager};
+use std::{io::SeekFrom, path::PathBuf, sync::{Arc, RwLock}, time::Duration};
+use tokio::{fs, io::{self, AsyncBufReadExt, AsyncSeekExt}, time::sleep};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
-use std::{collections::{HashSet, VecDeque}, fs, path::PathBuf, sync::{Arc, RwLock}, time::Instant};
-use serde_json::{json, Value};
-use tauri::{async_runtime, Emitter, WebviewWindow};
-use tokio::{fs::File, io::{AsyncBufReadExt, AsyncSeekExt, BufReader, SeekFrom}, select, time::{sleep, Duration}};
-
-use crate::{aria2c::*, get_app_handle, CURRENT_BIN};
+use regex::Regex;
+use crate::{aria2c::{QueueInfo, DownloadEvent, Task}, shared::get_app_handle};
 
 lazy_static! {
     static ref FFMPEG_CHILD: Arc<RwLock<Option<CommandChild>>> = Arc::new(RwLock::new(None));
 }
 
-pub async fn init_merge(window: &WebviewWindow, info: &VideoInfo) -> Result<(), String> {
-    log::info!("Starting merge process for audio");
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct FFmpegLog {
+    frame: u64,
+    fps: f64,
+    stream_0_0_q: f64,
+    bitrate: String,
+    total_size: u64,
+    out_time_us: u64,
+    out_time_ms: u64,
+    out_time: String,
+    dup_frames: u32,
+    drop_frames: u32,
+    speed: String,
+    progress: String,
+}
 
-    let output_path = info.output_path.to_string_lossy().into_owned();
-    let video_filename = info.output_path.file_name()
+async fn get_frames(input: PathBuf) -> Result<u64, String> {
+    let app = get_app_handle();
+    let meta_output = app.shell().sidecar("./bin/ffmpeg").unwrap()
+        .args([
+            "-i", input.to_str().unwrap(),
+            "-map", "0:v:0",
+            "-c", "copy",
+            "-f", "null", "-"
+        ])
+        .output().await
+        .map_err(|e| e.to_string())?;
+
+    log::info!("{:?}", &String::from_utf8_lossy(&meta_output.stderr));
+    let re_0 = Regex::new(r"frame=\s(\d+)\s").map_err(|e| e.to_string())?;
+    let re_1 = Regex::new(r"frame=\d+").map_err(|e| e.to_string())?;
+    if let Some(captures) = re_0.captures(&String::from_utf8_lossy(&meta_output.stderr)) {
+        return captures.get(1)
+            .map(|m| m.as_str().trim().parse().unwrap_or(0))
+            .ok_or("Failed to parse frame count".to_string());
+    }
+    if let Some(captures) = re_1.captures(&String::from_utf8_lossy(&meta_output.stderr)) {
+        return captures.get(0)
+            .map(|m| m.as_str().trim().parse().unwrap_or(0))
+            .ok_or("Failed to parse frame count".to_string());
+    }
+    Err("No frame count found in ffmpeg output".to_string())
+}
+
+pub async fn merge(info: QueueInfo, event: &Channel<DownloadEvent>) -> Result<(), String> {
+    if info.tasks.len() < 2 {
+        return Err(format!("Insufficient number of input paths, {}", info.tasks.len()));
+    }
+    let paths: Vec<_> = info.tasks.iter().map(|task| task.path.clone()).collect();
+    let output = info.output;
+    let output_filename = output.file_name()
         .ok_or("Failed to extract video filename")?
         .to_string_lossy().into_owned();
+
+    let video_path = info.tasks.iter()
+        .find(|task| task.media_type == "video")
+        .map(|task| task.path.clone()).unwrap();
+
+    let progress_path = get_app_handle().path().app_log_dir().unwrap()
+        .join("ffmpeg").join(format!("{}.log", output_filename));
+
+    fs::create_dir_all(progress_path.parent().unwrap()).await.map_err(|e| e.to_string())?;
+    fs::write(&progress_path, &[]).await.map_err(|e| e.to_string())?;
+    let frames = get_frames(video_path.unwrap()).await.map_err(|e| {
+        event.send(DownloadEvent::Error { code: -1, message: e.to_string() }).unwrap();
+        e.to_string()
+    })?;
     let app = get_app_handle();
-
-    let video_path = info.video_path.clone();
-    let audio_path = info.audio_path.clone();
-    let progress_path = Arc::new(CURRENT_BIN.join("ffmpeg")
-        .join(format!("{}.log", video_filename)));
-
-    let ffmpeg_task = async_runtime::spawn({
-        let progress_path = Arc::clone(&progress_path);
-        async move {
+    async_runtime::spawn(async move {
+        let progress_path = get_app_handle().path().app_log_dir().unwrap()
+            .join("ffmpeg").join(format!("{}.log", output_filename));
         let status = app.shell().sidecar("./bin/ffmpeg").unwrap()
             .args([
-                "-i", video_path.to_str().unwrap(),
-                "-i", audio_path.to_str().unwrap(),
+                "-i", paths[0].clone().unwrap().to_str().unwrap(),
+                "-i", paths[1].clone().unwrap().to_str().unwrap(),
                 "-stats_period", "0.1",
                 "-c:v", "copy",
                 "-c:a", "aac",
-                &output_path, "-progress",
+                output.to_str().unwrap(), "-progress",
                 progress_path.to_str().unwrap(), "-y"
             ])
             .status().await
             .map_err(|e| e.to_string())?;
-
+    
         if status.success() {
             Ok(())
         } else {
             Err(format!("FFmpeg exited with status: {}", status.code().unwrap_or(-1)))
         }
-    }});
-    monitor_progress(window, info, &Arc::clone(&progress_path)).await?;
-    select! { _ = ffmpeg_task => Ok(()) }
+    });
+    let ffmpeg_task = info.tasks.iter().find(|task| task.media_type == "video").unwrap();
+    monitor(ffmpeg_task, progress_path, frames, event).await.map_err(|e| {
+        event.send(DownloadEvent::Error { code: -1, message: e.to_string() }).unwrap();
+        e.to_string()
+    })?;
+    Ok(())
 }
 
-async fn monitor_progress(window: &WebviewWindow, info: &VideoInfo, progress_path: &PathBuf) -> Result<(), String> {
+async fn monitor(task: &Task, progress_path: PathBuf, frames: u64, event: &Channel<DownloadEvent>) -> Result<(), String> {
     while !progress_path.exists() {
         sleep(Duration::from_millis(250)).await;
     }
-    let mut progress_lines = VecDeque::new();
+    let gid = task.clone().gid.unwrap_or(String::new());
+    event.send(DownloadEvent::Started { gid, media_type: "merge".into() }).unwrap();
     let mut last_size: u64 = 0;
-    let mut last_log_time = Instant::now();
+    let mut map = Map::new();
+    let mut keys = Vec::new();
     loop {
-        let mut printed_keys = HashSet::new();
-        let metadata = fs::metadata(&progress_path).unwrap();
-        if metadata.len() > last_size {
-            let mut file = File::open(&progress_path).await.map_err(|e| e.to_string())?;
-            file.seek(SeekFrom::Start(last_size)).await.map_err(|e| e.to_string())?;
-            let mut reader = BufReader::new(file);
-            let mut line = String::new();
-            while reader.read_line(&mut line).await.unwrap() != 0 {
-                if progress_lines.len() >= 12 {
-                    progress_lines.pop_front();
+        let gid = task.clone().gid.unwrap_or(String::new());
+        let metadata = fs::metadata(&progress_path).await.map_err(|e| e.to_string())?;
+        let mut file = fs::File::open(&progress_path).await.map_err(|e| e.to_string())?;
+        let _ = file.seek(SeekFrom::Start(last_size)).await;
+        let mut reader = io::BufReader::new(file);
+        let mut line = String::new();
+        while reader.read_line(&mut line).await.unwrap_or(0) > 0 {
+            if let Some((key, value)) = line.trim().split_once('=') {
+                let key = key.trim().to_string();
+                let value = value.trim();
+                if keys.len() >= 12 {
+                    if let Some(oldest_key) = keys.remove(0) {
+                        map.remove(&oldest_key);
+                    }
                 }
-                progress_lines.push_back(line.clone());
-                line.clear();
+                let value = if let Ok(number) = value.parse::<u64>() {
+                    json!(number)
+                } else if let Ok(number) = value.parse::<f64>() {
+                    json!(number)
+                } else {
+                    json!(value)
+                };
+                map.insert(key.clone(), value);
+                keys.push(Some(key));
             }
-            last_size = metadata.len();
+            line.clear();
         }
-        let mut messages = Vec::new();
-        for l in &progress_lines {
-            let parts: Vec<&str> = l.split('=').collect();
-            if parts.len() == 2 {
-                let key = parts[0].trim();
-                let value = parts[1].trim();
-                if !printed_keys.contains(key) {
-                    match key {
-                        "frame" | "fps" | "out_time" | "speed" => {
-                            messages.push(value);
-                        },
-                        _ => continue,
-                    };
-                    printed_keys.insert(key.to_string());
-                }
+        last_size = metadata.len();
+        if map.is_empty() { continue; }
+        let log_data: FFmpegLog = serde_json::from_value(Value::Object(map.clone())).map_err(|e| {log::info!("{}", e.to_string()); e.to_string()})?;
+        match log_data.progress.as_str() {
+            "continue" => {
+                event.send(DownloadEvent::Progress {
+                    gid: gid.clone(),
+                    content_length: frames,
+                    chunk_length: log_data.frame,
+                }).unwrap();
+            },
+            "end" => {
+                event.send(DownloadEvent::Progress {
+                    gid: gid.clone(),
+                    content_length: frames,
+                    chunk_length: frames,
+                }).unwrap();
+                event.send(DownloadEvent::Finished {
+                    gid: gid.clone(),
+                }).unwrap();
+                return Ok(());
             }
+            _ => {},
         }
-        let formatted_values = json!({
-            "gid": info.gid,
-            "display_name": info.output_path,
-            "frame": messages.get(0).unwrap_or(&"").to_string(),
-            "fps": messages.get(1).unwrap_or(&"").to_string(),
-            "progress": "100%".to_string(),
-            "out_time": messages.get(2).unwrap_or(&"").to_string(),
-            "speed": messages.get(3).unwrap_or(&"").to_string(),
-            "type": "merge".to_string()
-        });
-        let formatted_array: Vec<String> = formatted_values.as_object().unwrap()
-        .iter().map(|(_key, value)| {
-            match value { Value::String(s) => format!("{}", s),
-             _ => format!("{}", value) }
-        }).collect();
-        if last_log_time.elapsed() >= Duration::from_secs(1) {
-            log::info!("{:?}", formatted_array.join(" | "));
-            last_log_time = Instant::now();
-        }
-        window.emit("progress", &formatted_values).map_err(|e| e.to_string())?;
-        if progress_lines.iter().any(|l| l.starts_with("progress=end")) {
-            return Ok(());
-        }
-        sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(200)).await;
     }
 }
 

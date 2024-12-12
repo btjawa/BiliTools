@@ -1,35 +1,42 @@
 <template><div class="flex-col">
-    <!-- This is a temporary announcement -->
-    <h3 class="absolute right-6 top-6 font-semibold mt-[7px]">
-        This page has no transitions yet.
-    </h3>
     <div class="queue__tab flex mt-[7px] mb-[13px] h-fit items-center hover:cursor-pointer">
-        <h3 @click="queuePage = 0" :class="queuePage !== 0 || 'active'">等待中</h3>
+        <h3 @click="queuePage = 0" :class="queuePage !== 0 || 'active'">{{ $t('downloads.tab.waiting') }}</h3>
         <div class="split h-5 mx-[21px]"></div>
-        <h3 @click="queuePage = 1" :class="queuePage !== 1 || 'active'">进行中</h3>
+        <h3 @click="queuePage = 1" :class="queuePage !== 1 || 'active'">{{ $t('downloads.tab.doing') }}</h3>
         <div class="split h-5 mx-[21px]"></div>
-        <h3 @click="queuePage = 2" :class="queuePage !== 2 || 'active'">已完成</h3>
+        <h3 @click="queuePage = 2" :class="queuePage !== 2 || 'active'">{{ $t('downloads.tab.complete') }}</h3>
     </div>
     <hr class="w-full my-4" />
-    <div class="queue__page flex w-[768px] mt-[13px] h-full flex-col" ref="queuePage">
+    <div class="queue__page flex w-[768px] mt-[13px] h-full flex-col gap-0.5" ref="queuePage">
         <div v-for="item in Object.values(store.queue)[queuePage]"
             class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
         >
-            <h3 class="w-[calc(100%-92px)] text-base text ellipsis">{{ item.info.title }}</h3>
+            <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
+                {{ item.info.title }}
+                <span class="ml-2 desc" v-for="option in item.currentSelect">
+                    {{ $t(`common.default.${
+                    Object.keys(item.currentSelect)
+                        .find(k => (item.currentSelect as any)[k] === option)
+                    }.data.${option}`) }}
+                </span>
+            </h3>
             <span class="absolute top-3 right-4 desc">av{{ item.info.id }}</span>
             <div class="progress flex items-center justify-center">
-                <span class="pr-2 min-w-fit text-sm">{{ getMessage(item.tasks)?.message || '等待' }}</span>
-                <div :style="`--progress-width: ${getMessage(item.tasks)?.progress || 0}%`"
+                <span class="pr-2 min-w-fit text-sm">{{
+                    queuePage === 2 ? $t('downloads.label.complete') :
+                    (getMessage(item.tasks)?.message || $t('downloads.label.waiting'))
+                }}</span>
+                <div :style="`--progress-width: ${queuePage === 2 ? 100 : (getMessage(item.tasks)?.progress ?? 0)}%`"
                     class="progress-bar relative h-1.5 rounded-[3px] mx-2 bg-[color:var(--section-color)] w-full"
                 ></div>
-                <span class="px-2 min-w-[67px] text-right text-sm"> {{ 
-                    (getMessage(item.tasks)?.progress === Infinity || getMessage(item.tasks)?.progress === -Infinity) 
-                    ? '未知' : (getMessage(item.tasks)?.progress.toFixed(1) || '0.0')
+                <span class="px-2 min-w-[68px] text-right text-sm"> {{ 
+                    queuePage === 2 ? '100.0' : 
+                    (getMessage(item.tasks)?.progress.toFixed(1) ?? '0.0')
                 }} %</span>
-                <button @click="item.tasks.forEach(task => postAria2c('pause', task.gid))">
+                <button @click="postAria2c('togglePause', getMessage(item.tasks)?.gid)">
                     <i class="fa-solid fa-play-pause"></i>
                 </button>
-                <button @click="item.tasks.forEach(task => postAria2c('unpause', task.gid))">
+                <button @click="openPath(item.output, { parent: true })">
                     <i class="fa-solid fa-folder-open"></i>
                 </button>
             </div>
@@ -37,11 +44,12 @@
         <button v-if="queuePage === 0 && store.queue.waiting.length > 0" @click="processQueue()"
             class="absolute right-6 bottom-6"
         >
-            <i class="fa-solid fa-download"></i><span>开始下载</span>
+            <i class="fa-solid fa-download"></i><span>{{ $t('downloads.label.startDownload') }}</span>
         </button>
-        <img v-if="Object.values(store.queue)[queuePage].length === 0"
-            src="/src/assets/img/empty.png" class="w-64 mx-auto my-auto" draggable="false"
-        />
+        <div class="flex mx-auto my-auto flex-col items-center" v-if="Object.values(store.queue)[queuePage].length === 0">
+            <img src="/src/assets/img/empty.png" class="w-64" draggable="false" />
+            <span class="">{{ $t('downloads.empty') }}</span>
+        </div>
     </div>
 </div></template>
 
@@ -49,15 +57,22 @@
 import { ApplicationError } from '@/services/utils';
 import { DownloadEvent, QueueEvent } from '@/types/DataTypes';
 import { Channel, invoke } from '@tauri-apps/api/core';
+import { dirname } from '@tauri-apps/api/path';
 import store from '@/store';
+import * as shell from '@tauri-apps/plugin-shell';
 
 export default {
     data() {
         return {
-            queuePage: 0,
             store: store.state,
             mediaType: '',
-            statusList: [] as { gid: string, message: string, status: string, progress: number }[]
+            statusList: [] as { gid: string, message: string, status: string, progress: number, paused: boolean }[],
+        }
+    },
+    computed: {
+        queuePage: {
+            get() { return this.store.data.queuePage },
+            set(v: number) { this.store.data.queuePage = v }
         }
     },
     watch: {
@@ -75,9 +90,19 @@ export default {
     },
     methods: {
         async postAria2c(action: string, gid: string) {
-            await invoke('post_aria2c', { action, params: [gid] });
+            if (action === 'togglePause') {
+                const status = this.statusList.find(status => status.gid === gid);
+                if (!status) return;
+                action = status.paused ? 'unpause' : 'pause';
+                status.paused = !status.paused;
+            }
+            const body = await invoke('post_aria2c', { action, params: [gid] }) as any;
+            if (body.error) {
+                new ApplicationError(body.error.message, { code: body.error.code }).handleError();
+            }
         },
         async processQueue() {
+            this.queuePage = 1;
             try {
 				const downloadEvent = new Channel<DownloadEvent>();
                 const queueEvent = new Channel<QueueEvent>();
@@ -91,14 +116,17 @@ export default {
                                 message: (() => {
                                     switch(message.media_type) {
                                         case 'video': 
-                                            return '视频'; 
+                                            return this.$t('downloads.label.video'); 
                                         case 'audio': 
-                                            return '音频';
+                                            return this.$t('downloads.label.audio'); 
+                                        case 'merge': 
+                                            return this.$t('downloads.label.merge'); 
                                         default: return message.media_type;
                                     }
                                 })(),
                                 status: message.status,
-                                progress: 0,
+                                progress: 0.0,
+                                paused: false,
                             });
                             break;
 
@@ -106,12 +134,24 @@ export default {
                             const status0 = this.statusList.find(status => status.gid === message.gid);
                             if (status0) {
                                 status0.progress = message.chunk_length / message.content_length * 100;
+                                if (
+                                    Number.isNaN(status0.progress) ||
+                                    status0.progress === Infinity
+                                ) status0.progress = 0.0;
+                                status0.status = message.status;
                             }
                             break;
 
-                        case 'Finished': 
+                        case 'Finished':
                             const status1 = this.statusList.find(status => status.gid === message.gid);
-                            if (status1) status1.status = message.status;
+                            if (status1) {
+                                status1.progress = 100.0;
+                                status1.status = message.status;
+                            }
+                            break;
+
+                        case 'Error':
+                            new ApplicationError(message.message, { code: message.code }).handleError();
                             break;
                     }
 				}
@@ -119,7 +159,6 @@ export default {
 					console.log('got queue event', message.type, message.data);
                     store.commit('updateState', { ['queue.' + message.type.toLowerCase()]: message.data });
                     console.log(this.store.queue);
-                    
 				}
                 await invoke('process_queue', { downloadEvent, queueEvent });
             } catch (err) {
@@ -133,15 +172,10 @@ export default {
                 return status ? { ...status } : null;
             }).filter(status => status !== null)[0];
         },
-    },
-    async mounted() {
-        // while (true) {
-        //     this.test += 0.1;
-        //     if (this.test > 100) this.test = 0;
-        //     await new Promise(resolve => setTimeout(resolve, 1));
-        // }
+        async openPath(path: string, options?: { parent: boolean }) {
+            return shell.open(options?.parent ? await dirname(path) : path);
+        },
     }
-
 }
 </script>
 

@@ -3,7 +3,7 @@
 		class="search_input absolute flex h-[52px] w-[640px] rounded-[26px] p-2.5 bg-[color:var(--block-color)]"
 	>
         <input
-			type="text" :placeholder="$t('home.inputPlaceholder')"
+			type="text" :placeholder="$t('home.inputPlaceholder', [$t('common.bilibili')])"
 			@keydown.enter="search" @keydown.esc.stop="searchActive = false; mediaRootActive = false"
 			autocomplete="off" spellcheck="false"
 			@input="searchInput=searchInput.replace(/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g, '')"
@@ -20,7 +20,7 @@
 			<img :src="mediaInfo.cover" draggable="false" class="object-cover rounded-lg" />
 			<div class="info__details text h-full w-full">
 				<h3 class="w-[calc(100%-64px)] text-lg">{{ mediaInfo.title }}</h3>
-				<div v-if="mediaInfo.upper && mediaInfo.upper.avatar" @click="shell.open('https://space.bilibili.com/' + mediaInfo.upper.mid)"
+				<div v-if="mediaInfo.upper && mediaInfo.upper.avatar" @click="openPath('https://space.bilibili.com/' + mediaInfo.upper.mid)"
 					class="user absolute flex flex-col items-center top-4 right-4 cursor-pointer"
 				>
 					<img :src="mediaInfo.upper?.avatar" class="w-9 rounded-[50%]" />
@@ -68,8 +68,8 @@
 				<h3 class="block mb-2">{{ $t(`common.default.dms.name`) }}</h3>
 				<div class="flex gap-1">
 					<button v-for="id in [...(new Set(playUrlInfo.video.map(item => item.id)))]"
-						:class="{ 'selected': currentSelect.video_quality === id }"
-						@click="currentSelect.video_quality = id"
+						:class="{ 'selected': currentSelect.dms === id }"
+						@click="currentSelect.dms = id; updateCodec()"
 					>
 						<!-- <i :class="[ 'fa-solid', id >= 64 ? 'fa-high-definition' : 'fa-standard-definition' ]"></i> -->
 						<i class="fa-solid fa-file-video"></i>
@@ -82,8 +82,8 @@
 				<h3 class="block mb-2">{{ $t('common.default.ads.name') }}</h3>
 				<div class="flex gap-1">
 					<button v-for="id in playUrlInfo.audio.map(item => item.id)"
-						:class="{ 'selected': currentSelect.audio_quality === id }"
-						@click="currentSelect.audio_quality = id"
+						:class="{ 'selected': currentSelect.ads === id }"
+						@click="currentSelect.ads = id; updateCodec()"
 					>
 						<i class="fa-solid fa-file-audio"></i>
 						<span>{{ $t('common.default.ads.data.' + id) }}</span>
@@ -94,9 +94,9 @@
 			<template v-if="playUrlInfo.video">
 				<h3 class="block mb-2">{{ $t('common.default.cdc.name') }}</h3>
 				<div class="flex gap-1">
-					<button v-for="item in playUrlInfo.video.filter(item => item.id === currentSelect.video_quality)"
-						:class="{ 'selected': currentSelect.video_codec === item.codecid }"
-						@click="currentSelect.video_codec = item.codecid"
+					<button v-for="item in playUrlInfo.video.filter(item => item.id === currentSelect.dms)"
+						:class="{ 'selected': currentSelect.cdc === item.codecid }"
+						@click="currentSelect.cdc = item.codecid"
 					>
 						<i class="fa-solid fa-file-code"></i>
 						<span>{{ $t('common.default.cdc.data.' + item.codecid) }}</span>
@@ -106,8 +106,8 @@
 			</template>
 			<h3 class="block mb-2">
 				{{ $t('common.default.fmt.name') }}
-				<i @click="shell.open('https://www.btjawa.top/bilitools#关于-DASH-FLV-MP4')"
-					class="fa-regular fa-circle-question question"
+				<i @click="openPath('https://www.btjawa.top/bilitools#关于-DASH-FLV-MP4')"
+					class="fa-light fa-circle-question question"
 				></i>
 			</h3>
 			<div class="flex gap-1">
@@ -120,7 +120,7 @@
 				</button>
 			</div>
 			<span v-if="typeof getSize() === 'number'"
-				class="absolute bottom-4 right-[100px] leading-8 desc"
+				class="absolute bottom-4 right-[120px] leading-8 desc"
 			>
 				~ {{ formatBytes(getSize() as number) }}
 			</span>
@@ -138,7 +138,7 @@
 import * as data from '@/services/data';
 import * as shell from '@tauri-apps/plugin-shell';
 import { ApplicationError, stat, formatBytes, parseId } from '@/services/utils';
-import { DashInfo, DurlInfo, StreamCodecType } from '@/types/DataTypes';
+import { CurrentSelect, DashInfo, DurlInfo, StreamCodecType } from '@/types/DataTypes';
 import store from '@/store';
 
 export default {
@@ -158,14 +158,13 @@ export default {
 				'share': 'bcc-icon-icon_action_share_n_x'
 			},
 			currentSelect: {
-				video_quality: this.$store.state.settings.df_dms,
-				video_codec: this.$store.state.settings.df_cdc,
-				audio_quality: this.$store.state.settings.df_ads,
-			},
+				dms: this.$store.state.settings.df_dms,
+				ads: this.$store.state.settings.df_ads,
+				cdc: this.$store.state.settings.df_cdc,
+			} as CurrentSelect,
 			stream_codec: 0,
 			index: 0,
 			playUrlInfo: {} as DashInfo | DurlInfo,
-			shell,
 			store: store.state,
 		}
 	},
@@ -204,7 +203,7 @@ export default {
 			}
 		},
 		updateDefault(ids: number[], df: keyof typeof this.store.settings, opt: keyof typeof this.currentSelect) {
-			this.currentSelect[opt] = ids.includes(this.store.settings[df] as number) ? this.store.settings[df] : ids[0];
+			this.currentSelect[opt] = ids.includes(this.store.settings[df] as number) ? this.store.settings[df] as number : ids.sort((a, b) => b - a)[0];
 		},
 		async updateDash(index: number) {
 			try {
@@ -214,13 +213,18 @@ export default {
 				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, StreamCodecType.Dash);
 				this.$store.commit('updateState', { 'data.dashInfo': info });
 				this.playUrlInfo = info as DashInfo;
-				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "video_quality");
-				this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "audio_quality");
-				this.updateDefault(this.playUrlInfo.video.map(item => item.codecid), "df_cdc", "video_codec");
+				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
+				this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads");
+				this.updateCodec();
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
 			}
+		},
+		updateCodec() {
+			this.updateDefault(
+				this.playUrlInfo.video.filter(item => item.id === this.currentSelect.dms).map(item => item.codecid),
+			"df_cdc", "cdc");
 		},
 		async updateDurl(index: number) {
 			try {
@@ -230,8 +234,8 @@ export default {
 				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, StreamCodecType.Mp4);
 				this.$store.commit('updateState', { 'data.durlInfo': info });
 				this.playUrlInfo = info as DurlInfo;
-				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "video_quality");
-				this.updateDefault(this.playUrlInfo.video.map(item => item.codecid), "df_cdc", "video_codec");
+				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
+				this.updateCodec();
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -240,10 +244,11 @@ export default {
 		async pushBackQueue() {
 			this.popupActive = 0;
 			try {
-				const video = this.playUrlInfo.video.find(item => item.id === this.currentSelect.video_quality && item.codecid === this.currentSelect.video_codec);
-				const audio = (this.playUrlInfo as DashInfo).audio ? (this.playUrlInfo as DashInfo).audio.find(item => item.id === this.currentSelect.audio_quality) : null;
-				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], video, ...(audio && { audio }) });
+				const video = this.playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc);
+				const audio = (this.playUrlInfo as DashInfo).audio ? (this.playUrlInfo as DashInfo).audio.find(item => item.id === this.currentSelect.ads) : null;
+				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], currentSelect: this.currentSelect, video, ...(audio && { audio }) });
 				this.$router.push('/down-page');
+				this.store.data.queuePage = 0;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -251,10 +256,13 @@ export default {
 		},
 		getSize() {
 			if (!this.playUrlInfo.video) return null;
-			const info = this.playUrlInfo.video.find(item => item.id === this.currentSelect.video_quality);
+			const info = this.playUrlInfo.video.find(item => item.id === this.currentSelect.dms);
 			if (info && 'size' in info) { return info.size }
 			else { return null }
 		},
+		async openPath(path: string) {
+            return shell.open(path);
+        },
 		stat,
 		formatBytes,
 	},

@@ -47,8 +47,9 @@
         "max_conc": "同時ダウンロード",
         "checkProxy": "プロキシ確認",
         "auto_check_update": "自動チェック",
-        "checkUpdate": "アップデートをチェック",
+        "checkUpdate": "すぐチェック",
         "documentation": "ドキュメント",
         "feedback": "フィードバック"
-    }
+    },
+    "askDelete": "この操作は元に戻せません。本当に実行しますか？"
 }

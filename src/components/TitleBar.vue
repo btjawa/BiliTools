@@ -1,8 +1,8 @@
 <template>
-<div data-tauri-drag-region @contextmenu.prevent @dblclick="toggleMaximize"
+<div data-tauri-drag-region @contextmenu.prevent @dblclick="appWindow.toggleMaximize()"
 	class="titlebar h-[30px] w-[calc(100vw-61px)] bg-[color:transparent] absolute flex right-0 top-0 text-[#c4c4c4]"
 >
-    <div v-if="osType() == 'windows'" class='windows relative z-[100] !visible ml-auto'>
+    <div v-if="osType == 'windows'" class='relative z-[100] !visible ml-auto'>
         <div class="titlebar-button translate-y-[-5px] hover:bg-[color:#242424]" @click="appWindow.minimize()">
 			<svg width="10"height="1"viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path
@@ -11,7 +11,7 @@
 			/>
 			</svg>
         </div>
-        <div class="titlebar-button hover:bg-[color:#242424]" @click="toggleMaximize">
+        <div class="titlebar-button hover:bg-[color:#242424]" @click="appWindow.toggleMaximize()">
 			<svg v-if="!maxed" width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path
 				d="M1.47461 10.001C1.2793 10.001 1.09212 9.96191 0.913086 9.88379C0.734049 9.80241 0.576172 9.69499 0.439453 9.56152C0.30599 9.4248 0.198568 9.26693 0.117188 9.08789C0.0390625 8.90885 0 8.72168 0 8.52637V1.47559C0 1.28027 0.0390625 1.0931 0.117188 0.914062C0.198568 0.735026 0.30599 0.578776 0.439453 0.445312C0.576172 0.308594 0.734049 0.201172 0.913086 0.123047C1.09212 0.0416667 1.2793 0.000976562 1.47461 0.000976562H8.52539C8.7207 0.000976562 8.90788 0.0416667 9.08691 0.123047C9.26595 0.201172 9.4222 0.308594 9.55566 0.445312C9.69238 0.578776 9.7998 0.735026 9.87793 0.914062C9.95931 1.0931 10 1.28027 10 1.47559V8.52637C10 8.72168 9.95931 8.90885 9.87793 9.08789C9.7998 9.26693 9.69238 9.4248 9.55566 9.56152C9.4222 9.69499 9.26595 9.80241 9.08691 9.88379C8.90788 9.96191 8.7207 10.001 8.52539 10.001H1.47461ZM8.50098 9C8.56934 9 8.63281 8.98698 8.69141 8.96094C8.75326 8.9349 8.80697 8.89909 8.85254 8.85352C8.89811 8.80794 8.93392 8.75586 8.95996 8.69727C8.986 8.63542 8.99902 8.57031 8.99902 8.50195V1.5C8.99902 1.43164 8.986 1.36816 8.95996 1.30957C8.93392 1.24772 8.89811 1.19401 8.85254 1.14844C8.80697 1.10286 8.75326 1.06706 8.69141 1.04102C8.63281 1.01497 8.56934 1.00195 8.50098 1.00195H1.49902C1.43066 1.00195 1.36556 1.01497 1.30371 1.04102C1.24512 1.06706 1.19303 1.10286 1.14746 1.14844C1.10189 1.19401 1.06608 1.24772 1.04004 1.30957C1.014 1.36816 1.00098 1.43164 1.00098 1.5V8.50195C1.00098 8.57031 1.014 8.63542 1.04004 8.69727C1.06608 8.75586 1.10189 8.80794 1.14746 8.85352C1.19303 8.89909 1.24512 8.9349 1.30371 8.96094C1.36556 8.98698 1.43066 9 1.49902 9H8.50098Z"
@@ -34,114 +34,39 @@
 			</svg>
         </div>
     </div>
-    <div v-if="osType() == 'macos'" class='macos relative z-[100] !visible -translate-x-full px-[3px]'>
-        <div class="titlebar-button bg-[color:#ff544d]" @click="appWindow.close()">
-            <svg width="6" height="6" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<path
-				d="M15.7522 4.44381L11.1543 9.04165L15.7494 13.6368C16.0898 13.9771 16.078 14.5407 15.724 14.8947L13.8907 16.728C13.5358 17.0829 12.9731 17.0938 12.6328 16.7534L8.03766 12.1583L3.44437 16.7507C3.10402 17.091 2.54132 17.0801 2.18645 16.7253L0.273257 14.8121C-0.0807018 14.4572 -0.0925004 13.8945 0.247845 13.5542L4.84024 8.96087L0.32499 4.44653C-0.0153555 4.10619 -0.00355681 3.54258 0.350402 3.18862L2.18373 1.35529C2.53859 1.00042 3.1013 0.989533 3.44164 1.32988L7.95689 5.84422L12.5556 1.24638C12.8951 0.906035 13.4587 0.917833 13.8126 1.27179L15.7267 3.18589C16.0807 3.53985 16.0925 4.10346 15.7522 4.44381Z"
-				fill="currentColor"
-			/>
-			</svg>
-        </div>
-        <div class="titlebar-button bg-[color:#ffbd2e]" @click="appWindow.minimize()">
-            <svg width="8" height="8" viewBox="0 0 17 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<g clip-path="url(#clip0_20_2051)">
-				<path fill-rule="evenodd" clip-rule="evenodd"
-					d="M1.47211 1.18042H15.4197C15.8052 1.18042 16.1179 1.50551 16.1179 1.90769V3.73242C16.1179 4.13387 15.8052 4.80006 15.4197 4.80006H1.47211C1.08665 4.80006 0.773926 4.47497 0.773926 4.07278V1.90769C0.773926 1.50551 1.08665 1.18042 1.47211 1.18042Z"
-					fill="currentColor"
-				/>
-			</g>
-			</svg>
-        </div>
-        <div class="titlebar-button bg-[color:#28c93f]" @click="toggleMaximize">
-            <svg v-if="isAltPressed" width="8" height="8" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<g clip-path="url(#clip0_20_2053)">
-				<path fill-rule="evenodd" clip-rule="evenodd"
-					d="M15.5308 9.80147H10.3199V15.0095C10.3199 15.3949 9.9941 15.7076 9.59265 15.7076H7.51555C7.11337 15.7076 6.78828 15.3949 6.78828 15.0095V9.80147H1.58319C1.19774 9.80147 0.88501 9.47638 0.88501 9.07419V6.90619C0.88501 6.50401 1.19774 6.17892 1.58319 6.17892H6.78828V1.06183C6.78828 0.676375 7.11337 0.363647 7.51555 0.363647H9.59265C9.9941 0.363647 10.3199 0.676375 10.3199 1.06183V6.17892H15.5308C15.9163 6.17892 16.229 6.50401 16.229 6.90619V9.07419C16.229 9.47638 15.9163 9.80147 15.5308 9.80147Z"
-					fill="currentColor"
-				/>
-			</g>
-			</svg>
-            <svg v-else width="6" height="6" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<g clip-path="url(#clip0_20_2057)">
-				<path fill-rule="evenodd" clip-rule="evenodd"
-					d="M3.53068 0.433838L15.0933 12.0409C15.0933 12.0409 15.0658 5.35028 15.0658 4.01784C15.0658 1.32095 14.1813 0.433838 11.5378 0.433838C10.6462 0.433838 3.53068 0.433838 3.53068 0.433838ZM12.4409 15.5378L0.87735 3.93073C0.87735 3.93073 0.905794 10.6214 0.905794 11.9538C0.905794 14.6507 1.79024 15.5378 4.43291 15.5378C5.32535 15.5378 12.4409 15.5378 12.4409 15.5378Z"
-					fill="currentColor"
-				/>
-			</g>
-			</svg>
-        </div>
-    </div>
 </div>
 </template>
 
 <script lang="ts">
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { defineComponent } from 'vue';
-import { debounce } from '../services/utils';
+import { debounce } from '@/services/utils';
 import { type as osType } from '@tauri-apps/plugin-os';
-const appWindow = getCurrentWindow();
 
 export default defineComponent({
     data() {
         return {
             maxed: false,
-            isAltPressed: false,
-			appWindow
-        }
-    },
-    methods: {
-		osType, 
-        async toggleMaximize() {
-            if (this.osType() == "macos") {
-                this.isAltPressed ? appWindow.toggleMaximize()
-                : ( await appWindow.isFullscreen() ? 
-                appWindow.setFullscreen(false) :
-                appWindow.setFullscreen(true) )
-            } else if (this.osType() == "windows") appWindow.toggleMaximize()
+			osType: osType(),
+			appWindow: getCurrentWindow(),
         }
     },
     mounted() {
-        appWindow.onResized(debounce(async () => {
-            this.maxed = await appWindow.isMaximized();
+        this.appWindow.onResized(debounce(async () => {
+            this.maxed = await this.appWindow.isMaximized();
         }, 250));
-        window.addEventListener('keydown', (e) => {
-            if (e.altKey) this.isAltPressed = true;
-        });
-        window.addEventListener('keyup', (e) => {
-            if (!e.altKey) this.isAltPressed = false;
-        });
     }
 });
 
 </script>
 
 <style scoped lang="scss">
-.macos, .titlebar-button {
+.titlebar-button {
 	display: inline-flex;
 	justify-content: center;
 	align-items: center;
 	transition: all 0.1s;
-}
-.windows .titlebar-button {
 	width: 45px;
 	height: 29px;
-}
-.macos {
-	.titlebar-button {
-		width: 12px;
-		height: 12px;
-		border-radius: 50%;
-		margin: auto 3px;
-		border: 1px solid rgba(0, 0, 0, 0.12);
-		svg {
-			display: none;
-			color: rgb(0, 0, 0, 0.6);
-		}
-
-	}
-	&:hover svg {
-		display: inline-flex;
-	}
 }
 </style>

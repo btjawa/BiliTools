@@ -245,7 +245,7 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
                     audio: [
                         ...data.dash.audio, 
                         ...(data.dash.dolby?.audio ? [data.dash.dolby.audio[0]] : []),
-                        ...(data.dash.flac ? [data.dash.flac.audio] : []),
+                        ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
                     ],
                 }
             } else if (codec === DataTypes.StreamCodecType.Mp4) {
@@ -293,7 +293,7 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
     }
 }
 
-export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData }) {
+export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, currentSelect: DataTypes.CurrentSelect, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData }) {
     const tasks = [
         ...(params?.video ? [{
             urls: [params.video.base_url, ...params.video.backup_url],
@@ -303,15 +303,17 @@ export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem,
             urls: [params.audio.base_url, ...params.audio.backup_url],
             media_type: "audio",
         }] : []),
+        ...(params?.video && params?.audio ? [{ urls: [], media_type: "merge" }] : [])
     ];
     const ts = {
         millis: Date.now(),
         string: timestamp(Date.now(), { file: true })
     }
-    const tasksInfo: DataTypes.TasksInfo = await invoke('push_back_queue', { info: params.info, tasks, ts });
+    const tasksInfo: DataTypes.TasksInfo = await invoke('push_back_queue', { info: params.info, currentSelect: params.currentSelect, tasks, ts });
     store.commit('pushToArray', { 'queue.waiting': {
         ...tasksInfo,
         info: params.info,
+        currentSelect: params.currentSelect,
     }});
     console.log(store.state.queue)
 }

@@ -1,4 +1,6 @@
 use lazy_static::lazy_static;
+use rand::{distributions::Alphanumeric, Rng};
+use sea_orm::FromJsonQueryResult;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::{async_runtime, ipc::Channel};
@@ -7,7 +9,7 @@ use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathB
 use tokio::{sync::{RwLock, Notify, OnceCell}, time::sleep};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 
-use crate::shared::{filename, get_app_handle, init_client, BINARY_PATH, CONFIG, SECRET};
+use crate::{downloads, ffmpeg::merge, shared::{filename, get_app_handle, init_client, BINARY_PATH, CONFIG, SECRET}};
 
 lazy_static! {
     pub static ref WAITING_QUEUE: RwLock<VecDeque<QueueInfo>> = RwLock::new(VecDeque::new());
@@ -16,23 +18,25 @@ lazy_static! {
     static ref ARIA2C_PORT: Arc<StdRwLock<usize>> = Arc::new(StdRwLock::new(0));
     static ref ARIA2C_CHILD: Arc<StdRwLock<Option<CommandChild>>> = Arc::new(StdRwLock::new(None));
     static ref DOWNLOAD_NOTIFY: Notify = Notify::new();
-    static ref DOWNLOAD_EVENT: Arc<OnceCell<Channel<DownloadEvent>>> = Arc::new(OnceCell::new());
-    static ref QUEUE_EVENT: Arc<OnceCell<Channel<QueueEvent>>> = Arc::new(OnceCell::new());
+    pub static ref DOWNLOAD_EVENT: Arc<OnceCell<Channel<DownloadEvent>>> = Arc::new(OnceCell::new());
+    pub static ref QUEUE_EVENT: Arc<OnceCell<Channel<QueueEvent>>> = Arc::new(OnceCell::new());
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct QueueInfo {
     pub tasks: Vec<Task>,
     pub output: PathBuf,
-    pub info: MediaInfo
+    pub info: MediaInfo,
+    #[serde(rename = "currentSelect")]
+    pub current_select: Value,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Task {
-    urls: Vec<String>,
-    gid: Option<String>,
-    media_type: String,
-    path: Option<PathBuf>,
+    pub urls: Vec<String>,
+    pub gid: Option<String>,
+    pub media_type: String,
+    pub path: Option<PathBuf>,
 }
 
 #[derive(Clone, Serialize)]
@@ -50,6 +54,10 @@ pub enum DownloadEvent {
     Finished {
         gid: String,
     },
+    Error {
+        code: isize,
+        message: String
+    }
 }
 
 #[derive(Clone, Serialize)]
@@ -83,7 +91,7 @@ pub struct Timestamp {
     string: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Aria2Error {
     code: isize,
     message: String,
@@ -204,33 +212,47 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Valu
         .json(&payload).send().await.map_err(|e| e.to_string())?;
 
     let body = response.json::<serde_json::Value>().await.map_err(|e| e.to_string())?;
-    if let Some(error) = body.get("error") {
-        let error: Aria2Error = serde_json::from_value(error.clone()).unwrap();
-        return Err(json!({ "code": error.code, "message": error.message }));
-    }
     Ok(body)
 }
 
 #[tauri::command]
-pub async fn push_back_queue(info: MediaInfo, tasks: Vec<Task>, ts: Timestamp) -> Result<QueueInfo, Value> {
+pub async fn push_back_queue(info: MediaInfo, current_select: Value, tasks: Vec<Task>, ts: Timestamp) -> Result<QueueInfo, Value> {
     let config = CONFIG.read().unwrap().clone();
     let info_id = info.id.clone();
+    let suffix: String = if tasks.len() > 1 {
+        "mp4".into()
+    } else {
+        match tasks[0].media_type.as_str() {
+            "video" => "mp4".into(),
+            "audio" => "aac".into(),
+            _ => return Err(format!("No such media_type, {}", tasks[0].media_type).into())
+        }
+    };
     let mut video_info = QueueInfo {
         tasks,
-        output: config.down_dir.join(format!("{}_{}", filename(info.ss_title.clone()), ts.string)),
-        info
+        output: config.down_dir
+            .join(format!("{}_{}", filename(info.ss_title.clone()), ts.string))
+            .join(format!("{}.{}", filename(info.title.clone()), suffix)),
+        info,
+        current_select,
     };
     for task in &mut video_info.tasks {
+        if task.media_type.as_str() == "merge" { // FFmpeg task
+            task.gid = Some(rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(16).map(char::from)
+                .collect());
+            continue;
+        }
         let parsed_url = reqwest::Url::parse(&task.urls[0]).map_err(|e| e.to_string())?;
         let name = parsed_url.path_segments().unwrap().last().unwrap();
         let dir = config.temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", info_id, ts.millis));
         let params = vec![
             task.urls.clone().into(),
-            json!({ "dir": dir, "out": name })
+            json!({ "dir": dir, "out": name, "pause": "true" })
         ];
         let body_value: Value = post_aria2c("addUri", params).await.map_err(|e| e.to_string())?;
         let body: Aria2AddUri = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
-        log::info!("{:?}", body);
         if let Some(error) = body.error {
             return Err(json!({ "code": error.code, "message": error.message }));
         }
@@ -240,7 +262,6 @@ pub async fn push_back_queue(info: MediaInfo, tasks: Vec<Task>, ts: Timestamp) -
     }
     let mut waiting_queue = WAITING_QUEUE.write().await;
     waiting_queue.push_back(video_info.clone());
-    // log::info!("{:?}", waiting_queue.iter());
     Ok(video_info)
 }
 
@@ -277,18 +298,19 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
                 { DOING_QUEUE.write().await.push_back(info.clone()); }
                 async_runtime::spawn(async move {
                     update_queue_event(vec!["waiting", "doing"]).await;
-                    // let _ = process_download(info.clone()).await.map_err(|e| e.to_string());
-                    let task = info.clone().tasks[0].clone();
-                    let event = DOWNLOAD_EVENT.get().unwrap();
-                    event.send(DownloadEvent::Started { gid: task.gid.clone().unwrap(), media_type: "video".into() }).unwrap();
-                    for i in 1..50 {
-                        event.send(DownloadEvent::Progress { gid: task.gid.clone().unwrap(), content_length: 5017600, chunk_length: 1024 * 100 * i }).unwrap();
-                        tokio::time::sleep(Duration::from_millis(100)).await;
+                    let info_clone = info.clone();
+                    let _ = process_download(info.clone()).await.map_err(|e| e.to_string());
+                    if info.tasks.len() > 1 { // for visual-audio
+                        let event = DOWNLOAD_EVENT.get().unwrap();
+                        let _ = merge(info.clone(), event).await.map_err(|e| e.to_string());
+                    } else {
+                        let _ = fs::rename(&info.tasks[0].clone().path.unwrap(), &info.output);
                     }
                     {
                         DOING_QUEUE.write().await.retain(|task| *task != info);
                         COMPLETE_QUEUE.write().await.push_back(info);
                     }
+                    let _ = downloads::insert(info_clone).await.map_err(|e| e.to_string());
                     update_queue_event(vec!["doing", "complete"]).await;
                     tokio::time::sleep(Duration::from_millis(1000)).await;
                     DOWNLOAD_NOTIFY.notify_one();
@@ -305,25 +327,26 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
 }
 
 async fn process_download(info: QueueInfo) -> Result<(), Value> {
-    fs::create_dir_all(info.output).map_err(|e| e.to_string())?;
+    fs::create_dir_all(info.output.parent().unwrap()).map_err(|e| e.to_string())?;
     for task in info.tasks {
+        if task.media_type.as_str() == "merge" { continue }
         let task_clone = task.clone();
         let gid = task_clone.gid.unwrap_or(String::new());
         let body: Aria2AddUri = serde_json::from_value(
             post_aria2c("unpause", vec![gid.clone().into()]).await.map_err(|e| e.to_string())?
         ).map_err(|e| e.to_string())?;
-        log::info!("{:?}", body);
+        let event = DOWNLOAD_EVENT.get().unwrap();
         if let Some(error) = body.error {
+            event.send(DownloadEvent::Error { code: error.clone().code, message: error.clone().message }).unwrap();
             return Err(json!({ "code": error.code, "message": error.message }));
         }
-        let event = DOWNLOAD_EVENT.get().unwrap();
         event.send(DownloadEvent::Started { gid, media_type: task_clone.media_type }).unwrap();
         loop {
             let gid = task.clone().gid.unwrap_or(String::new());
             let body_value: Value = post_aria2c("tellStatus", vec![gid.clone().into()]).await.map_err(|e| e.to_string())?;
             let body: Aria2TellStatus = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
-            log::info!("{:?}", body);
             if let Some(error) = body.error {
+                event.send(DownloadEvent::Error { code: error.clone().code, message: error.clone().message }).unwrap();
                 return Err(json!({ "code": error.code, "message": error.message }));
             }
             if let Some(result) = body.result { match result.status.as_str() {
@@ -335,12 +358,17 @@ async fn process_download(info: QueueInfo) -> Result<(), Value> {
                     }).unwrap();
                 },
                 "complete" => {
+                    event.send(DownloadEvent::Progress {
+                        gid: gid.clone(),
+                        content_length: result.total_length.parse().unwrap(),
+                        chunk_length: result.total_length.parse().unwrap(),
+                    }).unwrap();
                     event.send(DownloadEvent::Finished { gid }).unwrap();
                     break;
                 },
                 _ => {},
             }}
-            sleep(Duration::from_millis(500)).await;
+            sleep(Duration::from_millis(100)).await;
         }
     }
     Ok(())
