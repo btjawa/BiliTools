@@ -1,4 +1,3 @@
-@import url("./iziToast.min.css");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -33,22 +32,59 @@
     background: #80808080;
 }
 
-:root {
-    /* --primary-color: rgb(212,78,125); */
-    --primary-color: rgb(0, 161, 214);
-    --content-color: rgb(233,233,233);
-    --desc-color: #a2a7ae;
-    --block-radius: 8px;
-    --split-color: #c4c4c433;
-    --block-color: #333;
-    --section-color: #1f1f1f;
+@media (prefers-color-scheme: light) {
+    :root {
+        /* --primary-color: rgb(212,78,125); */
+        --primary-color: rgb(0, 161, 214);
+        --content-color: #1a1a1a;
+        --desc-color: #a2a7ae;
+        --block-radius: 8px;
+        --split-color: #ebebeb;
+        /* --block-color: #333; */
+        --block-color: #ffffff;
+        --solid-block-color: #ffffff;
+        /* --button-color: #323232; */
+        --button-color: #00000009;
+        --dark-button-color: rgb(233,233,233);
+    }
+    button, select, input {
+        @apply hover:!brightness-110;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* --primary-color: rgb(212,78,125); */
+        --primary-color: rgb(0, 161, 214);
+        --content-color: rgb(233,233,233);
+        --desc-color: #a2a7ae;
+        --block-radius: 8px;
+        --split-color: #c4c4c433;
+        /* --block-color: #333; */
+        --block-color: #ffffff0d;
+        --solid-block-color: #2b2b2b;
+        /* --button-color: #323232; */
+        /* --button-color: #ffffff15; */
+        --button-color: #a2a7ae18;
+        --dark-button-color: rgb(233,233,233);
+    }    
+    .iziToast-close {
+        filter: invert(1);
+    }
+}
+
+body.override-dark {
+    background-color: #202020;
+}
+
+body.override-light {
+    background-color: #f9f9f9;
 }
 
 body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(15,15,15,0.6);
 }
 
  * {
@@ -82,17 +118,13 @@ hr {
 
 button, select, input {
     @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
-    @apply bg-[color:var(--block-color)] text-[color:var(--content-color)];
-    @apply hover:brightness-[85%];
+    @apply bg-[color:var(--button-color)] text-[color:var(--content-color)];
+    @apply hover:brightness-150;
     @apply transition !select-none;
 }
 
 button {
     @apply hover:cursor-pointer;
-}
-
-button.selected {
-    @apply brightness-[85%];
 }
 
 i.question {
@@ -131,11 +163,11 @@ select {
     pointer-events: none;
 }
 
+.text, .text * {
+    user-select: text;
+}
+
 .iziToast-wrapper-topRight,
 .iziToast-wrapper-topLeft {
     transform: translateY(30px);
-}
-
-.text, .text * {
-    user-select: text;
 }

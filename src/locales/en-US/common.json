@@ -11,6 +11,7 @@
     "cancel": "Cancel",
     "exempt": "Data generated and acquired will be stored solely on the user's device.",
     "bilibili": "BiliBili",
+    "wip": "Working in progress",
     "iziToast": {
         "info": "Info",
         "success": "Success",
@@ -25,8 +26,8 @@
                 "32": "480P Clear",
                 "64": "720P HD",
                 "80": "1080P HD",
-                "112": "1080P+ High Bitrate",
-                "116": "1080P60 High Frame Rate",
+                "112": "1080P+ Bitrate",
+                "116": "1080P60 FPS",
                 "120": "4K Ultra HD",
                 "125": "HDR True Color",
                 "126": "Dolby Vision",
@@ -37,10 +38,13 @@
             "name": "Audio Quality",
             "data": {
                 "30216": "64K",
+                "30228": "128K",
                 "30232": "132K",
                 "30280": "192K",
+                "30380": "320K",
                 "30250": "Dolby Atmos",
-                "30251": "Hi-Res Lossless"
+                "30251": "Hi-Res Lossless",
+                "30252": "Lossless FLAC"
             }
         },
         "cdc": {
@@ -55,7 +59,7 @@
         "fmt": {
             "name": "Streaming Format",
             "data": {
-                "-1": "FLV (Deprecated)",
+                "2": "FLV (Deprecated)",
                 "0": "DASH Format",
                 "1": "MP4 Format"
             }

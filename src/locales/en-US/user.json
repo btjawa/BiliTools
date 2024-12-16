@@ -25,7 +25,7 @@
     "stat": {
         "coins": "Coin",
         "following": "Following",
-        "follwer": "Follower",
+        "follower": "Follower",
         "dynamic": "Dynamic"
     },
     "login": "Login",

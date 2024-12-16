@@ -2,6 +2,15 @@
     "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU番号...",
     "downloadOptions": {
         "audioVisual": "音声と映像",
+        "audio": "音声",
         "others": "その他"
-    }
+    },
+    "label": {
+        "cover": "カバー",
+        "aiSummary": "AIサマリー",
+        "danmaku": "弾幕",
+        "liveDanmaku": "リアルタイム弾幕",
+        "historyDanmaku": "歴史弾幕"    
+    },
+    "empty": "利用可能なリソースがありません~"
 }

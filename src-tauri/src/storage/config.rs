@@ -27,6 +27,7 @@ pub struct Settings {
     pub df_cdc: usize,
     pub auto_check_update: bool,
     pub proxy: SettingsProxy,
+    pub theme: tauri::Theme,
     pub language: String
 }
 

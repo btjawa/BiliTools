@@ -1,8 +1,9 @@
-import * as DataTypes from "@/types/DataTypes";
 import { fetch } from "@tauri-apps/plugin-http";
-import { ApplicationError, formatProxyUrl, tryFetch, timestamp } from "@/services/utils";
-import store from "@/store";
+import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
+import * as DataTypes from "@/types/data.d";
+import * as dm_v1 from "@/proto/dm_v1";
+import store from "@/store";
 
 export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promise<DataTypes.MediaInfo> {
     let url = "https://api.bilibili.com";
@@ -195,17 +196,26 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     name: data.uname,
                     mid: data.uid,
                 },
-                list: [] // TODO
+                list: [{
+                    title: data.title,
+                    cover: data.cover.replace("http:", "https:"),
+                    desc: data.intro.replace("\n", "<br>"),
+                    id: data.id,
+                    cid: data.cid,
+                    eid: data.id,
+                    ss_title: data.title,
+                }]
             };
         }
-            
+        default: throw 'No type named ' + type;
     }
 }
 
-export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: DataTypes.MediaType, codec: DataTypes.StreamCodecType, options?: { qn: number }): Promise<DataTypes.DashInfo | DataTypes.DurlInfo | DataTypes.CommonDurlData> {
+export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: DataTypes.MediaType, options?: { codec?: DataTypes.StreamCodecType, qn?: number })
+: Promise<DataTypes.DashInfo | DataTypes.DurlInfo | DataTypes.MusicUrlInfo | DataTypes.CommonDurlData | DataTypes.MusicUrlData> {
     let url = "https://api.bilibili.com";
     let fnval;
-    switch (codec) {
+    switch (options?.codec) {
         case DataTypes.StreamCodecType.Dash:
             fnval = 4048;
             break;
@@ -219,7 +229,7 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
     let params = {
         fnval, fnver: 0, fourk: 1, qn: options?.qn || 127,
         avid: info.id, cid: info.cid, ep_id: info.eid,
-    };
+    } as any;
     switch(type) {
         case DataTypes.MediaType.Video:
             url += '/x/player/wbi/playurl';
@@ -232,14 +242,17 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
             break;
         case DataTypes.MediaType.Music:
             url += '/audio/music-service-c/url';
-            // TODO
+            params = {
+                songid: info.id, quality: options?.qn, privilege: 2,
+                mid: store.state.user.mid, platform: 'web'
+            }
             break;
     }
     const body = await tryFetch(url, { wbi: type === DataTypes.MediaType.Video, params });
     switch(type) {
         case DataTypes.MediaType.Video: {
             const data = (body as DataTypes.VideoPlayUrlInfo).data;
-            if (codec === DataTypes.StreamCodecType.Dash) {
+            if (options?.codec === DataTypes.StreamCodecType.Dash) {
                 return {
                     video: data.dash.video,
                     audio: [
@@ -248,7 +261,7 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
                         ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
                     ],
                 }
-            } else if (codec === DataTypes.StreamCodecType.Mp4) {
+            } else if (options?.codec === DataTypes.StreamCodecType.Mp4) {
                 if (options?.qn) {
                     return {
                         id: options.qn,
@@ -260,10 +273,10 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
                 }
                 return {
                     video: await Promise.all(
-                        data.accept_quality.map(id => getPlayUrl(info, type, codec, { qn: id }))
+                        data.accept_quality.map(id => getPlayUrl(info, type, { codec: options?.codec, qn: id }))
                     ) as any
                 }
-            } else throw 'No such codec: ' + codec;
+            } else throw 'No such codec: ' + options?.codec;
         }
         case DataTypes.MediaType.Bangumi: {
             const info = body as DataTypes.BangumiPlayUrlInfo;
@@ -282,38 +295,120 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
             }
         }
         case DataTypes.MediaType.Music: {
-            // TODO
-            const info = body as DataTypes.LessonPlayUrlInfo;
-            const data = info.data;
-            return {
-                video: data.dash.video,
-                audio: data.dash.audio,
+            const _info = body as DataTypes.MusicPlayUrlInfo;
+            const data = _info.data;
+            console.log(body)
+            const id = (() => {switch (options?.qn) {
+                case 0: return 30228;
+                case 1: return 30280;
+                case 2: return 30380;
+                case 3: return 30252;
+                default: throw 'No qn named ' + options?.qn
+            }})();
+            if (options?.qn !== 0) {
+                return {
+                    id,
+                    size: data.size,
+                    base_url: data.cdns[0],
+                    backup_url: data.cdns
+                }
             }
+            return {
+                audio: await Promise.all(data.qualities.map(async (quality) => {
+                    if (quality.type === options.qn) return {
+                        id,
+                        size: data.size,
+                        base_url: data.cdns[0],
+                        backup_url: data.cdns
+                    };
+                    return await getPlayUrl(info, type, { qn: quality.type });
+                }))
+            } as any;
         }
+        default: throw 'No type named ' + type;
     }
 }
 
-export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, currentSelect: DataTypes.CurrentSelect, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData }) {
+export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData | DataTypes.MusicUrlData }) {
     const tasks = [
-        ...(params?.video ? [{
+        ...(params.video ? [{
             urls: [params.video.base_url, ...params.video.backup_url],
             media_type: "video",
         }] : []),
-        ...(params?.audio ? [{
+        ...(params.audio ? [{
             urls: [params.audio.base_url, ...params.audio.backup_url],
             media_type: "audio",
         }] : []),
-        ...(params?.video && params?.audio ? [{ urls: [], media_type: "merge" }] : [])
+        ...(params.video && params.audio ? [{ urls: [], media_type: "merge" }] : [])
     ];
     const ts = {
         millis: Date.now(),
         string: timestamp(Date.now(), { file: true })
     }
-    const tasksInfo: DataTypes.TasksInfo = await invoke('push_back_queue', { info: params.info, currentSelect: params.currentSelect, tasks, ts });
-    store.commit('pushToArray', { 'queue.waiting': {
-        ...tasksInfo,
-        info: params.info,
-        currentSelect: params.currentSelect,
-    }});
+    const currentSelect = store.state.data.currentSelect;
+    const ext = (() => {
+        if (params.video) return 'mp4';
+        else if (params.audio) {
+            return currentSelect.ads === 30252 ? 'flac' : 'aac';
+        }
+    })()
+    console.log(params.info)
+    const queueInfo: DataTypes.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext });
+    store.commit('pushToArray', { 'queue.waiting': queueInfo});
     console.log(store.state.queue)
+}
+
+export async function getBinary(url: string | URL) {
+    const response = await fetch(url, {
+        headers: store.state.data.headers,
+        ...(store.state.settings.proxy.addr && {
+            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+        })
+    });
+    if (!response.ok) {
+        throw new ApplicationError(response.statusText, { code: response.status });
+    }
+    return await response.arrayBuffer();
+}
+
+export async function getAISummary(info: DataTypes.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
+    const params = {
+        aid: info.id, cid: info.cid, up_mid: mid
+    };
+    const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { wbi: true, params });
+    const body = response as DataTypes.AISummaryInfo;
+    console.log(body)
+    if (options?.check) return body.data.code;
+    if (!body.data.model_result.result_type) {
+        throw new ApplicationError('No summary', { code: body.code });
+    }
+    let text = `# ${info.title} - av${info.id}\n\n${body.data.model_result.summary}\n\n`;
+    if (body.data.model_result.result_type === 2) {
+        body.data.model_result.outline.forEach(section => {
+            text += `## ${section.title} - [${duration(section.timestamp, 'video')}](https://www.bilibili.com/video/av${info.id}?t=${section.timestamp})\n\n`;
+            section.part_outline.forEach(part => {
+                text += `- ${part.content} - [${duration(part.timestamp, 'video')}](https://www.bilibili.com/video/av${info.id}?t=${part.timestamp})\n\n`;
+            });
+        })
+    }
+    return text;
+}
+
+export async function getLiveDanmaku(info: DataTypes.MediaInfo["list"][0], type?: DataTypes.MediaType) {
+    const params = {
+        type: type === DataTypes.MediaType.Manga ? 2 : 1,
+        oid: info.cid, pid: info.id, segment_index: 1, // Segment INOP,  
+    }
+    console.log(params)
+    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { binary: true, wbi: true, params });
+    const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
+    return new TextEncoder().encode(xml);
+}
+
+export async function getHistoryDanmaku(info: DataTypes.MediaInfo["list"][0], date: string) {
+    const params = { type: 1, oid: info.cid, date };
+    console.log(params)
+    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { binary: true, params });
+    const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
+    return new TextEncoder().encode(xml);
 }

@@ -11,6 +11,7 @@ use lazy_static::lazy_static;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use shared::{init_headers, APP_HANDLE, SECRET};
+use tauri_plugin_shell::ShellExt;
 use std::{collections::VecDeque, env, panic, sync::{Arc, RwLock}};
 use tokio::fs;
 use tauri::{async_runtime, Manager};
@@ -23,7 +24,7 @@ use storage::*;
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 #[cfg(target_os = "windows")]
-use window_vibrancy::{apply_acrylic, apply_blur};
+use window_vibrancy::{apply_blur, apply_mica};
 
 lazy_static! {
     static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
@@ -75,6 +76,34 @@ async fn clean_cache(path: String) -> Result<(), String> {
             }
         }
     }
+    Ok(())
+}
+
+#[tauri::command]
+async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Result<(), String> {
+    if secret != *SECRET.read().unwrap() {
+        return Err("403 Forbidden".into())
+    }
+    fs::write(&path, contents).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, filename: String, contents: Vec<u8>) -> Result<(), String> {
+    let config = shared::CONFIG.read().unwrap().clone();
+    let input = config.temp_dir.join("com.btjawa.bilitools").join(format!("{filename}.xml"));
+    write_binary(secret, input.to_string_lossy().into(), contents).await?;
+    app.shell().sidecar("./bin/DanmakuFactory").unwrap()
+        .args(["-i", input.to_str().unwrap(), "-o", &path])
+        .status().await.map_err(|e| e.to_string())?;
+
+    fs::remove_file(input).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn set_theme(window: tauri::Window, theme: tauri::Theme) -> Result<(), String> {
+    window.set_theme(Some(theme)).unwrap();
     Ok(())
 }
 
@@ -132,7 +161,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_process::init())
@@ -146,21 +174,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::info!("BiliTools v{}", VERSION.unwrap_or("unknown"));
             panic::set_hook(Box::new(move |e| { e.to_string(); }));
             APP_HANDLE.set(app.app_handle().clone()).unwrap();
+            let window = app.get_webview_window("main").unwrap();
             async_runtime::spawn(async move {
                 storage::init().await.map_err(|e| e.to_string())?;
                 services::init().await.map_err(|e| e.to_string())?;
                 Ok::<(), String>(())
             });
-            let window = app.get_webview_window("main").unwrap();
             #[cfg(debug_assertions)]
             window.open_devtools();
             match tauri_plugin_os::version() {
                 tauri_plugin_os::Version::Semantic(major, _minor, _build) => {
                     #[cfg(target_os = "windows")]
-                    if major == 10 && _build >= 1903 {
-                        apply_acrylic(&window, Some((18, 18, 18, 160)))?;
+                    if major == 10 {
+                        if _build > 22000 {
+                            apply_mica(&window, None)?;
+                        } else if _build >= 1903 {
+                            // apply_blur(&window, None)?;
+                        } else {
+                            // window_vibrancy::apply_acrylic(&window, None)?;
+                        }
                     } else {
-                        apply_blur(&window, Some((18, 18, 18, 160)))?;
+                        apply_blur(&window, None)?;
                     }
                     #[cfg(target_os = "macos")]
                     if major >= 10 {
@@ -172,7 +206,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            ready, init, get_size, clean_cache,
+            ready, init, get_size, clean_cache, write_binary, xml_to_ass, set_theme,
             login::exit, login::sms_login, login::pwd_login, login::switch_cookie, login::scan_login, login::refresh_cookie,
             crate::config::rw_config,
             aria2c::push_back_queue, aria2c::process_queue, aria2c::post_aria2c])

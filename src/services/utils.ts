@@ -1,5 +1,5 @@
 import { fetch } from '@tauri-apps/plugin-http';
-import { MediaType } from '@/types/DataTypes';
+import { MediaType } from '@/types/data.d';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
 import iziToast from "izitoast";
@@ -11,9 +11,11 @@ const t = i18n.global.t;
 iziToast.settings({
     transitionIn: 'fadeInLeft',
     transitionOut: 'fadeOutRight',
+    backgroundColor: 'var(--block-color)',
+    titleColor: 'var(--content-color)',
+    messageColor: 'var(--content-color)',
+    iconColor: 'var(--content-color)',
     position: "topRight",
-    backgroundColor: '#3b3b3b',
-    theme: 'dark'
 });
 
 export class ApplicationError extends Error {
@@ -24,6 +26,7 @@ export class ApplicationError extends Error {
         this.code = options?.code;
         this.noStack = options?.noStack;
         (Error as any).captureStackTrace(this, this.constructor);
+        console.log(this.stack)
         this.stack = this.cleanStack(this.stack);
     }
     private cleanStack(stack?: string): string {
@@ -59,7 +62,7 @@ function iziError(message: string) {
     });
 }
 
-export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number }) {
+export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number, binary?: boolean }) {
     let grisk_id: string = '';
     for (let i = 0; i < (options?.times ?? 3); i++) {
         const rawParams = {
@@ -81,6 +84,7 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
         if (!response.ok) {
             throw new ApplicationError(response.statusText, { code: response.status });
         }
+        if (options?.binary) return await response.arrayBuffer();
         const body = await response.json();
         if (body.code !== 0) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
@@ -243,6 +247,11 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     });
     const formattedDate = formatter.format(date).replace(/\//g, '-');
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
+}
+
+export function filename(filename: string): string {
+    const regex = /[\\/:*?"<>|]/g;
+    return filename.replace(regex, "_");
 }
 
 export function formatEscape(str: string): string {

@@ -25,7 +25,7 @@
     "stat": {
         "coins": "硬幣数",
         "following": "關注數",
-        "follwer": "粉絲數",
+        "follower": "粉絲數",
         "dynamic": "動態數"
     },
     "login": "登錄",

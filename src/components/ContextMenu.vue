@@ -1,7 +1,7 @@
 <template>
 <div ref="contextMenu" v-show="active" @contextmenu.prevent
     class="context-menu flex fixed flex-col overflow-hidden w-[200px] rounded-lg transition-opacity 
-    bg-[color:var(--section-color)] border border-solid border-[var(--split-color)] z-[99] shadow-lg"
+    bg-[color:var(--solid-block-color)] border border-solid border-[var(--split-color)] z-[99] shadow-lg"
     @transitionend.prevent :style="{ opacity, top: pos.y + 'px', left: pos.x + 'px' }"
 >
     <div @click="handleAction('cut')" class="context-menu__item">
@@ -87,7 +87,7 @@ export default defineComponent({
 
 <style scoped lang="scss">
 .context-menu__item {
-	color: #c4c4c4;
+	color: var(--content-color);
 	height: 35px;
 	display: flex;
 	align-items: center;
@@ -102,7 +102,7 @@ export default defineComponent({
     .item__key {
         position: absolute;
         right: 10px;
-        color: #999;
+        color: var(--desc-color);
         font-size: 12px;
     }
     .item__icon {

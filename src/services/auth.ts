@@ -1,6 +1,7 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import store from "@/store";
-import * as types from "@/types";
+import * as user from "@/types/user";
+import * as login from "@/types/login";
 import { ApplicationError, formatProxyUrl } from "./utils";
 import md5 from "md5";
 
@@ -40,7 +41,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
     }
-    const body = await response.json() as types.userInfo.NavInfoResp;
+    const body = await response.json() as user.NavInfoResp;
     if (body?.code !== 0) {
         throw new ApplicationError(body?.message, { code: body?.code });
     }
@@ -60,7 +61,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
     return query + '&w_rid=' + wbiSign;
 }
 
-export async function captcha(gt: string, challenge: string): Promise<types.login.Captcha> {
+export async function captcha(gt: string, challenge: string): Promise<login.Captcha> {
     return new Promise(async (resolve) => {
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({

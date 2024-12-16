@@ -1,79 +1,88 @@
-<template><div class="flex-col">
-    <div class="queue__tab flex mt-[7px] mb-[13px] h-fit items-center hover:cursor-pointer">
+<template><div class="flex-col pb-0">
+    <div class="queue__tab flex mt-[7px] mb-[13px] h-fit items-center hover:cursor-pointer flex-shrink-0">
         <h3 @click="queuePage = 0" :class="queuePage !== 0 || 'active'">{{ $t('downloads.tab.waiting') }}</h3>
         <div class="split h-5 mx-[21px]"></div>
         <h3 @click="queuePage = 1" :class="queuePage !== 1 || 'active'">{{ $t('downloads.tab.doing') }}</h3>
         <div class="split h-5 mx-[21px]"></div>
         <h3 @click="queuePage = 2" :class="queuePage !== 2 || 'active'">{{ $t('downloads.tab.complete') }}</h3>
     </div>
-    <hr class="w-full my-4" />
-    <div class="queue__page flex w-[768px] mt-[13px] h-full flex-col gap-0.5" ref="queuePage">
-        <div v-for="item in Object.values(store.queue)[queuePage]"
-            class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
-        >
-            <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
-                {{ item.info.title }}
-                <span class="ml-2 desc" v-for="option in item.currentSelect">
-                    {{ $t(`common.default.${
-                    Object.keys(item.currentSelect)
-                        .find(k => (item.currentSelect as any)[k] === option)
-                    }.data.${option}`) }}
-                </span>
-            </h3>
-            <span class="absolute top-3 right-4 desc">av{{ item.info.id }}</span>
-            <div class="progress flex items-center justify-center">
-                <span class="pr-2 min-w-fit text-sm">{{
-                    queuePage === 2 ? $t('downloads.label.complete') :
-                    (getMessage(item.tasks)?.message || $t('downloads.label.waiting'))
-                }}</span>
-                <div :style="`--progress-width: ${queuePage === 2 ? 100 : (getMessage(item.tasks)?.progress ?? 0)}%`"
-                    class="progress-bar relative h-1.5 rounded-[3px] mx-2 bg-[color:var(--section-color)] w-full"
-                ></div>
-                <span class="px-2 min-w-[68px] text-right text-sm"> {{ 
-                    queuePage === 2 ? '100.0' : 
-                    (getMessage(item.tasks)?.progress.toFixed(1) ?? '0.0')
-                }} %</span>
-                <button @click="postAria2c('togglePause', getMessage(item.tasks)?.gid)">
-                    <i class="fa-solid fa-play-pause"></i>
-                </button>
-                <button @click="openPath(item.output, { parent: true })">
-                    <i class="fa-solid fa-folder-open"></i>
-                </button>
+    <hr class="w-full my-4 flex-shrink-0" />
+    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-[calc(100%-90px)]" ref="queuePage">
+        <RecycleScroller
+			v-if="Object.values(store.queue)[queuePage].length"
+			:items="Object.values(store.queue)[queuePage]"
+			:item-size="103" v-slot="{ item }"
+		>
+            <div class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3">
+                <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
+                    {{ item.info.title }}
+                </h3>
+                <div class="!flex gap-2 desc">
+                    <template v-for="option in item.currentSelect">
+                    <span v-if="!(option < 0)">
+                        {{ $t(`common.default.${Object.keys(item.currentSelect).find(k => item.currentSelect[k] === option)}.data.${option}`) }}
+                    </span>
+                    </template>
+                    <span>{{ item.ts.string }}</span>
+                </div>
+                <span class="absolute top-3 right-4 desc">{{ item.info.id }}</span>
+                <div class="progress flex items-center justify-center">
+                    <span class="pr-2 min-w-fit text-sm">{{
+                        queuePage === 2 ? recycleI18n()[1] :
+                        (getMessage(item.tasks)?.message || recycleI18n()[2])
+                    }}</span>
+                    <div :style="`--progress-width: ${queuePage === 2 ? 100 : (getMessage(item.tasks)?.progress ?? 0)}%`"
+                        class="progress-bar relative h-1.5 rounded-[3px] mx-2 bg-[color:var(--button-color)] w-full"
+                    ></div>
+                    <span class="px-2 min-w-[70px] text-sm"> {{ 
+                        queuePage === 2 ? '100.0' : 
+                        (getMessage(item.tasks)?.progress.toFixed(1) ?? '0.0')
+                    }} %</span>
+                    <button class="mr-2" @click="postAria2c('togglePause', getMessage(item.tasks)?.gid)">
+                        <i :class="[fa_dyn, 'fa-play-pause']"></i>
+                    </button>
+                    <button @click="openPath(item.output, { parent: true })">
+                        <i :class="[fa_dyn, 'fa-folder-open']"></i>
+                    </button>
+                </div>
             </div>
-        </div>
+		</RecycleScroller>
         <button v-if="queuePage === 0 && store.queue.waiting.length > 0" @click="processQueue()"
             class="absolute right-6 bottom-6"
         >
-            <i class="fa-solid fa-download"></i><span>{{ $t('downloads.label.startDownload') }}</span>
+            <i :class="[fa_dyn, 'fa-download']"></i><span>{{ recycleI18n()[3] }}</span>
         </button>
-        <div class="flex mx-auto my-auto flex-col items-center" v-if="Object.values(store.queue)[queuePage].length === 0">
-            <img src="/src/assets/img/empty.png" class="w-64" draggable="false" />
-            <span class="">{{ $t('downloads.empty') }}</span>
-        </div>
+        <Empty :expression="Object.values(store.queue)[queuePage].length === 0" text="downloads.empty" />
     </div>
 </div></template>
 
 <script lang="ts">
 import { ApplicationError } from '@/services/utils';
-import { DownloadEvent, QueueEvent } from '@/types/DataTypes';
+import { DownloadEvent, QueueEvent } from '@/types/data';
 import { Channel, invoke } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
+import { Empty } from '@/components';
 import store from '@/store';
 import * as shell from '@tauri-apps/plugin-shell';
 
 export default {
+    components: {
+        Empty
+    },
     data() {
         return {
             store: store.state,
-            mediaType: '',
             statusList: [] as { gid: string, message: string, status: string, progress: number, paused: boolean }[],
         }
     },
     computed: {
         queuePage: {
-            get() { return this.store.data.queuePage },
-            set(v: number) { this.store.data.queuePage = v }
-        }
+            get() { return this.store.status.queuePage },
+            set(v: number) { this.store.status.queuePage = v }
+        },
+        fa_dyn() {
+			return this.$store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
+		}
     },
     watch: {
         queuePage(oldPage, newPage) {
@@ -101,6 +110,14 @@ export default {
                 new ApplicationError(body.error.message, { code: body.error.code }).handleError();
             }
         },
+        recycleI18n() {
+			return [
+                '',
+                this.$t('downloads.label.complete'),
+                this.$t('downloads.label.waiting'),
+                this.$t('downloads.label.startDownload'),
+            ];
+		},
         async processQueue() {
             this.queuePage = 1;
             try {

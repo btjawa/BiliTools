@@ -2,6 +2,15 @@
     "inputPlaceholder": "{0}連結/AV/BV/SS/EP/AU號...",
     "downloadOptions": {
         "audioVisual": "下載音視頻",
+        "audio": "音頻",
         "others": "下載其他"
-    }
+    },
+    "label": {
+        "cover": "封面",
+        "aiSummary": "AI總結",
+        "danmaku": "彈幕",
+        "liveDanmaku": "實時彈幕",
+        "historyDanmaku": "歷史彈幕"    
+    },
+    "empty": "可用資源為空~"
 }

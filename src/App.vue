@@ -22,7 +22,9 @@ import { listen } from "@tauri-apps/api/event";
 import { ApplicationError } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { fetchUser, checkRefresh } from "@/services/login";
-import { InitData } from "./types/DataTypes";
+import { InitData } from "@/types/data.d";
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { version as osVersion } from "@tauri-apps/plugin-os";
 
 export default {
     components: {
@@ -41,8 +43,17 @@ export default {
 		listen('headers', e => {
 			this.$store.commit('updateState', { 'data.headers': e.payload });
 		});
-		listen('rw_config:settings', e => {
+		listen('rw_config:settings', async e => {
 			this.$store.commit('updateState', { settings: e.payload });
+			const window = getCurrentWindow();
+			const theme = this.$store.state.settings.theme;
+			const version = osVersion().split('.');
+			if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
+				document.body.classList.remove('override-dark');
+				document.body.classList.remove('override-light');
+				document.body.classList.add('override-' + theme);
+			}
+			await window.setTheme(theme as any);
 			this.$i18n.locale = this.$store.state.settings.language;
 		});
         try {
@@ -66,17 +77,11 @@ export default {
 
 <style lang="scss">
 .main, .updater {
-	position: absolute;
-	right: 0;
-	bottom: 0;
-	height: calc(100vh - 30px);
+	@apply absolute right-0 bottom-0 h-[calc(100vh_-_30px)];
 }
 .main {
-	background-color: rgba(24,24,24);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	width: calc(100vw - 61px);
+	// background-color: rgba(24,24,24);
+	@apply flex justify-center items-center w-[calc(100vw_-_61px)] bg-transparent;
 	mask-size: 100% 100%;
     mask-repeat: no-repeat;
     mask-image: linear-gradient(
@@ -88,18 +93,10 @@ export default {
     );
 }
 .page {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	position: absolute;
-	color: var(--content-color);
-	padding: 24px;
-	overflow: hidden;
+	@apply flex absolute justify-center items-center w-full h-full;
+	@apply text-[color:var(--content-color)] p-6 overflow-hidden;
 	h1 {
-		font-size: 24px;
-		margin-bottom: 8px;
+		@apply text-2xl mb-2;
 	}
 }
 .fade-enter-active {
@@ -110,24 +107,10 @@ export default {
 	opacity: 0;
 }
 .loading {
-	position: absolute;
-	width: 30px;
-	height: 30px;
-	top: 0;
-	right: 0;
-	z-index: 99;
-	margin: 24px;
-	opacity: 0;
-	border: 2px solid #c4c4c4;
-	border-top-color: rgba(255, 255, 255, 0.2);
-	border-right-color: rgba(255, 255, 255, 0.2);
-	border-bottom-color: rgba(255, 255, 255, 0.2);
-	border-radius: 100%;
-	transition: opacity 0.2s;
-	animation: circle infinite 0.75s linear;
-	&.active {
-		opacity: 1;
-	}
+	@apply absolute w-8 h-8 top-0 right-0 m-6 opacity-0 z-[99];
+	@apply border-solid border-2 border-[color:var(--solid-block-color)] border-l-[color:var(--content-color)] rounded-full;
+	@apply transition-opacity animate-[circle_infinite_0.75s_linear];
+	&.active { opacity: 1 }
 }
 @keyframes circle {
     0% { transform: rotate(0); }

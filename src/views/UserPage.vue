@@ -1,15 +1,11 @@
 <template><div>
-    <div v-if="store.user.isLogin"
-        class="profile w-full absolute max-w-7xl bg-[color:var(--section-color)]"
-    >
+    <div v-if="store.user.isLogin" class="profile w-full absolute max-w-7xl bg-[color:var(--block-color)]">
         <div class="profile__top_photo relative" :style="{ opacity: store.user.topPhoto ? 1 : 0 }">
-            <img :src=store.user.topPhoto draggable="false" class="w-full block" />
+            <img :src=store.user.topPhoto draggable="false" class="w-full" />
         </div>
         <div class="profile__meta relative flex items-center mx-10">
-            <div
-                class="avatar -translate-y-2.5 box-content block relative w-[100px] h-[100px] rounded-[50%] border-2 border-solid border-[rgba(255,255,255,0.4)]"
-            >
-                <img :src="store.user.avatar + '@100w_100h'" class="rounded-[50%]" />
+            <div class="avatar -translate-y-2.5 w-[104px] h-[104px] rounded-full">
+                <img :src="store.user.avatar + '@100w_100h'" class="rounded-full" />
                 <img v-if="store.user.vipLabel" class="w-[30px] absolute right-0 bottom-0" src="/src/assets/img/profile/big-vip.svg" />
             </div>
             <div class="details absolute top-[10px] ml-[120px]">
@@ -18,39 +14,24 @@
                     <img class="h-[14px]" :src="`/src/assets/img/profile/level/level${store.user.level}.svg`" />
                     <img class="h-5" v-if="store.user.vipLabel" :src="store.user.vipLabel" />
                 </div>
-                <span class="text-[var(--desc-color)] text-sm w-[530px] block">{{ store.user.desc }}</span>
+                <span class="text-[var(--desc-color)] text-sm w-[530px]">{{ store.user.desc }}</span>
             </div>
             <div class="stat ml-auto mr-6">
-                <div class="stat__item">
-                    <span>{{ $t('user.stat.coins') }}</span>
-                    <span>{{ store.user.stat.coins }}</span>
-                </div>
-                <div class="stat__item">
-                    <span>{{ $t('user.stat.following') }}</span>
-                    <span>{{ store.user.stat.following }}</span>
-                </div>
-                <div class="stat__item">
-                    <span>{{ $t('user.stat.follwer') }}</span>
-                    <span>{{ store.user.stat.follower }}</span>
-                </div>
-                <div class="stat__item">
-                    <span>{{ $t('user.stat.dynamic') }}</span>
-                    <span>{{ store.user.stat.dynamic_count }}</span>
+                <div class="stat__item" v-for="item in Object.keys(store.user.stat)">
+                    <span>{{ $t('user.stat.' + item) }}</span>
+                    <span>{{ (store.user.stat as any)[item] }}</span>
                 </div>
             </div>
-            <button @click="exit()"
-                class="px-3 py-2.5 rounded-lg hover:bg-[color:var(--primary-color)]"
-            >{{ $t('user.exit') }}</button>
+            <button @click="exit()">{{ $t('user.exit') }}</button>
         </div>
     </div>
-    <div v-if="!store.user.isLogin"
-        class="login flex relative border border-solid border-[#333] rounded-lg"
-    >
+    <!-- will be optimized soon -->
+    <div v-else class="login flex relative border border-solid border-[var(--split-color)] rounded-lg">
         <div class="scan h-[350px]">
             <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
             <div class="scan__box relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg">                
                 <img src="/src/assets/img/login/loadTV.gif" class="absolute invert m-[30px] z-0" />
-                <canvas ref="loginQrcode" class="relative z-1"></canvas>
+                <canvas ref="loginQrcode" :class="[store.settings.theme === 'light' ? 'invert' : '', 'relative', 'z-1']"></canvas>
                 <div v-if="scan.code === 86038 || scan.code === 86090" @click="scanLogin()"
                     class="scan__tips absolute flex w-[172px] h-[172px] z-2 bg-[#18181890] -top-px -left-px
                     flex-col justify-center items-center cursor-pointer rounded-md text-sm"
@@ -71,8 +52,7 @@
         <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
         <div class="others flex relative h-[290px] w-[400px] flex-col items-center">
             <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
-                <!-- <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'"> -->
-                <h3 @click="iziInfo('Login via password is temporarily unavailable')" :class="othersPage !== 0 || 'active'">
+                <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'">
                     {{ $t('user.others.pwd') }}
                 </h3>
                 <div class="split h-5 mx-[21px]"></div>
@@ -167,13 +147,13 @@ export default {
         return {
             store: this.$store.state,
             pwd: {
-                username: '',
-                pwd: '',
+                username: String(),
+                pwd: String(),
             },
             sms: {
-                tel: '',
-                code: '',
-                captchaKey: "",
+                tel: String(),
+                code: String(),
+                captchaKey: String(),
                 cid: 86,
             },
             scan: {
@@ -184,13 +164,6 @@ export default {
                 cname: string;
                 country_id: string;
             }[],
-            telVerify: {
-                need: false,
-                code: '',
-                captchaKey: '',
-                tmpCode: '',
-                requestId: ''
-            },
             othersPage: 1,
         }
     },
@@ -203,7 +176,7 @@ export default {
                 const qrcodeKey = await login.genQrcode(this.$refs.loginQrcode as HTMLCanvasElement);
                 return await login.scanLogin(qrcodeKey, ({ code }) => {
                     this.scan.code = code;
-                    if (code === 86114) return null; // USER CANCELD
+                    if (code === 86114) return null; // USER CANCELED
                 });
             }, { login: true });
         },
@@ -212,22 +185,9 @@ export default {
                 return await login.pwdLogin(this.pwd.username, this.pwd.pwd);
             }, { login: true });
         },
-        async verifyTel() {
-            await this.handleError(async () => {
-                return await login.verifyTel(this.telVerify.tmpCode, this.telVerify.captchaKey, this.telVerify.code, this.telVerify.requestId);
-            }, { login: true });
-        },
-        async sendVerifyTelSmsCode() {
-            await this.handleError(async () => {
-                this.telVerify.captchaKey = await login.verifyTelSendSmsCode(this.telVerify.tmpCode);
-            });
-        },
         async sendSmsCode() {
             await this.handleError(async () => {
-                if (!this.sms.tel) {
-                    new ApplicationError('手机号为空', { noStack: true }).handleError();
-                    return null;
-                }
+                if (!this.sms.tel) return;
                 this.sms.captchaKey = await login.sendSmsCode(this.sms.cid, this.sms.tel);
             });
         },
@@ -255,16 +215,12 @@ export default {
                     new ApplicationError(err).handleError();
                 } else if ((err as any)?.tmp_code && (err as any)?.request_id) {
                     new ApplicationError((err as any).message, { code: (err as any).code }).handleError();
-                    this.telVerify.need = true;
-                    this.telVerify.tmpCode = (err as any).tmp_code;
-                    this.telVerify.requestId = (err as any).request_id;
-                    console.log(this.telVerify)
+                    // TEL Verify logics here
                 }
             }
         },
     },
     async activated() {
-        this.telVerify.need = false;
         if (!this.store.user.isLogin) {
             this.scanLogin();
             await this.handleError(async () => {
@@ -333,6 +289,7 @@ a {
     .avatar {
         @apply bg-cover bg-clip-padding;
         background-image: url("/src/assets/img/profile/default-avatar.jpg");
+        border: 2px solid var(--desc-color);
     }
     .details span {
         @apply overflow-hidden text-ellipsis;

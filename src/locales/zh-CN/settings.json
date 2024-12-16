@@ -27,6 +27,9 @@
             "desc": "暂仅支持 HTTP(S) 协议，修改完成后建议重启应用以全局生效。"
         }
     },
+    "advanced": {
+        "name": "高级"
+    },
     "about": {
         "name": "关于",
         "thanks": "觉得好用的话，在Github点个Star吧！",

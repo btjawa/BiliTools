@@ -2,6 +2,15 @@
     "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU ID...",
     "downloadOptions": {
         "audioVisual": "Audio-Visual",
+        "audio": "Audio",
         "others": "Others"
-    }
+    },
+    "label": {
+        "cover": "Cover",
+        "aiSummary": "AI Summary",
+        "danmaku": "Danmaku",
+        "liveDanmaku": "Live Danmaku",
+        "historyDanmaku": "History Danmaku"    
+    },
+    "empty": "No available resources~"
 }

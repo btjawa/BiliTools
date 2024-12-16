@@ -5,8 +5,8 @@ import store from "@/store";
 import qrcode from "qrcode-generator";
 import JSEncrypt from "jsencrypt";
 import i18n from "@/i18n";
-import * as LoginTypes from "@/types/LoginTypes";
-import * as UserInfoTypes from "@/types/UserInfoTypes";
+import * as LoginTypes from "@/types/login";
+import * as UserTypes from "@/types/user";
 import * as auth from "@/services/auth";
 
 const t = i18n.global.t;
@@ -17,7 +17,7 @@ export async function fetchUser() {
         store.commit('updateState', { 'user.isLogin': false, 'data.inited': true });
         return null;
     }
-    const userInfo = await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', { wbi: true, params: { mid } }) as UserInfoTypes.UserInfoResp;
+    const userInfo = await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', { wbi: true, params: { mid } }) as UserTypes.UserInfoResp;
     const userStatResp = await fetch('https://api.bilibili.com/x/web-interface/nav/stat', {
         headers: store.state.data.headers,
         ...(store.state.settings.proxy.addr && {
@@ -27,7 +27,7 @@ export async function fetchUser() {
     if (!userStatResp.ok) {
         throw new ApplicationError(userStatResp.statusText, { code: userStatResp.status });
     }
-    const userStat = await userStatResp.json() as UserInfoTypes.UserStatResp;
+    const userStat = await userStatResp.json() as UserTypes.UserStatResp;
     if (userStat.code !== 0) {
         throw new ApplicationError(userStat.message, { code: userStat.code });
     }
@@ -51,7 +51,7 @@ export async function fetchUser() {
             coins: userInfo.data.coins,
             following: userStat.data.following,
             follower: userStat.data.follower,
-            dynamic_count: userStat.data.dynamic_count,
+            dynamic: userStat.data.dynamic_count,
         }
     }});
 }

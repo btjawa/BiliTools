@@ -1,50 +1,57 @@
 import { createStore } from 'vuex';
-import { DashInfo, DurlInfo, MediaInfo, QueueInfo } from '../types/DataTypes';
+import { CurrentSelect, QueueInfo } from '@/types/data.d';
 
 export default createStore({
     state() {
         return {
             user: {
-                avatar: '', name: '', desc: '',
-                mid: 0, level: 0,
-                vipLabel: '',
-                topPhoto: '',
+                avatar: String(),
+                name: String(),
+                desc: String(),
+                mid: Number(),
+                level: Number(),
+                vipLabel: String(),
+                topPhoto: String(),
                 isLogin: false,
                 stat: {
-                    coins: 0,
-                    following: 0,
-                    follower: 0,
-                    dynamic_count: 0,
+                    coins: Number(),
+                    following: Number(),
+                    follower: Number(),
+                    dynamic: Number(),
                 }
             },
             settings: {
-                down_dir: null,
-                temp_dir: null,
-                max_conc: -1,
-                df_dms: 80,
-                df_ads: 30280,
-                df_cdc: 7,
-                language: null,
+                down_dir: String(),
+                temp_dir: String(),
+                max_conc: Number(),
+                df_dms: Number(),
+                df_ads: Number(),
+                df_cdc: Number(),
+                language: String(),
+                theme: String(),
                 auto_check_update: false,
                 proxy: {
-                    addr: '',
-                    username: '',
-                    password: '',
+                    addr: String(),
+                    username: String(),
+                    password: String(),
                 },
             },
             data: {
                 inited: false,
-                secret: '',
-                hash: '',
+                secret: String(),
+                hash: String(),
                 headers: {},
-                mediaInfo: {} as MediaInfo,
-                dashInfo: {} as DashInfo,
-                durlInfo: {} as DurlInfo,
+                currentSelect: {
+                    dms: -1,
+                    ads: -1,
+                    cdc: -1,
+                    fmt: -1,
+                } as CurrentSelect,
                 cache: {
-                    log: '',
-                    temp: '',
-                    webview: '',
-                    database: '',
+                    log: Number(),
+                    temp: Number(),
+                    webview: Number(),
+                    database: Number(),
                 },
                 mediaMap: {
                     dms: [
@@ -53,23 +60,24 @@ export default createStore({
                         { id: 125 }, { id: 126 }, { id: 127 },
                     ],
                     ads: [
-                        { id: 30216 }, { id: 30232 }, { id: 30280 },
-                        { id: 30250 }, { id: 30251 },
+                        { id: 30216 }, { id: 30228 }, { id: 30232 }, { id: 30280 },
+                        { id: 30250 }, { id: 30380 }, { id: 30251 }, { id: 30252 },
                     ],
                     cdc: [
                         { id: 7 }, { id: 12 }, { id: 13 }, { id: -1 },
                     ],
                     fmt: [
-                        // { id: -1 }, { id: 0 }, { id: 1 }
                         { id: 0 }, { id: 1 }
                     ]
                 },
-                queuePage: 0,
             },
             queue: {
                 waiting: [] as QueueInfo[],
                 doing: [] as QueueInfo[],
                 complete: [] as QueueInfo[],
+            },
+            status: {
+                queuePage: 0
             }
         };
     },

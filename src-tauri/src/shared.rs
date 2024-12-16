@@ -28,6 +28,7 @@ lazy_static! {
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
         auto_check_update: true,
+        theme: tauri::Theme::Dark,
         proxy: SettingsProxy {
             addr: String::new(),
             username: String::new(),

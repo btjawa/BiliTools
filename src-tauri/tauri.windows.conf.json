@@ -12,9 +12,7 @@
         "height": 750,
         "transparent": true,
         "decorations": false,
-        "shadow": true,
-        "theme": "Dark",
-        "backgroundColor": "#181818"
+        "backgroundColor": "#000000"
       }
     ],
     "macOSPrivateApi": true

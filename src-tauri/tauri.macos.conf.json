@@ -11,9 +11,7 @@
         "width": 1100,
         "height": 750,
         "transparent": true,
-        "titleBarStyle": "Overlay",
-        "theme": "Dark",
-        "backgroundColor": "#181818"
+        "titleBarStyle": "Overlay"
       }
     ],
     "macOSPrivateApi": true

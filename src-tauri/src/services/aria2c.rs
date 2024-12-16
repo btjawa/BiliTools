@@ -24,6 +24,8 @@ lazy_static! {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct QueueInfo {
+    pub id: String,
+    pub ts: Timestamp,
     pub tasks: Vec<Task>,
     pub output: PathBuf,
     pub info: MediaInfo,
@@ -79,9 +81,9 @@ pub struct MediaInfo {
     title: String,
     cover: String,
     desc: String,
-    id: u32,
-    cid: u32,
-    eid: u32,
+    id: u64,
+    cid: u64,
+    eid: u64,
     ss_title: String,
 }
 
@@ -216,23 +218,19 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Valu
 }
 
 #[tauri::command]
-pub async fn push_back_queue(info: MediaInfo, current_select: Value, tasks: Vec<Task>, ts: Timestamp) -> Result<QueueInfo, Value> {
+pub async fn push_back_queue(info: MediaInfo, current_select: Value, tasks: Vec<Task>, ts: Timestamp, ext: String) -> Result<QueueInfo, Value> {
     let config = CONFIG.read().unwrap().clone();
     let info_id = info.id.clone();
-    let suffix: String = if tasks.len() > 1 {
-        "mp4".into()
-    } else {
-        match tasks[0].media_type.as_str() {
-            "video" => "mp4".into(),
-            "audio" => "aac".into(),
-            _ => return Err(format!("No such media_type, {}", tasks[0].media_type).into())
-        }
-    };
     let mut video_info = QueueInfo {
+        id: rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(16).map(char::from)
+            .collect(),
+        ts: ts.clone(),
         tasks,
         output: config.down_dir
             .join(format!("{}_{}", filename(info.ss_title.clone()), ts.string))
-            .join(format!("{}.{}", filename(info.title.clone()), suffix)),
+            .join(format!("{}.{}", filename(info.title.clone()), ext)),
         info,
         current_select,
     };
@@ -303,8 +301,9 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
                     if info.tasks.len() > 1 { // for visual-audio
                         let event = DOWNLOAD_EVENT.get().unwrap();
                         let _ = merge(info.clone(), event).await.map_err(|e| e.to_string());
+                        let _ = fs::remove_file(info.tasks[0].clone().path.unwrap().parent().unwrap()).map_err(|e| e.to_string());
                     } else {
-                        let _ = fs::rename(&info.tasks[0].clone().path.unwrap(), &info.output);
+                        let _ = fs::rename(info.tasks[0].clone().path.unwrap(), &info.output).map_err(|e| e.to_string());
                     }
                     {
                         DOING_QUEUE.write().await.retain(|task| *task != info);

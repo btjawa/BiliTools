@@ -25,7 +25,7 @@
     "stat": {
         "coins": "硬币数",
         "following": "关注数",
-        "follwer": "粉丝数",
+        "follower": "粉丝数",
         "dynamic": "动态数"
     },
     "login": "登录",

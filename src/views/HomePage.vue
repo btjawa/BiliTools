@@ -1,6 +1,6 @@
 <template><div>
     <div ref="searchInput" :style="{ 'top': searchActive ? '13px' : 'calc(50% - 13px)' }"
-		class="search_input absolute flex h-[52px] w-[640px] rounded-[26px] p-2.5 bg-[color:var(--block-color)]"
+		class="search_input absolute flex h-[52px] w-[calc(100%-397px)] rounded-[26px] p-2.5 bg-[color:var(--block-color)]"
 	>
         <input
 			type="text" :placeholder="$t('home.inputPlaceholder', [$t('common.bilibili')])"
@@ -10,176 +10,85 @@
 			v-model="searchInput" class="w-full mr-2.5 rounded-2xl"
 		/>
         <button @click="search"
-			class="fa-solid fa-search bg-[color:var(--desc-color)] rounded-[50%] text-[var(--block-color)]"
+			:class="[fa_dyn, 'fa-search rounded-[50%]']"
 		></button>
     </div>
 	<div :style="{ 'opacity': mediaRootActive ? 1 : 0, 'pointerEvents': mediaRootActive ? 'all' : 'none' }"
-		class="media_root absolute top-[78px] w-[768px] h-[calc(100%-93px)]"
+		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
-		<div class="media_info flex w-full h-40 bg-[color:var(--block-color)] mb-[13px] rounded-lg p-4 gap-4">
-			<img :src="mediaInfo.cover" draggable="false" class="object-cover rounded-lg" />
-			<div class="info__details text h-full w-full">
-				<h3 class="w-[calc(100%-64px)] text-lg">{{ mediaInfo.title }}</h3>
-				<div v-if="mediaInfo.upper && mediaInfo.upper.avatar" @click="openPath('https://space.bilibili.com/' + mediaInfo.upper.mid)"
-					class="user absolute flex flex-col items-center top-4 right-4 cursor-pointer"
-				>
-					<img :src="mediaInfo.upper?.avatar" class="w-9 rounded-[50%]" />
-					<span class="text-xs ellipsis max-w-16 mt-1">{{ mediaInfo.upper.name }}</span>
-				</div>
-				<div class="stat text-xs flex gap-3 mt-1.5 text-[var(--desc-color)]">
-					<div v-if="mediaInfo.stat" class="stat_item flex" v-for="([key, value]) in Object.entries(mediaInfo.stat)">
-						<i class="bcc-iconfont mr-1" :class="iconMap[key as keyof typeof iconMap]"></i>
-						<span>{{ stat(value ?? '') }}</span>
-					</div>
-				</div>
-				<span class="w-[calc(100%-64px)] text-sm block mt-2" v-html="mediaInfo.desc"></span>
-			</div>
-		</div>
-		<div class="media_list flex flex-col gap-0.5 overflow-auto max-h-[468px]"
-			:style="{ 'transform': mediaRootActive ? 'translateY(0)' : 'translateY(24px)' }"
+		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open="openPath" />
+        <Empty v-if="mediaInfo.list" :expression="mediaInfo.list.length === 0" text="home.empty" />
+		<RecycleScroller
+			v-if="mediaInfo.list" class="h-[calc(100%-158px)]"
+			:items="mediaInfo.list" :item-size="50"
+			key-field="cid" v-slot="{ item, index }"
 		>
-			<div v-for="(item, index) in mediaInfo.list"
-				class="list__item flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)]"
-			>
-				<span class="min-w-6">{{ index + 1 }}</span>
-				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<span class="flex flex-1 ellipsis">{{ item.title }}</span>
-				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<div class="flex gap-2">
-					<button @click="updateDash(index).then(_ => popupActive = 1)">
-						<i class="fa-solid fa-file-arrow-down"></i>
-						<span>{{ $t('home.downloadOptions.audioVisual') }}</span>
-					</button>
-					<button @click=""> 
-						<i class="fa-solid fa-file-export"></i>
-						<span>{{ $t('home.downloadOptions.others') }}</span>
-					</button>
-				</div>
-			</div>
-		</div>
+			<MediaListItem :index="index" :title="item.title" :actions="[() => updateStream(index, 0), () => checkOthers(index)]" :media-type="mediaInfo.type" />
+		</RecycleScroller>
 	</div>
-	<div @click="popupActive = 0" :style="{ 'opacity': popupActive ? 1 : 0, 'pointerEvents': popupActive ? 'all' : 'none' }"
-		class="popup_container absolute flex items-center justify-center w-full h-full bg-opacity-50 bg-black cursor-pointer"
-	>
-		<div @click.stop
-			class="popup min-w-[768px] relative h-96 p-4 rounded-xl bg-[color:var(--block-color)] cursor-default"
-		>
-			<template v-if="playUrlInfo.video">
-				<h3 class="block mb-2">{{ $t(`common.default.dms.name`) }}</h3>
-				<div class="flex gap-1">
-					<button v-for="id in [...(new Set(playUrlInfo.video.map(item => item.id)))]"
-						:class="{ 'selected': currentSelect.dms === id }"
-						@click="currentSelect.dms = id; updateCodec()"
-					>
-						<!-- <i :class="[ 'fa-solid', id >= 64 ? 'fa-high-definition' : 'fa-standard-definition' ]"></i> -->
-						<i class="fa-solid fa-file-video"></i>
-						<span>{{ $t('common.default.dms.data.' + id) }}</span>
-					</button>
-				</div>
-				<hr class="my-[15px]" />
-			</template>
-			<template v-if="'audio' in playUrlInfo && playUrlInfo.audio">
-				<h3 class="block mb-2">{{ $t('common.default.ads.name') }}</h3>
-				<div class="flex gap-1">
-					<button v-for="id in playUrlInfo.audio.map(item => item.id)"
-						:class="{ 'selected': currentSelect.ads === id }"
-						@click="currentSelect.ads = id; updateCodec()"
-					>
-						<i class="fa-solid fa-file-audio"></i>
-						<span>{{ $t('common.default.ads.data.' + id) }}</span>
-					</button>
-				</div>
-				<hr class="my-[15px]" />
-			</template>
-			<template v-if="playUrlInfo.video">
-				<h3 class="block mb-2">{{ $t('common.default.cdc.name') }}</h3>
-				<div class="flex gap-1">
-					<button v-for="item in playUrlInfo.video.filter(item => item.id === currentSelect.dms)"
-						:class="{ 'selected': currentSelect.cdc === item.codecid }"
-						@click="currentSelect.cdc = item.codecid"
-					>
-						<i class="fa-solid fa-file-code"></i>
-						<span>{{ $t('common.default.cdc.data.' + item.codecid) }}</span>
-					</button>
-				</div>
-				<hr class="my-[15px]" />
-			</template>
-			<h3 class="block mb-2">
-				{{ $t('common.default.fmt.name') }}
-				<i @click="openPath('https://www.btjawa.top/bilitools#关于-DASH-FLV-MP4')"
-					class="fa-light fa-circle-question question"
-				></i>
-			</h3>
-			<div class="flex gap-1">
-				<button v-for="item in mediaMap.fmt"
-					:class="{ 'selected': stream_codec === item.id }"
-					@click="stream_codec = item.id"
-				>
-					<i class="fa-solid fa-file-code"></i>
-					<span>{{ $t('common.default.fmt.data.' + item.id) }}</span>
-				</button>
-			</div>
-			<span v-if="typeof getSize() === 'number'"
-				class="absolute bottom-4 right-[120px] leading-8 desc"
-			>
-				~ {{ formatBytes(getSize() as number) }}
-			</span>
-			<button @click="pushBackQueue()"
-				class="absolute bottom-4 right-4 bg-[color:var(--primary-color)]"
-			>
-				<i class="fa-solid fa-right"></i>
-				<span>{{ $t('common.confirm') }}</span>
-			</button>
-		</div>
-	</div>
+	<Popup :style="{ 'opacity': popupActive ? 1 : 0, 'pointerEvents': popupActive ? 'all' : 'none' }"
+		@click="popupActive = 0" @confirm="pushBackQueue" :open="openPath"
+		:get-others="getOthers" :others-reqs="othersReqs" :others-map="othersMap"
+		:popup-active="popupActive" :play-url-info="playUrlInfo"
+	/>
 </div></template>
 
 <script lang="ts">
+import { ApplicationError, stat, formatBytes, parseId, filename, timestamp } from '@/services/utils';
+import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo } from '@/types/data.d';
+import { join as pathJoin } from '@tauri-apps/api/path';
+import { invoke } from '@tauri-apps/api/core';
+import { transformImage } from '@tauri-apps/api/image';
+import { MediaInfo, MediaListItem, Popup } from '@/components/HomePage';
+import { Empty } from '@/components';
 import * as data from '@/services/data';
 import * as shell from '@tauri-apps/plugin-shell';
-import { ApplicationError, stat, formatBytes, parseId } from '@/services/utils';
-import { CurrentSelect, DashInfo, DurlInfo, StreamCodecType } from '@/types/DataTypes';
-import store from '@/store';
+import * as dialog from '@tauri-apps/plugin-dialog';
 
 export default {
+	components: {
+		MediaInfo,
+		MediaListItem,
+		Popup,
+		Empty
+	},
 	data() {
 		return {
-			searchInput: '',
+			searchInput: String(),
 			searchActive: false,
 			mediaRootActive: false,
+			mediaInfo: {} as MediaInfoType,
 			popupActive: 0,
-			iconMap: {
-				'play': 'bcc-icon-icon_list_player_x1',
-				'danmaku': 'bcc-icon-danmuguanli',
-				'reply': 'bcc-icon-pinglunguanli',
-				'like': 'bcc-icon-ic_Likesx',
-				'coin': 'bcc-icon-icon_action_reward_n_x',
-				'favorite': 'bcc-icon-icon_action_collection_n_x',
-				'share': 'bcc-icon-icon_action_share_n_x'
-			},
-			currentSelect: {
-				dms: this.$store.state.settings.df_dms,
-				ads: this.$store.state.settings.df_ads,
-				cdc: this.$store.state.settings.df_cdc,
-			} as CurrentSelect,
-			stream_codec: 0,
 			index: 0,
-			playUrlInfo: {} as DashInfo | DurlInfo,
-			store: store.state,
+			playUrlInfo: {} as DashInfo | DurlInfo | MusicUrlInfo,
+			store: this.$store.state,
+			othersReqs: {
+				aiSummary: -1,
+				danmaku: false,
+			},
+			othersMap: {
+				'cover': { suffix: 'png', desc: 'PNG Image', icon: 'fa-image' },
+				'aiSummary': { suffix: 'md', desc: 'Markdown Document', icon: 'fa-microchip-ai' },
+				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File', icon: 'fa-clock' },
+				'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File', icon: 'fa-clock-rotate-left' },
+			}
 		}
 	},
 	computed: {
-		mediaInfo() {
-			return this.store.data.mediaInfo;
+		fa_dyn() {
+			return this.store.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
 		},
-		mediaMap() {
-			return this.store.data.mediaMap;
-		},
+		currentSelect() {
+			return this.store.data.currentSelect
+		}
 	},
 	watch: {
-		stream_codec(newCodec, oldCodec) {
-			if (newCodec === oldCodec) return;
-			newCodec ? this.updateDurl(this.index) : this.updateDash(this.index);
+		'currentSelect.fmt': function(newFmt, _) {
+			if (newFmt === -1) return;
+			this.updateStream(this.index, Number(newFmt));
+		},
+		'currentSelect.dms': function() {
+			this.updateCodec();
 		}
     },
 	methods: {
@@ -188,12 +97,12 @@ export default {
 			this.mediaRootActive = false;
 			this.searchActive = false;
 			try {
-				this.$store.commit('updateState', { 'data.mediaInfo': {} });
+				this.mediaInfo = {} as MediaInfoType;
 				this.searchActive = true;
 				const { id, type } = await parseId(this.searchInput);
 				const info = await data.getMediaInfo(id, type);
 				console.log(info)
-				this.$store.commit('updateState', { 'data.mediaInfo': info });
+				this.mediaInfo = info;
 				this.mediaRootActive = true;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
@@ -202,40 +111,87 @@ export default {
 				this.searchActive = false;
 			}
 		},
-		updateDefault(ids: number[], df: keyof typeof this.store.settings, opt: keyof typeof this.currentSelect) {
-			this.currentSelect[opt] = ids.includes(this.store.settings[df] as number) ? this.store.settings[df] as number : ids.sort((a, b) => b - a)[0];
+		updateDefault(ids: number[], df: "df_dms" | "df_ads" | "df_cdc", opt: keyof typeof this.currentSelect) {
+			this.currentSelect[opt] = ids.includes(this.store.settings[df]) ? this.store.settings[df] : ids.sort((a, b) => b - a)[0];
 		},
-		async updateDash(index: number) {
+		async updateStream(index: number, codec: number) {
 			try {
-				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as any;
-				this.stream_codec = 0;
+				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as never;
 				this.index = index;
-				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, StreamCodecType.Dash);
-				this.$store.commit('updateState', { 'data.dashInfo': info });
-				this.playUrlInfo = info as DashInfo;
-				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
-				this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads");
-				this.updateCodec();
+				if (this.mediaInfo.type === MediaType.Music) {
+					this.currentSelect.fmt = -1;
+					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { qn: 0 });
+					this.playUrlInfo = info as MusicUrlInfo;
+					this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads");
+				} else {
+					this.currentSelect.fmt = codec;
+					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { codec: StreamCodecType[codec ? 'Mp4' : 'Dash'] });
+					if (codec === 0) {
+						this.playUrlInfo = info as DashInfo;
+						if (!('video' in this.playUrlInfo)) return;
+						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
+						this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads");
+					} else if (codec === 1) {
+						this.playUrlInfo = info as DurlInfo;
+						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
+					}
+					this.updateCodec();
+				}
+				this.popupActive = 1;
+			} catch(err) {
+				if (err instanceof ApplicationError) {
+					err.handleError();
+					if (err.code === -400 && this.currentSelect.fmt === 1) this.updateStream(index, 0);
+				} else new ApplicationError(err as string).handleError();
+			}
+		},
+		updateCodec() {
+			if (!('video' in this.playUrlInfo)) return;
+			this.updateDefault(
+				this.playUrlInfo.video.filter(item => item.id === this.currentSelect.dms).map(item => item.codecid),
+			"df_cdc", "cdc");
+		},
+		async checkOthers(index: number) {
+			try {
+				this.index = index;
+				const info = this.mediaInfo.list[this.index];
+				if (this.mediaInfo.type === "music") {
+					this.othersReqs.danmaku = false;
+				} else {
+					this.othersReqs.aiSummary = await data.getAISummary(info, this.mediaInfo.upper.mid || 0, { check: true }) as number;
+					this.othersReqs.danmaku = true;
+				}
+				this.popupActive = 2;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
 			}
 		},
-		updateCodec() {
-			this.updateDefault(
-				this.playUrlInfo.video.filter(item => item.id === this.currentSelect.dms).map(item => item.codecid),
-			"df_cdc", "cdc");
-		},
-		async updateDurl(index: number) {
+		async getOthers(type: keyof typeof this.othersMap, date?: string) {
 			try {
-				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as any;
-				this.stream_codec = 1;
-				this.index = index;
-				const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, StreamCodecType.Mp4);
-				this.$store.commit('updateState', { 'data.durlInfo': info });
-				this.playUrlInfo = info as DurlInfo;
-				this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
-				this.updateCodec();
+				const info = this.mediaInfo.list[this.index];
+				let name = this.$t(`home.label.${type}`) + '_' + filename(info.title) + '_' + timestamp(Date.now(), { file: true });
+				if (type === 'historyDanmaku') name = date + '_' + name;
+                const result = await (async () => { switch (type) {
+					case 'cover': return await data.getBinary(info.cover);
+					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);
+					case 'liveDanmaku': return await data.getLiveDanmaku(info);
+					case 'historyDanmaku': return await data.getHistoryDanmaku(info, date as string);
+				}})();
+				const path = await dialog.save({
+					filters: [{
+                        name: this.othersMap[type].desc,
+                        extensions: [this.othersMap[type].suffix]
+                    }],
+					defaultPath: await pathJoin(String(this.store.settings.down_dir), name)
+				});
+				if (!path) return;
+				switch (type) {
+					case 'cover': return await invoke('write_binary', { secret: this.store.data.secret, path, contents: transformImage(result as ArrayBuffer) });
+					case 'aiSummary': return await invoke('write_binary', { secret: this.store.data.secret, path, contents: new TextEncoder().encode(result as string) });
+					case 'liveDanmaku': return await invoke('xml_to_ass', { secret: this.store.data.secret, path, filename: name, contents: result })
+					case 'historyDanmaku': return await invoke('xml_to_ass', { secret: this.store.data.secret, path, filename: name, contents: result })
+				}
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -244,21 +200,16 @@ export default {
 		async pushBackQueue() {
 			this.popupActive = 0;
 			try {
-				const video = this.playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc);
-				const audio = (this.playUrlInfo as DashInfo).audio ? (this.playUrlInfo as DashInfo).audio.find(item => item.id === this.currentSelect.ads) : null;
-				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], currentSelect: this.currentSelect, video, ...(audio && { audio }) });
+				const playUrlInfo = this.playUrlInfo as DashInfo;
+				const video = playUrlInfo.video ? playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc) : null;
+				const audio = playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
+				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], ...(video && { video }), ...(audio && { audio }) });
 				this.$router.push('/down-page');
-				this.store.data.queuePage = 0;
+				this.store.status.queuePage = 0;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
 			}
-		},
-		getSize() {
-			if (!this.playUrlInfo.video) return null;
-			const info = this.playUrlInfo.video.find(item => item.id === this.currentSelect.dms);
-			if (info && 'size' in info) { return info.size }
-			else { return null }
 		},
 		async openPath(path: string) {
             return shell.open(path);
@@ -269,7 +220,7 @@ export default {
 }
 </script>
 
-<style lang="scss">
+<style>
 .search_input, .media_root, .media_list, .popup_container {
 	transition: top .3s cubic-bezier(0,1,.6,1), opacity .2s, transform .5s cubic-bezier(0,1,.6,1);
 }
@@ -281,5 +232,11 @@ export default {
         -webkit-line-clamp: 2;
         line-clamp: 2;
     }
+}
+.popup button {
+	border: 2px solid transparent;
+	&.selected {
+		border: 2px solid var(--primary-color)
+	}
 }
 </style>

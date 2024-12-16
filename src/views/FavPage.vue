@@ -1,6 +1,13 @@
 <template><div>
-    <h1 class="text-center">
-        FavPage.vue<br>
-        Work in progress
-    </h1>
+    <Empty :expression="true" text="common.wip" />
 </div></template>
+
+<script lang="ts">
+import Empty from '@/components/Empty.vue';
+
+export default {
+    components: {
+        Empty
+    }
+}
+</script>

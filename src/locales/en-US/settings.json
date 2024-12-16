@@ -27,6 +27,9 @@
             "desc": "Only HTTP(S) is supported yet. Restart the app for global changes to take effect."
         }
     },
+    "advanced": {
+        "name": "Advanced"
+    },
     "about": {
         "name": "About",
         "thanks": "If you find it useful, please give me a Star on GitHub!",

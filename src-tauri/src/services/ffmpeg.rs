@@ -40,20 +40,11 @@ async fn get_frames(input: PathBuf) -> Result<u64, String> {
         .output().await
         .map_err(|e| e.to_string())?;
 
-    log::info!("{:?}", &String::from_utf8_lossy(&meta_output.stderr));
-    let re_0 = Regex::new(r"frame=\s(\d+)\s").map_err(|e| e.to_string())?;
-    let re_1 = Regex::new(r"frame=\d+").map_err(|e| e.to_string())?;
-    if let Some(captures) = re_0.captures(&String::from_utf8_lossy(&meta_output.stderr)) {
-        return captures.get(1)
-            .map(|m| m.as_str().trim().parse().unwrap_or(0))
-            .ok_or("Failed to parse frame count".to_string());
-    }
-    if let Some(captures) = re_1.captures(&String::from_utf8_lossy(&meta_output.stderr)) {
-        return captures.get(0)
-            .map(|m| m.as_str().trim().parse().unwrap_or(0))
-            .ok_or("Failed to parse frame count".to_string());
-    }
-    Err("No frame count found in ffmpeg output".to_string())
+    let stderr = String::from_utf8_lossy(&meta_output.stderr);
+    log::info!("{:?}", &stderr);
+    return Regex::new(r"frame=\s*(\d+)").unwrap().captures_iter(&stderr)
+        .filter_map(|caps| caps.get(1)?.as_str().trim().parse::<u64>().ok())
+        .find(|&num| num > 1).ok_or("Failed to parse frame count".to_string());
 }
 
 pub async fn merge(info: QueueInfo, event: &Channel<DownloadEvent>) -> Result<(), String> {
@@ -78,7 +69,7 @@ pub async fn merge(info: QueueInfo, event: &Channel<DownloadEvent>) -> Result<()
     let frames = get_frames(video_path.unwrap()).await.map_err(|e| {
         event.send(DownloadEvent::Error { code: -1, message: e.to_string() }).unwrap();
         e.to_string()
-    })?;
+    }).unwrap_or(0);
     let app = get_app_handle();
     async_runtime::spawn(async move {
         let progress_path = get_app_handle().path().app_log_dir().unwrap()
