@@ -62,16 +62,23 @@ export async function wbi(params: { [key: string]: string | number | object }) {
 }
 
 export async function captcha(gt: string, challenge: string): Promise<login.Captcha> {
+    const settings_lang = store.state.settings.language;
+    const lang = (() => { if (settings_lang.startsWith('zh')) {
+        return settings_lang;
+    } else {
+        return settings_lang.slice(0, 2);
+    }})();
     return new Promise(async (resolve) => {
         // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
         await initGeetest({
             gt,
             challenge,
+            lang,
             offline: false,
             new_captcha: true,
             product: "bind",
             width: "300px",
-            https: true
+            https: true,
         }, function (captchaObj) {
             captchaObj.onReady(function () {
                 captchaObj.verify();

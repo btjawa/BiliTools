@@ -11,7 +11,7 @@ const t = i18n.global.t;
 iziToast.settings({
     transitionIn: 'fadeInLeft',
     transitionOut: 'fadeOutRight',
-    backgroundColor: 'var(--block-color)',
+    backgroundColor: 'var(--solid-block-color)',
     titleColor: 'var(--content-color)',
     messageColor: 'var(--content-color)',
     iconColor: 'var(--content-color)',
@@ -26,7 +26,6 @@ export class ApplicationError extends Error {
         this.code = options?.code;
         this.noStack = options?.noStack;
         (Error as any).captureStackTrace(this, this.constructor);
-        console.log(this.stack)
         this.stack = this.cleanStack(this.stack);
     }
     private cleanStack(stack?: string): string {
@@ -48,7 +47,7 @@ export function iziInfo(message: string) {
     console.log(message)
     iziToast.info({
         icon: 'fa-solid fa-circle-info',
-        layout: 2, timeout: 4000,
+        layout: 2, timeout: false, // Cheat iziToast for no timeout
         title: t('common.iziToast.info'), message
     });
 }
@@ -57,12 +56,12 @@ function iziError(message: string) {
     console.error(message);
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
-        layout: 2, timeout: 10000,
+        layout: 2, timeout: false, // Cheat iziToast for no timeout
         title: t('common.iziToast.error'), message: message.replace(/\n/g, '<br>')
     });
 }
 
-export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number, binary?: boolean }) {
+export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number, type?: 'text' | 'binary' }) {
     let grisk_id: string = '';
     for (let i = 0; i < (options?.times ?? 3); i++) {
         const rawParams = {
@@ -84,7 +83,10 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
         if (!response.ok) {
             throw new ApplicationError(response.statusText, { code: response.status });
         }
-        if (options?.binary) return await response.arrayBuffer();
+        switch(options?.type) {
+            case 'text': return await response.text();
+            case 'binary': return await response.arrayBuffer();
+        }
         const body = await response.json();
         if (body.code !== 0) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {

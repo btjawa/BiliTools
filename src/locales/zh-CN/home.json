@@ -10,7 +10,8 @@
         "aiSummary": "AI总结",
         "danmaku": "弹幕",
         "liveDanmaku": "实时弹幕",
-        "historyDanmaku": "历史弹幕"    
+        "historyDanmaku": "历史弹幕",
+        "metaSnapshot": "元信息快照"
     },
     "empty": "可用资源为空~"
 }

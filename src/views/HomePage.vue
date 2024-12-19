@@ -18,18 +18,37 @@
 	>
 		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open="openPath" />
         <Empty v-if="mediaInfo.list" :expression="mediaInfo.list.length === 0" text="home.empty" />
-		<RecycleScroller
-			v-if="mediaInfo.list" class="h-[calc(100%-158px)]"
+		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="mediaInfo?.stein_gate">
+			<template v-for="story in mediaInfo.stein_gate.story_list">
+			<button class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
+				@click="updateStein(story.edge_id)"
+			>
+				<i :class="[fa_dyn, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
+			</button>
+			</template>
+		</div>
+		<RecycleScroller v-if="mediaInfo.list"
+			class="h-[calc(100%-158px)] transition-opacity"
 			:items="mediaInfo.list" :item-size="50"
 			key-field="cid" v-slot="{ item, index }"
 		>
-			<MediaListItem :index="index" :title="item.title" :actions="[() => updateStream(index, 0), () => checkOthers(index)]" :media-type="mediaInfo.type" />
+			<MediaListItem :index="index" :title="item.title" :actions="[() => updateStream(index, 0, true), () => checkOthers(index)]" :media-type="mediaInfo.type" />
 		</RecycleScroller>
+		<div class="my-2 flex justify-center gap-[5px] absolute w-full"
+			v-if="mediaInfo?.stein_gate" :style="{ 'top': 216 + mediaInfo.list.length * 50 + 'px' }"
+		>
+			<template v-for="(quesion, index) in mediaInfo.stein_gate.choices">
+				<button
+					v-if="getSteinCondition(mediaInfo.stein_gate, index)"
+					@click="updateStein(quesion.id)"
+				>{{ quesion.option }}</button>
+			</template>
+		</div> 
 	</div>
-	<Popup :style="{ 'opacity': popupActive ? 1 : 0, 'pointerEvents': popupActive ? 'all' : 'none' }"
-		@click="popupActive = 0" @confirm="pushBackQueue" :open="openPath"
+	<Popup
+		:close="popupClose" :confirm="pushBackQueue" :open="openPath"
 		:get-others="getOthers" :others-reqs="othersReqs" :others-map="othersMap"
-		:popup-active="popupActive" :play-url-info="playUrlInfo"
+		:popup-active="popupActive" :play-url-info="playUrlInfo" :media-type="mediaInfo.type || ''"
 	/>
 </div></template>
 
@@ -57,6 +76,7 @@ export default {
 			searchInput: String(),
 			searchActive: false,
 			mediaRootActive: false,
+			mediaListActive: false,
 			mediaInfo: {} as MediaInfoType,
 			popupActive: 0,
 			index: 0,
@@ -69,6 +89,7 @@ export default {
 			othersMap: {
 				'cover': { suffix: 'png', desc: 'PNG Image', icon: 'fa-image' },
 				'aiSummary': { suffix: 'md', desc: 'Markdown Document', icon: 'fa-microchip-ai' },
+				'metaSnapshot': { suffix: 'md', desc: 'Markdown Document', icon: 'fa-camera-polaroid' },
 				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File', icon: 'fa-clock' },
 				'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File', icon: 'fa-clock-rotate-left' },
 			}
@@ -84,7 +105,6 @@ export default {
 	},
 	watch: {
 		'currentSelect.fmt': function(newFmt, _) {
-			if (newFmt === -1) return;
 			this.updateStream(this.index, Number(newFmt));
 		},
 		'currentSelect.dms': function() {
@@ -92,6 +112,18 @@ export default {
 		}
     },
 	methods: {
+		popupClose() {
+			setTimeout(() => this.popupActive = 0, 200);
+		},
+		getSteinCondition(stein_gate: typeof this.mediaInfo.stein_gate, index: number) {
+			const question = stein_gate?.choices?.[index];
+			if (!question) return false;
+			const exp = question.condition ? question.condition.replace(/\$[\w]+/g, (match) => {
+				const hiddenVar = stein_gate.hidden_vars.find(v => v.id_v2 === match.slice());
+				return hiddenVar?.value.toString() || '0';
+			}) : '1';
+			return /^[\d+\-*/.()=<>\s]+$/.test(exp) ? (new Function('return ' + exp))() : false;
+		},
 		async search() {
 			if (!this.searchInput) return null;
 			this.mediaRootActive = false;
@@ -114,30 +146,30 @@ export default {
 		updateDefault(ids: number[], df: "df_dms" | "df_ads" | "df_cdc", opt: keyof typeof this.currentSelect) {
 			this.currentSelect[opt] = ids.includes(this.store.settings[df]) ? this.store.settings[df] : ids.sort((a, b) => b - a)[0];
 		},
-		async updateStream(index: number, codec: number) {
+		async updateStream(index: number, fmt: number, init?: boolean) {
 			try {
 				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as never;
 				this.index = index;
 				if (this.mediaInfo.type === MediaType.Music) {
-					this.currentSelect.fmt = -1;
+					if (init) this.currentSelect.fmt = 0;
 					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { qn: 0 });
 					this.playUrlInfo = info as MusicUrlInfo;
 					this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads");
 				} else {
-					this.currentSelect.fmt = codec;
-					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { codec: StreamCodecType[codec ? 'Mp4' : 'Dash'] });
-					if (codec === 0) {
+					if (init) this.currentSelect.fmt = fmt;
+					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { codec: StreamCodecType[fmt ? 'Mp4' : 'Dash'] });
+					if (fmt === 0) {
 						this.playUrlInfo = info as DashInfo;
 						if (!('video' in this.playUrlInfo)) return;
 						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
 						this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads");
-					} else if (codec === 1) {
+					} else if (fmt === 1) {
 						this.playUrlInfo = info as DurlInfo;
 						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms");
 					}
 					this.updateCodec();
 				}
-				this.popupActive = 1;
+				if (init) this.popupActive = 1;
 			} catch(err) {
 				if (err instanceof ApplicationError) {
 					err.handleError();
@@ -161,6 +193,7 @@ export default {
 					this.othersReqs.aiSummary = await data.getAISummary(info, this.mediaInfo.upper.mid || 0, { check: true }) as number;
 					this.othersReqs.danmaku = true;
 				}
+				await this.updateStream(index, 0);
 				this.popupActive = 2;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
@@ -171,12 +204,11 @@ export default {
 			try {
 				const info = this.mediaInfo.list[this.index];
 				let name = this.$t(`home.label.${type}`) + '_' + filename(info.title) + '_' + timestamp(Date.now(), { file: true });
-				if (type === 'historyDanmaku') name = date + '_' + name;
                 const result = await (async () => { switch (type) {
 					case 'cover': return await data.getBinary(info.cover);
 					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);
 					case 'liveDanmaku': return await data.getLiveDanmaku(info);
-					case 'historyDanmaku': return await data.getHistoryDanmaku(info, date as string);
+					case 'historyDanmaku': name = date + '_' + name; return await data.getHistoryDanmaku(info, date as string);
 				}})();
 				const path = await dialog.save({
 					filters: [{
@@ -197,12 +229,37 @@ export default {
 				new ApplicationError(err as string).handleError();
 			}
 		},
-		async pushBackQueue() {
-			this.popupActive = 0;
+		async updateStein(edge_id: number) {
+			const stein_gate = this.mediaInfo.stein_gate;
+			if (!stein_gate) return;
+			const stein_info = await data.getSteinInfo(this.mediaInfo.id, stein_gate.grapth_version, edge_id);
+			this.mediaInfo.stein_gate = {
+				edge_id: 1,
+				grapth_version: stein_gate.grapth_version,
+				story_list: stein_info.story_list,
+				choices: stein_info.edges.questions[0].choices,
+				hidden_vars: stein_info.hidden_vars,
+			};
+			const current = stein_info.story_list.find(story => story.edge_id === edge_id);
+			if (!current) return;
+			this.mediaInfo.list = [{
+				id: this.mediaInfo.id,
+				cid: current.cid,
+				title: current.title,
+				cover: current.cover,
+				desc: this.mediaInfo.desc,
+				eid: this.mediaInfo.list[0].eid,
+				ss_title: this.mediaInfo.list[0].ss_title,
+			}];
+		},
+		async pushBackQueue(options: { video: boolean, audio: boolean }) {
+			this.popupClose();
 			try {
 				const playUrlInfo = this.playUrlInfo as DashInfo;
-				const video = playUrlInfo.video ? playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc) : null;
-				const audio = playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
+				const video = options.video === false ? null : 
+					playUrlInfo.video ? playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc) : null;
+				const audio = options.audio === false ? null : 
+					playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
 				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], ...(video && { video }), ...(audio && { audio }) });
 				this.$router.push('/down-page');
 				this.store.status.queuePage = 0;
@@ -223,15 +280,6 @@ export default {
 <style>
 .search_input, .media_root, .media_list, .popup_container {
 	transition: top .3s cubic-bezier(0,1,.6,1), opacity .2s, transform .5s cubic-bezier(0,1,.6,1);
-}
-.info__details {
-	h3, & > span {
-        @apply overflow-hidden text-ellipsis;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-    }
 }
 .popup button {
 	border: 2px solid transparent;

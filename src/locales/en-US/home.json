@@ -10,7 +10,8 @@
         "aiSummary": "AI Summary",
         "danmaku": "Danmaku",
         "liveDanmaku": "Live Danmaku",
-        "historyDanmaku": "History Danmaku"    
+        "historyDanmaku": "History Danmaku",
+        "metaSnapshot": "Metadata Snapshot"
     },
     "empty": "No available resources~"
 }

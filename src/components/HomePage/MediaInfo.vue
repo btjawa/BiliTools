@@ -50,3 +50,15 @@ export default defineComponent({
     }
 });
 </script>
+
+<style scoped>
+.info__details {
+	h3, & > span {
+        @apply overflow-hidden text-ellipsis;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+    }
+}
+</style>

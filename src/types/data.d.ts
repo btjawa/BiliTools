@@ -1,3 +1,11 @@
+export interface Headers {
+  'Cookie': string;
+  'User-Agent': string;
+  'Referer': string;
+  'Origin': string;
+  [key: string]: string;
+}
+
 export enum Queue {
   Waiting = "waiting",
   Doing = "doing",
@@ -29,11 +37,19 @@ export interface MediaInfoListItem {
 }
 
 export interface MediaInfo {
+  id: number;
   title: string;
   cover: string;
   desc: string;
   type: MediaType;
   tags: string[];
+  stein_gate?: {
+    grapth_version: number;
+    edge_id: number;
+    story_list: SteinInfo["data"]["story_list"];
+    choices?: SteinInfo["data"]["edges"]["questions"][0]["choices"];
+    hidden_vars: SteinInfo["data"]["hidden_vars"];
+  };
   stat: {
     play: number | null,
     danmaku: number | null,
@@ -1508,5 +1524,213 @@ export interface AISummaryInfo {
     status: number;
     like_num: number;
     dislike_num: number;
+  };
+}
+
+export interface PlayerInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    aid: number;
+    bvid: string;
+    allow_bp: boolean;
+    no_share: boolean;
+    cid: number;
+    max_limit: number;
+    page_no: number;
+    has_next: boolean;
+    ip_info: {
+      ip: string;
+      zone_ip: string;
+      zone_id: number;
+      country: string;
+      province: string;
+      city: string;
+    };
+    login_mid: number;
+    login_mid_hash: string;
+    is_owner: boolean;
+    name: string;
+    permission: string;
+    level_info: {
+      current_level: number;
+      current_min: number;
+      current_exp: number;
+      next_exp: number;
+      level_up: number;
+    };
+    vip: {
+      type: number;
+      status: number;
+      due_date: number;
+      vip_pay_type: number;
+      theme_type: number;
+      label: {
+        path: string;
+        text: string;
+        label_theme: string;
+        text_color: string;
+        bg_style: number;
+        bg_color: string;
+        border_color: string;
+        use_img_label: boolean;
+        img_label_uri_hans: string;
+        img_label_uri_hant: string;
+        img_label_uri_hans_static: string;
+        img_label_uri_hant_static: string;
+      };
+      avatar_subscript: number;
+      nickname_color: string;
+      role: number;
+      avatar_subscript_url: string;
+      tv_vip_status: number;
+      tv_vip_pay_type: number;
+      tv_due_date: number;
+      avatar_icon: {
+        icon_type: number;
+        icon_resource: {
+        };
+      };
+    };
+    answer_status: number;
+    block_time: number;
+    role: string;
+    last_play_time: number;
+    last_play_cid: number;
+    now_time: number;
+    online_count: number;
+    need_login_subtitle: boolean;
+    subtitle: {
+      allow_submit: boolean;
+      lan: string;
+      lan_doc: string;
+      subtitles: unknown[];
+    };
+    view_points: unknown[];
+    preview_toast: string;
+    interaction: {
+      history_node: {
+        node_id: number;
+        title: string;
+        cid: number;
+      };
+      graph_version: number;
+      msg: string;
+      error_toast: string;
+      mark: number;
+      need_reload: number;
+    };
+    options: {
+      is_360: boolean;
+      without_vip: boolean;
+    };
+    guide_attention: unknown[];
+    jump_card: unknown[];
+    operation_card: unknown[];
+    online_switch: {
+      enable_gray_dash_playback: string;
+      new_broadcast: string;
+      realtime_dm: string;
+      subtitle_submit_switch: string;
+    };
+    fawkes: {
+      config_version: number;
+      ff_version: number;
+    };
+    show_switch: {
+      long_progress: boolean;
+    };
+    bgm_info: {
+      music_id: string;
+      music_title: string;
+      jump_url: string;
+    };
+    toast_block: boolean;
+    is_upower_exclusive: boolean;
+    is_upower_play: boolean;
+    is_ugc_pay_preview: boolean;
+    elec_high_level: {
+      privilege_type: number;
+      title: string;
+      sub_title: string;
+      show_button: boolean;
+      button_text: string;
+      jump_url: string;
+      intro: string;
+      new: boolean;
+    };
+    disable_show_up_info: boolean;
+  };
+}
+
+export interface SteinInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    title: string;
+    edge_id: number;
+    story_list: {
+      node_id: number;
+      edge_id: number;
+      title: string;
+      cid: number;
+      start_pos: number;
+      cover: string;
+      is_current: number;
+      cursor: number;
+    }[];
+    edges: {
+      dimension: {
+        width: number;
+        height: number;
+        rotate: number;
+        sar: string;
+      };
+      questions: {
+        id: number;
+        type: number;
+        start_time_r: number;
+        duration: number;
+        pause_video: number;
+        title: string;
+        choices: {
+          id: number;
+          platform_action: string;
+          native_action: string;
+          condition: string;
+          cid: number;
+          option: string;
+          is_default: number;
+        }[];
+      }[];
+      skin: {
+        choice_image: string;
+        title_text_color: string;
+        title_shadow_color: string;
+        title_shadow_offset_y: number;
+        title_shadow_radius: number;
+        progressbar_color: string;
+        progressbar_shadow_color: string;
+      };
+    };
+    buvid: string;
+    preload: {
+      video: {
+        aid: number;
+        cid: number;
+      }[];
+    };
+    hidden_vars: {
+      value: number;
+      id: string;
+      id_v2: string;
+      type: number;
+      is_show: number;
+      name: string;
+      skip_overwrite: number;
+    }[];
+    is_leaf: number;
   };
 }

@@ -40,11 +40,23 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
             }
             const data = info.data.View;
             return {
+                id: data.aid,
                 title: data.title,
                 cover: data.pic.replace("http:", "https:"),
                 desc: data.desc.replace("\n", "<br>"),
                 type,
                 tags: info.data.Tags.map(item => item.tag_name),
+                stein_gate: data.rights.is_stein_gate ? await (async () => {
+                    const playerInfo = await getPlayerInfo(data.aid, data.cid);
+                    const steinInfo = await getSteinInfo(data.aid, playerInfo.interaction.graph_version);
+                    return {
+                        edge_id: 1,
+                        grapth_version: playerInfo.interaction.graph_version,
+                        story_list: steinInfo.story_list,
+                        choices: steinInfo.edges.questions[0].choices,
+                        hidden_vars: steinInfo.hidden_vars,
+                    };
+                })() : undefined,
                 stat: {
                     play: data.stat.view,
                     danmaku: data.stat.danmaku,
@@ -90,6 +102,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
             }
             const data = info.result;
             return {
+                id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
                 desc: data.evaluate.replace("\n", "<br>"),
@@ -127,6 +140,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
             }
             const data = info.data;
             return {
+                id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
                 desc: `${data.subtitle || ''}<br>${data.faq.title || ''}<br>${data.faq.content || ''}`,
@@ -177,6 +191,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
             }
             const data = info.data;
             return {
+                id: data.aid,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
                 desc: data.intro.replace("\n", "<br>"),
@@ -297,7 +312,6 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
         case DataTypes.MediaType.Music: {
             const _info = body as DataTypes.MusicPlayUrlInfo;
             const data = _info.data;
-            console.log(body)
             const id = (() => {switch (options?.qn) {
                 case 0: return 30228;
                 case 1: return 30280;
@@ -330,6 +344,7 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
 }
 
 export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData | DataTypes.MusicUrlData }) {
+    if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
     const tasks = [
         ...(params.video ? [{
             urls: [params.video.base_url, ...params.video.backup_url],
@@ -352,7 +367,6 @@ export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem,
             return currentSelect.ads === 30252 ? 'flac' : 'aac';
         }
     })()
-    console.log(params.info)
     const queueInfo: DataTypes.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext });
     store.commit('pushToArray', { 'queue.waiting': queueInfo});
     console.log(store.state.queue)
@@ -399,16 +413,28 @@ export async function getLiveDanmaku(info: DataTypes.MediaInfo["list"][0], type?
         type: type === DataTypes.MediaType.Manga ? 2 : 1,
         oid: info.cid, pid: info.id, segment_index: 1, // Segment INOP,  
     }
-    console.log(params)
-    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { binary: true, wbi: true, params });
+    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
     return new TextEncoder().encode(xml);
 }
 
 export async function getHistoryDanmaku(info: DataTypes.MediaInfo["list"][0], date: string) {
     const params = { type: 1, oid: info.cid, date };
-    console.log(params)
-    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { binary: true, params });
+    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { type: 'binary', params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
     return new TextEncoder().encode(xml);
+}
+
+export async function getPlayerInfo(id: number, cid: number) {
+    const params = { aid: id, cid };
+    const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { wbi: true, params });
+    const body = response as DataTypes.PlayerInfo;
+    return body.data;
+}
+
+export async function getSteinInfo(id: number, graph_version: number, edge_id?: number) {
+    const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
+    const response = await tryFetch('https://api.bilibili.com/x/stein/edgeinfo_v2', { wbi: true, params });
+    const body = response as DataTypes.SteinInfo;
+    return body.data;
 }

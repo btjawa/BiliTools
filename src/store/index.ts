@@ -1,5 +1,6 @@
 import { createStore } from 'vuex';
 import { CurrentSelect, QueueInfo } from '@/types/data.d';
+import { Headers } from '@/types/data.d';
 
 export default createStore({
     state() {
@@ -40,7 +41,7 @@ export default createStore({
                 inited: false,
                 secret: String(),
                 hash: String(),
-                headers: {},
+                headers: {} as Headers,
                 currentSelect: {
                     dms: -1,
                     ads: -1,

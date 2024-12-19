@@ -7,20 +7,22 @@
         <h3 @click="queuePage = 2" :class="queuePage !== 2 || 'active'">{{ $t('downloads.tab.complete') }}</h3>
     </div>
     <hr class="w-full my-4 flex-shrink-0" />
-    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-[calc(100%-90px)]" ref="queuePage">
-        <RecycleScroller
+    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-[calc(100%-90px)] gap-0.5 overflow-auto" ref="queuePage">
+        <!-- <RecycleScroller
 			v-if="Object.values(store.queue)[queuePage].length"
 			:items="Object.values(store.queue)[queuePage]"
 			:item-size="103" v-slot="{ item }"
-		>
-            <div class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3">
+		> -->
+            <div v-for="item in Object.values(store.queue)[queuePage]"
+                class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
+            >
                 <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
                     {{ item.info.title }}
                 </h3>
                 <div class="!flex gap-2 desc">
                     <template v-for="option in item.currentSelect">
                     <span v-if="!(option < 0)">
-                        {{ $t(`common.default.${Object.keys(item.currentSelect).find(k => item.currentSelect[k] === option)}.data.${option}`) }}
+                        {{ $t(`common.default.${Object.keys(item.currentSelect).find(k => (item.currentSelect as any)[k] === option)}.data.${option}`) }}
                     </span>
                     </template>
                     <span>{{ item.ts.string }}</span>
@@ -46,7 +48,7 @@
                     </button>
                 </div>
             </div>
-		</RecycleScroller>
+		<!-- </RecycleScroller> -->
         <button v-if="queuePage === 0 && store.queue.waiting.length > 0" @click="processQueue()"
             class="absolute right-6 bottom-6"
         >
@@ -82,7 +84,7 @@ export default {
         },
         fa_dyn() {
 			return this.$store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
-		}
+		},
     },
     watch: {
         queuePage(oldPage, newPage) {

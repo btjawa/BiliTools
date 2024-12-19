@@ -301,7 +301,7 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
                     if info.tasks.len() > 1 { // for visual-audio
                         let event = DOWNLOAD_EVENT.get().unwrap();
                         let _ = merge(info.clone(), event).await.map_err(|e| e.to_string());
-                        let _ = fs::remove_file(info.tasks[0].clone().path.unwrap().parent().unwrap()).map_err(|e| e.to_string());
+                        let _ = fs::remove_dir_all(info.tasks[0].clone().path.unwrap().parent().unwrap()).map_err(|e| e.to_string());
                     } else {
                         let _ = fs::rename(info.tasks[0].clone().path.unwrap(), &info.output).map_err(|e| e.to_string());
                     }

@@ -10,7 +10,7 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "exempt": "Data generated and acquired will be stored solely on the user's device.",
-    "bilibili": "BiliBili",
+    "bilibili": "Bilibili",
     "wip": "Working in progress",
     "iziToast": {
         "info": "Info",
@@ -59,7 +59,7 @@
         "fmt": {
             "name": "Streaming Format",
             "data": {
-                "2": "FLV (Deprecated)",
+                "2": "FLV Format (Deprecated)",
                 "0": "DASH Format",
                 "1": "MP4 Format"
             }

@@ -12,7 +12,7 @@ import * as auth from "@/services/auth";
 const t = i18n.global.t;
 
 export async function fetchUser() {
-    const mid = new Headers(store.state.data.headers).get('Cookie')?.match(/DedeUserID=(\d+);/)?.[1];
+    const mid = store.state.data.headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
     if (!mid) {
         store.commit('updateState', { 'user.isLogin': false, 'data.inited': true });
         return null;
