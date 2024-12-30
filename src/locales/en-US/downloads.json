@@ -10,7 +10,7 @@
         "audio": "Audio",
         "merge": "Merge",
         "complete": "Complete",
-        "startDownload": "Start Download"
+        "download": "Download"
     },
     "empty": "This queue is empty~"
 }

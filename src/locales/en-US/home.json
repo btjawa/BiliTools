@@ -11,7 +11,8 @@
         "danmaku": "Danmaku",
         "liveDanmaku": "Live Danmaku",
         "historyDanmaku": "History Danmaku",
-        "metaSnapshot": "Metadata Snapshot"
+        "metaSnapshot": "Metadata Snapshot",
+        "multiSelect": "Multi-Select"
     },
     "empty": "No available resources~"
 }

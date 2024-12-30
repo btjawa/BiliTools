@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use rand::{distributions::Alphanumeric, Rng};
 use sea_orm::FromJsonQueryResult;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -8,13 +7,12 @@ use tauri_plugin_http::reqwest;
 use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{RwLock as StdRwLock, Arc}, time::Duration};
 use tokio::{sync::{RwLock, Notify, OnceCell}, time::sleep};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
-
-use crate::{downloads, ffmpeg::merge, shared::{filename, get_app_handle, init_client, BINARY_PATH, CONFIG, SECRET}};
+use crate::{downloads, ffmpeg, shared::{filename, get_app_handle, init_client, BINARY_PATH, BINARY_RELATIVE, CONFIG, SECRET, random_string}};
 
 lazy_static! {
-    pub static ref WAITING_QUEUE: RwLock<VecDeque<QueueInfo>> = RwLock::new(VecDeque::new());
-    pub static ref DOING_QUEUE: RwLock<VecDeque<QueueInfo>> = RwLock::new(VecDeque::new());
-    pub static ref COMPLETE_QUEUE: RwLock<VecDeque<QueueInfo>> = RwLock::new(VecDeque::new());
+    pub static ref WAITING_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
+    pub static ref DOING_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
+    pub static ref COMPLETE_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
     static ref ARIA2C_PORT: Arc<StdRwLock<usize>> = Arc::new(StdRwLock::new(0));
     static ref ARIA2C_CHILD: Arc<StdRwLock<Option<CommandChild>>> = Arc::new(StdRwLock::new(None));
     static ref DOWNLOAD_NOTIFY: Notify = Notify::new();
@@ -25,10 +23,10 @@ lazy_static! {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct QueueInfo {
     pub id: String,
-    pub ts: Timestamp,
+    pub ts: Arc<Timestamp>,
     pub tasks: Vec<Task>,
     pub output: PathBuf,
-    pub info: MediaInfo,
+    pub info: Arc<MediaInfo>,
     #[serde(rename = "currentSelect")]
     pub current_select: Value,
 }
@@ -45,16 +43,19 @@ pub struct Task {
 #[serde(tag = "status")]
 pub enum DownloadEvent {
     Started {
-        gid: String,
+        id: Arc<String>,
+        gid: Arc<String>,
         media_type: String,
     },
     Progress {
-        gid: String,
+        id: Arc<String>,
+        gid: Arc<String>,
         content_length: u64,
         chunk_length: u64,
     },
     Finished {
-        gid: String,
+        id: Arc<String>,
+        gid: Arc<String>,
     },
     Error {
         code: isize,
@@ -66,13 +67,13 @@ pub enum DownloadEvent {
 #[serde(tag = "type")]
 pub enum QueueEvent {
     Waiting {
-        data: VecDeque<QueueInfo>
+        data: VecDeque<Arc<QueueInfo>>
     },
     Doing {
-        data: VecDeque<QueueInfo>
+        data: VecDeque<Arc<QueueInfo>>
     },
     Complete {
-        data: VecDeque<QueueInfo>
+        data: VecDeque<Arc<QueueInfo>>
     },
 }
 
@@ -89,8 +90,8 @@ pub struct MediaInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Timestamp {
-    millis: isize,
-    string: String,
+    pub millis: isize,
+    pub string: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -108,11 +109,18 @@ struct Aria2AddUri {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct Aria2Remove {
+    id: String,
+    jsonrpc: String,
+    result: Option<String>,
+    error: Option<Aria2Error>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct Aria2TellStatus {
     id: String,
     jsonrpc: String,
     result: Option<Aria2TellStatusResult>,
-    error: Option<Aria2Error>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -142,6 +150,8 @@ struct Aria2TellStatusResult {
     connections: String,
     #[serde(rename = "errorCode")]
     error_code: Option<String>,
+    #[serde(rename = "errorMessage")]
+    error_message: Option<String>
 }
 
 pub fn init() -> Result<(), String> {
@@ -152,7 +162,7 @@ pub fn init() -> Result<(), String> {
         .ok_or("No free port found".to_string())?.local_addr().unwrap().port();
     *ARIA2C_PORT.write().unwrap() = port as usize;
     let app = get_app_handle();
-    let (_, child) = app.shell().sidecar("./bin/aria2c").unwrap()
+    let (_, child) = app.shell().sidecar(format!("{}/aria2c", &*BINARY_RELATIVE)).unwrap()
         .current_dir(&*BINARY_PATH)
         .args([
             format!("--conf-path={}", BINARY_PATH.join("aria2.conf").to_string_lossy()),
@@ -161,7 +171,6 @@ pub fn init() -> Result<(), String> {
             format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
         ]).spawn().map_err(|e| e.to_string())?;
 
-        
     #[cfg(target_os = "macos")]
     app.shell().sidecar("/bin/bash").unwrap()
     .args([
@@ -184,13 +193,13 @@ pub fn _kill() -> Result<(), String> {
     Ok(())
 }
 
-fn param_to_value(value: &Value) -> Result<Value, String> {
+fn param_to_value(value: Value) -> Result<Value, String> {
     match value {
-        Value::String(s) => Ok(Value::String(s.clone())),
-        Value::Number(n) => Ok(Value::Number(n.clone())),
-        Value::Bool(b) => Ok(Value::Bool(*b)),
-        Value::Array(arr) => Ok(Value::Array(arr.clone())),
-        Value::Object(obj) => Ok(Value::Object(obj.clone())),
+        Value::String(s) => Ok(Value::String(s)),
+        Value::Number(n) => Ok(Value::Number(n)),
+        Value::Bool(b) => Ok(Value::Bool(b)),
+        Value::Array(arr) => Ok(Value::Array(arr)),
+        Value::Object(obj) => Ok(Value::Object(obj)),
         _ => Err("Unsupported type".to_string()),
     }
 }
@@ -200,7 +209,7 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Valu
     let client = init_client().await?;
     let mut params_vec = vec![Value::String(format!("token:{}", *SECRET.read().unwrap()))];
     for param in params {
-        let param_str = param_to_value(&param)?;
+        let param_str = param_to_value(param)?;
         params_vec.push(param_str);
     }
     let payload = json!({
@@ -217,36 +226,64 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Valu
     Ok(body)
 }
 
+#[tauri::command(rename_all = "snake_case")]
+pub async fn remove_aria2c_task(queue_id: &str, id: Arc<String>, gid: Option<Arc<String>>) -> Result<(), Value> {
+    match queue_id {
+        "waiting" | "doing" => {
+            let mut queue = if queue_id == "waiting" {
+                WAITING_QUEUE.write().await
+            } else {
+                DOING_QUEUE.write().await
+            };
+            queue.retain(|task| *task.id != *id);
+            let body_value: Value = post_aria2c("remove", vec![json!(gid)]).await.map_err(|e| e.to_string())?;
+            let body: Aria2Remove = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
+            if let Some(error) = body.error {
+                return Err(json!({ "code": error.code, "message": error.message }));
+            }    
+        },
+        "complete" => {
+            downloads::delete(id).await.map_err(|e| e.to_string())?;
+            downloads::load().await.map_err(|e| e.to_string())?;
+        },
+        _ => {},
+    }
+    match QUEUE_EVENT.get() {
+        Some(_) => update_queue_event(vec![queue_id]).await,
+        None => {}
+    }
+    Ok(())
+}
+
 #[tauri::command]
-pub async fn push_back_queue(info: MediaInfo, current_select: Value, tasks: Vec<Task>, ts: Timestamp, ext: String) -> Result<QueueInfo, Value> {
-    let config = CONFIG.read().unwrap().clone();
-    let info_id = info.id.clone();
+pub async fn push_back_queue(info: Arc<MediaInfo>, current_select: Value, tasks: Vec<Task>, ts: Arc<Timestamp>, ext: String, output: Option<String>) -> Result<Arc<QueueInfo>, Value> {
+    let parent = if let Some(output) = output {
+        PathBuf::from(output)
+    } else {
+        let config = CONFIG.read().unwrap();
+        config.down_dir.join(format!("{}_{}", filename(info.ss_title.clone()), ts.string))
+    };
     let mut video_info = QueueInfo {
-        id: rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(16).map(char::from)
-            .collect(),
+        id: random_string(16),
         ts: ts.clone(),
         tasks,
-        output: config.down_dir
-            .join(format!("{}_{}", filename(info.ss_title.clone()), ts.string))
-            .join(format!("{}.{}", filename(info.title.clone()), ext)),
-        info,
+        output: parent.join(format!("{}.{}", filename(info.title.clone()), ext)),
+        info: info.clone(),
         current_select,
     };
     for task in &mut video_info.tasks {
-        if task.media_type.as_str() == "merge" { // FFmpeg task
-            task.gid = Some(rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(16).map(char::from)
-                .collect());
+        if task.media_type.as_str() == "merge" || task.media_type.as_str() == "flac" { // FFmpeg task
+            task.gid = Some(random_string(16));
             continue;
         }
         let parsed_url = reqwest::Url::parse(&task.urls[0]).map_err(|e| e.to_string())?;
         let name = parsed_url.path_segments().unwrap().last().unwrap();
-        let dir = config.temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", info_id, ts.millis));
+        let dir = {
+            let config = CONFIG.read().unwrap();
+            config.temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", info.clone().id, ts.millis))
+        };
         let params = vec![
-            task.urls.clone().into(),
+            json!(task.urls),
             json!({ "dir": dir, "out": name, "pause": "true" })
         ];
         let body_value: Value = post_aria2c("addUri", params).await.map_err(|e| e.to_string())?;
@@ -259,8 +296,9 @@ pub async fn push_back_queue(info: MediaInfo, current_select: Value, tasks: Vec<
         task.path = Some(dir.join(name));
     }
     let mut waiting_queue = WAITING_QUEUE.write().await;
-    waiting_queue.push_back(video_info.clone());
-    Ok(video_info)
+    let video_info_arc = Arc::new(video_info);
+    waiting_queue.push_back(video_info_arc.clone());
+    Ok(video_info_arc.clone())
 }
 
 async fn update_queue_event(queue_types: Vec<&str>) {
@@ -296,23 +334,25 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
                 { DOING_QUEUE.write().await.push_back(info.clone()); }
                 async_runtime::spawn(async move {
                     update_queue_event(vec!["waiting", "doing"]).await;
-                    let info_clone = info.clone();
-                    let _ = process_download(info.clone()).await.map_err(|e| e.to_string());
-                    if info.tasks.len() > 1 { // for visual-audio
+                    process_download(info.clone()).await.map_err(|e| e.to_string())?;
+                    if info.tasks.iter().any(|task| task.media_type == "merge") {
                         let event = DOWNLOAD_EVENT.get().unwrap();
-                        let _ = merge(info.clone(), event).await.map_err(|e| e.to_string());
-                        let _ = fs::remove_dir_all(info.tasks[0].clone().path.unwrap().parent().unwrap()).map_err(|e| e.to_string());
-                    } else {
-                        let _ = fs::rename(info.tasks[0].clone().path.unwrap(), &info.output).map_err(|e| e.to_string());
+                        ffmpeg::merge(info.clone(), event).await.map_err(|e| e.to_string())?;
+                    } else if info.tasks.iter().any(|task| task.media_type == "flac") { 
+                        ffmpeg::raw_flac(info.clone()).await.map_err(|e| e.to_string())?;
+                    } else {                        
+                        fs::rename(info.tasks[0].clone().path.unwrap(), &info.output).map_err(|e| e.to_string())?;
                     }
+                    fs::remove_dir_all(info.tasks[0].clone().path.unwrap().parent().unwrap()).map_err(|e| e.to_string())?;
                     {
                         DOING_QUEUE.write().await.retain(|task| *task != info);
-                        COMPLETE_QUEUE.write().await.push_back(info);
+                        COMPLETE_QUEUE.write().await.push_back(info.clone());
                     }
-                    let _ = downloads::insert(info_clone).await.map_err(|e| e.to_string());
+                    downloads::insert(info.clone()).await.map_err(|e| e.to_string())?;
                     update_queue_event(vec!["doing", "complete"]).await;
-                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    sleep(Duration::from_millis(100)).await;
                     DOWNLOAD_NOTIFY.notify_one();
+                    Ok::<(), String>(())
                 });
             }
         }
@@ -325,48 +365,57 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
     Ok(())
 }
 
-async fn process_download(info: QueueInfo) -> Result<(), Value> {
+async fn process_download(info: Arc<QueueInfo>) -> Result<(), Value> {
     fs::create_dir_all(info.output.parent().unwrap()).map_err(|e| e.to_string())?;
-    for task in info.tasks {
-        if task.media_type.as_str() == "merge" { continue }
-        let task_clone = task.clone();
-        let gid = task_clone.gid.unwrap_or(String::new());
+    for task in &info.tasks {
+        if task.media_type.as_str() == "merge" || task.media_type.as_str() == "flac" { continue }
+        let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
+        let id = Arc::new(info.id.clone());
         let body: Aria2AddUri = serde_json::from_value(
-            post_aria2c("unpause", vec![gid.clone().into()]).await.map_err(|e| e.to_string())?
+            post_aria2c("unpause", vec![json!(gid)]).await.map_err(|e| e.to_string())?
         ).map_err(|e| e.to_string())?;
         let event = DOWNLOAD_EVENT.get().unwrap();
         if let Some(error) = body.error {
             event.send(DownloadEvent::Error { code: error.clone().code, message: error.clone().message }).unwrap();
+            remove_aria2c_task("doing", id.clone(), Some(gid)).await?;
             return Err(json!({ "code": error.code, "message": error.message }));
         }
-        event.send(DownloadEvent::Started { gid, media_type: task_clone.media_type }).unwrap();
+        event.send(DownloadEvent::Started { id: id.clone(), gid, media_type: task.media_type.clone() }).unwrap();
         loop {
-            let gid = task.clone().gid.unwrap_or(String::new());
-            let body_value: Value = post_aria2c("tellStatus", vec![gid.clone().into()]).await.map_err(|e| e.to_string())?;
+            let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
+            let body_value: Value = post_aria2c("tellStatus", vec![json!(gid)]).await.map_err(|e| e.to_string())?;
             let body: Aria2TellStatus = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
-            if let Some(error) = body.error {
-                event.send(DownloadEvent::Error { code: error.clone().code, message: error.clone().message }).unwrap();
-                return Err(json!({ "code": error.code, "message": error.message }));
+            if let Some(result) = body.result {
+                if let Some(error) = result.error_code {
+                    let code = error.parse::<isize>().unwrap();
+                    if code != 0 {
+                        let message = result.error_message.unwrap();
+                        event.send(DownloadEvent::Error { code: code.clone(), message: message.clone() }).unwrap();
+                        return Err(json!({ "code": code.clone(), "message": message.clone() }));
+                    }
+                }    
+                match result.status.as_str() {
+                    "active" => {
+                        event.send(DownloadEvent::Progress {
+                            id: id.clone(),
+                            gid,
+                            content_length: result.total_length.parse().unwrap(),
+                            chunk_length: result.completed_length.parse::<u64>().unwrap_or(0),
+                        }).unwrap();
+                    },
+                    "complete" => {
+                        event.send(DownloadEvent::Progress {
+                            id: id.clone(),
+                            gid: gid.clone(),
+                            content_length: result.total_length.parse().unwrap(),
+                            chunk_length: result.total_length.parse().unwrap(),
+                        }).unwrap();
+                        event.send(DownloadEvent::Finished { id: id.clone(), gid }).unwrap();
+                        break;
+                    },
+                    _ => {},
+                }
             }
-            if let Some(result) = body.result { match result.status.as_str() {
-                "active" => {
-                    event.send(DownloadEvent::Progress {
-                        gid,
-                        content_length: result.total_length.parse().unwrap(),
-                        chunk_length: result.completed_length.parse::<u64>().unwrap_or(0),
-                    }).unwrap();
-                },
-                "complete" => {
-                    event.send(DownloadEvent::Progress {
-                        gid: gid.clone(),
-                        content_length: result.total_length.parse().unwrap(),
-                        chunk_length: result.total_length.parse().unwrap(),
-                    }).unwrap();
-                    event.send(DownloadEvent::Finished { gid }).unwrap();
-                    break;
-                },
-                _ => {},
-            }}
             sleep(Duration::from_millis(100)).await;
         }
     }

@@ -1,56 +1,54 @@
 <template><div>
-    <div v-if="store.user.isLogin" class="profile w-full absolute max-w-7xl bg-[color:var(--block-color)]">
-        <div class="profile__top_photo relative" :style="{ opacity: store.user.topPhoto ? 1 : 0 }">
-            <img :src=store.user.topPhoto draggable="false" class="w-full" />
+    <div v-if="user.isLogin" class="profile w-full absolute max-w-7xl bg-[color:var(--block-color)]">
+        <div class="profile__top_photo relative" :style="{ opacity: user.topPhoto ? 1 : 0 }">
+            <img :src=user.topPhoto draggable="false" class="w-full" />
         </div>
         <div class="profile__meta relative flex items-center mx-10">
             <div class="avatar -translate-y-2.5 w-[104px] h-[104px] rounded-full">
-                <img :src="store.user.avatar + '@100w_100h'" class="rounded-full" />
-                <img v-if="store.user.vipLabel" class="w-[30px] absolute right-0 bottom-0" src="/src/assets/img/profile/big-vip.svg" />
+                <img :src="user.avatar + '@100w_100h'" class="rounded-full" />
+                <img v-if="user.vipLabel" class="w-[30px] absolute right-0 bottom-0" src="/src/assets/img/profile/big-vip.svg" />
             </div>
             <div class="details absolute top-[10px] ml-[120px]">
                 <div class="mb-[6px] flex items-center gap-2">
-                    <h2>{{ store.user.name }}</h2>
-                    <img class="h-[14px]" :src="`/src/assets/img/profile/level/level${store.user.level}.svg`" />
-                    <img class="h-5" v-if="store.user.vipLabel" :src="store.user.vipLabel" />
+                    <h2>{{ user.name }}</h2>
+                    <img class="h-[14px]" :src="`/src/assets/img/profile/level/level${user.level}.svg`" />
+                    <img class="h-5" v-if="user.vipLabel" :src="user.vipLabel" />
                 </div>
-                <span class="text-[var(--desc-color)] text-sm w-[530px]">{{ store.user.desc }}</span>
+                <span class="text-[var(--desc-color)] text-sm w-[530px]">{{ user.desc }}</span>
             </div>
             <div class="stat ml-auto mr-6">
-                <div class="stat__item" v-for="item in Object.keys(store.user.stat)">
+                <div class="stat__item" v-for="item in Object.keys(user.stat)">
                     <span>{{ $t('user.stat.' + item) }}</span>
-                    <span>{{ (store.user.stat as any)[item] }}</span>
+                    <span>{{ (user.stat as any)[item] }}</span>
                 </div>
             </div>
-            <button @click="exit()">{{ $t('user.exit') }}</button>
+            <button @click="login('exit')">{{ $t('user.exit') }}</button>
         </div>
     </div>
-    <!-- will be optimized soon -->
     <div v-else class="login flex relative border border-solid border-[var(--split-color)] rounded-lg">
-        <div class="scan h-[350px]">
+        <div class="h-[350px]">
             <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
-            <div class="scan__box relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg">                
-                <img src="/src/assets/img/login/loadTV.gif" class="absolute invert m-[30px] z-0" />
-                <canvas ref="loginQrcode" :class="[store.settings.theme === 'light' ? 'invert' : '', 'relative', 'z-1']"></canvas>
-                <div v-if="scan.code === 86038 || scan.code === 86090" @click="scanLogin()"
-                    class="scan__tips absolute flex w-[172px] h-[172px] z-2 bg-[#18181890] -top-px -left-px
-                    flex-col justify-center items-center cursor-pointer rounded-md text-sm"
+            <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-[color:var(--solid-block-color)]">
+                <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" :class="{ 'invert': dark }" />
+                <canvas ref="loginQrcode" :class="{ 'invert': !dark }" class="relative z-1"></canvas>
+                <div v-if="scanCode === 86038 || scanCode === 86090" @click="login('scan')"
+                    class="absolute flex w-[172px] h-[172px] z-2 bg-opacity-50 bg-black -top-px -left-px
+                    flex-col gap-2.5 justify-center items-center cursor-pointer rounded-md text-sm"
                 >
-                    <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scan.code === 86038, 'fa-check': scan.code === 86090}"
-                        class="w-14 h-14 p-4 text-[24px] bg-[var(--block-color)] text-[var(--primary-color)] mb-[10px] rounded-[50%]"
+                    <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scanCode === 86038, 'fa-check': scanCode === 86090}"
+                        class="w-14 h-14 p-4 text-[24px] bg-[var(--solid-block-color)] text-[var(--primary-color)] rounded-[50%]"
                     ></i>
-                    <span>{{ $t('user.scan.code_0.' + scan.code) }}</span>
-                    <span>{{ $t('user.scan.code_1.' + scan.code) }}</span>
+                    <span class="whitespace-pre-wrap text-center">{{ $t('user.scan.' + scanCode) }}</span>
                 </div>
             </div>
             <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]">
             <template v-slot:link>
-                <a href="https://app.bilibili.com/" target="_blank">{{ $t('user.scan.client') }}</a><br>
+                <a @click="open('https://app.bilibili.com')">{{ $t('user.scan.client') }}</a><br>
             </template>
             </i18n-t>
         </div>
         <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
-        <div class="others flex relative h-[290px] w-[400px] flex-col items-center">
+        <div class="flex relative h-[290px] w-[400px] flex-col items-center">
             <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
                 <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'">
                     {{ $t('user.others.pwd') }}
@@ -60,76 +58,61 @@
                     {{ $t('user.others.sms') }}
                 </h3>
             </div>
-            <div class="others__page w-full" ref="othersPage">
-                <form class="input_form rounded-lg border boredr-solid border-[var(--split-color)]">
+            <div class="others__page w-full">
+                <form class="rounded-lg border boredr-solid border-[var(--split-color)]">
                     <div class="form_item border-b-[color:var(--split-color)] border-b border-solid">
-                        <span v-if="othersPage === 0">{{ $t('common.account') }}</span>
-                        <div v-if="othersPage === 1" class="w-[42px] relative">
-                            +{{ sms.cid }}
+                        <span v-if="!othersPage">{{ $t('common.account') }}</span>
+                        <template v-else>
+                        <div class="w-[42px] relative">
+                            +{{ cid }}
                             <svg class="absolute left-[42px] top-2 w-[12px] p-0 hover:cursor-pointer" viewBox="0 0 13.4 8.1">
                                 <path d="M6.8 8.1L0 1.75 1.36.3l5.38 5L11.97 0l1.42 1.4-6.6 6.7z" fill="var(--primary-color)"></path>
                             </svg>
                         </div>
-                        <select v-if="othersPage === 1"
-                            class="absolute opacity-0 h-[22px] p-0 hover:cursor-pointer"
-                            @change="($event) => {
-                                sms.cid = Number(($event.target as HTMLSelectElement).value);
-                            }"
+                        <select class="absolute opacity-0 h-[22px] p-0 hover:cursor-pointer z-10"
+                            @change="($event) => cid = Number(($event.target as HTMLSelectElement).value)"
                         >
-                            <option
-                                v-for="country in countryList"
-                                :value="country.country_id"
-                            >
+                            <option v-for="country in countryList" :value="country.country_id">
                                 {{ country.cname }} +{{ country.country_id }}
                             </option>
                         </select>
-                        <input v-model="pwd.username" v-if="othersPage === 0"
-                            oninput="value=value.replace(/\s+/g, '')"
-                            :placeholder="$t('user.others.pleaseInput', [$t('common.account')])"
-                            spellcheck="false"
+                        </template>
+                        <input v-model="tel"
+                            :oninput="tel=tel.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
+                            autocomplete="new-password" class="z-20" spellcheck="false"
+                            :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'account' : 'telephone'}`)])"
                         />
-                        <input v-model="sms.tel" v-if="othersPage === 1"
-                            oninput="value=value.replace(/[^\d]/g, '')"
-                            :placeholder="$t('user.others.pleaseInput', [$t('common.telephone')])"
-                            spellcheck="false"
-                        />
+                        <template v-if="othersPage">
+                        <div class="split h-[22px] mx-[20px]"></div>
+                        <button type="button" @click="login('sendSms')"
+                            class="bg-[color:unset] p-0 h-fit leading-[22px]"
+                        >{{ $t('user.others.get', [$t('common.verifyCode')]) }}</button>
+                        </template>
                     </div>
                     <div class="form_item">
                         <span>{{ othersPage ? $t('common.verifyCode') : $t('common.password') }}</span>
-                        <input v-model="pwd.pwd" v-if="othersPage === 0"
-                            oninput="value=value.replace(/\s+/g, '')"
-                            :placeholder="$t('user.others.pleaseInput', [$t('common.password')])"
-                            type="password"
-                            spellcheck="false"
+                        <input v-model="pwd"
+                            :oninput="pwd=pwd.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
+                            autocomplete="new-password" type="password" spellcheck="false"
+                            :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'password' : 'verifyCode'}`)])"
                         />
-                        <template v-if="othersPage === 1">
-                            <input v-model="sms.code"
-                                oninput="value=value.replace(/[^\d]/g, '')"
-                                :placeholder="$t('user.others.pleaseInput', [$t('common.verifyCode')])"
-                                spellcheck="false"
-                            />
-                            <div class="split h-[22px] mx-[20px]"></div>
-                            <button type="button" @click="sendSmsCode()"
-                                class="bg-[color:unset] p-0 h-fit leading-[22px]"
-                            >{{ $t('user.others.get', [$t('common.verifyCode')]) }}</button>
-                        </template>
                     </div>
                 </form>
-                <button @click="othersPage ? smsLogin() : pwdLogin()"
+                <button @click="login(othersPage ? 'sms' : 'pwd')"
                     class="mt-5 rounded-lg h-10 w-full hover:bg-[color:var(--primary-color)]"
                 >{{ $t('user.login') }}</button>
             </div>
-            <div class="agreement absolute bottom-2 text-sm">
+            <div class="absolute bottom-2 text-sm">
                 <span class="desc">{{ $t('user.others.exempt') }}</span>
                 <i18n-t keypath="user.others.agree" tag="span" class="desc">
                 <template v-slot:bilibili>
-                    <a href="https://www.bilibili.com" target="_blank">{{ $t('common.bilibili') }}</a>
+                    <a @click="open('https://www.bilibili.com')">{{ $t('common.bilibili') }}</a>
                 </template>
                 <template v-slot:licence>
-                    <a href="https://www.bilibili.com/protocal/licence.html" target="_blank">{{ $t('user.others.licence') }}</a>
+                    <a @click="open('https://www.bilibili.com/protocal/licence.html')">{{ $t('user.others.licence') }}</a>
                 </template>
                 <template v-slot:privacy>
-                    <a href="https://www.bilibili.com/blackboard/privacy-pc.html" target="_blank">{{ $t('user.others.privacy') }}</a>
+                    <a @click="open('https://www.bilibili.com/blackboard/privacy-pc.html')">{{ $t('user.others.privacy') }}</a>
                 </template>
                 </i18n-t>
             </div>
@@ -140,25 +123,17 @@
 <script lang="ts">
 import { ApplicationError, iziInfo } from '@/services/utils';
 import { emit } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-shell';
 import * as login from '@/services/login';
 
 export default {
     data() {
         return {
-            store: this.$store.state,
-            pwd: {
-                username: String(),
-                pwd: String(),
-            },
-            sms: {
-                tel: String(),
-                code: String(),
-                captchaKey: String(),
-                cid: 86,
-            },
-            scan: {
-                code: 0,
-            },
+            tel: String(),
+            pwd: String(),
+            captchaKey: String(),
+            scanCode: 0,
+            cid: 86,
             countryList: [] as {
                 id: number;
                 cname: string;
@@ -167,67 +142,76 @@ export default {
             othersPage: 1,
         }
     },
+    watch: {
+        othersPage() {
+            this.tel = String();
+            this.pwd = String();
+        }
+    },
+    computed: {
+        user() {
+            return this.$store.state.user;
+        },
+        dark() {
+            return this.$store.state.settings.theme === 'dark';
+        }
+    },
     methods: {
         iziInfo,
-        async scanLogin() {
-            await this.handleError(async () => {
-                this.scan.code = 0;
-                (this.$refs.loginQrcode as HTMLCanvasElement).height = 160;
-                const qrcodeKey = await login.genQrcode(this.$refs.loginQrcode as HTMLCanvasElement);
-                return await login.scanLogin(qrcodeKey, ({ code }) => {
-                    this.scan.code = code;
-                    if (code === 86114) return null; // USER CANCELED
-                });
-            }, { login: true });
-        },
-        async pwdLogin() {
-            await this.handleError(async () => {
-                return await login.pwdLogin(this.pwd.username, this.pwd.pwd);
-            }, { login: true });
-        },
-        async sendSmsCode() {
-            await this.handleError(async () => {
-                if (!this.sms.tel) return;
-                this.sms.captchaKey = await login.sendSmsCode(this.sms.cid, this.sms.tel);
-            });
-        },
-        async smsLogin() {
-            await this.handleError(async () => {
-                return await login.smsLogin(this.sms.cid, this.sms.tel, this.sms.code, this.sms.captchaKey);
-            }, { login: true });
-        },
-        async exit() {
-            await this.handleError(async () => {
-                return await login.exitLogin();
-            }, { login: true });
-        },
-        async handleError(func: Function, options?: { login: boolean }) {
+        open,
+        async login(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
             try {
-                const code = await func();
-                if (options?.login && code === 0) {
+                let code = -1;
+                switch(type) {
+                    case 'scan': {
+                        this.scanCode = 0;
+                        (this.$refs.loginQrcode as HTMLCanvasElement).height = 160;
+                        const qrcodeKey = await login.genQrcode(this.$refs.loginQrcode as HTMLCanvasElement);
+                        code = await login.scanLogin(qrcodeKey, ({ code }) => {
+                            this.scanCode = code;
+                            if (code === 86114) return; // USER CANCELED
+                        });
+                        break;
+                    };
+                    case 'pwd': {
+                        if (!this.tel || !this.pwd) return;
+                        code = await login.pwdLogin(this.tel, this.pwd);
+                        break;
+                    };
+                    case 'sms': {
+                        if (!this.tel || !this.pwd || !this.captchaKey) return;
+                        code = await login.smsLogin(this.cid, this.tel, this.pwd, this.captchaKey);
+                        break;
+                    };
+                    case 'sendSms': {
+                        if (!this.tel || !this.cid) return;
+                        this.captchaKey = await login.sendSmsCode(this.cid, this.tel);
+                        break;
+                    }
+                    case 'exit': {
+                        login.exitLogin();
+                        break;
+                    }
+                    case 'init': {
+                        this.cid = await login.getZoneCode();
+                        this.countryList = await login.getCountryList();
+                        break;
+                    }
+                }
+                if (code === 0) {
                     this.$router.push('/');
                     login.fetchUser();
                 }
             } catch (err) {
-                if (err instanceof ApplicationError) {
-                    err.handleError();
-                } else if (typeof err === 'string') {
-                    new ApplicationError(err).handleError();
-                } else if ((err as any)?.tmp_code && (err as any)?.request_id) {
-                    new ApplicationError((err as any).message, { code: (err as any).code }).handleError();
-                    // TEL Verify logics here
-                }
+                const error = err instanceof ApplicationError ? err : new ApplicationError(err as string);
+                return error.handleError();
             }
-        },
+        }
     },
     async activated() {
-        if (!this.store.user.isLogin) {
-            this.scanLogin();
-            await this.handleError(async () => {
-                this.sms.cid = await login.getZoneCode();
-                this.countryList = await login.getCountryList();
-            });
-        }
+        if (this.$store.state.user.isLogin) return;
+        this.login('scan');
+        this.login('init');
     },
     deactivated() {
         emit('stop_login');

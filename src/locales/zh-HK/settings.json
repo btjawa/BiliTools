@@ -27,6 +27,13 @@
             "desc": "暫僅支持 HTTP(S) 協議，修改完成後建議重啟應用程式以全局生效。"
         }
     },
+    "advanced": {
+        "name": "高級",
+        "auto_convert_flac": {
+            "name": "自動轉換 FLAC",
+            "desc": "使用FFmpeg將原始FLAC轉換為標準FLAC格式。"
+        }
+    },
     "about": {
         "name": "關於",
         "thanks": "覺得好用的話，在GitHub點個Star吧！",
@@ -44,9 +51,10 @@
         "database": "用戶資料庫",
         "down_dir": "輸出文件",
         "temp_dir": "臨時文件",
-        "max_conc": "下載並發數",
+        "max_conc": "同時下載數",
         "checkProxy": "檢查代理連通性",
         "auto_check_update": "自動檢查",
+        "auto_convert_flac": "自動轉換",
         "checkUpdate": "檢查更新",
         "documentation": "文檔",
         "feedback": "反饋"

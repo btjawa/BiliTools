@@ -10,7 +10,7 @@
         "audio": "オーディオ",
         "merge": "マージ",
         "complete": "完了",
-        "startDownload": "ダウンロード開始"
+        "download": "ダウンロード"
     },
     "empty": "このキューは空です～"
 }

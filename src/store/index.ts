@@ -1,5 +1,5 @@
 import { createStore } from 'vuex';
-import { CurrentSelect, QueueInfo } from '@/types/data.d';
+import { CurrentSelect, DashInfo, DurlInfo, MusicUrlInfo, QueueInfo } from '@/types/data.d';
 import { Headers } from '@/types/data.d';
 
 export default createStore({
@@ -36,6 +36,9 @@ export default createStore({
                     username: String(),
                     password: String(),
                 },
+                advanced: {
+                    auto_convert_flac: false,
+                }
             },
             data: {
                 inited: false,
@@ -48,6 +51,7 @@ export default createStore({
                     cdc: -1,
                     fmt: -1,
                 } as CurrentSelect,
+                playUrlInfo: {} as DashInfo | DurlInfo | MusicUrlInfo,
                 cache: {
                     log: Number(),
                     temp: Number(),

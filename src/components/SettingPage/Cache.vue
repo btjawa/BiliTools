@@ -2,9 +2,9 @@
     <button @click="open({ getPath: true, pathName: data })"
         class="ellipsis max-w-[120px] min-w-24 rounded-r-none"
     >{{ formatBytes(store.data.cache[data]) }}</button>
-    <button @click="update(data)"
-        class="bg-[color:var(--primary-color)] rounded-l-none"
-    ><i class="fa-light fa-broom-wide text-[color:var(--dark-button-color)]"></i></button>
+    <button @click="update(data)" class="primary-color rounded-l-none">
+        <i class="fa-light fa-broom-wide"></i>
+    </button>
 </div></template>
 
 <script lang="ts">

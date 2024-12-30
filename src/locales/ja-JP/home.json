@@ -11,7 +11,8 @@
         "danmaku": "弾幕",
         "liveDanmaku": "リアルタイム弾幕",
         "historyDanmaku": "歴史弾幕",
-        "metaSnapshot": "メタスナップショット"
+        "metaSnapshot": "メタスナップショット",
+        "multiSelect": "複数選択"
     },
     "empty": "利用可能なリソースがありません~"
 }

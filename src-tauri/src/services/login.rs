@@ -155,6 +155,24 @@ pub fn stop_login() {
 
 pub async fn get_extra_cookies() -> Result<(), Value> {
     let client = init_client().await?;
+    let html_resp = client
+        .get("https://www.bilibili.com")
+        .send().await.map_err(|e| e.to_string())?;
+    if html_resp.status() != StatusCode::OK {
+        return Err(Value::from(html_resp.status().to_string()));
+    }
+    let cookies: Vec<String> = html_resp.headers().get_all(header::SET_COOKIE)
+        .iter().flat_map(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .collect();
+    let mut has_buvid_3 = false;
+    for cookie in cookies {
+        cookies::insert(cookie.clone()).await.map_err(|e| e.to_string())?;
+        if cookie.starts_with("buvid3") {
+            has_buvid_3 = true;
+        }
+    }
+
     let buvid_resp = client
         .get("https://api.bilibili.com/x/frontend/finger/spi")
         .send().await.map_err(|e| e.to_string())?;
@@ -165,7 +183,9 @@ pub async fn get_extra_cookies() -> Result<(), Value> {
     if buvid_body.code != 0 {
         return Err(json!({ "code": buvid_body.code, "message": buvid_body.message }));
     }
-    cookies::insert(format!("buvid3={}", buvid_body.data.b_3)).await.map_err(|e| e.to_string())?;
+    if !has_buvid_3 {
+        cookies::insert(format!("buvid3={}", buvid_body.data.b_3)).await.map_err(|e| e.to_string())?;
+    }
     cookies::insert(format!("buvid4={}", buvid_body.data.b_4)).await.map_err(|e| e.to_string())?;
 
     let ts = get_ts(false);

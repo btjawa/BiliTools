@@ -7,24 +7,24 @@
         <div class="loading"></div>
         <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
-                <keep-alive><component :is="Component" class="page" /></keep-alive>
+                <keep-alive><component :is="Component" class="page" ref="page" /></keep-alive>
             </transition>
         </router-view>
     </div>
 </template>
 
 <script lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+import { provide } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { listen } from "@tauri-apps/api/event";
 import { ApplicationError } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { fetchUser, checkRefresh } from "@/services/login";
 import { InitData } from "@/types/data.d";
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, Theme } from '@tauri-apps/api/window';
 import { version as osVersion } from "@tauri-apps/plugin-os";
+import { SearchPage } from "@/views";
 
 export default {
     components: {
@@ -46,15 +46,27 @@ export default {
 		listen('rw_config:settings', async e => {
 			this.$store.commit('updateState', { settings: e.payload });
 			const window = getCurrentWindow();
-			const theme = this.$store.state.settings.theme;
+			const theme = this.$store.state.settings.theme as Theme;
 			const version = osVersion().split('.');
 			if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
 				document.body.classList.remove('override-dark');
 				document.body.classList.remove('override-light');
 				document.body.classList.add('override-' + theme);
 			}
-			await window.setTheme(theme as any);
+			await window.setTheme(theme);
 			this.$i18n.locale = this.$store.state.settings.language;
+		});
+		provide('trySearch', async (input?: string) => {
+			this.$router.push('/');
+			const start = Date.now();
+			const checkCondition = () => {
+				const page = this.$refs.page as InstanceType<typeof SearchPage>;
+				if (Date.now() - start > 1000) return;
+				if (page && typeof page.search === 'function') {
+					page.search(input);
+				} else setTimeout(checkCondition, 50);
+			};
+			checkCondition();
 		});
         try {
 			const secret = await invoke('ready');
@@ -107,7 +119,7 @@ export default {
 	opacity: 0;
 }
 .loading {
-	@apply absolute w-8 h-8 top-0 right-0 m-6 opacity-0 z-[99];
+	@apply absolute w-8 h-8 top-0 right-0 m-6 opacity-0 z-[99] pointer-events-none;
 	@apply border-solid border-2 border-[color:var(--solid-block-color)] border-l-[color:var(--content-color)] rounded-full;
 	@apply transition-opacity animate-[circle_infinite_0.75s_linear];
 	&.active { opacity: 1 }

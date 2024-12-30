@@ -6,7 +6,7 @@ use std::{io::SeekFrom, path::PathBuf, sync::{Arc, RwLock}, time::Duration};
 use tokio::{fs, io::{self, AsyncBufReadExt, AsyncSeekExt}, time::sleep};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 use regex::Regex;
-use crate::{aria2c::{QueueInfo, DownloadEvent, Task}, shared::get_app_handle};
+use crate::{aria2c::{QueueInfo, DownloadEvent, Task}, shared::{get_app_handle, BINARY_RELATIVE}};
 
 lazy_static! {
     static ref FFMPEG_CHILD: Arc<RwLock<Option<CommandChild>>> = Arc::new(RwLock::new(None));
@@ -30,7 +30,7 @@ struct FFmpegLog {
 
 async fn get_frames(input: PathBuf) -> Result<u64, String> {
     let app = get_app_handle();
-    let meta_output = app.shell().sidecar("./bin/ffmpeg").unwrap()
+    let meta_output = app.shell().sidecar(format!("{}/ffmpeg", &*BINARY_RELATIVE)).unwrap()
         .args([
             "-i", input.to_str().unwrap(),
             "-map", "0:v:0",
@@ -47,14 +47,17 @@ async fn get_frames(input: PathBuf) -> Result<u64, String> {
         .find(|&num| num > 1).ok_or("Failed to parse frame count".to_string());
 }
 
-pub async fn merge(info: QueueInfo, event: &Channel<DownloadEvent>) -> Result<(), String> {
+pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Result<(), String> {
     if info.tasks.len() < 2 {
         return Err(format!("Insufficient number of input paths, {}", info.tasks.len()));
     }
-    let paths: Vec<_> = info.tasks.iter().map(|task| task.path.clone()).collect();
-    let output = info.output;
-    let output_filename = output.file_name()
-        .ok_or("Failed to extract video filename")?
+    let paths = {
+        let _paths: Vec<_> = info.tasks.iter().map(|task| task.path.clone()).collect();
+        Arc::new(_paths)
+    };
+    let output = info.output.clone();
+    let output_filename = &output.file_name()
+        .ok_or("Failed to extract filename")?
         .to_string_lossy().into_owned();
 
     let video_path = info.tasks.iter()
@@ -62,27 +65,25 @@ pub async fn merge(info: QueueInfo, event: &Channel<DownloadEvent>) -> Result<()
         .map(|task| task.path.clone()).unwrap();
 
     let progress_path = get_app_handle().path().app_log_dir().unwrap()
-        .join("ffmpeg").join(format!("{}.log", output_filename));
+        .join("ffmpeg").join(format!("{}_{}.log", output_filename, info.ts.millis));
 
+    let progress_path_clone = progress_path.clone();
     fs::create_dir_all(progress_path.parent().unwrap()).await.map_err(|e| e.to_string())?;
-    fs::write(&progress_path, &[]).await.map_err(|e| e.to_string())?;
     let frames = get_frames(video_path.unwrap()).await.map_err(|e| {
         event.send(DownloadEvent::Error { code: -1, message: e.to_string() }).unwrap();
         e.to_string()
     }).unwrap_or(0);
     let app = get_app_handle();
     async_runtime::spawn(async move {
-        let progress_path = get_app_handle().path().app_log_dir().unwrap()
-            .join("ffmpeg").join(format!("{}.log", output_filename));
-        let status = app.shell().sidecar("./bin/ffmpeg").unwrap()
+        let status = app.shell().sidecar(format!("{}/ffmpeg", &*BINARY_RELATIVE)).unwrap()
             .args([
                 "-i", paths[0].clone().unwrap().to_str().unwrap(),
                 "-i", paths[1].clone().unwrap().to_str().unwrap(),
-                "-stats_period", "0.1",
                 "-c:v", "copy",
                 "-c:a", "aac",
-                output.to_str().unwrap(), "-progress",
-                progress_path.to_str().unwrap(), "-y"
+                "-shortest",
+                &output.to_str().unwrap(), "-progress",
+                progress_path_clone.to_str().unwrap(), "-y"
             ])
             .status().await
             .map_err(|e| e.to_string())?;
@@ -94,24 +95,48 @@ pub async fn merge(info: QueueInfo, event: &Channel<DownloadEvent>) -> Result<()
         }
     });
     let ffmpeg_task = info.tasks.iter().find(|task| task.media_type == "video").unwrap();
-    monitor(ffmpeg_task, progress_path, frames, event).await.map_err(|e| {
+    monitor(info.id.clone(), ffmpeg_task, progress_path, frames, event).await.map_err(|e| {
         event.send(DownloadEvent::Error { code: -1, message: e.to_string() }).unwrap();
         e.to_string()
     })?;
     Ok(())
 }
 
-async fn monitor(task: &Task, progress_path: PathBuf, frames: u64, event: &Channel<DownloadEvent>) -> Result<(), String> {
+pub async fn raw_flac(info: Arc<QueueInfo>) -> Result<(), String> {
+    let output = info.output.clone();
+    let input_path = info.tasks.iter()
+        .find(|task| task.media_type == "audio")
+        .map(|task| task.path.clone()).unwrap();
+
+    let app = get_app_handle();
+    let status = app.shell().sidecar(format!("{}/ffmpeg", &*BINARY_RELATIVE)).unwrap()
+        .args([
+            "-i", input_path.unwrap().to_str().unwrap(),
+            "-vn", "-acodec", "flac",
+            &output.to_str().unwrap()
+        ])
+        .status().await
+        .map_err(|e| e.to_string())?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("FFmpeg exited with status: {}", status.code().unwrap_or(-1)))
+    }
+}
+
+async fn monitor(id: String, task: &Task, progress_path: PathBuf, frames: u64, event: &Channel<DownloadEvent>) -> Result<(), String> {
     while !progress_path.exists() {
         sleep(Duration::from_millis(250)).await;
     }
-    let gid = task.clone().gid.unwrap_or(String::new());
-    event.send(DownloadEvent::Started { gid, media_type: "merge".into() }).unwrap();
+    let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
+    let id = Arc::new(id);
+    event.send(DownloadEvent::Started { id: id.clone(), gid, media_type: "merge".into() }).unwrap();
     let mut last_size: u64 = 0;
     let mut map = Map::new();
     let mut keys = Vec::new();
     loop {
-        let gid = task.clone().gid.unwrap_or(String::new());
+        let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
         let metadata = fs::metadata(&progress_path).await.map_err(|e| e.to_string())?;
         let mut file = fs::File::open(&progress_path).await.map_err(|e| e.to_string())?;
         let _ = file.seek(SeekFrom::Start(last_size)).await;
@@ -140,10 +165,11 @@ async fn monitor(task: &Task, progress_path: PathBuf, frames: u64, event: &Chann
         }
         last_size = metadata.len();
         if map.is_empty() { continue; }
-        let log_data: FFmpegLog = serde_json::from_value(Value::Object(map.clone())).map_err(|e| {log::info!("{}", e.to_string()); e.to_string()})?;
+        let log_data: FFmpegLog = serde_json::from_value(Value::Object(map.clone())).map_err(|e| e.to_string())?;
         match log_data.progress.as_str() {
             "continue" => {
                 event.send(DownloadEvent::Progress {
+                    id: id.clone(),
                     gid: gid.clone(),
                     content_length: frames,
                     chunk_length: log_data.frame,
@@ -151,11 +177,13 @@ async fn monitor(task: &Task, progress_path: PathBuf, frames: u64, event: &Chann
             },
             "end" => {
                 event.send(DownloadEvent::Progress {
+                    id: id.clone(),
                     gid: gid.clone(),
                     content_length: frames,
                     chunk_length: frames,
                 }).unwrap();
                 event.send(DownloadEvent::Finished {
+                    id: id.clone(),
                     gid: gid.clone(),
                 }).unwrap();
                 return Ok(());

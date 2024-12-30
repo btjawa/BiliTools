@@ -1,4 +1,5 @@
 {
+    "waitInit": "請等待初始化完成",
     "risk": "觸發風險控制，請進行驗證",
     "invalidInput": "無法解析輸入",
     "loginExpired": "登錄狀態已過期",

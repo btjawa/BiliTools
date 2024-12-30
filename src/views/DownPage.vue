@@ -1,5 +1,5 @@
 <template><div class="flex-col pb-0">
-    <div class="queue__tab flex mt-[7px] mb-[13px] h-fit items-center hover:cursor-pointer flex-shrink-0">
+    <div class="queue__tab flex mt-1 mb-[13px] h-fit items-center hover:cursor-pointer flex-shrink-0">
         <h3 @click="queuePage = 0" :class="queuePage !== 0 || 'active'">{{ $t('downloads.tab.waiting') }}</h3>
         <div class="split h-5 mx-[21px]"></div>
         <h3 @click="queuePage = 1" :class="queuePage !== 1 || 'active'">{{ $t('downloads.tab.doing') }}</h3>
@@ -7,48 +7,43 @@
         <h3 @click="queuePage = 2" :class="queuePage !== 2 || 'active'">{{ $t('downloads.tab.complete') }}</h3>
     </div>
     <hr class="w-full my-4 flex-shrink-0" />
-    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-[calc(100%-90px)] gap-0.5 overflow-auto" ref="queuePage">
-        <!-- <RecycleScroller
-			v-if="Object.values(store.queue)[queuePage].length"
-			:items="Object.values(store.queue)[queuePage]"
-			:item-size="103" v-slot="{ item }"
-		> -->
-            <div v-for="item in Object.values(store.queue)[queuePage]"
-                class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
-            >
-                <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
-                    {{ item.info.title }}
-                </h3>
-                <div class="!flex gap-2 desc">
-                    <template v-for="option in item.currentSelect">
-                    <span v-if="!(option < 0)">
-                        {{ $t(`common.default.${Object.keys(item.currentSelect).find(k => (item.currentSelect as any)[k] === option)}.data.${option}`) }}
-                    </span>
-                    </template>
-                    <span>{{ item.ts.string }}</span>
-                </div>
-                <span class="absolute top-3 right-4 desc">{{ item.info.id }}</span>
-                <div class="progress flex items-center justify-center">
-                    <span class="pr-2 min-w-fit text-sm">{{
-                        queuePage === 2 ? recycleI18n()[1] :
-                        (getMessage(item.tasks)?.message || recycleI18n()[2])
-                    }}</span>
-                    <div :style="`--progress-width: ${queuePage === 2 ? 100 : (getMessage(item.tasks)?.progress ?? 0)}%`"
-                        class="progress-bar relative h-1.5 rounded-[3px] mx-2 bg-[color:var(--button-color)] w-full"
-                    ></div>
-                    <span class="px-2 min-w-[70px] text-sm"> {{ 
-                        queuePage === 2 ? '100.0' : 
-                        (getMessage(item.tasks)?.progress.toFixed(1) ?? '0.0')
-                    }} %</span>
-                    <button class="mr-2" @click="postAria2c('togglePause', getMessage(item.tasks)?.gid)">
+    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-full gap-0.5 overflow-auto" ref="queuePage">
+        <div v-for="item in Object.values(store.queue)[queuePage]"
+            class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
+        >
+            <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
+                {{ item.info.title }}
+            </h3>
+            <div class="!flex gap-2 desc">
+                <template v-for="option in item.currentSelect">
+                <span v-if="!(option < 0)">
+                    {{ $t(`common.default.${Object.keys(item.currentSelect).find(k => (item.currentSelect as any)[k] === option)}.data.${option}`) }}
+                </span>
+                </template>
+                <span>{{ item.ts.string }}</span>
+            </div>
+            <span class="absolute top-3 right-4 desc text">{{ item.info.id }}</span>
+            <div class="progress flex items-center justify-center">
+                <span class="pr-2 min-w-fit text-sm">{{ queuePage === 2 ? recycleI18n()[1] : (statusList[item.id]?.message ?? recycleI18n()[2]) }}</span>
+                <div :style="`--progress-width: ${queuePage === 2 ? 100.0 : (statusList[item.id]?.progress ?? 0)}%`"
+                    class="progress-bar relative h-1.5 rounded-[3px] mx-2 bg-[color:var(--button-color)] w-full"
+                ></div>
+                <span class="px-2 min-w-[70px] text-sm"> {{ 
+                    queuePage === 2 ? '100.0' : (statusList[item.id]?.progress.toFixed(1) ?? '0.0')
+                }} %</span>
+                <div class="flex gap-2">
+                    <button @click="togglePause(item.id)">
                         <i :class="[fa_dyn, 'fa-play-pause']"></i>
                     </button>
                     <button @click="openPath(item.output, { parent: true })">
                         <i :class="[fa_dyn, 'fa-folder-open']"></i>
                     </button>
+                    <button @click="removeTask(item.id, Object.keys(store.queue)[queuePage])">
+                        <i :class="[fa_dyn, 'fa-trash']"></i>
+                    </button>
                 </div>
             </div>
-		<!-- </RecycleScroller> -->
+        </div>
         <button v-if="queuePage === 0 && store.queue.waiting.length > 0" @click="processQueue()"
             class="absolute right-6 bottom-6"
         >
@@ -60,12 +55,19 @@
 
 <script lang="ts">
 import { ApplicationError } from '@/services/utils';
-import { DownloadEvent, QueueEvent } from '@/types/data';
+import { DownloadEvent, QueueEvent } from '@/types/data.d';
 import { Channel, invoke } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
 import { Empty } from '@/components';
-import store from '@/store';
 import * as shell from '@tauri-apps/plugin-shell';
+
+interface Status {
+  gid: string;
+  message: string;
+  status: DownloadEvent['status'];
+  progress: number;
+  paused: boolean;
+}
 
 export default {
     components: {
@@ -73,8 +75,8 @@ export default {
     },
     data() {
         return {
-            store: store.state,
-            statusList: [] as { gid: string, message: string, status: string, progress: number, paused: boolean }[],
+            store: this.$store.state,
+            statusList: {} as { [id: string]: Status },
         }
     },
     computed: {
@@ -100,16 +102,48 @@ export default {
         }
     },
     methods: {
-        async postAria2c(action: string, gid: string) {
-            if (action === 'togglePause') {
-                const status = this.statusList.find(status => status.gid === gid);
+        async togglePause(id: string) {
+            try {
+                const status = this.statusList[id];
                 if (!status) return;
-                action = status.paused ? 'unpause' : 'pause';
                 status.paused = !status.paused;
+                const body = await invoke('post_aria2c', { action: [status.paused ? 'unpause' : 'pause'], params: [status.gid] }) as any;
+                if (body.error) {
+                    new ApplicationError(body.error.message, { code: body.error.code }).handleError();
+                }
+            } catch (err) {
+                err instanceof ApplicationError ? err.handleError() :
+                new ApplicationError(err as string).handleError();
             }
-            const body = await invoke('post_aria2c', { action, params: [gid] }) as any;
-            if (body.error) {
-                new ApplicationError(body.error.message, { code: body.error.code }).handleError();
+        },
+        async removeTask(id: string, queue: string) {
+            try {
+                const status = this.statusList[id];
+                if (status) {
+                    const queue_id = (() => { switch(status.status) {
+                        case 'Started': return 'doing';
+                        case 'Progress': return 'doing';
+                        case 'Finished': return 'complete';
+                        case 'Error': return 'doing';
+                    }})();
+                    return await invoke('remove_aria2c_task', { queue_id, id, gid: status.gid });
+                }
+                const queue_id = queue as keyof typeof this.store.queue;
+                const index = this.store.queue[queue_id].findIndex(q => q.id === id);
+                if (index < 0) return;
+                const targetQueue = this.store.queue[queue_id][index];
+                for (let task of targetQueue.tasks) {
+                    if (task.media_type === 'merge' || task.media_type === 'flac') continue;
+                    try {
+                        await invoke('remove_aria2c_task', { queue_id, id, gid: task.gid });
+                        this.store.queue[queue_id].splice(index, 1);
+                    } catch(err) {
+                        throw err;
+                    }
+                }
+            } catch (err) {
+                err instanceof ApplicationError ? err.handleError() :
+                new ApplicationError(err as string).handleError();
             }
         },
         recycleI18n() {
@@ -117,7 +151,7 @@ export default {
                 '',
                 this.$t('downloads.label.complete'),
                 this.$t('downloads.label.waiting'),
-                this.$t('downloads.label.startDownload'),
+                this.$t('downloads.label.download'),
             ];
 		},
         async processQueue() {
@@ -126,70 +160,55 @@ export default {
 				const downloadEvent = new Channel<DownloadEvent>();
                 const queueEvent = new Channel<QueueEvent>();
                 downloadEvent.onmessage = (message) => {
-					console.log('got download event', message);
                     switch(message.status) {
-                        case 'Started': 
-                            this.statusList = this.statusList.filter(status => status.status !== 'Finished');
-                            this.statusList.push({
-                                gid: message.gid,
-                                message: (() => {
-                                    switch(message.media_type) {
-                                        case 'video': 
-                                            return this.$t('downloads.label.video'); 
-                                        case 'audio': 
-                                            return this.$t('downloads.label.audio'); 
-                                        case 'merge': 
-                                            return this.$t('downloads.label.merge'); 
-                                        default: return message.media_type;
-                                    }
-                                })(),
-                                status: message.status,
-                                progress: 0.0,
-                                paused: false,
-                            });
-                            break;
+                    case 'Started': 
+                        this.statusList[message.id] = {
+                            gid: message.gid,
+                            message: (() => {
+                                switch(message.media_type) {
+                                    case 'video': 
+                                        return this.$t('downloads.label.video'); 
+                                    case 'audio': 
+                                        return this.$t('downloads.label.audio'); 
+                                    case 'merge': 
+                                        return this.$t('downloads.label.merge'); 
+                                    default: return message.media_type;
+                                }
+                            })(),
+                            status: message.status,
+                            progress: 0.0,
+                            paused: false,
+                        };
+                        break;
 
-                        case 'Progress':
-                            const status0 = this.statusList.find(status => status.gid === message.gid);
-                            if (status0) {
-                                status0.progress = message.chunk_length / message.content_length * 100;
-                                if (
-                                    Number.isNaN(status0.progress) ||
-                                    status0.progress === Infinity
-                                ) status0.progress = 0.0;
-                                status0.status = message.status;
+                    case 'Progress':
+                        const status = this.statusList[message.id];
+                        if (status) {
+                            status.progress = message.chunk_length / message.content_length * 100;
+                            if ( Number.isNaN(status.progress) || status.progress === Infinity ) {
+                                status.progress = 0.0;
                             }
-                            break;
+                            status.status = message.status;
+                        }
+                        break;
 
-                        case 'Finished':
-                            const status1 = this.statusList.find(status => status.gid === message.gid);
-                            if (status1) {
-                                status1.progress = 100.0;
-                                status1.status = message.status;
-                            }
-                            break;
+                    case 'Finished':
+                        this.statusList[message.id].status = message.status;
+                        break;
 
-                        case 'Error':
-                            new ApplicationError(message.message, { code: message.code }).handleError();
-                            break;
+                    case 'Error':
+                        new ApplicationError(message.message, { code: message.code }).handleError();
+                        break;
                     }
 				}
                 queueEvent.onmessage = (message) => {
-					console.log('got queue event', message.type, message.data);
-                    store.commit('updateState', { ['queue.' + message.type.toLowerCase()]: message.data });
-                    console.log(this.store.queue);
+                    this.$store.commit('updateState', { ['queue.' + message.type.toLowerCase()]: message.data });
 				}
                 await invoke('process_queue', { downloadEvent, queueEvent });
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
                 new ApplicationError(err as string).handleError();
             }
-        },
-        getMessage(tasks: typeof this.store.queue.waiting[0]['tasks']) {
-            return tasks.map(task => {
-                const status = this.statusList.find(status => status.gid === task.gid);
-                return status ? { ...status } : null;
-            }).filter(status => status !== null)[0];
         },
         async openPath(path: string, options?: { parent: boolean }) {
             return shell.open(options?.parent ? await dirname(path) : path);

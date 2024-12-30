@@ -34,6 +34,7 @@ export interface MediaInfoListItem {
   cid: number,
   eid: number,
   ss_title: string;
+  index: number;
 }
 
 export interface MediaInfo {
@@ -71,7 +72,7 @@ export interface TasksInfo {
   tasks: {
     urls: string[];
     gid: string;
-    media_type: "video" | "audio";
+    media_type: "video" | "audio" | "merge" | "flac";
     path: string;
   }[];
   output: string;
@@ -93,9 +94,9 @@ export interface InitData {
 }
 
 export type DownloadEvent = 
-  | { status: "Started"; gid: string; media_type: "video" | "audio" | "merge"; }
-  | { status: "Progress"; gid: string; content_length: number; chunk_length: number }
-  | { status: "Finished"; gid: string }
+  | { status: "Started"; id: string; gid: string; media_type: "video" | "audio" | "merge" | "flac"; }
+  | { status: "Progress"; id: string; gid: string; content_length: number; chunk_length: number }
+  | { status: "Finished"; id: string; gid: string }
   | { status: "Error"; code: number; message: string };
 
 export type QueueEvent =
@@ -1732,5 +1733,102 @@ export interface SteinInfo {
       skip_overwrite: number;
     }[];
     is_leaf: number;
+  };
+}
+
+export interface FavoriteList {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    count: number;
+    list: {
+      id: number;
+      fid: number;
+      mid: number;
+      attr: number;
+      title: string;
+      fav_state: number;
+      media_count: number;
+    }[];
+    season: null;
+  };
+}
+
+export interface FavoriteContent {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    info: {
+      id: number;
+      fid: number;
+      mid: number;
+      attr: number;
+      title: string;
+      cover: string;
+      upper: {
+        mid: number;
+        name: string;
+        face: string;
+        followed: boolean;
+        vip_type: number;
+        vip_statue: number;
+      };
+      cover_type: number;
+      cnt_info: {
+        collect: number;
+        play: number;
+        thumb_up: number;
+        share: number;
+      };
+      type: number;
+      intro: string;
+      ctime: number;
+      mtime: number;
+      state: number;
+      fav_state: number;
+      like_state: number;
+      media_count: number;
+      is_top: boolean;
+    };
+    medias: {
+      id: number;
+      type: number;
+      title: string;
+      cover: string;
+      intro: string;
+      page: number;
+      duration: number;
+      upper: {
+        mid: number;
+        name: string;
+        face: string;
+      };
+      attr: number;
+      cnt_info: {
+        collect: number;
+        play: number;
+        danmaku: number;
+        vt: number;
+        play_switch: number;
+        reply: number;
+        view_text_1: string;
+      };
+      link: string;
+      ctime: number;
+      pubtime: number;
+      fav_time: number;
+      bv_id: string;
+      bvid: string;
+      season: null;
+      ogv: null;
+      ugc: {
+        first_cid: number;
+      };
+      media_list_link: string;
+    }[];
+    has_more: boolean;
+    ttl: number;
   };
 }

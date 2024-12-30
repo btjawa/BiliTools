@@ -1,19 +1,18 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import viteCompression from 'vite-plugin-compression';
+import viteCompression from "vite-plugin-compression";
+
+// @ts-expect-error process is a nodejs global
+const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  base: './',
-  plugins: [
-    vue(),
-    viteCompression(),
-  ],
+export default defineConfig(async () => ({
+  plugins: [vue(), viteCompression()],
+
   resolve: {
-    alias: {
-      '@': '/src'
-    }
+    alias: { '@': '/src' }
   },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors
@@ -22,6 +21,14 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    host: host || false,
+    hmr: host
+      ? {
+          protocol: "ws",
+          host,
+          port: 1421,
+        }
+      : undefined,
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
@@ -31,4 +38,4 @@ export default defineConfig({
     sourcemap: true,
     target: 'ESNext',
   }
-});
+}));

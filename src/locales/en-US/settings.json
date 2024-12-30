@@ -28,7 +28,11 @@
         }
     },
     "advanced": {
-        "name": "Advanced"
+        "name": "Advanced",
+        "auto_convert_flac": {
+            "name": "Auto convert FLAC",
+            "desc": "Use FFmpeg to convert raw FLAC to standard FLAC format."
+        }
     },
     "about": {
         "name": "About",
@@ -47,9 +51,10 @@
         "database": "User Database",
         "down_dir": "Output Files",
         "temp_dir": "Temp Files",
-        "max_conc": "Concurrent Downloads",
+        "max_conc": "Simultaneous Downloads",
         "checkProxy": "Check proxy",
         "auto_check_update": "Auto Check",
+        "auto_convert_flac": "Auto Convert",
         "checkUpdate": "Check Update",
         "documentation": "Documentation",
         "feedback": "Feedback"

@@ -1,4 +1,5 @@
 {
+    "waitInit": "请等待初始化完成",
     "risk": "触发风控，请进行验证",
     "invalidInput": "无法解析输入",
     "loginExpired": "登录状态已过期",

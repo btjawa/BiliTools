@@ -53,6 +53,13 @@ jobs:
       - name: install frontend dependencies
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
         run: npm install # change this to npm or pnpm depending on which one you use.
+        
+      - name: Get updatelog
+        id: get-updatelog
+        run: |
+          output=$(npm run updatelog --silent)
+          echo "DOCS=$output" >> $GITHUB_OUTPUT
+        shell: bash
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -61,12 +68,9 @@ jobs:
         with:
           tagName: v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: 'BiliTools | v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseBody: ${{ steps.get-updatelog.outputs.DOCS }}
           releaseDraft: true
           prerelease: false
           updaterJsonPreferNsis: true
           tauriScript: 'npm'
           args: ${{ matrix.args }}
-
-      - name: Init and deploy install.json
-        run: npm run updater

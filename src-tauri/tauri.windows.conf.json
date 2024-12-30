@@ -4,15 +4,18 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "minWidth": 1100,
-        "minHeight": 750,
+        "minWidth": 1150,
+        "minHeight": 800,
         "title": "BiliTools",
         "label": "main",
-        "width": 1100,
-        "height": 750,
+        "width": 1150,
+        "height": 800,
         "transparent": true,
         "decorations": false,
-        "backgroundColor": "#000000"
+        "backgroundColor": "#000000",
+        "windowEffects": {
+          "effects": ["mica"]
+        }
       }
     ],
     "macOSPrivateApi": true

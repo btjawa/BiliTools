@@ -1,11 +1,12 @@
 use std::{collections::HashMap, env, path::PathBuf, sync::{Arc, RwLock}, time::{SystemTime, UNIX_EPOCH}};
 use lazy_static::lazy_static;
 use regex::Regex;
+use rand::{distributions::Alphanumeric, Rng};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use tokio::sync::OnceCell;
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Emitter, Manager, WebviewWindow, Wry};
 
-use crate::{cookies, config::{Settings, SettingsProxy}};
+use crate::{config::{Settings, SettingsAdvanced, SettingsProxy}, cookies};
 
 lazy_static! {
     pub static ref APP_HANDLE: Arc<OnceCell<AppHandle<Wry>>> = Arc::new(OnceCell::new());
@@ -33,12 +34,25 @@ lazy_static! {
             addr: String::new(),
             username: String::new(),
             password: String::new()
+        },
+        advanced: SettingsAdvanced {
+            auto_convert_flac: true
         }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
     pub static ref STORAGE_PATH: PathBuf = WORKING_PATH.join("Storage");
-    pub static ref BINARY_PATH: PathBuf = env::current_exe().unwrap().parent().unwrap().to_path_buf().join("bin");
+    pub static ref BINARY_PATH: PathBuf = {
+        let current = env::current_exe().unwrap().parent().unwrap().to_path_buf();
+        if cfg!(target_os = "macos")  && cfg!(not(debug_assertions)){
+            current.parent().unwrap().join("Resources").join("bin")
+        } else { current.join("bin") }
+    };
+    pub static ref BINARY_RELATIVE: String = {
+        if cfg!(target_os = "macos")  && cfg!(not(debug_assertions)){
+            "../Resources/bin".into()
+        } else { "./bin".into() }
+    };
 }
 
 pub async fn init_headers() -> Result<HashMap<String, String>, String> {
@@ -94,4 +108,9 @@ pub fn filename(filename: String) -> String {
 pub fn get_ts(mills: bool) -> u128 {
     let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     if mills { ts.as_millis() } else { ts.as_secs().into() }
+}
+
+pub fn random_string(len: usize) -> String {
+    rand::thread_rng().sample_iter(&Alphanumeric)
+        .take(len).map(char::from).collect()
 }

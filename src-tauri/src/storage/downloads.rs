@@ -1,6 +1,6 @@
-use std::error::Error;
+use std::{error::Error, sync::Arc};
 use serde::{Serialize, Deserialize};
-use sea_orm::{Database, DbBackend, Set, Schema, Statement};
+use sea_orm::{Database, DbBackend, Schema, Set, Statement};
 use sea_orm::entity::prelude::*;
 use sea_orm::sea_query::{TableCreateStatement, SqliteQueryBuilder};
 use crate::{aria2c::{QueueInfo, COMPLETE_QUEUE}, shared::STORAGE_PATH};
@@ -30,11 +30,13 @@ pub async fn init() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub async fn insert(info: QueueInfo) -> Result<(), Box<dyn Error>> {
+pub async fn insert(info: Arc<QueueInfo>) -> Result<(), Box<dyn Error>> {
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
+    let name = info.id.clone();
+    let info_unwrapped = Arc::try_unwrap(info).unwrap_or_else(|arc| (*arc).clone());
     let db_info = ActiveModel {
-        name: Set(info.output.to_str().unwrap().into()),
-        value: Set(info)
+        name: Set(name.into()),
+        value: Set(info_unwrapped)
     };
     db_info.insert(&db).await?;
     Ok(())
@@ -46,7 +48,18 @@ pub async fn load() -> Result<(), Box<dyn Error>> {
     let mut complete_queue = COMPLETE_QUEUE.write().await;
     complete_queue.clear();
     for download in downloads {
-        complete_queue.push_back(download.value);
+        complete_queue.push_back(Arc::new(download.value));
     }
+    Ok(())
+}
+
+pub async fn delete(id: Arc<String>) -> Result<(), Box<dyn Error>> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
+    let id_unwrapped = Arc::try_unwrap(id).unwrap_or_else(|arc| (*arc).clone());
+    Entity::delete_many()
+        .filter(Column::Name.eq(id_unwrapped))
+        .exec(&db)
+        .await?;
+
     Ok(())
 }

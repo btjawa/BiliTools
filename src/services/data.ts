@@ -1,6 +1,7 @@
 import { fetch } from "@tauri-apps/plugin-http";
-import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration } from "@/services/utils";
+import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
+import { checkRefresh } from "@/services/login";
 import * as DataTypes from "@/types/data.d";
 import * as dm_v1 from "@/proto/dm_v1";
 import store from "@/store";
@@ -31,7 +32,6 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
         throw new ApplicationError(response.statusText, { code: response.status });
     }
     const body = await response.json();
-    console.log(body)
     switch(type) {
         case DataTypes.MediaType.Video: {
             const info = body as DataTypes.VideoInfo;
@@ -43,7 +43,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 id: data.aid,
                 title: data.title,
                 cover: data.pic.replace("http:", "https:"),
-                desc: data.desc.replace("\n", "<br>"),
+                desc: data.desc,
                 type,
                 tags: info.data.Tags.map(item => item.tag_name),
                 stein_gate: data.rights.is_stein_gate ? await (async () => {
@@ -72,7 +72,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     mid: data.owner.mid,
                 },
                 list: data?.ugc_season ?
-                    data.ugc_season.sections[0].episodes.map(episode => ({
+                    data.ugc_season.sections[0].episodes.map((episode, index) => ({
                         title: episode.title,
                         cover: episode.arc.pic.replace("http:", "https:"),
                         desc: episode.arc.desc,
@@ -80,8 +80,9 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                         cid: episode.cid,
                         eid: episode.id,
                         ss_title: data.ugc_season.title,
+                        index
                     })) :
-                    data.pages.map(page => ({
+                    data.pages.map((page, index) => ({
                         title: page.part || data.title,
                         cover: data.pic.replace("http:", "https:"),
                         desc: data.desc,
@@ -89,6 +90,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                         cid: page.cid,
                         eid: page.page,
                         ss_title: data.title || page.part,
+                        index
                     }))
             };
         }
@@ -105,7 +107,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
-                desc: data.evaluate.replace("\n", "<br>"),
+                desc: data.evaluate,
                 type,
                 tags: data.styles,
                 stat: {
@@ -122,7 +124,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     name: data?.up_info?.uname,
                     mid: data?.up_info?.mid,
                 },
-                list: data.episodes.map(episode => ({
+                list: data.episodes.map((episode, index) => ({
                     title: episode.share_copy,
                     cover: episode.cover.replace("http:", "https:"),
                     desc: data.evaluate,
@@ -130,6 +132,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     cid: episode.cid,
                     eid: episode.ep_id,
                     ss_title: data.season_title,
+                    index
                 }))
             };
         }
@@ -143,7 +146,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
-                desc: `${data.subtitle || ''}<br>${data.faq.title || ''}<br>${data.faq.content || ''}`,
+                desc: `${data.subtitle || ''}\n${data.faq.title || ''}\n${data.faq.content || ''}`,
                 type,
                 tags: [],
                 stat: {
@@ -160,7 +163,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     name: data.up_info.uname,
                     mid: data.up_info.mid,
                 },
-                list: data.episodes.map(episode => ({
+                list: data.episodes.map((episode, index) => ({
                     title: episode.title,
                     cover: episode.cover.replace("http:", "https:"),
                     desc: data.subtitle,
@@ -168,6 +171,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     cid: episode.cid,
                     eid: episode.id,
                     ss_title: data.title,
+                    index
                 }))
             };
         }
@@ -194,7 +198,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 id: data.aid,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
-                desc: data.intro.replace("\n", "<br>"),
+                desc: data.intro,
                 type,
                 tags: [],
                 stat: {
@@ -214,11 +218,12 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 list: [{
                     title: data.title,
                     cover: data.cover.replace("http:", "https:"),
-                    desc: data.intro.replace("\n", "<br>"),
+                    desc: data.intro,
                     id: data.id,
                     cid: data.cid,
                     eid: data.id,
                     ss_title: data.title,
+                    index: 0,
                 }]
             };
         }
@@ -343,8 +348,16 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
     }
 }
 
-export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData | DataTypes.MusicUrlData }) {
+export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData | DataTypes.MusicUrlData, output?: string }) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
+    const _currentSelect = store.state.data.currentSelect;
+    const currentSelect: DataTypes.CurrentSelect = {
+        dms: params.video ? _currentSelect.dms : -1,
+        cdc: params.video ? _currentSelect.cdc : -1,
+        ads: params.audio ? _currentSelect.ads : -1,
+        fmt: _currentSelect.fmt,
+    };
+    const ext = getFileExtension(currentSelect);
     const tasks = [
         ...(params.video ? [{
             urls: [params.video.base_url, ...params.video.backup_url],
@@ -354,22 +367,16 @@ export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem,
             urls: [params.audio.base_url, ...params.audio.backup_url],
             media_type: "audio",
         }] : []),
-        ...(params.video && params.audio ? [{ urls: [], media_type: "merge" }] : [])
+        ...(params.video && params.audio ? [{ urls: [], media_type: "merge" }] : []),
+        ...(ext === "flac" ? [{ urls: [], media_type: "flac" }] : [])
     ];
     const ts = {
         millis: Date.now(),
         string: timestamp(Date.now(), { file: true })
     }
-    const currentSelect = store.state.data.currentSelect;
-    const ext = (() => {
-        if (params.video) return 'mp4';
-        else if (params.audio) {
-            return currentSelect.ads === 30252 ? 'flac' : 'aac';
-        }
-    })()
-    const queueInfo: DataTypes.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext });
+    const queueInfo: DataTypes.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext, output: params.output });
     store.commit('pushToArray', { 'queue.waiting': queueInfo});
-    console.log(store.state.queue)
+    return queueInfo;
 }
 
 export async function getBinary(url: string | URL) {
@@ -391,7 +398,6 @@ export async function getAISummary(info: DataTypes.MediaInfo["list"][0], mid: nu
     };
     const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { wbi: true, params });
     const body = response as DataTypes.AISummaryInfo;
-    console.log(body)
     if (options?.check) return body.data.code;
     if (!body.data.model_result.result_type) {
         throw new ApplicationError('No summary', { code: body.code });
@@ -436,5 +442,20 @@ export async function getSteinInfo(id: number, graph_version: number, edge_id?: 
     const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
     const response = await tryFetch('https://api.bilibili.com/x/stein/edgeinfo_v2', { wbi: true, params });
     const body = response as DataTypes.SteinInfo;
+    return body.data;
+}
+
+export async function getFavoriteList() {
+    const result = await checkRefresh();
+    const up_mid = store.state.data.headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
+    if (result !== 0 || !up_mid) return;
+    const response = await tryFetch('https://api.bilibili.com/x/v3/fav/folder/created/list-all', { params: { up_mid } });
+    const body = response as DataTypes.FavoriteList;
+    return body.data.list;
+}
+
+export async function getFavoriteContent(media_id: number, pn: number) {
+    const response = await tryFetch('https://api.bilibili.com/x/v3/fav/resource/list', { params: { media_id, ps: 20, pn } });
+    const body = response as DataTypes.FavoriteContent;
     return body.data;
 }

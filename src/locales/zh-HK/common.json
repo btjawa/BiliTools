@@ -12,6 +12,7 @@
     "exempt": "該應用產生與獲取的所有數據將僅存儲於用戶本地",
     "bilibili": "哔哩哔哩",
     "wip": "此處施工中",
+    "refresh": "刷新",
     "iziToast": {
         "info": "提示",
         "success": "成功",

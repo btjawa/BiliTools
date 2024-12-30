@@ -28,7 +28,11 @@
         }
     },
     "advanced": {
-        "name": "高级"
+        "name": "高级",
+        "auto_convert_flac": {
+            "name": "自动转换 FLAC",
+            "desc": "使用FFmpeg将原始FLAC转换为标准FLAC格式。"
+        }
     },
     "about": {
         "name": "关于",
@@ -47,9 +51,10 @@
         "database": "用户数据库",
         "down_dir": "输出文件",
         "temp_dir": "临时文件",
-        "max_conc": "下载并发数",
+        "max_conc": "同时下载数",
         "checkProxy": "检查代理连通性",
         "auto_check_update": "自动检查",
+        "auto_convert_flac": "自动转换",
         "checkUpdate": "检查更新",
         "documentation": "文档",
         "feedback": "反馈"

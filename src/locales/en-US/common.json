@@ -12,6 +12,7 @@
     "exempt": "Data generated and acquired will be stored solely on the user's device.",
     "bilibili": "Bilibili",
     "wip": "Working in progress",
+    "refresh": "Refresh",
     "iziToast": {
         "info": "Info",
         "success": "Success",

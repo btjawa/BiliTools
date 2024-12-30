@@ -4,14 +4,17 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "minWidth": 1100,
-        "minHeight": 750,
+        "minWidth": 1150,
+        "minHeight": 800,
         "title": "",
         "label": "main",
-        "width": 1100,
-        "height": 750,
+        "width": 1150,
+        "height": 800,
         "transparent": true,
-        "titleBarStyle": "Overlay"
+        "titleBarStyle": "Overlay",
+        "windowEffects": {
+          "effects": ["hudWindow"]
+        }
       }
     ],
     "macOSPrivateApi": true

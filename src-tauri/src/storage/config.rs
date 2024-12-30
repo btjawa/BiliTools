@@ -27,6 +27,7 @@ pub struct Settings {
     pub df_cdc: usize,
     pub auto_check_update: bool,
     pub proxy: SettingsProxy,
+    pub advanced: SettingsAdvanced,
     pub theme: tauri::Theme,
     pub language: String
 }
@@ -36,6 +37,11 @@ pub struct SettingsProxy {
     pub addr: String,
     pub username: String,
     pub password: String
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+pub struct SettingsAdvanced {
+    pub auto_convert_flac: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

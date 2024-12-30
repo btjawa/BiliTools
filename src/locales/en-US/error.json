@@ -1,4 +1,5 @@
 {
+    "waitInit": "Please wait for the initialization to complete",
     "risk": "Risk control has been triggered, please verify",
     "invalidInput": "Unable to parse input",
     "loginExpired": "Login session has expired",

@@ -10,7 +10,7 @@
         "audio": "音频",
         "merge": "合并",
         "complete": "完成",
-        "startDownload": "开始下载"
+        "download": "下载"
     },
     "empty": "此队列为空～"
 }

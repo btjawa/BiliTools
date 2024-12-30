@@ -47,7 +47,7 @@ export function iziInfo(message: string) {
     console.log(message)
     iziToast.info({
         icon: 'fa-solid fa-circle-info',
-        layout: 2, timeout: false, // Cheat iziToast for no timeout
+        layout: 2, timeout: 10000,
         title: t('common.iziToast.info'), message
     });
 }
@@ -56,7 +56,7 @@ function iziError(message: string) {
     console.error(message);
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
-        layout: 2, timeout: false, // Cheat iziToast for no timeout
+        layout: 2, timeout: 10000,
         title: t('common.iziToast.error'), message: message.replace(/\n/g, '<br>')
     });
 }
@@ -176,9 +176,9 @@ export async function parseId(input: string) {
             'ss': MediaType.Bangumi,
             'au': MediaType.Music
         };
-        const prefix = input.slice(0, 2).toLowerCase();
+        const prefix = input.slice(0, 2).toLowerCase() as keyof typeof map;
         const id = prefix === 'av' || prefix === 'au' ? input.slice(2) : input;
-        return { id: id, type: (map as any)[prefix] || null };
+        return { id: id, type: map[prefix] || null };
     }
 }
 
@@ -256,12 +256,6 @@ export function filename(filename: string): string {
     return filename.replace(regex, "_");
 }
 
-export function formatEscape(str: string): string {
-    return str
-        .replace(/\n/g, '<br>')
-        .replace(/ /g, '&nbsp;');
-}
-
 export function formatBytes(bytes: number): string {
     if (bytes < 1024 * 1024) {
         return (bytes / 1024).toFixed(2) + ' KB';
@@ -277,4 +271,25 @@ export function formatProxyUrl(proxy: { addr: string, username?: string, passwor
     url.username = proxy.username || '';
     url.password = proxy.password || '';
     return url.toString();
+}
+
+export function getFileExtension(options: { dms: number, ads: number, cdc: number }) {
+    let videoExt = 'mp4';
+    let audioExt = 'aac';
+    if (options.dms > 120 || options.cdc > 7) {
+        videoExt = 'mkv';
+    }
+    if (options.ads >= 30250 && options.ads <= 30252 || options.ads === 30380) {
+        videoExt = 'mkv';
+    }
+    if (options.ads >= 30216 && options.ads <= 30232 || options.ads === 30280 || options.ads === 30380) {
+        audioExt = 'aac';
+    }
+    if (options.ads === 30250) {
+        audioExt = 'eac3';
+    }
+    if (options.ads >= 30251 && options.ads <= 30252) {
+        audioExt = 'flac';
+    }
+    return options.dms >= 0 ? videoExt : audioExt;
 }

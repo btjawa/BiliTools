@@ -30,6 +30,7 @@
     "dialog:allow-ask",
     "os:allow-arch",
     "os:allow-os-type",
+    "clipboard-manager:allow-read-text",
     "process:allow-restart",
     "http:allow-fetch",
     "http:allow-fetch-read-body",

@@ -27,6 +27,13 @@
             "desc": "現在、HTTP(S)プロトコルのみがサポートされています。全体の変更を適用するにはアプリを再起動してください。"
         }
     },
+    "advanced": {
+        "name": "アドバンスド",
+        "auto_convert_flac": {
+            "name": "FLACを自動変換",
+            "desc": "FFmpegを使用して、ローファイルのFLACを標準的なFLAC形式に変換します。"
+        }
+    },
     "about": {
         "name": "概要",
         "thanks": "役に立ったと思ったら、GitHubでStarを付けてください!",
@@ -47,6 +54,7 @@
         "max_conc": "同時ダウンロード",
         "checkProxy": "プロキシ確認",
         "auto_check_update": "自動チェック",
+        "auto_convert_flac": "自動変換",
         "checkUpdate": "すぐチェック",
         "documentation": "ドキュメント",
         "feedback": "フィードバック"

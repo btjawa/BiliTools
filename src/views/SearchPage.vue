@@ -4,19 +4,19 @@
 	>
         <input
 			type="text" :placeholder="$t('home.inputPlaceholder', [$t('common.bilibili')])"
-			@keydown.enter="search" @keydown.esc.stop="searchActive = false; mediaRootActive = false"
+			@keydown.enter="search()" @keydown.esc.stop="searchActive = false; mediaRootActive = false"
 			autocomplete="off" spellcheck="false"
 			@input="searchInput=searchInput.replace(/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g, '')"
-			v-model="searchInput" class="w-full mr-2.5 rounded-2xl"
+			v-model="searchInput" class="w-full mr-2.5 !rounded-2xl"
 		/>
-        <button @click="search"
+        <button @click="search()"
 			:class="[fa_dyn, 'fa-search rounded-[50%]']"
 		></button>
     </div>
 	<div :style="{ 'opacity': mediaRootActive ? 1 : 0, 'pointerEvents': mediaRootActive ? 'all' : 'none' }"
 		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
-		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open="openPath" />
+		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open="open" />
         <Empty v-if="mediaInfo.list" :expression="mediaInfo.list.length === 0" text="home.empty" />
 		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="mediaInfo?.stein_gate">
 			<template v-for="story in mediaInfo.stein_gate.story_list">
@@ -28,11 +28,26 @@
 			</template>
 		</div>
 		<RecycleScroller v-if="mediaInfo.list"
-			class="h-[calc(100%-158px)] transition-opacity"
+			class="h-[calc(100%-158px)]"
 			:items="mediaInfo.list" :item-size="50"
-			key-field="cid" v-slot="{ item, index }"
+			key-field="index" v-slot="{ item, index }"
 		>
-			<MediaListItem :index="index" :title="item.title" :actions="[() => updateStream(index, 0, true), () => checkOthers(index)]" :media-type="mediaInfo.type" />
+			<div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
+				<div class="checkbox" v-if="checkbox">
+					<input type="checkbox" :value="index" v-model="multiSelect"/>
+					<i class="fa-solid fa-check"></i>
+				</div>
+				<span class="min-w-6">{{ index + 1 }}</span>
+				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
+				<span class="flex flex-1 ellipsis text">{{ item.title }}</span>
+				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
+				<div class="flex gap-2">
+					<button v-for="(item, _index) in options" @click="options[_index].action(index)">
+						<i :class="[fa_dyn, item.icon]"></i>
+						<span>{{ recycleI18n[_index] }}</span>
+					</button>
+				</div>
+			</div>
 		</RecycleScroller>
 		<div class="my-2 flex justify-center gap-[5px] absolute w-full"
 			v-if="mediaInfo?.stein_gate" :style="{ 'top': 216 + mediaInfo.list.length * 50 + 'px' }"
@@ -44,55 +59,67 @@
 				>{{ quesion.option }}</button>
 			</template>
 		</div> 
+		<button
+			class="fixed bottom-6 left-[73px] multi-select"
+			:class="{ 'active': checkbox }" @click="checkbox = !checkbox"
+		>
+			<i :class="[fa_dyn, 'fa-square-check']"></i>
+			<span>{{ $t('home.label.multiSelect') }}</span>
+		</button>
+		<button
+			class="fixed bottom-6 right-6 primary-color"
+			v-if="checkbox" @click="pushBackMulti"
+		>
+			<i :class="[fa_dyn, 'fa-right']"></i>
+			<span>{{ $t('common.confirm') }}</span>
+		</button>
 	</div>
-	<Popup
-		:close="popupClose" :confirm="pushBackQueue" :open="openPath"
-		:get-others="getOthers" :others-reqs="othersReqs" :others-map="othersMap"
-		:popup-active="popupActive" :play-url-info="playUrlInfo" :media-type="mediaInfo.type || ''"
-	/>
+	<Popup ref="popup" :get-others="getOthers" :push-back="pushBackQueue" :open="open" />
 </div></template>
 
 <script lang="ts">
 import { ApplicationError, stat, formatBytes, parseId, filename, timestamp } from '@/services/utils';
 import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo } from '@/types/data.d';
-import { join as pathJoin } from '@tauri-apps/api/path';
+import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api/core';
 import { transformImage } from '@tauri-apps/api/image';
-import { MediaInfo, MediaListItem, Popup } from '@/components/HomePage';
+import { MediaInfo, Popup } from '@/components/SearchPage';
 import { Empty } from '@/components';
+import { open } from '@tauri-apps/plugin-shell';
 import * as data from '@/services/data';
-import * as shell from '@tauri-apps/plugin-shell';
 import * as dialog from '@tauri-apps/plugin-dialog';
 
 export default {
 	components: {
 		MediaInfo,
-		MediaListItem,
 		Popup,
 		Empty
 	},
 	data() {
 		return {
 			searchInput: String(),
+			mediaInfo: {} as MediaInfoType,
 			searchActive: false,
 			mediaRootActive: false,
-			mediaListActive: false,
-			mediaInfo: {} as MediaInfoType,
-			popupActive: 0,
 			index: 0,
-			playUrlInfo: {} as DashInfo | DurlInfo | MusicUrlInfo,
+			checkbox: false,
+			multiSelect: [] as number[],
 			store: this.$store.state,
 			othersReqs: {
 				aiSummary: -1,
 				danmaku: false,
 			},
 			othersMap: {
-				'cover': { suffix: 'png', desc: 'PNG Image', icon: 'fa-image' },
-				'aiSummary': { suffix: 'md', desc: 'Markdown Document', icon: 'fa-microchip-ai' },
-				'metaSnapshot': { suffix: 'md', desc: 'Markdown Document', icon: 'fa-camera-polaroid' },
-				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File', icon: 'fa-clock' },
-				'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File', icon: 'fa-clock-rotate-left' },
-			}
+				'cover': { suffix: 'png', desc: 'PNG Image' },
+				'aiSummary': { suffix: 'md', desc: 'Markdown Document' },
+				'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
+				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
+				'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
+			},
+			options: [
+				{ icon: 'fa-file-arrow-down', action: (index: number) => this.updateStream(index, 0, true) },
+				{ icon: 'fa-file-export', action: (index: number) => this.checkOthers(index) },
+			]
 		}
 	},
 	computed: {
@@ -100,21 +127,29 @@ export default {
 			return this.store.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
 		},
 		currentSelect() {
-			return this.store.data.currentSelect
+			return this.store.data.currentSelect;
+		},
+		playUrlInfo: {
+            get() { return this.store.data.playUrlInfo },
+            set(v: any) { this.store.data.playUrlInfo = v }
+		},
+		recycleI18n() {
+			return [
+                this.$t(`home.downloadOptions.${this.mediaInfo.type === MediaType.Music ? 'audio' : 'audioVisual'}`),
+                this.$t('home.downloadOptions.others')
+            ];
 		}
 	},
 	watch: {
-		'currentSelect.fmt': function(newFmt, _) {
+		'currentSelect.fmt': function(newFmt, oldFmt) {
+			if (oldFmt === -1) return;
 			this.updateStream(this.index, Number(newFmt));
 		},
 		'currentSelect.dms': function() {
 			this.updateCodec();
-		}
+		},
     },
 	methods: {
-		popupClose() {
-			setTimeout(() => this.popupActive = 0, 200);
-		},
 		getSteinCondition(stein_gate: typeof this.mediaInfo.stein_gate, index: number) {
 			const question = stein_gate?.choices?.[index];
 			if (!question) return false;
@@ -124,16 +159,17 @@ export default {
 			}) : '1';
 			return /^[\d+\-*/.()=<>\s]+$/.test(exp) ? (new Function('return ' + exp))() : false;
 		},
-		async search() {
+		async search(input?: string) {
+			this.searchInput = input ?? this.searchInput;
 			if (!this.searchInput) return null;
 			this.mediaRootActive = false;
 			this.searchActive = false;
+			this.checkbox = false;
 			try {
 				this.mediaInfo = {} as MediaInfoType;
 				this.searchActive = true;
 				const { id, type } = await parseId(this.searchInput);
 				const info = await data.getMediaInfo(id, type);
-				console.log(info)
 				this.mediaInfo = info;
 				this.mediaRootActive = true;
 			} catch(err) {
@@ -169,7 +205,9 @@ export default {
 					}
 					this.updateCodec();
 				}
-				if (init) this.popupActive = 1;
+				if (init) {
+					(this.$refs.popup as InstanceType<typeof Popup>).init("audioVisual", this.mediaInfo.type, { req: this.othersReqs });
+				}
 			} catch(err) {
 				if (err instanceof ApplicationError) {
 					err.handleError();
@@ -194,7 +232,7 @@ export default {
 					this.othersReqs.danmaku = true;
 				}
 				await this.updateStream(index, 0);
-				this.popupActive = 2;
+				(this.$refs.popup as InstanceType<typeof Popup>).init("others", this.mediaInfo.type, { req: this.othersReqs });
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -250,41 +288,54 @@ export default {
 				desc: this.mediaInfo.desc,
 				eid: this.mediaInfo.list[0].eid,
 				ss_title: this.mediaInfo.list[0].ss_title,
+				index: 0,
 			}];
 		},
-		async pushBackQueue(options: { video: boolean, audio: boolean }) {
-			this.popupClose();
+		async pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output?: string, init?: boolean }) {
 			try {
 				const playUrlInfo = this.playUrlInfo as DashInfo;
-				const video = options.video === false ? null : 
+				const video = type === 'audio' ? null : 
 					playUrlInfo.video ? playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc) : null;
-				const audio = options.audio === false ? null : 
+				const audio = type === 'video' ? null : 
 					playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
-				await data.pushBackQueue({ info: this.mediaInfo.list[this.index], ...(video && { video }), ...(audio && { audio }) });
-				this.$router.push('/down-page');
-				this.store.status.queuePage = 0;
+				const info = await data.pushBackQueue({ info: this.mediaInfo.list[this.index], ...(video && { video }), ...(audio && { audio }), output: options?.output });
+				if (options?.init) {
+					this.$router.push('/down-page');
+					this.store.status.queuePage = 0;
+				}
+				return info;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
 			}
 		},
-		async openPath(path: string) {
-            return shell.open(path);
-        },
+		async pushBackMulti() {
+			this.currentSelect.fmt = 0;
+			let output = String();
+			for (const index of this.multiSelect) {
+				try {
+					await this.updateStream(index, 0);
+					const result = await this.pushBackQueue("all", { ...(output && { output }), ...(index === 0 && { init: true }) });
+					output = await pathDirname(result?.output || this.store.settings.down_dir);
+					await new Promise(resolve => setTimeout(resolve, 100));
+				} catch(err) {
+					err instanceof ApplicationError ? err.handleError() :
+					new ApplicationError(err as string).handleError();
+				}
+			}
+		},
 		stat,
 		formatBytes,
-	},
+		open,
+	}
 }
 </script>
 
-<style>
-.search_input, .media_root, .media_list, .popup_container {
-	transition: top .3s cubic-bezier(0,1,.6,1), opacity .2s, transform .5s cubic-bezier(0,1,.6,1);
+<style scoped lang="scss">
+.search_input, .media_root {
+	transition: top .3s cubic-bezier(0,1,.6,1), opacity .2s;
 }
-.popup button {
-	border: 2px solid transparent;
-	&.selected {
-		border: 2px solid var(--primary-color)
-	}
+.multi-select.active {
+	@apply text-[color:var(--dark-button-color)] bg-[color:var(--primary-color)];;
 }
 </style>

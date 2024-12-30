@@ -1,5 +1,5 @@
-<template><div class="flex-col">
-    <h1 class="self-start">
+<template><div class="flex-col items-start">
+    <h1>
         <i class="fa-gear mr-2" :class="store.settings.theme === 'light' ? 'fa-light' : 'fa-solid'"></i>
         {{ $t('settings.title') }}
         <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"
@@ -8,10 +8,8 @@
     </h1>
     <hr />
     <div class="setting-page__sub flex w-full h-full">
-        <div
-            class="setting-page__sub-page flex flex-col flex-1 mr-6"
-            ref="subPage"
-        >
+        <div class="flex flex-col flex-1 mr-6" ref="subPage">
+            <Empty :expression="settings.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
             <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
                 <h3 v-if="item.name" class="font-semibold">
                     <i class="mr-1" :class="[store.settings.theme === 'light' ? 'fa-light' : 'fa-solid', item.icon]"></i>
@@ -33,13 +31,12 @@
                     <input v-if="unit.type === 'input'"
                         :type="unit.data === 'password' ? 'password' : 'text'"
                         :placeholder="unit.placeholder"
-                        @blur="updateProxy($event, unit.data as typeof store.settings.proxy)"
-                        :value="store.settings.proxy[unit.data]"
+                        @blur="(e) => updateNest(unit.data, (e.target as HTMLInputElement).value)"
                         autocorrect="off" spellcheck="false" autocapitalize="off"
                     />
                     <button v-if="unit.type === 'switch'"
-                        @click="updateSettings(unit.data, !store.settings[unit.data])"
-                        :class="{ 'active': store.settings[unit.data] }"
+                        @click="updateNest(unit.data, !getNestedValue(store.settings, unit.data))"
+                        :class="{ 'active': getNestedValue(store.settings, unit.data) }"
                         class="inline-block w-11 h-[22px] relative delay-100 p-[3px] rounded-xl"
                     >
                         <div class="circle h-4 w-4 rounded-lg bg-[color:var(--desc-color)] absolute left-[3px] top-[3px]"></div>
@@ -88,6 +85,7 @@ import { getVersion } from '@tauri-apps/api/app';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { fetch } from '@tauri-apps/plugin-http';
 import { Path, Cache, Dropdown } from '@/components/SettingPage';
+import { Empty } from '@/components';
 import locales from '@/locales/index.json';
 import store from '@/store';
 import * as path from '@tauri-apps/api/path';
@@ -102,7 +100,7 @@ type UnitType =
 | { name: string; type: 'cache'; data: PathAlias; }
 | { name: string; type: 'dropdown'; data: keyof typeof store.state.settings; drop: keyof typeof store.state.data.mediaMap; }
 | { name: string; type: 'button'; data: Function; icon: string; }
-| { name: string; type: 'input'; data: keyof typeof store.state.settings.proxy; placeholder: string; }
+| { name: string; type: 'input'; data: string; placeholder: string; }
 | { name: string; type: 'about' }
 | { name: string; type: 'reference' };
 
@@ -111,6 +109,7 @@ export default {
         Path,
         Cache,
         Dropdown,
+        Empty
     },
     data() {
         return {
@@ -155,13 +154,17 @@ export default {
                         ] },
                     ] },
                     { name: t('settings.download.proxy.name'), icon: "fa-globe", desc: t('settings.download.proxy.desc'), data: [
-                        { name: t('common.address'), type: "input", data: "addr", placeholder: "http(s)://server:port" },
-                        { name: t('common.username'), type: "input", data: "username", placeholder: t('common.optional') },
-                        { name: t('common.password'), type: "input", data: "password", placeholder: t('common.optional') },
+                        { name: t('common.address'), type: "input", data: "proxy.addr", placeholder: "http(s)://server:port" },
+                        { name: t('common.username'), type: "input", data: "proxy.username", placeholder: t('common.optional') },
+                        { name: t('common.password'), type: "input", data: "proxy.password", placeholder: t('common.optional') },
                         { name: t('settings.label.checkProxy'), type: "button", data: this.checkProxy.bind(this), icon: "fa-cloud-question" },
                     ] }
                 ] },
-                { id: "advanced", name: t('settings.advanced.name'), icon: "fa-flask", content: [] },
+                { id: "advanced", name: t('settings.advanced.name'), icon: "fa-flask", content: [
+                    { name: t('settings.advanced.auto_convert_flac.name'), icon: "fa-exchange", desc: t('settings.advanced.auto_convert_flac.desc'), data: [
+                        { name: t('settings.label.auto_convert_flac'), type: "switch", data: "advanced.auto_convert_flac" },
+                    ] }
+                ] },
                 { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
                     { data: [{ type: "about" }] },
                     { name: t('settings.about.update.name'), icon: "fa-upload", data: [
@@ -207,11 +210,12 @@ export default {
                 new ApplicationError(err).handleError();
             })
         },
-        updateProxy(event: Event, key: keyof typeof this.store.settings.proxy) {
-            const data = (event.target as HTMLInputElement).value;
-            if (data === this.store.settings.proxy[key]) return null;
-            this.store.settings.proxy[key] = data;
-            this.updateSettings('proxy', this.store.settings.proxy);
+        updateNest(key: string, data: any) {
+            const parent = key.split('.')[0] as keyof typeof this.store.settings;
+            let value = this.getNestedValue(this.store.settings, key);
+            if (data === value) return null;
+            this.$store.commit('updateState', { [`settings.${key}`]: data });
+            this.updateSettings(parent, this.store.settings[parent]);
         },
         updateSettings(key: string, item: any) {
             if (key === "df_cdc" && item as number < 0) return;
@@ -270,6 +274,14 @@ export default {
             if (!result) return;
             await invoke('clean_cache', { path: await this.getPath(pathName) });
             await this.getSize(pathName);
+        },
+        getNestedValue(obj: Record<string, any>, path: string): any {
+            if (!path.includes('.')) return obj[path];
+            const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+            if (value && typeof value === 'object') {
+                return Array.isArray(value) ? [...value] : { ...value };
+            }
+            return value;
         }
     },
     async activated() {
@@ -281,8 +293,10 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
+$color: red;
 hr {
     @apply w-full my-4;
+    color: $color;
 }
 .page span.desc {
     @apply text-sm;

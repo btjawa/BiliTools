@@ -117,11 +117,29 @@ hr {
     margin: 8px 0;
 }
 
-button, select, input {
+button, select, input[type='text'], input[type='password'], input[type='number'] {
     @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
     @apply bg-[color:var(--button-color)] text-[color:var(--content-color)];
-    @apply hover:brightness-150;
-    @apply transition !select-none;
+    @apply hover:brightness-150 transition !select-none;
+}
+
+.checkbox {
+    @apply relative flex h-4 w-4 mr-4;
+    input[type='checkbox'] {
+        @apply absolute appearance-none h-4 w-4 rounded-[4px];
+        @apply bg-[color:var(--button-color)];
+        @apply hover:brightness-150 transition !select-none;
+    }
+    i { 
+        @apply invisible absolute pointer-events-none text-xs left-[3px] top-[0.5px];
+        @apply text-[color:var(--dark-button-color)];
+    }
+    input[type='checkbox']:checked {
+        @apply bg-[color:var(--primary-color)];
+        & + i {
+            @apply visible;
+        }
+    }
 }
 
 button {
@@ -166,6 +184,11 @@ select {
 
 .text, .text * {
     user-select: text;
+}
+
+.primary-color {
+    color: var(--dark-button-color);
+    background-color: var(--primary-color);
 }
 
 .iziToast-wrapper-topRight,

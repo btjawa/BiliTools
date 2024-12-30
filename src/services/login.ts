@@ -323,7 +323,7 @@ export async function checkRefresh(): Promise<number> {
         throw new ApplicationError(cookie_info_resp.statusText, { code: cookie_info_resp.status });
     }
     const cookie_info_body = await cookie_info_resp.json() as LoginTypes.CookieInfoResp;
-    console.log('检查刷新状态', cookie_info_body)
+    console.log('Refresh status', cookie_info_body)
     if (cookie_info_body?.code !== 0) {
         throw new ApplicationError(
             cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / ' + t('error.loginExpired') : ''),
@@ -350,7 +350,7 @@ export async function checkRefresh(): Promise<number> {
     if (!refresh_csrf) {
         throw "Failed to get refresh_csrf";
     }
-    console.log('获得refresh_csrf', refresh_csrf?.slice(0, 7))
+    console.log('Got refresh_csrf', refresh_csrf?.slice(0, 7))
     try {
         const refresh_cookie_code = await invoke('refresh_cookie', { refresh_csrf });
         return refresh_cookie_code as number;

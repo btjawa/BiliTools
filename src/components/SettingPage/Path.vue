@@ -2,9 +2,9 @@
     <button @click="open({ path: store.settings[data] as string })"
         class="ellipsis max-w-[420px] rounded-r-none"
     >{{ store.settings[data] }}</button>
-    <button @click="update(data)"
-        class="bg-[color:var(--primary-color)] rounded-l-none"
-    ><i class="fa-light fa-folder-open text-[color:var(--dark-button-color)]"></i></button>
+    <button @click="update(data)" class="primary-color rounded-l-none">
+        <i class="fa-light fa-folder-open"></i>
+    </button>
 </div></template>
 
 <script lang="ts">

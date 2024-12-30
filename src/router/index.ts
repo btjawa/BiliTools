@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { UserPage, HomePage, DownPage, FavPage, SettingPage } from '@/views';
+import { UserPage, SearchPage, DownPage, FavPage, SettingPage } from '@/views';
 
 export default createRouter({
   history: createWebHistory(),
@@ -11,8 +11,8 @@ export default createRouter({
     },
     {
       path: '/',
-      name: 'HomePage',
-      component: HomePage,
+      name: 'SearchPage',
+      component: SearchPage,
     },
     {
       path: '/down-page',
