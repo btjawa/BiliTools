@@ -1,6 +1,6 @@
 [package]
 name = "bilitools"
-version = "1.3.0-dev.7"
+version = "1.3.0"
 description = "BiliTools - 哔哩哔哩工具箱"
 authors = ["btjawa"]
 edition = "2021"
@@ -46,7 +46,6 @@ tokio = { version = "1.42", features = ["macros", "io-util", "sync", "time", "fs
 rand = "0.8.5"
 walkdir = "2.5.0"
 ring = "0.17.8"
-win32job = "2.0.0"
 sys-locale = "0.3.2"
 tauri-plugin-clipboard-manager = "2.2.0"
 

@@ -171,6 +171,18 @@ pub fn init() -> Result<(), String> {
             // format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
         ]).spawn().map_err(|e| e.to_string())?;
 
+    #[cfg(target_os = "windows")]
+    app.shell().sidecar("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe").unwrap()
+        .args([
+            "-Command",
+            &format!(
+                "while ((Get-Process -Id {} -ErrorAction SilentlyContinue) -ne $null) \
+                {{ Start-Sleep -Milliseconds 500 }}; Stop-Process -Id {} -Force",
+                std::process::id(),
+                child.pid()
+            )
+        ]).spawn().map_err(|e| e.to_string())?;
+
     #[cfg(target_os = "macos")]
     app.shell().sidecar("/bin/bash").unwrap()
     .args([

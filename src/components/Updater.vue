@@ -11,25 +11,21 @@
     >
         <button @click="handleAction(true)" class="primary-color">
             <i class="fa-solid fa-download"></i>
-            <span>{{ $t('updater.download') }}</span>
+            <span>{{ $t('updater.install') }}</span>
         </button>
         <button @click="handleAction()">{{ $t('common.cancel') }}</button>
     </div>
     <div ref="updaterProgress"
         class="updater-progress opacity-0 inline-block absolute z-[1] left-12 transition-opacity leading-8"
     >
-        <span class="inline-block">{{
+        <div :style="'--progress-width: ' + updateProgress.bytes * 160 / updateProgress.length + 'px;'"
+            class="updater-progress-bar inline-block mr-3 relative h-1.5 bg-[color:var(--block-color)] w-40 rounded-[3px]"
+        ></div>
+        <span class="inline-block min-w-[70px]">{{
             updateProgress.length ? 
             (updateProgress.bytes * 100 / updateProgress.length).toFixed(2) + ' %'
             : formatBytes(updateProgress.bytes)
         }}</span>
-        <div :style="'--progress-width: ' + updateProgress.bytes * 160 / updateProgress.length + 'px;'"
-            class="updater-progress-bar inline-block ml-3 relative h-1.5 bg-[color:var(--block-color)] w-40 rounded-[3px]"
-        ></div>
-        <button @click="updateProgress.completed ? install() : null" class="ml-4 primary-color">
-            <i class="fa-solid" :class="updateProgress.completed ? 'fa-rocket-launch' : 'fa-ban'"></i>
-            <span>{{ $t('updater.install') }}</span>
-        </button>
     </div>
 </div>
 </template>
@@ -40,7 +36,6 @@ import { ApplicationError, formatBytes, formatProxyUrl } from '@/services/utils'
 import { check as checkUpdate, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { marked } from 'marked';
-import * as log from '@tauri-apps/plugin-log';
 
 export default defineComponent({
     data() {
@@ -106,22 +101,23 @@ export default defineComponent({
                 updaterAction.style.pointerEvents = 'none';
                 (this.$refs.updaterProgress as HTMLElement).classList.add('active');
                 try {
-                    await this.update?.download((event) => {
+                    await this.update?.downloadAndInstall((event) => {
                         switch (event.event) {
                         case 'Started':
                             this.updateProgress.length = event.data?.contentLength || 0;
-                            log.info(`started downloading ${event.data.contentLength} bytes`);
+                            console.log(`started downloading ${event.data.contentLength} bytes`);
                             break;
                         case 'Progress':
                             this.updateProgress.bytes += event.data.chunkLength;
-                            log.info(`downloaded ${this.updateProgress.bytes} from ${this.updateProgress.length}`);
+                            console.log(`downloaded ${this.updateProgress.bytes} from ${this.updateProgress.length}`);
                             break;
                         case 'Finished':
                             this.updateProgress.completed = true;
-                            log.info('download finished');
+                            console.log('download finished');
                             break;
                         }
                     });
+                    await relaunch();
                 } catch(err) {
                     new ApplicationError(err as string).handleError();
                 }
@@ -135,12 +131,7 @@ export default defineComponent({
                 this.sidebarElement.style.opacity = '1';
                 this.sidebarElement.style.pointerEvents = 'all';
                 this.$el.classList.remove('active');
-
             }
-        },
-        async install() {
-            await this.update?.install();
-            await relaunch();
         }
     }
 });

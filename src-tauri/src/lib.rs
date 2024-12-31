@@ -123,17 +123,6 @@ async fn init(secret: String) -> Result<InitData<'static>, Value> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     *SECRET.write().unwrap() = shared::random_string(10);
-    #[cfg(target_os = "windows")]
-    let mut _job: Option<win32job::Job> = None;
-    #[cfg(target_os = "windows")]
-    {
-        let job = win32job::Job::create()?;
-        let mut info = job.query_extended_limit_info()?;
-        info.limit_kill_on_job_close();
-        job.set_extended_limit_info(&mut info)?;
-        job.assign_current_process()?;
-        _job = Some(job);
-    }
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_log::Builder::new()
@@ -166,11 +155,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 services::init().await.map_err(|e| e.to_string())?;
                 Ok::<(), String>(())
             });
-            let window = app.get_webview_window("main").unwrap();
             #[cfg(debug_assertions)]
-            window.open_devtools();
+            app.get_webview_window("main").unwrap().open_devtools();
             #[cfg(all(target_os = "windows", not(debug_assertions)))]
-            let _ = window.with_webview(|webview| unsafe {
+            let _ = app.get_webview_window("main").unwrap().with_webview(|webview| unsafe {
                 use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings4;
                 use windows::core::Interface;
                 let core = webview.controller().CoreWebView2().unwrap();

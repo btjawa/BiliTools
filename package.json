@@ -1,6 +1,6 @@
 {
   "name": "bilitools",
-  "version": "1.3.0-dev.7",
+  "version": "1.3.0",
   "description": "BiliTools - 哔哩哔哩工具箱",
   "type": "module",
   "scripts": {
@@ -8,7 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "updatelog": "node updatelog.mjs",
+    "updater": "node scripts/updater.mjs",
     "postinstall": "patch-package"
   },
   "repository": {
@@ -49,8 +49,10 @@
     "vuex": "^4.1.0"
   },
   "devDependencies": {
+    "@actions/github": "^6.0.0",
     "@tauri-apps/cli": "^2.1.0",
     "autoprefixer": "^10.4.20",
+    "node-fetch": "^3.3.2",
     "patch-package": "^8.0.0",
     "pbjs": "^0.0.14",
     "postcss": "^8.4.49",
