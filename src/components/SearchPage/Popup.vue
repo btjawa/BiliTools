@@ -8,7 +8,7 @@
         <div class="flex gap-1 mt-2 items-center">
             <button
                 v-for="btn in item.content"
-                @click="getOthers(btn.id, date)"
+                @click="getOthers(btn.id, { date })"
             >
                 <i :class="[fa_dyn, btn.icon]"></i>
                 <span>{{ $t('home.label.' + btn.id) }}</span>
@@ -21,7 +21,7 @@
         </div>
         <hr v-if="index < others.length - 1" />
     </div>
-    <hr v-if="popupType === 'others'" />
+    <hr v-if="others.length && popupType === 'others'" />
     <div v-for="(item, index) in general" class="relative">
         <h3>{{ $t(`common.default.${item.id}.name`) }}
         <i v-if="item.id === 'fmt'" class="fa-light fa-circle-question question"
@@ -56,6 +56,7 @@ import { DashInfo, MediaType } from '@/types/data.d';
 interface OthersReqs {
     aiSummary: number,
     danmaku: boolean,
+    cover: boolean,
 }
 
 export default defineComponent({
@@ -78,6 +79,7 @@ export default defineComponent({
             othersReqs: {} as OthersReqs,
             popupType: String() as 'audioVisual' | 'others',
             mediaType: MediaType.Video,
+            noFmt: false,
             date: new Intl.DateTimeFormat('en-CA').format(new Date()),
         }
     },
@@ -114,7 +116,7 @@ export default defineComponent({
                     content: info.audio.map(item => item.id),
                     id: 'ads', icon: 'fa-file-audio'
                 }] : []),
-                ...(this.popupType !== 'others' && this.mediaType === MediaType.Video ? [{
+                ...(this.popupType !== 'others' && this.mediaType === MediaType.Video && !this.noFmt ? [{
                     content: this.mediaMap.fmt.map(item => item.id),
                     id: 'fmt', icon: 'fa-file-code'
                 }] : []),
@@ -131,25 +133,29 @@ export default defineComponent({
                         icon: 'fa-clock-rotate-left'
                     }],
                     id: 'home.label.danmaku'
-                }] : []), {
-                    content: [{
+                }] : []),
+                ...(this.othersReqs.cover ? [{
+                    content: [
+                    ...(this.othersReqs.cover ? [{
                         id: 'cover',
                         icon: 'fa-image'
-                    },
+                    }] : []),
                     ...(this.othersReqs.aiSummary === 0 ? [{
                         id: 'aiSummary',
                         icon: 'fa-microchip-ai'
-                    }] : [])],
+                    }] : [])
+                    ],
                     id: 'home.downloadOptions.others'
-                },
+                }] : []),
             ];
         }
     },
     methods: {
-        init(type: 'audioVisual' | 'others', mediaType: MediaType, options: { req: OthersReqs }) {
+        init(type: 'audioVisual' | 'others', mediaType: MediaType, options: { req: OthersReqs, noFmt?: boolean }) {
             this.popupType = type;
             this.othersReqs = options.req;
             this.mediaType = mediaType;
+            if (options.noFmt) this.noFmt = options.noFmt;
             this.$el.classList.add('active');
         },
         close() {

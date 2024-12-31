@@ -127,12 +127,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut _job: Option<win32job::Job> = None;
     #[cfg(target_os = "windows")]
     {
-        let j = win32job::Job::create()?;
-        let mut info = j.query_extended_limit_info()?;
+        let job = win32job::Job::create()?;
+        let mut info = job.query_extended_limit_info()?;
         info.limit_kill_on_job_close();
-        j.set_extended_limit_info(&mut info)?;
-        j.assign_current_process()?;
-        _job = Some(j);
+        job.set_extended_limit_info(&mut info)?;
+        job.assign_current_process()?;
+        _job = Some(job);
     }
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
