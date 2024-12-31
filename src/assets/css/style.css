@@ -195,3 +195,10 @@ select {
 .iziToast-wrapper-topLeft {
     transform: translateY(30px);
 }
+
+markdown-style {
+    @apply !bg-transparent;
+    ul {
+        @apply list-disc;
+    }
+}

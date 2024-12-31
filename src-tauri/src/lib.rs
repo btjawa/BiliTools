@@ -166,8 +166,19 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 services::init().await.map_err(|e| e.to_string())?;
                 Ok::<(), String>(())
             });
+            let window = app.get_webview_window("main").unwrap();
             #[cfg(debug_assertions)]
-            app.get_webview_window("main").unwrap().open_devtools();
+            window.open_devtools();
+            #[cfg(all(target_os = "windows", not(debug_assertions)))]
+            let _ = window.with_webview(|webview| unsafe {
+                use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings4;
+                use windows::core::Interface;
+                let core = webview.controller().CoreWebView2().unwrap();
+                let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings4>().unwrap();
+                settings.SetAreBrowserAcceleratorKeysEnabled(false).unwrap();
+                settings.SetIsGeneralAutofillEnabled(false).unwrap();
+                settings.SetIsPasswordAutosaveEnabled(false).unwrap();
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

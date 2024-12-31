@@ -11,7 +11,7 @@
             <div class="details absolute top-[10px] ml-[120px]">
                 <div class="mb-[6px] flex items-center gap-2">
                     <h2>{{ user.name }}</h2>
-                    <img class="h-[14px]" :src="`/src/assets/img/profile/level/level${user.level}.svg`" />
+                    <img class="h-[14px]" :src="level" />
                     <img class="h-5" v-if="user.vipLabel" :src="user.vipLabel" />
                 </div>
                 <span class="text-[var(--desc-color)] text-sm w-[530px]">{{ user.desc }}</span>
@@ -154,6 +154,9 @@ export default {
         },
         dark() {
             return this.$store.state.settings.theme === 'dark';
+        },
+        level() {
+            return new URL(`/src/assets/img/profile/level/level${this.user.level}.svg`, import.meta.url).href;
         }
     },
     methods: {

@@ -88,7 +88,7 @@ export default defineComponent({
 
 <style scoped lang="scss">
 .context-menu {
-    @apply fixed overflow-hidden w-[200px] rounded-lg z-[99] shadow-lg;
+    @apply fixed overflow-hidden w-[200px] rounded-lg z-[100] shadow-lg;
     @apply bg-[color:var(--solid-block-color)] border border-solid border-[var(--split-color)];
     @apply animate-[rightmenu-in_.2s_cubic-bezier(.23,0,0,1.32)];
 }

@@ -168,7 +168,7 @@ pub fn init() -> Result<(), String> {
             format!("--conf-path={}", BINARY_PATH.join("aria2.conf").to_string_lossy()),
             format!("--rpc-listen-port={}", port),
             format!("--rpc-secret={}", &SECRET.read().unwrap()),
-            format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
+            // format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
         ]).spawn().map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "macos")]

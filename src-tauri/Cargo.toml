@@ -8,11 +8,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
-# panic = "abort" # Strip expensive panic clean-up logic
-# codegen-units = 2 # Compile crates one after another so the compiler can optimize better
-# lto = true # Enables link to optimizations
-# opt-level = "s" # Optimize for binary size
-# strip = true # Remove debug symbols
+codegen-units = 1 # Compile crates one after another so the compiler can optimize better
+lto = true # Enables link to optimizations
+opt-level = "s" # Optimize for binary size
+strip = true # Remove debug symbols
 
 # [profile.release.package.wry]
 # debug = true
@@ -51,5 +50,10 @@ win32job = "2.0.0"
 sys-locale = "0.3.2"
 tauri-plugin-clipboard-manager = "2.2.0"
 
-[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58.0", features = ["Win32_Foundation", "Win32_System_Com"] }
+windows-core = "0.58.0"
+webview2-com = "0.34.0"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.3.0"

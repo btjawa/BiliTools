@@ -2,7 +2,7 @@
     <TitleBar />
     <ContextMenu ref="contextMenu" />
     <SideBar />
-	<Updater />
+	<Updater @contextmenu.prevent="showMenu" />
     <div class="main" @contextmenu.prevent="showMenu">
         <div class="loading"></div>
         <router-view v-slot="{ Component }">

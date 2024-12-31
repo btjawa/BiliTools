@@ -47,4 +47,4 @@ if (!tagMap?.[tag]) {
   process.exit(1);
 }
 
-console.log(tagMap[tag].join('\\n').trim() || '');
+console.log(tagMap[tag].join('\n').trim() || '');

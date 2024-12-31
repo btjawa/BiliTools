@@ -1,5 +1,5 @@
-<template><div class="flex-col items-start">
-    <h1>
+<template><div class="flex-col">
+    <h1 class="self-start">
         <i class="fa-gear mr-2" :class="store.settings.theme === 'light' ? 'fa-light' : 'fa-solid'"></i>
         {{ $t('settings.title') }}
         <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"

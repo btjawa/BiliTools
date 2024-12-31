@@ -10,6 +10,7 @@ import '@/assets/css/style.css';
 import '@/assets/css/iziToast.min.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import '@vuepic/vue-datepicker/dist/main.css'
+import '@wcj/markdown-style';
 
 const url = new URL('/node_modules/source-map-support/browser-source-map-support.js', import.meta.url).href;
 {

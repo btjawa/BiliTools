@@ -110,7 +110,7 @@ export default {
 				cover: false,
 			},
 			othersMap: {
-				'cover': { suffix: 'png', desc: 'PNG Image' },
+				'cover': { suffix: 'jpg', desc: 'JPG Image' },
 				'aiSummary': { suffix: 'md', desc: 'Markdown Document' },
 				'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
 				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
@@ -173,6 +173,7 @@ export default {
 			this.mediaRootActive = false;
 			this.searchActive = false;
 			this.checkbox = false;
+			this.multiSelect = [];
 			try {
 				this.mediaInfo = {} as MediaInfoType;
 				this.searchActive = true;
@@ -226,7 +227,7 @@ export default {
 			}
 		},
 		updateCodec(currentSelect?: CurrentSelect) {
-			if (!('video' in this.playUrlInfo)) return;
+			if (!('video' in this.playUrlInfo) || !this.playUrlInfo.video) return;
 			this.updateDefault(
 				this.playUrlInfo.video.filter(item => item.id === this.currentSelect.dms).map(item => item.codecid),
 			"df_cdc", "cdc", currentSelect);
@@ -332,25 +333,25 @@ export default {
 			}
 		},
 		async pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof this.othersMap, options?: { date?: string }) {
-			const currentSelect = this.currentSelect;
+			const currentSelect = { ...this.currentSelect };
 			let output = String();
-				for (const [index, _index] of this.multiSelect.entries()) {
-					this.index = index;
-					try {
-						if (type in this.othersMap) {
-							await this.getOthers(type as any, options);
-						} else {
-							for (const key in this.currentSelect) (this.currentSelect as any)[key] = (currentSelect as any)[key];
-							await this.updateStream(index, 0, { currentSelect });
-							const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _index === 0 });
-							output = await pathDirname(result?.output || this.store.settings.down_dir);
-						}
-						await new Promise(resolve => setTimeout(resolve, 100));
-					} catch(err) {
-						err instanceof ApplicationError ? err.handleError() :
-						new ApplicationError(err as string).handleError();
+			for (const [index, _index] of this.multiSelect.entries()) {
+				this.index = index;
+				try {
+					if (type in this.othersMap) {
+						await this.getOthers(type as any, options);
+					} else {
+						for (const key in this.currentSelect) (this.currentSelect as any)[key] = (currentSelect as any)[key];
+						await this.updateStream(index, 0, { currentSelect });
+						const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _index === 0 });
+						output = await pathDirname(result?.output || this.store.settings.down_dir);
 					}
+					await new Promise(resolve => setTimeout(resolve, 100));
+				} catch(err) {
+					err instanceof ApplicationError ? err.handleError() :
+					new ApplicationError(err as string).handleError();
 				}
+			}
 		},
 		stat,
 		formatBytes,

@@ -1,13 +1,11 @@
 <template>
-<div @contextmenu.prevent
-    class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9"
->
+<div class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9">
     <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>{{ $t('updater.title') }}<span class="desc ml-3">{{ $t('updater.current', [update?.currentVersion]) }}</span></h1>
     <h3 class="text-lg">BiliTools v{{ update?.version }}<span class="desc ml-3">{{ update?.date }}</span></h3>
     <span class="desc">{{ $t('updater.disableUpdate') }}</span>
-    <div v-if="update?.body"
-        class="updater-body leading-7 max-h-[450px] overflow-auto mt-3 mb-6 whitespace-pre-wrap"
-    >{{ update.body }}</div>
+    <markdown-style v-html="body"
+        class="updater-body leading-7 max-h-[calc(100%-165px)] overflow-auto mt-3 mb-6"
+    ></markdown-style>
     <div ref="updaterAction"
         class="updater-action inline-block relative transition-opacity z-[2]"
     >
@@ -38,15 +36,17 @@
 
 <script lang="ts">
 import { defineComponent, markRaw } from 'vue';
-import { check as checkUpdate, Update } from '@tauri-apps/plugin-updater';
-import * as log from '@tauri-apps/plugin-log';
 import { ApplicationError, formatBytes, formatProxyUrl } from '@/services/utils';
+import { check as checkUpdate, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { marked } from 'marked';
+import * as log from '@tauri-apps/plugin-log';
 
 export default defineComponent({
     data() {
         return {
             update: null as Update | null,
+            body: String(),
             mainElement: {} as HTMLElement,
             sidebarElement: {} as HTMLElement,
             updateProgress: {
@@ -83,6 +83,7 @@ export default defineComponent({
             console.log('Update:', update);
             if (update?.available) {
                 this.update = markRaw(update);
+                this.body = await marked.parse(this.update.body || '');
                 this.mainElement = (document.querySelector('.main') as HTMLElement);
                 this.sidebarElement = (document.querySelector('.sidebar') as HTMLElement);
                 this.mainElement.animate(
