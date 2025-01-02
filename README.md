@@ -1,12 +1,18 @@
-# BiliTools - 哔哩哔哩工具箱
+<p align="center">
+    <img src="./assets/bilitools.png" width="500" />
+</p>
 
-![bilitools.png](https://cdn.jsdelivr.net/gh/btjawa/btjawa/assets/bilitools.png)
-
-![GitHub Tag](https://img.shields.io/github/v/tag/btjawa/BiliTools)
-![GitHub Stars](https://img.shields.io/github/stars/btjawa/BiliTools)
-![GitHub Stars](https://img.shields.io/github/license/btjawa/BiliTools)
-![Typescript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)
-![Rust](https://img.shields.io/badge/Rust-000000?logo=Rust&logoColor=white)
+<div align="center">
+    <h1>BiliTools - 哔哩哔哩工具箱</h1>
+    <img src="https://img.shields.io/github/v/tag/btjawa/BiliTools" />
+    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
+    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
+    <img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
+    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
+    <img src="https://img.shields.io/badge/Tauri-FFC131?logo=Tauri&logoColor=white" />
+    <img src="https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF" />
+    <img src="https://img.shields.io/badge/Rust-000000?logo=Rust&logoColor=white" />
+</div>
 
 ## 介绍
 
