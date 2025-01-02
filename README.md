@@ -12,7 +12,7 @@
 
 基于 [Tauri v2](https://v2.tauri.app) 实现的哔哩哔哩工具箱
 
-支持 `视频、番剧、课程、音乐` 等等资源下载与解析， 自动刷新登录信息等等
+支持 `视频、番剧、课程、音乐、漫画` 等等资源下载与解析， 自动刷新登录信息等等
 
 未来还会陆续支持更多功能，尽情期待~
 
@@ -20,7 +20,7 @@
 
 关于应用使用说明，可以查看[博客](https://www.btjawa.top/bilitools)，其中也包含各种问题的解决方法
 
-由于应用有涉及到登录等等敏感信息，请确保只在该项目的 `Release` 下载（或自行构建）
+由于应用有涉及到登录等等敏感信息，请确保只在该项目的 `Release` 下载（或自行构建），不保证其他来源的安全性
 
 ## 功能
 
@@ -64,28 +64,36 @@
 | ja-JP          | ✅ 已完成  |
 | en-US          | ✅ 已完成  |
 
-## 开发
+## TODO 列表
+
+ - [ ] 自定义文件名格式
+ - [ ] 元信息快照
+ - [ ] SOCKS 代理
+ - [ ] 完善密码登录
+ - [ ] 完善漫画解析
+ - 可以在 Issue 中提出想要的新功能
+
+## 本地开发 / 构建
+
+### 开发
 
 ```shell
+// Require Rust stable, edition 2021
 git clone https://github.com/btjawa/BiliTools.git
 cd BiliTools
 npm install // You can use pnpm, yarn as replacement
 npm run tauri dev
 ```
 
-## 贡献 / 反馈
+### 构建
 
-欢迎成为该项目的下一个贡献者~
-
-项目仍有许多模块未完全完成或不稳定，个人维护精力不足
-
-> [!IMPORTANT]
->
-> 对于提交报错， 推荐以下几种方式：
-> - 在弹出错误通知时，截图窗口，并贴图至 Issue
-> - 将 `BiliTools.log` (在应用内的 设置 -> 存储 -> 缓存 下找到日志，点击左侧按钮可打开日志文件夹) 作为附件上传至 Issue
-> 
-> 如果可以的话，请尽量描述复现方式与场景
+```shell
+// Require Rust stable, edition 2021
+git clone https://github.com/btjawa/BiliTools.git
+cd BiliTools
+npm install // You can use pnpm, yarn as replacement
+npm run tauri build
+```
 
 ## 声明
 

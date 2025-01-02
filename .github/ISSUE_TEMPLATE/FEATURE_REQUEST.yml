@@ -1,0 +1,33 @@
+name: 功能请求
+description: 想要什么新功能？
+title: "[功能请求] "
+labels: ["enhancement", "needs triage"]
+assignees: []
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 功能简述
+      description: 请对新功能进行详细描述
+    validations:
+      required: true
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: 实现参考
+      description: 是否已有实现思路或参考？
+    validations:
+      required: false
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 系统环境
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS
+    validations:
+      required: true

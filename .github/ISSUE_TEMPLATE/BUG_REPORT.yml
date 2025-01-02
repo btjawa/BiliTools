@@ -1,0 +1,46 @@
+name: 反馈 Bug
+description: 反馈 Bug 以帮助我们改进代码
+title: "[Bug] "
+labels: ["bug", "needs triage"]
+assignees: []
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 请对问题进行详细描述
+      description: 在进行什么操作时遇到的问题？问题导致？...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: 复现步骤
+      description: 请提供详细的复现步骤
+    validations:
+      required: false
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 系统环境
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: |
+        请粘贴日志，或是上传日志文件
+        Windows 日志文件路径：`C:\Users\用户名\AppData\Local\com.btjawa.bilitools\logs\BiliTools.log`
+        macOS 日志文件路径：`/Users/用户名/Library/Logs/com.btjawa.bilitools/BiliTools.log`
+        也可在应用内的 设置 -> 存储 -> 缓存 下找到日志，点击左侧按钮可打开日志文件夹
+
+    validations:
+      required: true
