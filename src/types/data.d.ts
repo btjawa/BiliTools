@@ -53,7 +53,7 @@ export interface MediaInfo {
   };
   stat: {
     play: number | null,
-    danmaku: number | null,
+    danmaku?: number | null,
     reply: number | string | null,
     like: number | null,
     coin: number | null,
@@ -1247,6 +1247,249 @@ export interface MusicTagsInfo {
     subtype: number;
     key: number;
     info: string;
+  }[];
+}
+
+export interface MangaInfo {
+  code: number;
+  msg: string;
+  data: {
+    id: number;
+    title: string;
+    comic_type: number;
+    page_default: number;
+    page_allow: number;
+    horizontal_cover: string;
+    square_cover: string;
+    vertical_cover: string;
+    author_name: string[];
+    styles: string[];
+    last_ord: number;
+    is_finish: number;
+    status: number;
+    fav: number;
+    read_order: number;
+    evaluate: string;
+    total: number;
+    ep_list: {
+      id: number;
+      ord: number;
+      read: number;
+      pay_mode: number;
+      is_locked: boolean;
+      pay_gold: number;
+      size: number;
+      short_title: string;
+      is_in_free: boolean;
+      title: string;
+      cover: string;
+      pub_time: string;
+      comments: number;
+      unlock_expire_at: string;
+      unlock_type: number;
+      allow_wait_free: boolean;
+      progress: string;
+      like_count: number;
+      chapter_id: number;
+      type: number;
+      extra: number;
+      image_count: number;
+      index_last_modified: string;
+      jump_url: string;
+    }[];
+    release_time: string;
+    is_limit: number;
+    read_epid: number;
+    last_read_time: string;
+    is_download: number;
+    read_short_title: string;
+    styles2: {
+      id: number;
+      name: string;
+    }[];
+    renewal_time: string;
+    last_short_title: string;
+    discount_type: number;
+    discount: number;
+    discount_end: string;
+    no_reward: boolean;
+    batch_discount_type: number;
+    ep_discount_type: number;
+    has_fav_activity: boolean;
+    fav_free_amount: number;
+    allow_wait_free: boolean;
+    wait_hour: number;
+    wait_free_at: string;
+    no_danmaku: number;
+    auto_pay_status: number;
+    no_month_ticket: boolean;
+    immersive: boolean;
+    no_discount: boolean;
+    show_type: number;
+    pay_mode: number;
+    chapters: unknown[];
+    classic_lines: string;
+    pay_for_new: number;
+    fav_comic_info: {
+      has_fav_activity: boolean;
+      fav_free_amount: number;
+      fav_coupon_type: number;
+    };
+    serial_status: number;
+    series_info: {
+      id: number;
+      comics: {
+        comic_id: number;
+        title: string;
+      }[];
+    };
+    album_count: number;
+    wiki_id: number;
+    disable_coupon_amount: number;
+    japan_comic: boolean;
+    interact_value: string;
+    temporary_finish_time: string;
+    video: null;
+    introduction: string;
+    comment_status: number;
+    no_screenshot: boolean;
+    type: number;
+    vomic_cvs: unknown[];
+    no_rank: boolean;
+    presale_eps: unknown[];
+    presale_text: string;
+    presale_discount: number;
+    no_leaderboard: boolean;
+    auto_pay_info: {
+      auto_pay_orders: {
+        id: number;
+        title: string;
+      }[];
+      id: number;
+    };
+    orientation: number;
+    story_elems: {
+      id: number;
+      name: string;
+    }[];
+    tags: {
+      id: number;
+      name: string;
+    }[];
+    is_star_hall: number;
+    hall_icon_text: string;
+    rookie_fav_tip: {
+      is_show: boolean;
+      used: number;
+      total: number;
+    };
+    authors: {
+      id: number;
+      name: string;
+      cname: string;
+      is_mangaman: number;
+      avatar: string;
+      uid: string;
+    }[];
+    discount_marketing: {
+      discount_scope: number;
+      discount_next_ep: unknown[];
+      discount_show: unknown[];
+      discount: number;
+    };
+    comic_alias: string[];
+    horizontal_covers: string[];
+    data_info: {
+      read_score: {
+        read_score: string;
+        is_jump: boolean;
+        increase: {
+          days: number;
+          increase_percent: number;
+        };
+        percentile: number;
+        description: string;
+      };
+      interactive_value: {
+        interact_value: string;
+        is_jump: boolean;
+        increase: {
+          days: number;
+          increase_percent: number;
+        };
+        percentile: number;
+        description: string;
+      };
+      fav_count: number;
+      five_star_rate: number;
+    };
+    last_short_title_msg: string;
+    unable_download_msg: string;
+    discount_banner: {
+      title: string;
+      msg: string;
+    };
+    marketing_tags: unknown[];
+    ad_hour: boolean;
+  };
+}
+
+export interface MangaImageIndex {
+  code: number;
+  msg: string;
+  data: {
+    path: string;
+    images: {
+      path: string;
+      x: number;
+      y: number;
+      video_path: string;
+      video_size: string;
+    }[];
+    last_modified: string;
+    host: string;
+    video: {
+      svid: string;
+      filename: string;
+      route: string;
+      resource: unknown[];
+      raw_width: string;
+      raw_height: string;
+      raw_rotate: string;
+      img_urls: unknown[];
+      bin_url: string;
+      img_x_len: number;
+      img_x_size: number;
+      img_y_len: number;
+      img_y_size: number;
+    };
+    cpx: string;
+  };
+};
+
+export interface MangaImageToken {
+  code: number;
+  msg: string;
+  data: {
+    url: string;
+    token: string;
+    complete_url: string;
+    hit_encrpyt: boolean;
+  }[];
+}
+
+export interface MangaIndexDat {
+  clips: {
+    r: number;
+    b: number;
+    t: number;
+    l: number;
+    pic: number;
+  }[];
+  pics: string[];
+  sizes: {
+    cx: number;
+    cy: number;
   }[];
 }
 

@@ -44,7 +44,7 @@
 				<div class="flex gap-2">
 					<button v-for="(item, _index) in options" @click="options[_index].action(index)">
 						<i :class="[fa_dyn, item.icon]"></i>
-						<span>{{ recycleI18n[_index] }}</span>
+						<span>{{ options[_index].text }}</span>
 					</button>
 				</div>
 			</div>
@@ -69,7 +69,7 @@
 		<div class="fixed bottom-6 right-4 flex flex-col gap-3" v-if="checkbox">
 			<button v-for="(item, _index) in options" @click="options[_index].multi" class="primary-color">
 				<i :class="[fa_dyn, item.icon]"></i>
-				<span>{{ recycleI18n[_index] }}</span>
+				<span>{{ options[_index].text }}</span>
 			</button>
 		</div>
 	</div>
@@ -108,6 +108,7 @@ export default {
 				aiSummary: -1,
 				danmaku: false,
 				cover: false,
+				manga: false,
 			},
 			othersMap: {
 				'cover': { suffix: 'jpg', desc: 'JPG Image' },
@@ -115,19 +116,8 @@ export default {
 				'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
 				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
 				'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
-			},
-			options: [
-				{
-					icon: 'fa-file-arrow-down',
-					action: (index: number) => this.updateStream(index, 0, { init: true }),
-					multi: () => this.initMulti('audioVisual')
-				},
-				{
-					icon: 'fa-file-export',
-					action: (index: number) => this.checkOthers(index, { init: true }),
-					multi: () => this.initMulti('others')
-				},
-			]
+				'manga': { suffix: 'jpg', desc: 'JPG Image' },
+			}
 		}
 	},
 	computed: {
@@ -141,11 +131,21 @@ export default {
             get() { return this.store.data.playUrlInfo },
             set(v: any) { this.store.data.playUrlInfo = v }
 		},
-		recycleI18n() {
+		options() {
 			return [
-                this.$t(`home.downloadOptions.${this.mediaInfo.type === MediaType.Music ? 'audio' : 'audioVisual'}`),
-                this.$t('home.downloadOptions.others')
-            ];
+				...((this.mediaInfo.type !== MediaType.Music && this.mediaInfo.type !== MediaType.Manga) ? [{
+					icon: 'fa-file-arrow-down',
+					text: this.$t('home.downloadOptions.audioVisual'),
+					action: (index: number) => this.updateStream(index, 0, { init: true }),
+					multi: () => this.initMulti('audioVisual')
+				}] : []),
+				{
+					icon: 'fa-file-export',
+					text: this.$t('home.downloadOptions.others'),
+					action: (index: number) => this.checkOthers(index, { init: true }),
+					multi: () => this.initMulti('others')
+				},
+			];
 		}
 	},
 	watch: {
@@ -236,15 +236,18 @@ export default {
 			try {
 				this.index = index;
 				const info = this.mediaInfo.list[this.index];
-				if (this.mediaInfo.type === "music") {
+				if (this.mediaInfo.type === MediaType.Music) {
 					this.othersReqs.danmaku = false;
+				} else if (this.mediaInfo.type === MediaType.Manga) {
+					this.othersReqs.danmaku = false;
+					this.othersReqs.manga = true;
 				} else {
 					this.othersReqs.aiSummary = await data.getAISummary(info, this.mediaInfo.upper.mid || 0, { check: true }) as number;
 					this.othersReqs.danmaku = true;
 				}
 				this.othersReqs.cover = true;
 				if (options?.init) {
-					await this.updateStream(index, 0);
+					if (this.mediaInfo.type !== MediaType.Manga) await this.updateStream(index, 0);
 					(this.$refs.popup as InstanceType<typeof Popup>).init("others", this.mediaInfo.type, { req: this.othersReqs });
 				}
 			} catch(err) {
@@ -256,6 +259,14 @@ export default {
 			try {
 				const info = this.mediaInfo.list[this.index];
 				let name = this.$t(`home.label.${type}`) + '_' + filename(info.title) + '_' + timestamp(Date.now(), { file: true });
+				if (type === 'manga') {
+					const parent = await dialog.open({
+						directory: true,
+						multiple: false,
+					});
+					if (!parent) return;
+					return await data.getMangaImages(info.id, parent, name);
+				}
                 const result = await (async () => { switch (type) {
 					case 'cover': return await data.getBinary(info.cover);
 					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);

@@ -2,6 +2,9 @@ import { fetch } from "@tauri-apps/plugin-http";
 import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { checkRefresh } from "@/services/login";
+import { getM1AndKey } from "@/services/auth";
+import { join as pathJoin } from "@tauri-apps/api/path";
+import { transformImage } from "@tauri-apps/api/image";
 import * as DataTypes from "@/types/data.d";
 import * as dm_v1 from "@/proto/dm_v1";
 import store from "@/store";
@@ -10,23 +13,26 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
     let url = "https://api.bilibili.com";
     switch(type) {
         case DataTypes.MediaType.Video:
-            url += `/x/web-interface/view/detail?${isNaN(+id) ? 'bv' : 'a'}id=${id}`;
+            url += `/x/web-interface/view/detail?${isNaN(+id) ? 'bv' : 'a'}id=` + id;
             break;
         case DataTypes.MediaType.Bangumi:
-            url += `/pgc/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=${id.match(/\d+/)?.[0]}`;
+            url += `/pgc/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + id.match(/\d+/)?.[0];
             break;
         case DataTypes.MediaType.Lesson:
-            url += `/pugv/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=${id.match(/\d+/)?.[0]}`;
+            url += `/pugv/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + id.match(/\d+/)?.[0];
             break;
         case DataTypes.MediaType.Music:
             url = "https://www.bilibili.com/audio/music-service-c/web/song/info?sid=" + id;
             break;
+        case DataTypes.MediaType.Manga:
+            url = "https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&nov=25&comic_id=" + id.match(/\d+/)?.[0];
     }
     const response = await fetch(url, {
         headers: store.state.data.headers,
         ...(store.state.settings.proxy.addr && {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-        })
+        }),
+        ...(type === DataTypes.MediaType.Manga && { method: 'POST' })
     });
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
@@ -151,7 +157,6 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 tags: [],
                 stat: {
                     play: data.stat.play,
-                    danmaku: null,
                     reply: null,
                     like: null,
                     coin: null,
@@ -203,7 +208,6 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 tags: [],
                 stat: {
                     play: data.statistic.play,
-                    danmaku: null,
                     reply: data.statistic.comment,
                     like: null,
                     coin: null,
@@ -226,6 +230,45 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                     index: 0,
                 }]
             };
+        }
+        case DataTypes.MediaType.Manga: {
+            const info = body as DataTypes.MangaInfo;
+            if (info.code !== 0) {
+                throw new ApplicationError(info.msg, { code: info.code });
+            }
+            const data = info.data;
+            console.log(data)
+            return {
+                id: data.id,
+                title: data.title,
+                cover: data.vertical_cover.replace("http:", "https:"),
+                desc: data.evaluate,
+                type,
+                tags: data.tags.map(tag => tag.name),
+                stat: {
+                    play: null,
+                    reply: data.ep_list.map(episode => episode.comments).reduce((a, b) => a + b),
+                    like: data.ep_list.map(episode => episode.like_count).reduce((a, b) => a + b),
+                    coin: null,
+                    favorite: null,
+                    share: null,
+                },
+                upper: {
+                    avatar: data.authors[0].avatar.replace("http:", "https:"),
+                    name: data.authors[0].name,
+                    mid: data.authors[0].id,
+                },
+                list: data.ep_list.reverse().map((episode, index) => ({
+                    title: episode.title.trim() || episode.short_title,
+                    cover: episode.cover.replace("http:", "https:"),
+                    desc: data.evaluate,
+                    id: episode.id,
+                    cid: episode.id,
+                    eid: episode.id,
+                    ss_title: data.title,
+                    index
+                })),
+            }
         }
         default: throw 'No type named ' + type;
     }
@@ -458,4 +501,58 @@ export async function getFavoriteContent(media_id: number, pn: number) {
     const response = await tryFetch('https://api.bilibili.com/x/v3/fav/resource/list', { params: { media_id, ps: 20, pn } });
     const body = response as DataTypes.FavoriteContent;
     return body.data;
+}
+
+export async function getMangaImages(epid: number, parent: string, name: string) {
+    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex?device=pc&platform=web&nov=25', {
+        headers: {
+            ...store.state.data.headers,
+            'Content-Type': 'application/json',
+        },
+        ...(store.state.settings.proxy.addr && {
+            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+        }),
+        method: 'POST',
+        body: JSON.stringify({ ep_id: epid })
+    });
+    if (!response.ok) {
+        throw new ApplicationError(response.statusText, { code: response.status });
+    }
+    const body = await response.json() as DataTypes.MangaImageIndex;
+    if (body.code !== 0) {
+        throw new ApplicationError(body.msg, { code: body.code });
+    }
+    let images = body.data.images.map(i => i.path);
+    for (let [index, image] of images.entries()) {
+        const url = await getMangaToken(image);
+        const path = await pathJoin(parent, name, index + 1 + '.jpg');
+        await invoke('write_binary', { 
+            contents: transformImage(await getBinary(url)),
+            secret: store.state.data.secret,
+            path,
+        });
+        // await new Promise(resolve => setTimeout(resolve, 100));
+    }
+}
+
+async function getMangaToken(path: string) {
+    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken?device=pc&platform=web&nov=25', {
+        headers: {
+            ...store.state.data.headers,
+            'Content-Type': 'application/json',
+        },
+        ...(store.state.settings.proxy.addr && {
+            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
+        }),
+        method: 'POST',
+        body: JSON.stringify({
+            urls: `[\"${path}\"]`,
+            m1: (await getM1AndKey()).key,
+        })
+    });
+    if (!response.ok) {
+        throw new ApplicationError(response.statusText, { code: response.status });
+    }
+    const body = await response.json() as DataTypes.MangaImageToken;
+    return body.data[0].complete_url;
 }

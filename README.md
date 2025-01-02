@@ -2,6 +2,12 @@
 
 ![bilitools.png](https://cdn.jsdelivr.net/gh/btjawa/btjawa/assets/bilitools.png)
 
+![GitHub Tag](https://img.shields.io/github/v/tag/btjawa/BiliTools)
+![GitHub Stars](https://img.shields.io/github/stars/btjawa/BiliTools)
+![GitHub Stars](https://img.shields.io/github/license/btjawa/BiliTools)
+![Typescript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)
+![Rust](https://img.shields.io/badge/Rust-000000?logo=Rust&logoColor=white)
+
 ## 介绍
 
 基于 [Tauri v2](https://v2.tauri.app) 实现的哔哩哔哩工具箱
@@ -43,6 +49,11 @@
 | AI总结  | ✅ 已完成 | MD Markdown格式         |
 | 历史弹幕 | ✅ 已完成 | ASS 字幕格式            |
 | 实时弹幕 | ✅ 已完成 | ASS 字幕格式            |
+| 漫画    | ❌ 不稳定 | 见下                    |
+
+### 关于漫画
+ - 使用新版API接口，可获得一话中大部分图像，仅个别图像格式不正确
+ - 目前有一个获取全部图像的方法，但是极不稳定，因此不考虑添加此功能
 
 ### 国际化 I18N
 
@@ -77,6 +88,8 @@ npm run tauri dev
 > 如果可以的话，请尽量描述复现方式与场景
 
 ## 声明
+
+本项目仅作学习用途，作者不承担因使用本项目而导致的一切后果，若有侵权，可随时联系删除
 
 本项目的代码部分依据 [MIT 许可证](https://opensource.org/license/mit) 授权，请参考项目根目录下的 `LICENSE` 文件。
 

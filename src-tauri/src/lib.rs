@@ -7,7 +7,7 @@ use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use shared::{init_headers, APP_HANDLE, SECRET};
 use tauri_plugin_shell::ShellExt;
-use std::{collections::VecDeque, env, panic, sync::{Arc, RwLock}};
+use std::{collections::VecDeque, env, panic, path::PathBuf, sync::{Arc, RwLock}};
 use tokio::fs;
 use tauri::{async_runtime, Manager};
 use walkdir::WalkDir;
@@ -72,6 +72,7 @@ async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Result
     if secret != *SECRET.read().unwrap() {
         return Err("403 Forbidden".into())
     }
+    fs::create_dir_all(PathBuf::from(&path).parent().unwrap()).await.map_err(|e| e.to_string())?;
     fs::write(&path, contents).await.map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -80,7 +81,7 @@ async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Result
 async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, filename: String, contents: Vec<u8>) -> Result<(), String> {
     let input = {
         let config = shared::CONFIG.read().unwrap();
-        config.temp_dir.join("com.btjawa.bilitools").join(format!("{filename}.xml"))
+        config.temp_dir.join("com.btjawa.bilitools").join(format!("{filename}_{}.xml", shared::get_ts(true)))
     };
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
     app.shell().sidecar(format!("{}/DanmakuFactory", &*shared::BINARY_RELATIVE)).unwrap()

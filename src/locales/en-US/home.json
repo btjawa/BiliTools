@@ -12,7 +12,8 @@
         "liveDanmaku": "Live Danmaku",
         "historyDanmaku": "History Danmaku",
         "metaSnapshot": "Metadata Snapshot",
-        "multiSelect": "Multi-Select"
+        "multiSelect": "Multi-Select",
+        "manga": "Manga"
     },
     "empty": "No available resources~"
 }

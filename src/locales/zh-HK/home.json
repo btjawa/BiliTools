@@ -12,7 +12,8 @@
         "liveDanmaku": "實時彈幕",
         "historyDanmaku": "歷史彈幕",
         "metaSnapshot": "元信息快照",
-        "multiSelect": "啟用多選"
+        "multiSelect": "啟用多選",
+        "manga": "漫畫"
     },
     "empty": "可用資源為空~"
 }

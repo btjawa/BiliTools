@@ -106,3 +106,29 @@ export async function correspondPath(timestamp: number) {
     const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
     return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
 }
+
+export async function getM1AndKey() {
+    const keyPair = await crypto.subtle.generateKey({
+        name: 'ECDH',
+        namedCurve: 'P-256'
+    }, true, ['deriveKey', 'deriveBits']);
+    const raw = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+    const jwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
+    const jwkString = JSON.stringify(jwk);
+    return { m1: btoa(jwkString), key: btoa(String.fromCharCode.apply(null, new Uint8Array(raw) as any)) };
+}
+
+export function getDecryptedDataIndex(binary: Uint8Array, epid: number, mcid: number) {
+    if (binary.subarray(0, 9).every((v, i) => v === new Uint8Array([66, 73, 76, 73, 67, 79, 77, 73, 67])[i])) {
+        const data = binary.subarray(9);
+        const key = new Uint8Array([
+            ...new Uint8Array(new Uint32Array([epid]).buffer),
+            ...new Uint8Array(new Uint32Array([mcid]).buffer)
+        ]);
+        const decrypted = data.map((byte, i) => byte ^ key[i % 8]);
+        if (decrypted[0] === 0x50 && decrypted[1] === 0x4B) {
+            return decrypted.buffer;
+        }
+    }
+    throw new ApplicationError("Invalid data index file");
+}

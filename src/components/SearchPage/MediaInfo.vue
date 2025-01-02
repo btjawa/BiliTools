@@ -9,10 +9,12 @@
             <span class="text-xs ellipsis max-w-16 mt-1">{{ info.upper.name }}</span>
         </div>
         <div class="text-xs flex gap-3 mt-1.5 text-[var(--desc-color)]">
-            <div v-if="info.stat" class="flex" v-for="([key, value]) in Object.entries(info.stat)">
-                <i class="bcc-iconfont mr-1" :class="iconMap[key as keyof typeof iconMap]"></i>
-                <span>{{ stat(value ?? '') }}</span>
-            </div>
+            <template v-if="info.stat" v-for="([key, value]) in Object.entries(info.stat)">
+                <div class="flex" v-if="typeof value === 'string' || typeof value === 'number'">
+                    <i class="bcc-iconfont mr-1" :class="iconMap[key as keyof typeof iconMap]"></i>
+                    <span>{{ stat(value ?? '') }}</span>
+                </div>
+            </template>
         </div>
         <span ref="desc" class="w-[calc(100%-64px)] text-sm block mt-2 whitespace-pre-wrap">
             {{ info.desc }}

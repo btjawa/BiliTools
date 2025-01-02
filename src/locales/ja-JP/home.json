@@ -12,7 +12,8 @@
         "liveDanmaku": "リアルタイム弾幕",
         "historyDanmaku": "歴史弾幕",
         "metaSnapshot": "メタスナップショット",
-        "multiSelect": "複数選択"
+        "multiSelect": "複数選択",
+        "manga": "マンガ"
     },
     "empty": "利用可能なリソースがありません~"
 }

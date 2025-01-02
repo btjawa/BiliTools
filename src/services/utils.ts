@@ -61,7 +61,7 @@ function iziError(message: string) {
     });
 }
 
-export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number, type?: 'text' | 'binary' }) {
+export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number, type?: 'text' | 'binary', post?: boolean }) {
     let grisk_id: string = '';
     for (let i = 0; i < (options?.times ?? 3); i++) {
         const rawParams = {
@@ -78,7 +78,8 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
             headers: store.state.data.headers,
             ...(store.state.settings.proxy.addr && {
                 proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-            })
+            }),
+            ...(options?.post && { method: 'POST' })
         });
         if (!response.ok) {
             throw new ApplicationError(response.statusText, { code: response.status });
@@ -150,6 +151,8 @@ export async function parseId(input: string) {
             if (match) return { id: match[0], type: MediaType.Bangumi }; 
             match = input.match(/au(\d+)/i);
             if (match) return { id: match[0], type: MediaType.Music }; 
+            match = input.match(/mc(\d+)/i);
+            if (match) return { id: match[0], type: MediaType.Manga };
             if (url.hostname === 'b23.tv') {
                 try {
                     const response = await fetch(url);
@@ -166,7 +169,7 @@ export async function parseId(input: string) {
         }
         throw new ApplicationError(t('error.invalidInput'), { noStack: true });
     } catch(_) { // NOT URL
-        if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
+        if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)|mc\d+$/i.test(input)) {
             throw new ApplicationError(t('error.invalidInput'), { noStack: true });
         }
         const map = {
@@ -174,7 +177,8 @@ export async function parseId(input: string) {
             'bv': MediaType.Video,
             'ep': MediaType.Bangumi,
             'ss': MediaType.Bangumi,
-            'au': MediaType.Music
+            'au': MediaType.Music,
+            'mc': MediaType.Manga
         };
         const prefix = input.slice(0, 2).toLowerCase() as keyof typeof map;
         const id = prefix === 'av' || prefix === 'au' ? input.slice(2) : input;

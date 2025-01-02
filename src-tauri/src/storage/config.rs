@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 use std::{collections::HashMap, error::Error};
 use serde::{Serialize, Deserialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use sea_orm::{Database, DbBackend, FromJsonQueryResult, IntoActiveModel, JsonValue, Schema, Statement};
 use sea_orm::entity::prelude::*;
@@ -88,17 +88,27 @@ pub async fn insert(name: String, value: JsonValue) -> Result<(), Box<dyn Error>
 pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<&str, String> {
     let window = get_window();
     if secret != *SECRET.read().unwrap() {
-        return Err("403 Forbidden".into())
+        return Err("403 Forbidden".into());
     }
     let update_config = |source: HashMap<String, Value>| {
         let mut config = CONFIG.write().unwrap();
         let mut config_json = serde_json::to_value(&*config).unwrap();
         if let Value::Object(ref mut config_obj) = config_json {
             for (key, value) in source {
-                config_obj.insert(key.clone(), value.clone());
-                async_runtime::spawn(async move {
-                    insert(key, value).await.map_err(|e| e.to_string()).unwrap();
-                });
+                if let (Some(Value::Object(original)), Value::Object(new)) = (config_obj.get_mut(&key), &value) {
+                    for (_key, _value) in new {
+                        original.insert(_key.clone(), _value.clone());
+                    }
+                    let merged = json!(original);
+                    async_runtime::spawn(async move {
+                        insert(key, merged).await.map_err(|e| e.to_string()).unwrap();
+                    });
+                } else {
+                    config_obj.insert(key.clone(), value.clone());
+                    async_runtime::spawn(async move {
+                        insert(key, value).await.map_err(|e| e.to_string()).unwrap();
+                    });
+                }
             }
         }
         *config = serde_json::from_value(config_json).map_err(|e| e.to_string()).unwrap();
@@ -114,7 +124,7 @@ pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, s
             update_config(map.into_iter().collect::<HashMap<String, Value>>());
         }
         #[cfg(debug_assertions)]
-        log::info!("{:?}", config)
+        log::info!("{:?}", config);
     }
     window.emit("rw_config:settings", config).unwrap();
     Ok(action)

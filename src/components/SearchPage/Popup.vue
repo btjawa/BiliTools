@@ -21,7 +21,7 @@
         </div>
         <hr v-if="index < others.length - 1" />
     </div>
-    <hr v-if="others.length && popupType === 'others'" />
+    <hr v-if="others.length && general.length && popupType === 'others'" />
     <div v-for="(item, index) in general" class="relative">
         <h3>{{ $t(`common.default.${item.id}.name`) }}
         <i v-if="item.id === 'fmt'" class="fa-light fa-circle-question question"
@@ -57,6 +57,7 @@ interface OthersReqs {
     aiSummary: number,
     danmaku: boolean,
     cover: boolean,
+    manga: boolean,
 }
 
 export default defineComponent({
@@ -134,7 +135,7 @@ export default defineComponent({
                     }],
                     id: 'home.label.danmaku'
                 }] : []),
-                ...(this.othersReqs.cover ? [{
+                ...(this.othersReqs.cover || this.othersReqs.aiSummary >= 0 || this.othersReqs.manga ? [{
                     content: [
                     ...(this.othersReqs.cover ? [{
                         id: 'cover',
@@ -143,6 +144,10 @@ export default defineComponent({
                     ...(this.othersReqs.aiSummary === 0 ? [{
                         id: 'aiSummary',
                         icon: 'fa-microchip-ai'
+                    }] : []),
+                    ...(this.othersReqs.manga ? [{
+                        id: 'manga',
+                        icon: 'fa-book'
                     }] : [])
                     ],
                     id: 'home.downloadOptions.others'
