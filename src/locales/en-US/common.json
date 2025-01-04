@@ -13,6 +13,7 @@
     "bilibili": "Bilibili",
     "wip": "Working in progress",
     "refresh": "Refresh",
+    "unstable": "This feature is still unstable. Please use with caution.",
     "iziToast": {
         "info": "Info",
         "success": "Success",

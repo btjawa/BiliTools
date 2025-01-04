@@ -270,7 +270,7 @@ export default {
             await invoke('get_size', { path: await this.getPath(pathName), event });
         },
         async cleanCache(pathName: PathAlias) {
-            const result = await dialog.ask(this.$t('settings.askDelete'), { 'kind': osType() === "windows" ? 'warning' : 'error' });
+            const result = await dialog.ask(this.$t('settings.askDelete'), { 'kind': 'warning' });
             if (!result) return;
             await invoke('clean_cache', { path: await this.getPath(pathName) });
             await this.getSize(pathName);

@@ -30,7 +30,7 @@
             <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
             <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-[color:var(--solid-block-color)]">
                 <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" :class="{ 'invert': dark }" />
-                <canvas ref="loginQrcode" :class="{ 'invert': !dark }" class="relative z-1"></canvas>
+                <canvas ref="loginQrcode" :class="{ 'invert': dark }" class="relative z-1"></canvas>
                 <div v-if="scanCode === 86038 || scanCode === 86090" @click="login('scan')"
                     class="absolute flex w-[172px] h-[172px] z-2 bg-opacity-50 bg-black -top-px -left-px
                     flex-col gap-2.5 justify-center items-center cursor-pointer rounded-md text-sm"
@@ -38,7 +38,7 @@
                     <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scanCode === 86038, 'fa-check': scanCode === 86090}"
                         class="w-14 h-14 p-4 text-[24px] bg-[var(--solid-block-color)] text-[var(--primary-color)] rounded-[50%]"
                     ></i>
-                    <span class="whitespace-pre-wrap text-center">{{ $t('user.scan.' + scanCode) }}</span>
+                    <span class="whitespace-pre-wrap text-center text-[color:var(--dark-button-color)]">{{ $t('user.scan.' + scanCode) }}</span>
                 </div>
             </div>
             <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]">
@@ -50,7 +50,9 @@
         <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
         <div class="flex relative h-[290px] w-[400px] flex-col items-center">
             <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
-                <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'">
+                <!-- <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'"> -->
+                <h3 @click="ask($t('common.unstable'), { 'kind': 'warning' }).then(r => r ? othersPage = 0 : null)"
+                    :class="othersPage !== 0 || 'active'">
                     {{ $t('user.others.pwd') }}
                 </h3>
                 <div class="split h-5 mx-[21px]"></div>
@@ -124,6 +126,7 @@
 import { ApplicationError, iziInfo } from '@/services/utils';
 import { emit } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
+import { ask } from '@tauri-apps/plugin-dialog';
 import * as login from '@/services/login';
 
 export default {
@@ -162,6 +165,7 @@ export default {
     methods: {
         iziInfo,
         open,
+        ask,
         async login(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
             try {
                 let code = -1;
@@ -192,7 +196,7 @@ export default {
                         break;
                     }
                     case 'exit': {
-                        login.exitLogin();
+                        code = await login.exitLogin();
                         break;
                     }
                     case 'init': {
@@ -203,7 +207,7 @@ export default {
                 }
                 if (code === 0) {
                     this.$router.push('/');
-                    login.fetchUser();
+                    await login.fetchUser();
                 }
             } catch (err) {
                 const error = err instanceof ApplicationError ? err : new ApplicationError(err as string);

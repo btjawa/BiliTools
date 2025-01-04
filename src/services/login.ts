@@ -264,8 +264,8 @@ export async function genQrcode(canvas: HTMLCanvasElement): Promise<string> {
         text: body.data.url,
         width: 160,
         height: 160,
-        background: "rgb(24, 24, 24)",
-        foreground: "rgb(233, 233, 233)"
+        background: "#fff",
+        foreground: "#000"
     };
     const qr = qrcode(0, 'Q');
     qr.addData(body.data.url);

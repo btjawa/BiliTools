@@ -260,6 +260,8 @@ export default {
 				const info = this.mediaInfo.list[this.index];
 				let name = this.$t(`home.label.${type}`) + '_' + filename(info.title) + '_' + timestamp(Date.now(), { file: true });
 				if (type === 'manga') {
+					const result = await dialog.ask(this.$t('common.unstable'), { 'kind': 'warning' });
+					if (!result) return;
 					const parent = await dialog.open({
 						directory: true,
 						multiple: false,

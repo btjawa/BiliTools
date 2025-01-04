@@ -13,6 +13,7 @@
     "bilibili": "哔哩哔哩",
     "wip": "此处施工中",
     "refresh": "刷新",
+    "unstable": "此功能尚不稳定，请谨慎使用",
     "iziToast": {
         "info": "提示",
         "success": "成功",

@@ -531,7 +531,7 @@ export async function getMangaImages(epid: number, parent: string, name: string)
             secret: store.state.data.secret,
             path,
         });
-        // await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
 }
 

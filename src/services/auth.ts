@@ -119,7 +119,8 @@ export async function getM1AndKey() {
 }
 
 export function getDecryptedDataIndex(binary: Uint8Array, epid: number, mcid: number) {
-    if (binary.subarray(0, 9).every((v, i) => v === new Uint8Array([66, 73, 76, 73, 67, 79, 77, 73, 67])[i])) {
+    const BILICOMIC = [...'BILICOMIC'].map(char => char.charCodeAt(0));
+    if (binary.subarray(0, 9).every((v, i) => v === BILICOMIC[i])) {
         const data = binary.subarray(9);
         const key = new Uint8Array([
             ...new Uint8Array(new Uint32Array([epid]).buffer),
