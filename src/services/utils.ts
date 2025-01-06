@@ -255,9 +255,15 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
 }
 
-export function filename(filename: string): string {
-    const regex = /[\\/:*?"<>|]/g;
-    return filename.replace(regex, "_");
+export function filename(options: { mediaType: string, aid: number, title: string }): string {
+    return store.state.settings.filename.replace(/{(\w+)}/g, (_, key) => {
+        switch(key) {
+            case 'date': return timestamp(Date.now(), { file: true });
+            case 'timestamp': return String(Date.now());
+            case 'title': return options.title.replace(/[\\/:*?"<>|]/g, "_");
+            default: return key in options ? String(options[key as keyof typeof options]) : "";
+        }
+    });
 }
 
 export function formatBytes(bytes: number): string {
@@ -277,7 +283,7 @@ export function formatProxyUrl(proxy: { addr: string, username?: string, passwor
     return url.toString();
 }
 
-export function getFileExtension(options: { dms: number, ads: number, cdc: number }) {
+export function getFileExtension(options: { dms: number, ads: number, cdc: number, fmt: number }) {
     let videoExt = 'mp4';
     let audioExt = 'aac';
     if (options.dms > 120 || options.cdc > 7) {
@@ -294,6 +300,9 @@ export function getFileExtension(options: { dms: number, ads: number, cdc: numbe
     }
     if (options.ads >= 30251 && options.ads <= 30252) {
         audioExt = 'flac';
+    }
+    if (options.fmt === 2) {
+        videoExt = 'flv';
     }
     return options.dms >= 0 ? videoExt : audioExt;
 }

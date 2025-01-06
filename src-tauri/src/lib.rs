@@ -73,7 +73,13 @@ async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Result
         return Err("403 Forbidden".into())
     }
     fs::create_dir_all(PathBuf::from(&path).parent().unwrap()).await.map_err(|e| e.to_string())?;
-    fs::write(&path, contents).await.map_err(|e| e.to_string())?;
+    let mut _path = PathBuf::from(path);
+    if _path.exists() {
+        if let (Some(stem), Some(ext)) = (_path.file_stem(), _path.extension()) {
+            _path.set_file_name(format!("{}_1.{}", stem.to_string_lossy(), ext.to_string_lossy()));
+        }
+    }
+    fs::write(&_path, contents).await.map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -84,11 +90,13 @@ async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, filenam
         config.temp_dir.join("com.btjawa.bilitools").join(format!("{filename}_{}.xml", shared::get_ts(true)))
     };
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
-    app.shell().sidecar(format!("{}/DanmakuFactory", &*shared::BINARY_RELATIVE)).unwrap()
+    let output = app.shell().sidecar(format!("{}/DanmakuFactory", &*shared::BINARY_RELATIVE)).unwrap()
         .args(["-i", input.to_str().unwrap(), "-o", &path])
-        .status().await.map_err(|e| e.to_string())?;
+        .output().await.map_err(|e| e.to_string())?;
 
-    fs::remove_file(input).await.map_err(|e| e.to_string())?;
+    log::info!("{:?}", path);
+    log::info!("{:?}", String::from_utf8_lossy(&output.stdout));
+    // fs::remove_file(input).await.map_err(|e| e.to_string())?;
     Ok(())
 }
 

@@ -22,6 +22,17 @@
             "name": "默認選項",
             "desc": "若搜尋的資源沒有此處的默認選項，將使用該資源支持的最高可用選項。"
         },
+        "filename": {
+            "name": "檔案名稱格式",
+            "shorten": "檔案名稱",
+            "data": {
+                "mediaType": "資源類型",
+                "aid": "AV號",
+                "title": "標題",
+                "date": "時間",
+                "timestamp": "Unix 時間戳"
+            }
+        },
         "proxy": {
             "name": "網絡代理",
             "desc": "暫僅支持 HTTP(S) 協議，修改完成後建議重啟應用程式以全局生效。"

@@ -4,6 +4,13 @@
         "doing": "Progress",
         "complete": "Complete"
     },
+    "media_type": {
+        "video": "Video",
+        "bangumi": "Bangumi",
+        "music": "Music",
+        "lesson": "Lesson",
+        "manga": "Manga"
+    },
     "label": {
         "waiting": "Waiting",
         "video": "Video",

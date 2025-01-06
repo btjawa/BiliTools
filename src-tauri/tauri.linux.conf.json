@@ -1,0 +1,24 @@
+{
+  "app": {
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "minWidth": 1150,
+        "minHeight": 800,
+        "title": "BiliTools",
+        "label": "main",
+        "width": 1150,
+        "height": 800,
+        "backgroundColor": "#000000",
+        "dragDropEnabled": false
+      }
+    ],
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "resources": {
+      "resources/linux/bin": "bin"
+    }
+  }
+}

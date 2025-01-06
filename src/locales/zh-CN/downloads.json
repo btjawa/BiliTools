@@ -4,6 +4,13 @@
         "doing": "进行中",
         "complete": "已完成"
     },
+    "media_type": {
+        "video": "视频",
+        "bangumi": "番剧",
+        "music": "音乐",
+        "lesson": "课程",
+        "manga": "漫画"
+    },
     "label": {
         "waiting": "等待",
         "video": "视频",

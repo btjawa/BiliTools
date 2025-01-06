@@ -13,11 +13,8 @@
                     @input="page<1?page=1:page>maxPage?page=maxPage:page"
                 />
             </div>
-            <RecycleScroller v-if="favorateContent[media_id]"
-                :items="favorateContent[media_id]" :item-size="50"
-                key-field="id" v-slot="{ item, index }"
-            > 
-                <div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
+            <div v-if="favorateContent[media_id]" class="flex flex-col overflow-auto gap-0.5">
+                <div v-for="(item, index) in favorateContent[media_id]" class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
                     <span class="min-w-6">{{ index + 1 }}</span>
                     <div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
                     <span class="flex flex-1 ellipsis text">{{ item.title }}</span>
@@ -27,7 +24,7 @@
                         <span>{{ $t('downloads.label.download') }}</span>
                     </button>
                 </div>
-            </RecycleScroller>
+            </div>
         </div>
         <div class="setting-page__sub-tab flex flex-col items-start gap-1">
             <button v-for="item in favorateList" @click="media_id = item.id" :class="media_id !== item.id || 'active'"

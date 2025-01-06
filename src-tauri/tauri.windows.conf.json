@@ -15,23 +15,15 @@
         "backgroundColor": "#000000",
         "windowEffects": {
           "effects": ["mica"]
-        }
+        },
+        "dragDropEnabled": false
       }
     ],
     "macOSPrivateApi": true
   },
   "bundle": {
-    "resources": [
-      "bin/aria2.conf",
-      "bin/aria2.session",
-      "bin/COPYING.aria2c",
-      "bin/COPYING.LGPLv3.ffmpeg",
-      "bin/DanmakuFactoryConfig.json",
-      "bin/LICENSE.DanmakuFactory",
-      "bin/LICENSE.OpenSSL",
-      "bin/ffmpeg.exe",
-      "bin/aria2c.exe",
-      "bin/DanmakuFactory.exe"
-    ]
+    "resources": {
+      "resources/windows/bin": "bin"
+    }
   }
 }

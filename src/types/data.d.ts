@@ -17,13 +17,13 @@ export enum MediaType {
   Bangumi = "bangumi",
   Music = "music",
   Lesson = "lesson",
-  Manga = "manga", // WIP
+  Manga = "manga",
 }
 
 export enum StreamCodecType {
   Dash = "dash",
   Mp4 = "mp4",
-  Flv = "flv", // INOP
+  Flv = "flv",
 }
 
 export interface MediaInfoListItem {
@@ -1571,6 +1571,7 @@ export interface BangumiPlayUrlInfo {
     durls: unknown[];
     has_paid: boolean;
     dash: CommonDash;
+    durl: CommonDurl[];
     clip_info_list: {
       materialNo: number;
       start: number;
@@ -1718,15 +1719,18 @@ export interface MusicUrlData {
 };
 
 export interface DashInfo {
+  type: 'dash';
   video: CommonDashData[];
   audio: CommonDashData[];
 }
 
 export interface DurlInfo {
+  type: 'mp4' | 'flv';
   video: CommonDurlData[];
 }
 
 export interface MusicUrlInfo {
+  type: 'music';
   audio: MusicUrlData[];
 }
 

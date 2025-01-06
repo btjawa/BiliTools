@@ -31,6 +31,7 @@ export default createStore({
                 language: String(),
                 theme: String(),
                 auto_check_update: false,
+                filename: String(),
                 proxy: {
                     addr: String(),
                     username: String(),
@@ -69,10 +70,10 @@ export default createStore({
                         { id: 30250 }, { id: 30380 }, { id: 30251 }, { id: 30252 },
                     ],
                     cdc: [
-                        { id: 7 }, { id: 12 }, { id: 13 }, { id: -1 },
+                        { id: 7 }, { id: 12 }, { id: 13 },
                     ],
                     fmt: [
-                        { id: 0 }, { id: 1 }
+                        { id: 0 }, { id: 1 }, { id: 2 }
                     ]
                 },
             },

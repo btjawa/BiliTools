@@ -1,6 +1,6 @@
 <template><div class="flex-col">
     <h1 class="self-start">
-        <i class="fa-gear mr-2" :class="store.settings.theme === 'light' ? 'fa-light' : 'fa-solid'"></i>
+        <i class="fa-gear mr-2" :class="fa_dyn"></i>
         {{ $t('settings.title') }}
         <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"
             class="question fa-light fa-circle-question text-xl"
@@ -12,7 +12,7 @@
             <Empty :expression="settings.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
             <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
                 <h3 v-if="item.name" class="font-semibold">
-                    <i class="mr-1" :class="[store.settings.theme === 'light' ? 'fa-light' : 'fa-solid', item.icon]"></i>
+                    <i class="mr-1" :class="[fa_dyn, item.icon]"></i>
                     {{ item.name }}
                 </h3>
                 <span v-if="'desc' in item" class="desc">{{ item.desc }}</span>
@@ -27,6 +27,10 @@
                     />
                     <Dropdown v-if="unit.type === 'dropdown'"
                         :data="unit.data" :drop="unit.drop" :update="updateSettings"
+                    />
+                    <Drag v-if="unit.type === 'drag'"
+                        :data="unit.data" :placeholders="unit.placeholders"
+                        :update="updateNest" :shorten="unit.shorten"
                     />
                     <input v-if="unit.type === 'input'"
                         :type="unit.data === 'password' ? 'password' : 'text'"
@@ -43,7 +47,7 @@
                     </button>
                     <button v-if="unit.type === 'button'" @click="unit.data()">
                         <span>{{ unit.name }}</span>
-                        <i :class="[store.settings.theme === 'light' ? 'fa-light' : 'fa-solid', unit.icon]"></i>
+                        <i :class="[fa_dyn, unit.icon]"></i>
                     </button>
                     <div v-if="unit.type === 'about'">
                         <div class="mb-4">
@@ -54,7 +58,7 @@
                             class="mx-2 text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
                         >{{ version }}</span>
                         <span class="text desc ml-2">
-                            <i :class="store.settings.theme === 'light' ? 'fa-light' : 'fa-solid'" class="fa-code-commit"></i>
+                            <i :class="fa_dyn" class="fa-code-commit"></i>
                             {{ store.data.hash.slice(0, 7) }}
                         </span>
                     </div>
@@ -84,7 +88,7 @@ import { Channel, invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { fetch } from '@tauri-apps/plugin-http';
-import { Path, Cache, Dropdown } from '@/components/SettingPage';
+import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
 import { Empty } from '@/components';
 import locales from '@/locales/index.json';
 import store from '@/store';
@@ -101,6 +105,7 @@ type UnitType =
 | { name: string; type: 'dropdown'; data: keyof typeof store.state.settings; drop: keyof typeof store.state.data.mediaMap; }
 | { name: string; type: 'button'; data: Function; icon: string; }
 | { name: string; type: 'input'; data: string; placeholder: string; }
+| { name: string; type: 'drag'; data: string; shorten: string; placeholders: Array<{ id: number | string, name: string | number }>; }
 | { name: string; type: 'about' }
 | { name: string; type: 'reference' };
 
@@ -109,6 +114,7 @@ export default {
         Path,
         Cache,
         Dropdown,
+        Drag,
         Empty
     },
     data() {
@@ -119,6 +125,9 @@ export default {
         }
     },
     computed: {
+        fa_dyn() {
+            return this.store.settings.theme === 'light' ? 'fa-light' : 'fa-solid';
+        },
         settings() {
             const t = this.$t;
             return [
@@ -151,6 +160,15 @@ export default {
                             { id: 3, name: "3" },
                             { id: 4, name: "4" },
                             { id: 5, name: "5" },
+                        ] },
+                    ] },
+                    { name: t('settings.download.filename.name'), icon: "fa-file", data: [
+                        { name: String(), type: "drag", data: 'filename', shorten: t('settings.download.filename.shorten'), placeholders: [
+                            { id: "{mediaType}", name: t('settings.download.filename.data.mediaType') },
+                            { id: "{aid}", name: t('settings.download.filename.data.aid') },
+                            { id: "{title}", name: t('settings.download.filename.data.title') },
+                            { id: "{date}", name: t('settings.download.filename.data.date') },
+                            { id: "{timestamp}", name: t('settings.download.filename.data.timestamp') },
                         ] },
                     ] },
                     { name: t('settings.download.proxy.name'), icon: "fa-globe", desc: t('settings.download.proxy.desc'), data: [
@@ -218,14 +236,20 @@ export default {
             this.updateSettings(parent, this.store.settings[parent]);
         },
         updateSettings(key: string, item: any) {
-            if (key === "df_cdc" && item as number < 0) return;
             invoke('rw_config', { action: 'write', settings: { [key]: item }, secret: this.store.data.secret });
         },
         async getPath(type: PathAlias) {
             switch (type) {
                 case 'log': return await path.appLogDir();
                 case 'temp': return path.join(await path.tempDir(), 'com.btjawa.bilitools');
-                case 'webview': return osType() === "windows" ? path.join(await path.appLocalDataDir(), 'EBWebView') : path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
+                case 'webview': return (async () => {
+                    switch(osType()) {
+                        case 'windows': return path.join(await path.appLocalDataDir(), 'EBWebView');
+                        case 'macos': return path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
+                        case 'linux': return path.join(await path.cacheDir(), 'bilitools');
+                        default: return '';
+                    }
+                })()
                 case 'database': return path.join(await path.appDataDir(), 'Storage');
             }
         },
@@ -293,10 +317,12 @@ export default {
 };
 </script>
 <style lang="scss" scoped>
-$color: red;
+.ghost {
+  opacity: 0.5;
+  background: #c8ebfb;
+}
 hr {
     @apply w-full my-4;
-    color: $color;
 }
 .page span.desc {
     @apply text-sm;

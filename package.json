@@ -43,6 +43,7 @@
     "qrcode-generator": "^1.4.4",
     "source-map-support": "^0.5.21",
     "vue": "3.4.35",
+    "vue-draggable-plus": "^0.6.0",
     "vue-i18n": "10.0.5",
     "vue-router": "4.4.0",
     "vue-virtual-scroller": "^2.0.0-beta.8",

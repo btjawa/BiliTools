@@ -1,30 +1,30 @@
 import { fetch } from "@tauri-apps/plugin-http";
-import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension } from "@/services/utils";
+import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension, filename } from "@/services/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { checkRefresh } from "@/services/login";
 import { getM1AndKey } from "@/services/auth";
 import { join as pathJoin } from "@tauri-apps/api/path";
 import { transformImage } from "@tauri-apps/api/image";
-import * as DataTypes from "@/types/data.d";
+import * as Types from "@/types/data.d";
 import * as dm_v1 from "@/proto/dm_v1";
 import store from "@/store";
 
-export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promise<DataTypes.MediaInfo> {
+export async function getMediaInfo(id: string, type: Types.MediaType): Promise<Types.MediaInfo> {
     let url = "https://api.bilibili.com";
     switch(type) {
-        case DataTypes.MediaType.Video:
+        case Types.MediaType.Video:
             url += `/x/web-interface/view/detail?${isNaN(+id) ? 'bv' : 'a'}id=` + id;
             break;
-        case DataTypes.MediaType.Bangumi:
+        case Types.MediaType.Bangumi:
             url += `/pgc/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + id.match(/\d+/)?.[0];
             break;
-        case DataTypes.MediaType.Lesson:
+        case Types.MediaType.Lesson:
             url += `/pugv/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + id.match(/\d+/)?.[0];
             break;
-        case DataTypes.MediaType.Music:
+        case Types.MediaType.Music:
             url = "https://www.bilibili.com/audio/music-service-c/web/song/info?sid=" + id;
             break;
-        case DataTypes.MediaType.Manga:
+        case Types.MediaType.Manga:
             url = "https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&nov=25&comic_id=" + id.match(/\d+/)?.[0];
     }
     const response = await fetch(url, {
@@ -32,15 +32,15 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
         ...(store.state.settings.proxy.addr && {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
         }),
-        ...(type === DataTypes.MediaType.Manga && { method: 'POST' })
+        ...(type === Types.MediaType.Manga && { method: 'POST' })
     });
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
     }
     const body = await response.json();
     switch(type) {
-        case DataTypes.MediaType.Video: {
-            const info = body as DataTypes.VideoInfo;
+        case Types.MediaType.Video: {
+            const info = body as Types.VideoInfo;
             if (info.code !== 0) {
                 throw new ApplicationError(info.message, { code: info.code });
             }
@@ -88,7 +88,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                         ss_title: data.ugc_season.title,
                         index
                     })) :
-                    data.pages.map((page, index) => ({
+                    data?.pages ? data.pages.map((page, index) => ({
                         title: page.part || data.title,
                         cover: data.pic.replace("http:", "https:"),
                         desc: data.desc,
@@ -97,14 +97,23 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                         eid: page.page,
                         ss_title: data.title || page.part,
                         index
-                    }))
+                    })) : [{
+                        title: data.title,
+                        cover: data.pic.replace("http:", "https:"),
+                        desc: data.desc,
+                        id: data.aid,
+                        cid: data.aid,
+                        eid: data.aid,
+                        ss_title: data.title,
+                        index: 0,
+                    }]
             };
         }
-        case DataTypes.MediaType.Bangumi: {
-            const info = body as DataTypes.BangumiInfo;
+        case Types.MediaType.Bangumi: {
+            const info = body as Types.BangumiInfo;
             if (info.code !== 0) {
                 if (info.code === -404) { // TRY LESSON
-                    return await getMediaInfo(id, DataTypes.MediaType.Lesson);
+                    return await getMediaInfo(id, Types.MediaType.Lesson);
                 }
                 throw new ApplicationError(info.message, { code: info.code });
             }
@@ -142,8 +151,8 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 }))
             };
         }
-        case DataTypes.MediaType.Lesson: {
-            const info = body as DataTypes.LessonInfo;
+        case Types.MediaType.Lesson: {
+            const info = body as Types.LessonInfo;
             if (info.code !== 0) {
                 throw new ApplicationError(info.message, { code: info.code });
             }
@@ -180,8 +189,8 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 }))
             };
         }
-        case DataTypes.MediaType.Music: {
-            const info = body as DataTypes.MusicInfo;
+        case Types.MediaType.Music: {
+            const info = body as Types.MusicInfo;
             if (info.code !== 0) {
                 throw new ApplicationError(info.msg, { code: info.code });
             }
@@ -194,7 +203,7 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
             if (!tagsResp.ok) {
                 throw new ApplicationError(tagsResp.statusText, { code: tagsResp.status });
             }        
-            const tagsBody = await tagsResp.json() as DataTypes.MusicTagsInfo;
+            const tagsBody = await tagsResp.json() as Types.MusicTagsInfo;
             if (tagsBody.code !== 0) {
                 throw new ApplicationError(tagsBody.msg, { code: tagsBody.code });
             }
@@ -231,13 +240,12 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
                 }]
             };
         }
-        case DataTypes.MediaType.Manga: {
-            const info = body as DataTypes.MangaInfo;
+        case Types.MediaType.Manga: {
+            const info = body as Types.MangaInfo;
             if (info.code !== 0) {
                 throw new ApplicationError(info.msg, { code: info.code });
             }
             const data = info.data;
-            console.log(data)
             return {
                 id: data.id,
                 title: data.title,
@@ -274,19 +282,60 @@ export async function getMediaInfo(id: string, type: DataTypes.MediaType): Promi
     }
 }
 
-export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: DataTypes.MediaType, options?: { codec?: DataTypes.StreamCodecType, qn?: number })
-: Promise<DataTypes.DashInfo | DataTypes.DurlInfo | DataTypes.MusicUrlInfo | DataTypes.CommonDurlData | DataTypes.MusicUrlData> {
+async function getDashDurl(
+    data: Types.VideoPlayUrlInfo["data"] | Types.BangumiPlayUrlInfo["result"] | Types.LessonPlayUrlInfo["data"],
+    info: Types.MediaInfo["list"][0],
+    type: Types.MediaType,
+    options?: { codec?: Types.StreamCodecType, qn?: number }
+) : Promise<Types.DashInfo | Types.DurlInfo | Types.CommonDurlData> { 
+    if ('dash' in data && data.dash) {
+        return {
+            type: 'dash',
+            video: data.dash.video,
+            audio: [
+                ...data.dash.audio, 
+                ...(data.dash.dolby?.audio?.length ? [data.dash.dolby.audio[0]] : []),
+                ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
+            ],
+        }
+    } else if ('durl' in data && data.durl.length) {
+        const result = {
+            codecid: 7,
+            size: data.durl[0].size,
+            base_url: data.durl[0].url,
+            backup_url: data.durl[0].backup_url
+        };
+        if (options?.qn) {
+            return { ...result, id: options.qn };
+        }
+        return {
+            type: data.format === 'mp4' ? 'mp4' : 'flv',
+            video: await Promise.all(
+                data.accept_quality.map(id => {
+                    if (id === data.quality) {
+                        return { ...result, id }
+                    }
+                    return getPlayUrl(info, type, { codec: options?.codec, qn: id })
+                })
+            ) as Types.CommonDurlData[]
+        }
+    } else throw 'No such codec: ' + options?.codec;
+}
+
+export async function getPlayUrl(
+    info: Types.MediaInfo["list"][0],
+    type: Types.MediaType,
+    options?: { codec?: Types.StreamCodecType, qn?: number }
+) : Promise<Types.DashInfo | Types.DurlInfo | Types.MusicUrlInfo | Types.MusicUrlData | Types.CommonDurlData> {
     let url = "https://api.bilibili.com";
     let fnval;
     switch (options?.codec) {
-        case DataTypes.StreamCodecType.Dash:
+        case Types.StreamCodecType.Dash:
+        case Types.StreamCodecType.Flv:
             fnval = 4048;
             break;
-        case DataTypes.StreamCodecType.Mp4:
+        case Types.StreamCodecType.Mp4:
             fnval = 1;
-            break;
-        case DataTypes.StreamCodecType.Flv:
-            fnval = 0;
             break;
     }
     let params = {
@@ -294,16 +343,16 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
         avid: info.id, cid: info.cid, ep_id: info.eid,
     } as any;
     switch(type) {
-        case DataTypes.MediaType.Video:
+        case Types.MediaType.Video:
             url += '/x/player/wbi/playurl';
             break;
-        case DataTypes.MediaType.Bangumi:
+        case Types.MediaType.Bangumi:
             url += '/pgc/player/web/playurl';
             break;
-        case DataTypes.MediaType.Lesson:
+        case Types.MediaType.Lesson:
             url += '/pugv/player/web/playurl';
             break;
-        case DataTypes.MediaType.Music:
+        case Types.MediaType.Music:
             url += '/audio/music-service-c/url';
             params = {
                 songid: info.id, quality: options?.qn, privilege: 2,
@@ -311,55 +360,22 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
             }
             break;
     }
-    const body = await tryFetch(url, { wbi: type === DataTypes.MediaType.Video, params });
+    const body = await tryFetch(url, { wbi: type === Types.MediaType.Video, params });
     switch(type) {
-        case DataTypes.MediaType.Video: {
-            const data = (body as DataTypes.VideoPlayUrlInfo).data;
-            if (options?.codec === DataTypes.StreamCodecType.Dash) {
-                return {
-                    video: data.dash.video,
-                    audio: [
-                        ...data.dash.audio, 
-                        ...(data.dash.dolby?.audio ? [data.dash.dolby.audio[0]] : []),
-                        ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
-                    ],
-                }
-            } else if (options?.codec === DataTypes.StreamCodecType.Mp4) {
-                if (options?.qn) {
-                    return {
-                        id: options.qn,
-                        codecid: 7,
-                        size: data.durl[0].size,
-                        base_url: data.durl[0].url,
-                        backup_url: data.durl[0].backup_url
-                    }
-                }
-                return {
-                    video: await Promise.all(
-                        data.accept_quality.map(id => getPlayUrl(info, type, { codec: options?.codec, qn: id }))
-                    ) as any
-                }
-            } else throw 'No such codec: ' + options?.codec;
+        case Types.MediaType.Video: {
+            const data = (body as Types.VideoPlayUrlInfo).data;
+            return await getDashDurl(data, info, type, options);
         }
-        case DataTypes.MediaType.Bangumi: {
-            const info = body as DataTypes.BangumiPlayUrlInfo;
-            const data = info.result;
-            return {
-                video: data.dash.video,
-                audio: data.dash.audio,
-            }
+        case Types.MediaType.Bangumi: {
+            const data = (body as Types.BangumiPlayUrlInfo).result;
+            return await getDashDurl(data, info, type, options);
         }
-        case DataTypes.MediaType.Lesson: {
-            const info = body as DataTypes.LessonPlayUrlInfo;
-            const data = info.data;
-            return {
-                video: data.dash.video,
-                audio: data.dash.audio,
-            }
+        case Types.MediaType.Lesson: {
+            const data = (body as Types.LessonPlayUrlInfo).data;
+            return await getDashDurl(data, info, type, options);
         }
-        case DataTypes.MediaType.Music: {
-            const _info = body as DataTypes.MusicPlayUrlInfo;
-            const data = _info.data;
+        case Types.MediaType.Music: {
+            const data = (body as Types.MusicPlayUrlInfo).data;
             const id = (() => {switch (options?.qn) {
                 case 0: return 30228;
                 case 1: return 30280;
@@ -367,34 +383,29 @@ export async function getPlayUrl(info: DataTypes.MediaInfo["list"][0], type: Dat
                 case 3: return 30252;
                 default: throw 'No qn named ' + options?.qn
             }})();
-            if (options?.qn !== 0) {
-                return {
-                    id,
-                    size: data.size,
-                    base_url: data.cdns[0],
-                    backup_url: data.cdns
-                }
-            }
+            const result = {
+                id,
+                size: data.size,
+                base_url: data.cdns[0],
+                backup_url: data.cdns
+            };
+            if (options?.qn !== 0) return result;
             return {
+                type: 'music',
                 audio: await Promise.all(data.qualities.map(async (quality) => {
-                    if (quality.type === options.qn) return {
-                        id,
-                        size: data.size,
-                        base_url: data.cdns[0],
-                        backup_url: data.cdns
-                    };
-                    return await getPlayUrl(info, type, { qn: quality.type });
-                }))
-            } as any;
+                    if (quality.type === options.qn) return result;
+                    return getPlayUrl(info, type, { qn: quality.type });
+                })) as Types.MusicUrlData[]
+            };
         }
         default: throw 'No type named ' + type;
     }
 }
 
-export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem, video?: DataTypes.CommonDashData | DataTypes.CommonDurlData, audio?: DataTypes.CommonDashData | DataTypes.MusicUrlData, output?: string }) {
+export async function pushBackQueue(params: { info: Types.MediaInfoListItem, video?: Types.CommonDashData | Types.CommonDurlData, audio?: Types.CommonDashData | Types.MusicUrlData, output?: string, media_type: string }) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
     const _currentSelect = store.state.data.currentSelect;
-    const currentSelect: DataTypes.CurrentSelect = {
+    const currentSelect: Types.CurrentSelect = {
         dms: params.video ? _currentSelect.dms : -1,
         cdc: params.video ? _currentSelect.cdc : -1,
         ads: params.audio ? _currentSelect.ads : -1,
@@ -417,7 +428,8 @@ export async function pushBackQueue(params: { info: DataTypes.MediaInfoListItem,
         millis: Date.now(),
         string: timestamp(Date.now(), { file: true })
     }
-    const queueInfo: DataTypes.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext, output: params.output });
+    const ssTitle = filename({ mediaType: params.media_type, aid: params.info.id, title: params.info.ss_title });
+    const queueInfo: Types.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext, output: params.output, ssTitle });
     store.commit('pushToArray', { 'queue.waiting': queueInfo});
     return queueInfo;
 }
@@ -435,12 +447,12 @@ export async function getBinary(url: string | URL) {
     return await response.arrayBuffer();
 }
 
-export async function getAISummary(info: DataTypes.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
+export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
     const params = {
         aid: info.id, cid: info.cid, up_mid: mid
     };
     const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { wbi: true, params });
-    const body = response as DataTypes.AISummaryInfo;
+    const body = response as Types.AISummaryInfo;
     if (options?.check) return body.data.code;
     if (!body.data.model_result.result_type) {
         throw new ApplicationError('No summary', { code: body.code });
@@ -457,9 +469,9 @@ export async function getAISummary(info: DataTypes.MediaInfo["list"][0], mid: nu
     return text;
 }
 
-export async function getLiveDanmaku(info: DataTypes.MediaInfo["list"][0], type?: DataTypes.MediaType) {
+export async function getLiveDanmaku(info: Types.MediaInfo["list"][0], type?: Types.MediaType) {
     const params = {
-        type: type === DataTypes.MediaType.Manga ? 2 : 1,
+        type: type === Types.MediaType.Manga ? 2 : 1,
         oid: info.cid, pid: info.id, segment_index: 1, // Segment INOP,  
     }
     const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
@@ -467,7 +479,7 @@ export async function getLiveDanmaku(info: DataTypes.MediaInfo["list"][0], type?
     return new TextEncoder().encode(xml);
 }
 
-export async function getHistoryDanmaku(info: DataTypes.MediaInfo["list"][0], date: string) {
+export async function getHistoryDanmaku(info: Types.MediaInfo["list"][0], date: string) {
     const params = { type: 1, oid: info.cid, date };
     const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { type: 'binary', params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
@@ -477,14 +489,14 @@ export async function getHistoryDanmaku(info: DataTypes.MediaInfo["list"][0], da
 export async function getPlayerInfo(id: number, cid: number) {
     const params = { aid: id, cid };
     const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { wbi: true, params });
-    const body = response as DataTypes.PlayerInfo;
+    const body = response as Types.PlayerInfo;
     return body.data;
 }
 
 export async function getSteinInfo(id: number, graph_version: number, edge_id?: number) {
     const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
     const response = await tryFetch('https://api.bilibili.com/x/stein/edgeinfo_v2', { wbi: true, params });
-    const body = response as DataTypes.SteinInfo;
+    const body = response as Types.SteinInfo;
     return body.data;
 }
 
@@ -493,13 +505,13 @@ export async function getFavoriteList() {
     const up_mid = store.state.data.headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
     if (result !== 0 || !up_mid) return;
     const response = await tryFetch('https://api.bilibili.com/x/v3/fav/folder/created/list-all', { params: { up_mid } });
-    const body = response as DataTypes.FavoriteList;
+    const body = response as Types.FavoriteList;
     return body.data.list;
 }
 
 export async function getFavoriteContent(media_id: number, pn: number) {
     const response = await tryFetch('https://api.bilibili.com/x/v3/fav/resource/list', { params: { media_id, ps: 20, pn } });
-    const body = response as DataTypes.FavoriteContent;
+    const body = response as Types.FavoriteContent;
     return body.data;
 }
 
@@ -518,7 +530,7 @@ export async function getMangaImages(epid: number, parent: string, name: string)
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
     }
-    const body = await response.json() as DataTypes.MangaImageIndex;
+    const body = await response.json() as Types.MangaImageIndex;
     if (body.code !== 0) {
         throw new ApplicationError(body.msg, { code: body.code });
     }
@@ -553,6 +565,6 @@ async function getMangaToken(path: string) {
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
     }
-    const body = await response.json() as DataTypes.MangaImageToken;
+    const body = await response.json() as Types.MangaImageToken;
     return body.data[0].complete_url;
 }

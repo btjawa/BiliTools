@@ -28,6 +28,7 @@ lazy_static! {
                     } else { "zh-CN".into() }
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
+        filename: "{mediaType}_{title}_{date}".into(),
         auto_check_update: true,
         theme: tauri::Theme::Dark,
         proxy: SettingsProxy {

@@ -120,7 +120,7 @@ hr {
 button, select, input[type='text'], input[type='password'], input[type='number'] {
     @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
     @apply bg-[color:var(--button-color)] text-[color:var(--content-color)];
-    @apply hover:brightness-150 transition !select-none;
+    @apply hover:brightness-150 !select-none transition-[filter];
 }
 
 .checkbox {

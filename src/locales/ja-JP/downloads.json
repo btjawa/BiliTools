@@ -4,6 +4,13 @@
         "doing": "進行中",
         "complete": "完了"
     },
+    "media_type": {
+        "video": "ビデオ",
+        "bangumi": "アニメ",
+        "music": "音楽",
+        "lesson": "ミュージック",
+        "manga": "マンガ"
+    },
     "label": {
         "waiting": "待機",
         "video": "ビデオ",

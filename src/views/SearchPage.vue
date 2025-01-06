@@ -27,27 +27,17 @@
 			</button>
 			</template>
 		</div>
-		<RecycleScroller v-if="mediaInfo.list"
+		<div v-if="mediaInfo.list && osType === 'linux'" class="flex flex-col h-[calc(100%-158px)] overflow-auto gap-0.5">
+			<template v-for="(item, index) in mediaInfo.list">
+				<MediaInfoItem :index="index" :item="item" :checkbox="checkbox" :options="options" v-model="multiSelect" />
+			</template>
+		</div>
+		<RecycleScroller v-else v-if="mediaInfo.list"
 			class="h-[calc(100%-158px)]"
 			:items="mediaInfo.list" :item-size="50"
 			key-field="index" v-slot="{ item, index }"
 		>
-			<div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
-				<div class="checkbox" v-if="checkbox">
-					<input type="checkbox" :value="index" v-model="multiSelect"/>
-					<i class="fa-solid fa-check"></i>
-				</div>
-				<span class="min-w-6">{{ index + 1 }}</span>
-				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<span class="flex flex-1 ellipsis text">{{ item.title }}</span>
-				<div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
-				<div class="flex gap-2">
-					<button v-for="(item, _index) in options" @click="options[_index].action(index)">
-						<i :class="[fa_dyn, item.icon]"></i>
-						<span>{{ options[_index].text }}</span>
-					</button>
-				</div>
-			</div>
+			<MediaInfoItem :index="index" :item="item" :checkbox="checkbox" :options="options" v-model="multiSelect" />
 		</RecycleScroller>
 		<div class="my-2 flex justify-center gap-[5px] absolute w-full"
 			v-if="mediaInfo?.stein_gate" :style="{ 'top': 216 + mediaInfo.list.length * 50 + 'px' }"
@@ -60,7 +50,7 @@
 			</template>
 		</div> 
 		<button
-			class="fixed bottom-6 left-[73px] multi-select"
+			class="fixed bottom-6 left-[73px] multi-select" v-if="mediaInfo.type !== 'manga'"
 			:class="{ 'active': checkbox }" @click="checkbox = !checkbox"
 		>
 			<i :class="[fa_dyn, 'fa-square-check']"></i>
@@ -77,12 +67,13 @@
 </div></template>
 
 <script lang="ts">
-import { ApplicationError, stat, formatBytes, parseId, filename, timestamp } from '@/services/utils';
+import { ApplicationError, stat, formatBytes, parseId, filename } from '@/services/utils';
 import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo, CurrentSelect } from '@/types/data.d';
 import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api/core';
 import { transformImage } from '@tauri-apps/api/image';
-import { MediaInfo, Popup } from '@/components/SearchPage';
+import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
+import { type as osType } from '@tauri-apps/plugin-os';
 import { Empty } from '@/components';
 import { open } from '@tauri-apps/plugin-shell';
 import * as data from '@/services/data';
@@ -91,6 +82,7 @@ import * as dialog from '@tauri-apps/plugin-dialog';
 export default {
 	components: {
 		MediaInfo,
+		MediaInfoItem,
 		Popup,
 		Empty
 	},
@@ -110,6 +102,7 @@ export default {
 				cover: false,
 				manga: false,
 			},
+			osType: osType(),
 			othersMap: {
 				'cover': { suffix: 'jpg', desc: 'JPG Image' },
 				'aiSummary': { suffix: 'md', desc: 'Markdown Document' },
@@ -204,13 +197,20 @@ export default {
 					this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads", options?.currentSelect);
 				} else {
 					if (options?.init) this.currentSelect.fmt = fmt;
-					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { codec: StreamCodecType[fmt ? 'Mp4' : 'Dash'] });
-					if (fmt === 0) {
+					const codecMap = {
+						0: StreamCodecType.Dash,
+						1: StreamCodecType.Mp4,
+						2: StreamCodecType.Flv,
+					};
+					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { codec: codecMap[fmt as keyof typeof codecMap] });
+					if ('type' in info && info.type === 'dash') {
+						if (options?.init) this.currentSelect.fmt = 0;
 						this.playUrlInfo = info as DashInfo;
 						if (!('video' in this.playUrlInfo)) return;
 						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms", options?.currentSelect);
 						this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads", options?.currentSelect);
-					} else if (fmt === 1) {
+					} else if ('type' in info && (info.type === 'mp4' || info.type === 'flv')) {
+						if (options?.init) this.currentSelect.fmt = info.type === 'mp4' ? 1 : 2;
 						this.playUrlInfo = info as DurlInfo;
 						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms", options?.currentSelect);
 					}
@@ -220,10 +220,8 @@ export default {
 					(this.$refs.popup as InstanceType<typeof Popup>).init("audioVisual", this.mediaInfo.type, { req: this.othersReqs });
 				}
 			} catch(err) {
-				if (err instanceof ApplicationError) {
-					err.handleError();
-					if (err.code === -400 && this.currentSelect.fmt === 1) this.updateStream(index, 0);
-				} else new ApplicationError(err as string).handleError();
+				err instanceof ApplicationError ? err.handleError() :
+				new ApplicationError(err as string).handleError();
 			}
 		},
 		updateCodec(currentSelect?: CurrentSelect) {
@@ -255,33 +253,44 @@ export default {
 				new ApplicationError(err as string).handleError();
 			}
 		},
-		async getOthers(type: keyof typeof this.othersMap, options?: { date?: string }) {
+		async getFolder() {
+			const parent = await dialog.open({
+				directory: true,
+				multiple: false,
+			});
+			return parent;
+		},
+		async getOthers(type: keyof typeof this.othersMap, options?: { date?: string, parent?: string }) {
 			try {
 				const info = this.mediaInfo.list[this.index];
-				let name = this.$t(`home.label.${type}`) + '_' + filename(info.title) + '_' + timestamp(Date.now(), { file: true });
+				const name = filename({
+					title: info.title + (type === 'historyDanmaku' && options?.date ? `_${options.date}` : ''),
+					mediaType: this.$t(`home.label.${type}`),
+					aid: info.id,
+				});
 				if (type === 'manga') {
+					const parent = await this.getFolder();
+					if (!parent) return;
 					const result = await dialog.ask(this.$t('common.unstable'), { 'kind': 'warning' });
 					if (!result) return;
-					const parent = await dialog.open({
-						directory: true,
-						multiple: false,
-					});
-					if (!parent) return;
 					return await data.getMangaImages(info.id, parent, name);
 				}
-                const result = await (async () => { switch (type) {
+				const result = await (async () => { switch (type) {
 					case 'cover': return await data.getBinary(info.cover);
 					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);
 					case 'liveDanmaku': return await data.getLiveDanmaku(info);
-					case 'historyDanmaku': name = options?.date + '_' + name; return await data.getHistoryDanmaku(info, options?.date || "");
+					case 'historyDanmaku': return await data.getHistoryDanmaku(info, options?.date || "");
 				}})();
-				const path = await dialog.save({
-					filters: [{
-                        name: this.othersMap[type].desc,
-                        extensions: [this.othersMap[type].suffix]
-                    }],
-					defaultPath: await pathJoin(String(this.store.settings.down_dir), name)
-				});
+				const suffix = this.othersMap[type].suffix;
+				const path =
+					options?.parent ? `${await pathJoin(options.parent, name)}.${suffix}`
+					: await dialog.save({
+						filters: [{
+							name: this.othersMap[type].desc,
+							extensions: [this.othersMap[type].suffix]
+						}],
+						defaultPath: `${await pathJoin(this.store.settings.down_dir, name)}.${suffix}`
+					});
 				if (!path) return;
 				switch (type) {
 					case 'cover': return await invoke('write_binary', { secret: this.store.data.secret, path, contents: transformImage(result as ArrayBuffer) });
@@ -320,11 +329,12 @@ export default {
 		},
 		async initMulti(type: 'audioVisual' | 'others') {
 			if (!this.checkbox) return;
+			this.currentSelect.fmt = 0;
 			await this.updateStream(this.multiSelect[0], 0);
 			await this.checkOthers(this.multiSelect[0]);
 			(this.$refs.popup as InstanceType<typeof Popup>).init(type, this.mediaInfo.type, {
 				req: this.othersReqs,
-				noFmt: true
+				noFmt: this.mediaInfo.type !== MediaType.Video
 			});
 		},
 		async pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output?: string, init?: boolean }) {
@@ -334,7 +344,13 @@ export default {
 					playUrlInfo.video ? playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc) : null;
 				const audio = type === 'video' ? null : 
 					playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
-				const info = await data.pushBackQueue({ info: this.mediaInfo.list[this.index], ...(video && { video }), ...(audio && { audio }), output: options?.output });
+				const info = await data.pushBackQueue({
+					info: this.mediaInfo.list[this.index],
+					...(video && { video }),
+					...(audio && { audio }),
+					output: options?.output,
+					media_type: this.$t('downloads.media_type.' + this.mediaInfo.type)
+				});
 				if (options?.init) {
 					this.$router.push('/down-page');
 					this.store.status.queuePage = 0;
@@ -348,14 +364,16 @@ export default {
 		async pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof this.othersMap, options?: { date?: string }) {
 			const currentSelect = { ...this.currentSelect };
 			let output = String();
+			const othersParent = type in this.othersMap ? await this.getFolder() : '_';
+			if (!othersParent) return;
 			for (const [index, _index] of this.multiSelect.entries()) {
 				this.index = index;
 				try {
 					if (type in this.othersMap) {
-						await this.getOthers(type as any, options);
+						await this.getOthers(type as any, { ...options, parent: othersParent });
 					} else {
 						for (const key in this.currentSelect) (this.currentSelect as any)[key] = (currentSelect as any)[key];
-						await this.updateStream(index, 0, { currentSelect });
+						await this.updateStream(index, this.currentSelect.fmt, { currentSelect });
 						const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _index === 0 });
 						output = await pathDirname(result?.output || this.store.settings.down_dir);
 					}

@@ -22,6 +22,17 @@
             "name": "Default Options",
             "desc": "If the options below are unavailable in the searched resource, the highest available ones will be used."
         },
+        "filename": {
+            "name": "Filename Format",
+            "shorten": "Filename",
+            "data": {
+                "mediaType": "Resource Type",
+                "aid": "AV ID",
+                "title": "Title",
+                "date": "Date",
+                "timestamp": "Unix Timestamp"
+            }
+        },
         "proxy": {
             "name": "Network Proxy",
             "desc": "Only HTTP(S) is supported yet. Restart the app for global changes to take effect."

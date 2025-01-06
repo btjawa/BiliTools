@@ -183,7 +183,7 @@ pub fn init() -> Result<(), String> {
             )
         ]).spawn().map_err(|e| e.to_string())?;
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     app.shell().sidecar("/bin/bash").unwrap()
     .args([
         "-c",
@@ -268,13 +268,24 @@ pub async fn remove_aria2c_task(queue_id: &str, id: Arc<String>, gid: Option<Arc
 }
 
 #[tauri::command]
-pub async fn push_back_queue(info: Arc<MediaInfo>, current_select: Value, tasks: Vec<Task>, ts: Arc<Timestamp>, ext: String, output: Option<String>) -> Result<Arc<QueueInfo>, Value> {
-    let parent = if let Some(output) = output {
+pub async fn push_back_queue(info: Arc<MediaInfo>, current_select: Value, tasks: Vec<Task>, ts: Arc<Timestamp>, ext: String, output: Option<String>, ss_title: String) -> Result<Arc<QueueInfo>, Value> {
+    let mut parent = if let Some(output) = &output {
         PathBuf::from(output)
     } else {
-        let config = CONFIG.read().unwrap();
-        config.down_dir.join(format!("{}_{}", filename(info.ss_title.clone()), ts.string))
+        CONFIG.read().unwrap().down_dir.join(ss_title)
     };
+    if parent.exists() {
+        let mut count = 1;
+        let original = parent.clone();
+        while parent.exists() {
+            parent = original.with_file_name(format!(
+                "{}_{}",
+                original.file_name().unwrap().to_string_lossy(),
+                count
+            ));
+            count += 1;
+        }
+    }
     let mut video_info = QueueInfo {
         id: random_string(16),
         ts: ts.clone(),
