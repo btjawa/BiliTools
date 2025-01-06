@@ -40,6 +40,7 @@
     "jsencrypt": "^3.3.2",
     "marked": "^15.0.4",
     "md5": "^2.3.0",
+    "pako": "^2.1.0",
     "qrcode-generator": "^1.4.4",
     "source-map-support": "^0.5.21",
     "vue": "3.4.35",
@@ -52,6 +53,7 @@
   "devDependencies": {
     "@actions/github": "^6.0.0",
     "@tauri-apps/cli": "^2.1.0",
+    "@types/pako": "^2.0.3",
     "autoprefixer": "^10.4.20",
     "node-fetch": "^3.3.2",
     "patch-package": "^8.0.0",

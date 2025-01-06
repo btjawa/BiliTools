@@ -12,7 +12,7 @@ export function DmSegMobileReplyToXML(binary: Uint8Array) {
       decoded.elems.forEach(elem => {
           const dElement = xmlDoc.createElement("d");
           dElement.setAttribute("p", [
-              (elem.progress || 0 / 1000).toString(),
+              (elem.progress || 0) / 1000,
               elem.mode,
               elem.fontsize,
               elem.color,

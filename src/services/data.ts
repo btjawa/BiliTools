@@ -7,6 +7,7 @@ import { join as pathJoin } from "@tauri-apps/api/path";
 import { transformImage } from "@tauri-apps/api/image";
 import * as Types from "@/types/data.d";
 import * as dm_v1 from "@/proto/dm_v1";
+import * as pako from 'pako';
 import store from "@/store";
 
 export async function getMediaInfo(id: string, type: Types.MediaType): Promise<Types.MediaInfo> {
@@ -469,14 +470,15 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
     return text;
 }
 
-export async function getLiveDanmaku(info: Types.MediaInfo["list"][0], type?: Types.MediaType) {
-    const params = {
-        type: type === Types.MediaType.Manga ? 2 : 1,
-        oid: info.cid, pid: info.id, segment_index: 1, // Segment INOP,  
+export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
+    /* const params = {
+        type: 1, oid: info.cid, pid: info.id, segment_index: 1, // Segment INOP,  
     }
     const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
-    return new TextEncoder().encode(xml);
+    return new TextEncoder().encode(xml); */
+    const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid: info.cid } });
+    return pako.inflateRaw(buffer);
 }
 
 export async function getHistoryDanmaku(info: Types.MediaInfo["list"][0], date: string) {
