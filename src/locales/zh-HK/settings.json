@@ -43,6 +43,10 @@
         "auto_convert_flac": {
             "name": "自動轉換 FLAC",
             "desc": "使用FFmpeg將原始FLAC轉換為標準FLAC格式。"
+        },
+        "prefer_pb_danmaku": {
+            "name": "優先使用 ProtoBuf 方式下載彈幕",
+            "desc": "相比 XML 方式，此方式可以獲得資源中幾乎所有彈幕，但處理時間會變長。"
         }
     },
     "about": {
@@ -65,10 +69,10 @@
         "max_conc": "同時下載數",
         "checkProxy": "檢查代理連通性",
         "auto_check_update": "自動檢查",
-        "auto_convert_flac": "自動轉換",
         "checkUpdate": "檢查更新",
         "documentation": "文檔",
-        "feedback": "反饋"
+        "feedback": "反饋",
+        "enable": "啟用"
     },
     "askDelete": "此操作無法還原。您確定嗎？"
 }

@@ -180,7 +180,10 @@ export default {
                 ] },
                 { id: "advanced", name: t('settings.advanced.name'), icon: "fa-flask", content: [
                     { name: t('settings.advanced.auto_convert_flac.name'), icon: "fa-exchange", desc: t('settings.advanced.auto_convert_flac.desc'), data: [
-                        { name: t('settings.label.auto_convert_flac'), type: "switch", data: "advanced.auto_convert_flac" },
+                        { name: t('settings.label.enable'), type: "switch", data: "advanced.auto_convert_flac" },
+                    ] },
+                    { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
+                        { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
                     ] }
                 ] },
                 { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [

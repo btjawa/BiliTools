@@ -4,10 +4,10 @@
  * @author https://github.com/btjawa
  * @license MIT
  */
-export function DmSegMobileReplyToXML(binary: Uint8Array) {
+export function DmSegMobileReplyToXML(binary: Uint8Array, options?: { inputXml?: Document }) {
   const decoded = decodeDmSegMobileReply(binary);
   if (decoded?.elems) {
-      const xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
+      const xmlDoc = options?.inputXml || new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
       const iElement = xmlDoc.querySelector("i");
       decoded.elems.forEach(elem => {
           const dElement = xmlDoc.createElement("d");

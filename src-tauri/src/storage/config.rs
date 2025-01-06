@@ -43,6 +43,7 @@ pub struct SettingsProxy {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct SettingsAdvanced {
     pub auto_convert_flac: bool,
+    pub prefer_pb_danmaku: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

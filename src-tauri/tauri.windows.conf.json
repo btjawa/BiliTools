@@ -23,7 +23,8 @@
   },
   "bundle": {
     "resources": {
-      "resources/windows/bin": "bin"
+      "resources/bin/*": "bin",
+      "resources/bin/windows/*": "bin/"
     }
   }
 }

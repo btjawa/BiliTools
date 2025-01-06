@@ -37,7 +37,8 @@ lazy_static! {
             password: String::new()
         },
         advanced: SettingsAdvanced {
-            auto_convert_flac: true
+            auto_convert_flac: true,
+            prefer_pb_danmaku: true,
         }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));

@@ -33,6 +33,7 @@ export interface MediaInfoListItem {
   id: number,
   cid: number,
   eid: number,
+  duration: number,
   ss_title: string;
   index: number;
 }

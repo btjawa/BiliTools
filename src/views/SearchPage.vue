@@ -279,7 +279,7 @@ export default {
 					case 'cover': return await data.getBinary(info.cover);
 					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);
 					case 'liveDanmaku': return await data.getLiveDanmaku(info);
-					case 'historyDanmaku': return await data.getHistoryDanmaku(info, options?.date || "");
+					case 'historyDanmaku': return await data.getHistoryDanmaku(info.cid, options?.date || "");
 				}})();
 				const suffix = this.othersMap[type].suffix;
 				const path =
@@ -323,6 +323,7 @@ export default {
 				cover: current.cover,
 				desc: this.mediaInfo.desc,
 				eid: this.mediaInfo.list[0].eid,
+				duration: this.mediaInfo.list[0].duration,
 				ss_title: this.mediaInfo.list[0].ss_title,
 				index: 0,
 			}];
@@ -382,6 +383,7 @@ export default {
 					err instanceof ApplicationError ? err.handleError() :
 					new ApplicationError(err as string).handleError();
 				}
+				await new Promise(resolve => setTimeout(resolve, 100));
 			}
 		},
 		stat,

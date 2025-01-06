@@ -22,7 +22,8 @@
   },
   "bundle": {
     "resources": {
-      "resources/macos/bin": "bin"
+      "resources/bin/*": "bin",
+      "resources/bin/macos/*": "bin/"
     }
   }
 }

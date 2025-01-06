@@ -43,6 +43,10 @@
         "auto_convert_flac": {
             "name": "FLACを自動変換",
             "desc": "FFmpegを使用して、ローファイルのFLACを標準的なFLAC形式に変換します。"
+        },
+        "prefer_pb_danmaku": {
+            "name": "ProtoBuf 方式で弾幕を優先してダウンロード",
+            "desc": "この方式ではほぼすべての弾幕を取得できますが、処理時間が長くなります。"
         }
     },
     "about": {
@@ -65,10 +69,10 @@
         "max_conc": "同時ダウンロード",
         "checkProxy": "プロキシ確認",
         "auto_check_update": "自動チェック",
-        "auto_convert_flac": "自動変換",
         "checkUpdate": "すぐチェック",
         "documentation": "ドキュメント",
-        "feedback": "フィードバック"
+        "feedback": "フィードバック",
+        "enable": "有効化"
     },
     "askDelete": "この操作は元に戻せません。本当に実行しますか？"
 }

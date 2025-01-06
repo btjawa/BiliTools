@@ -43,6 +43,10 @@
         "auto_convert_flac": {
             "name": "Auto convert FLAC",
             "desc": "Use FFmpeg to convert raw FLAC to standard FLAC format."
+        },
+        "prefer_pb_danmaku": {
+            "name": "Prefer downloading danmaku using ProtoBuf",
+            "desc": "this method can obtain almost all danmaku, but processing time will be longer."
         }
     },
     "about": {
@@ -65,10 +69,10 @@
         "max_conc": "Simultaneous Downloads",
         "checkProxy": "Check proxy",
         "auto_check_update": "Auto Check",
-        "auto_convert_flac": "Auto Convert",
         "checkUpdate": "Check Update",
         "documentation": "Documentation",
-        "feedback": "Feedback"
+        "feedback": "Feedback",
+        "enable": "Enable"
     },
     "askDelete": "This action cannot be reverted. Are you sure?"
 }

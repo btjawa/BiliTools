@@ -38,7 +38,8 @@ export default createStore({
                     password: String(),
                 },
                 advanced: {
-                    auto_convert_flac: false,
+                    auto_convert_flac: true,
+                    prefer_pb_danmaku: true,
                 }
             },
             data: {

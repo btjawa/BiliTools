@@ -18,7 +18,8 @@
   },
   "bundle": {
     "resources": {
-      "resources/linux/bin": "bin"
+      "resources/bin/*": "bin",
+      "resources/bin/linux/*": "bin/"
     }
   }
 }

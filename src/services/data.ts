@@ -86,6 +86,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                         id: episode.aid,
                         cid: episode.cid,
                         eid: episode.id,
+                        duration: episode.page.duration,
                         ss_title: data.ugc_season.title,
                         index
                     })) :
@@ -96,6 +97,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                         id: data.aid,
                         cid: page.cid,
                         eid: page.page,
+                        duration: page.duration,
                         ss_title: data.title || page.part,
                         index
                     })) : [{
@@ -105,6 +107,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                         id: data.aid,
                         cid: data.aid,
                         eid: data.aid,
+                        duration: data.duration,
                         ss_title: data.title,
                         index: 0,
                     }]
@@ -147,6 +150,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     id: episode.aid,
                     cid: episode.cid,
                     eid: episode.ep_id,
+                    duration: episode.duration / 1000,
                     ss_title: data.season_title,
                     index
                 }))
@@ -185,6 +189,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     id: episode.aid,
                     cid: episode.cid,
                     eid: episode.id,
+                    duration: episode.duration,
                     ss_title: data.title,
                     index
                 }))
@@ -236,6 +241,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     id: data.id,
                     cid: data.cid,
                     eid: data.id,
+                    duration: data.duration,
                     ss_title: data.title,
                     index: 0,
                 }]
@@ -274,6 +280,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     id: episode.id,
                     cid: episode.id,
                     eid: episode.id,
+                    duration: episode.image_count,
                     ss_title: data.title,
                     index
                 })),
@@ -471,18 +478,25 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
 }
 
 export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
-    /* const params = {
-        type: 1, oid: info.cid, pid: info.id, segment_index: 1, // Segment INOP,  
+    if (store.state.settings.advanced.prefer_pb_danmaku) {
+        let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
+        for (let i = 0; i < Math.ceil(info.duration / 360); i++) {
+            const params = {
+                type: 1, oid: info.cid, pid: info.id, segment_index: i + 1,
+            }
+            const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
+            dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        return new TextEncoder().encode(new XMLSerializer().serializeToString(xmlDoc));
+    } else {
+        const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid: info.cid } });
+        return pako.inflateRaw(buffer);
     }
-    const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
-    const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
-    return new TextEncoder().encode(xml); */
-    const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid: info.cid } });
-    return pako.inflateRaw(buffer);
 }
 
-export async function getHistoryDanmaku(info: Types.MediaInfo["list"][0], date: string) {
-    const params = { type: 1, oid: info.cid, date };
+export async function getHistoryDanmaku(oid: number, date: string) {
+    const params = { type: 1, oid, date };
     const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { type: 'binary', params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
     return new TextEncoder().encode(xml);

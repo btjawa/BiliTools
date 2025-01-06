@@ -95,7 +95,7 @@ async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, filenam
         .output().await.map_err(|e| e.to_string())?;
 
     log::info!("{:?}", String::from_utf8_lossy(&output.stdout));
-    fs::remove_file(input).await.map_err(|e| e.to_string())?;
+    // fs::remove_file(input).await.map_err(|e| e.to_string())?;
     Ok(())
 }
 
