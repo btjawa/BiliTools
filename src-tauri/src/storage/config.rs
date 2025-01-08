@@ -1,13 +1,18 @@
-use std::{fs, path::PathBuf};
 use std::{collections::HashMap, error::Error};
 use serde::{Serialize, Deserialize};
+use specta::Type;
+use tauri::async_runtime;
+use tauri_specta::Event;
+use std::{fs, path::PathBuf};
 use serde_json::{Value, json};
 
 use sea_orm::{Database, DbBackend, FromJsonQueryResult, IntoActiveModel, JsonValue, Schema, Statement};
-use sea_orm::entity::prelude::*;
 use sea_orm::sea_query::{OnConflict, SqliteQueryBuilder, TableCreateStatement};
-use tauri::{Emitter, async_runtime};
-use crate::shared::{STORAGE_PATH, SECRET, CONFIG, get_window};
+use sea_orm::entity::prelude::*;
+
+use crate::shared::{
+    get_app_handle, Theme, CONFIG, SECRET, STORAGE_PATH
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "config")]
@@ -17,7 +22,7 @@ pub struct Model {
     pub value: JsonValue,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
 pub struct Settings {
     pub max_conc: usize,
     pub temp_dir: PathBuf,
@@ -29,18 +34,18 @@ pub struct Settings {
     pub filename: String,
     pub proxy: SettingsProxy,
     pub advanced: SettingsAdvanced,
-    pub theme: tauri::Theme,
+    pub theme: Theme,
     pub language: String
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
 pub struct SettingsProxy {
     pub addr: String,
     pub username: String,
     pub password: String
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
 pub struct SettingsAdvanced {
     pub auto_convert_flac: bool,
     pub prefer_pb_danmaku: bool,
@@ -86,9 +91,9 @@ pub async fn insert(name: String, value: JsonValue) -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-#[tauri::command]
-pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<&str, String> {
-    let window = get_window();
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<(), String> {
     if secret != *SECRET.read().unwrap() {
         return Err("403 Forbidden".into());
     }
@@ -128,6 +133,6 @@ pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, s
         #[cfg(debug_assertions)]
         log::info!("{:?}", config);
     }
-    window.emit("rw_config:settings", config).unwrap();
-    Ok(action)
+    config.emit(&get_app_handle()).unwrap();
+    Ok(())
 }

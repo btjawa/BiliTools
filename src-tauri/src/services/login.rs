@@ -1,12 +1,20 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use tauri::{http::{header, StatusCode}, Url};
 use serde::{Serialize, Deserialize};
-use serde_json::{json, Value};
-use rand::Rng;
-use tauri::{http::{header, StatusCode}, Listener, Url};
-use lazy_static::lazy_static;
 use tokio::time::{sleep, Duration};
+use serde_json::{json, Value};
+use lazy_static::lazy_static;
 use ring::hmac;
-use crate::{cookies, init_headers, shared::{get_window, init_client, get_ts}};
+use rand::Rng;
+
+use crate::{
+    storage::cookies,
+    shared::{
+        init_headers,
+        init_client,
+        get_ts
+    }
+};
 
 lazy_static! {
     static ref LOGIN_POLLING: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
@@ -145,10 +153,8 @@ fn hmac_sha256(key: &str, message: &str) -> String {
     signature.as_ref().iter().map(|byte| format!("{:02x}", byte)).collect()
 }
 
-pub fn init() {
-    get_window().listen("stop_login", |_| { stop_login() });
-}
-
+#[tauri::command]
+#[specta::specta]
 pub fn stop_login() {
     LOGIN_POLLING.store(false, Ordering::SeqCst);
 }
@@ -229,7 +235,8 @@ pub async fn get_extra_cookies() -> Result<(), Value> {
     Ok(())
 }
 
-#[tauri::command()]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn exit() -> Result<isize, Value> {
     let client = init_client().await?;
     let cookies = cookies::load().await.map_err(|e| e.to_string())?;
@@ -257,8 +264,9 @@ pub async fn exit() -> Result<isize, Value> {
     Ok(body.code)
 }
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn sms_login(cid: isize, tel: String, code: String, captcha_key: String) -> Result<isize, Value> {
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String) -> Result<isize, Value> {
     let client = init_client().await?;
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login/sms")
@@ -295,7 +303,8 @@ pub async fn sms_login(cid: isize, tel: String, code: String, captcha_key: Strin
     Ok(body.code)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn pwd_login(username: String, encoded_pwd: String, token: String, challenge: String, validate: String, seccode: String) -> Result<isize, Value> {
     let client = init_client().await?;
     let response = client
@@ -343,7 +352,8 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
     Ok(data.status)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn switch_cookie(switch_code: String) -> Result<isize, Value> {
     let client = init_client().await?;
     let response = client
@@ -371,7 +381,8 @@ pub async fn switch_cookie(switch_code: String) -> Result<isize, Value> {
     Ok(body.code)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -> Result<isize, Value> {
     let client = init_client().await?;
     let masked_key: String = qrcode_key.chars().take(7).collect();
@@ -417,7 +428,8 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
     Ok(86114)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn refresh_cookie(refresh_csrf: String) -> Result<isize, Value> {
     let client = init_client().await?;
     let cookies = cookies::load().await.map_err(|e| e.to_string())?;

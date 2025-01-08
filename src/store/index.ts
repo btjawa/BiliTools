@@ -1,6 +1,11 @@
 import { createStore } from 'vuex';
-import { CurrentSelect, DashInfo, DurlInfo, MusicUrlInfo, QueueInfo } from '@/types/data.d';
+import { DashInfo, DurlInfo, MusicUrlInfo } from '@/types/data.d';
+import { CurrentSelect, QueueInfo, Settings } from '@/services/backend';
 import { Headers } from '@/types/data.d';
+
+function createSettings(settings: Settings): Settings {
+    return settings;
+}
 
 export default createStore({
     state() {
@@ -21,7 +26,7 @@ export default createStore({
                     dynamic: Number(),
                 }
             },
-            settings: {
+            settings: createSettings({
                 down_dir: String(),
                 temp_dir: String(),
                 max_conc: Number(),
@@ -29,7 +34,7 @@ export default createStore({
                 df_ads: Number(),
                 df_cdc: Number(),
                 language: String(),
-                theme: String(),
+                theme: 'dark',
                 auto_check_update: false,
                 filename: String(),
                 proxy: {
@@ -41,11 +46,12 @@ export default createStore({
                     auto_convert_flac: true,
                     prefer_pb_danmaku: true,
                 }
-            },
+            }),
             data: {
                 inited: false,
                 secret: String(),
                 hash: String(),
+                binary_path: String(),
                 headers: {} as Headers,
                 currentSelect: {
                     dms: -1,

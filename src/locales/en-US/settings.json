@@ -47,6 +47,10 @@
         "prefer_pb_danmaku": {
             "name": "Prefer downloading danmaku using ProtoBuf",
             "desc": "this method can obtain almost all danmaku, but processing time will be longer."
+        },
+        "config": {
+            "name": "Custom Configuration",
+            "desc": "Please make sure you know what you are doing before modifying the following configuration"
         }
     },
     "about": {

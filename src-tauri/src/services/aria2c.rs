@@ -1,51 +1,74 @@
-use lazy_static::lazy_static;
-use sea_orm::FromJsonQueryResult;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use tauri::{async_runtime, ipc::Channel};
-use tauri_plugin_http::reqwest;
 use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{RwLock as StdRwLock, Arc}, time::Duration};
 use tokio::{sync::{RwLock, Notify, OnceCell}, time::sleep};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
-use crate::{downloads, ffmpeg, shared::{filename, get_app_handle, init_client, BINARY_PATH, BINARY_RELATIVE, CONFIG, SECRET, random_string}};
+use tauri::{async_runtime, ipc::Channel};
+use serde::{Deserialize, Serialize};
+use sea_orm::FromJsonQueryResult;
+use tauri_plugin_http::reqwest;
+use serde_json::{json, Value};
+use lazy_static::lazy_static;
+use specta::Type;
+
+use crate::{
+    shared::{
+        filename,
+        get_app_handle,
+        init_client,
+        random_string,
+        BINARY_PATH,
+        BINARY_RELATIVE,
+        CONFIG,
+        SECRET,
+    },
+    downloads,
+    ffmpeg,
+};
 
 lazy_static! {
     pub static ref WAITING_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
     pub static ref DOING_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
     pub static ref COMPLETE_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
-    static ref ARIA2C_PORT: Arc<StdRwLock<usize>> = Arc::new(StdRwLock::new(0));
+    static ref ARIA2C_PORT: Arc<StdRwLock<u16>> = Arc::new(StdRwLock::new(0));
     static ref ARIA2C_CHILD: Arc<StdRwLock<Option<CommandChild>>> = Arc::new(StdRwLock::new(None));
     static ref DOWNLOAD_NOTIFY: Notify = Notify::new();
     pub static ref DOWNLOAD_EVENT: Arc<OnceCell<Channel<DownloadEvent>>> = Arc::new(OnceCell::new());
     pub static ref QUEUE_EVENT: Arc<OnceCell<Channel<QueueEvent>>> = Arc::new(OnceCell::new());
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
 pub struct QueueInfo {
     pub id: String,
     pub ts: Arc<Timestamp>,
     pub tasks: Vec<Task>,
     pub output: PathBuf,
-    pub info: Arc<MediaInfo>,
+    pub info: Arc<MediaInfoListItem>,
     #[serde(rename = "currentSelect")]
-    pub current_select: Value,
+    pub current_select: CurrentSelect,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct CurrentSelect {
+    pub dms: i32,
+    pub ads: i32,
+    pub cdc: i32,
+    pub fmt: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct Task {
     pub urls: Vec<String>,
     pub gid: Option<String>,
-    pub media_type: String,
+    pub media_type: MediaType,
     pub path: Option<PathBuf>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize, Type)]
 #[serde(tag = "status")]
 pub enum DownloadEvent {
     Started {
         id: Arc<String>,
         gid: Arc<String>,
-        media_type: String,
+        media_type: MediaType,
     },
     Progress {
         id: Arc<String>,
@@ -63,7 +86,16 @@ pub enum DownloadEvent {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum MediaType {
+    Video,
+    Audio,
+    Merge,
+    Flac,
+}
+
+#[derive(Clone, Serialize, Type)]
 #[serde(tag = "type")]
 pub enum QueueEvent {
     Waiting {
@@ -77,30 +109,32 @@ pub enum QueueEvent {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MediaInfo {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct MediaInfoListItem {
     title: String,
     cover: String,
     desc: String,
-    id: u64,
-    cid: u64,
-    eid: u64,
+    id: usize,
+    cid: usize,
+    eid: usize,
+    duration: usize,
     ss_title: String,
+    index: usize
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct Timestamp {
-    pub millis: isize,
+    pub millis: u64,
     pub string: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Aria2Error {
     code: isize,
     message: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Aria2AddUri {
     id: String,
     jsonrpc: String,
@@ -108,7 +142,7 @@ struct Aria2AddUri {
     error: Option<Aria2Error>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Aria2Remove {
     id: String,
     jsonrpc: String,
@@ -116,14 +150,14 @@ struct Aria2Remove {
     error: Option<Aria2Error>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Aria2TellStatus {
     id: String,
     jsonrpc: String,
     result: Option<Aria2TellStatusResult>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Aria2TellStatusResult {
     gid: String,
     status: String,
@@ -160,7 +194,7 @@ pub fn init() -> Result<(), String> {
     let port = (start_port..end_port)
         .find_map(|port| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).ok())
         .ok_or("No free port found".to_string())?.local_addr().unwrap().port();
-    *ARIA2C_PORT.write().unwrap() = port as usize;
+    *ARIA2C_PORT.write().unwrap() = port;
     let app = get_app_handle();
     let (_, child) = app.shell().sidecar(format!("{}/aria2c", &*BINARY_RELATIVE)).unwrap()
         .current_dir(&*BINARY_PATH)
@@ -216,7 +250,8 @@ fn param_to_value(value: Value) -> Result<Value, String> {
     }
 }
 
-#[tauri::command]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Value> {
     let client = init_client().await?;
     let mut params_vec = vec![Value::String(format!("token:{}", *SECRET.read().unwrap()))];
@@ -238,7 +273,8 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Valu
     Ok(body)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn remove_aria2c_task(queue_id: &str, id: Arc<String>, gid: Option<Arc<String>>) -> Result<(), Value> {
     match queue_id {
         "waiting" | "doing" => {
@@ -267,8 +303,9 @@ pub async fn remove_aria2c_task(queue_id: &str, id: Arc<String>, gid: Option<Arc
     Ok(())
 }
 
-#[tauri::command]
-pub async fn push_back_queue(info: Arc<MediaInfo>, current_select: Value, tasks: Vec<Task>, ts: Arc<Timestamp>, ext: String, output: Option<String>, ss_title: String) -> Result<Arc<QueueInfo>, Value> {
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn push_back_queue(info: Arc<MediaInfoListItem>, current_select: CurrentSelect, tasks: Vec<Task>, ts: Arc<Timestamp>, ext: String, output: Option<String>, ss_title: String) -> Result<Arc<QueueInfo>, Value> {
     let mut parent = if let Some(output) = &output {
         PathBuf::from(output)
     } else {
@@ -295,7 +332,7 @@ pub async fn push_back_queue(info: Arc<MediaInfo>, current_select: Value, tasks:
         current_select,
     };
     for task in &mut video_info.tasks {
-        if task.media_type.as_str() == "merge" || task.media_type.as_str() == "flac" { // FFmpeg task
+        if task.media_type == MediaType::Merge || task.media_type == MediaType::Flac { // FFmpeg task
             task.gid = Some(random_string(16));
             continue;
         }
@@ -345,7 +382,8 @@ async fn update_queue_event(queue_types: Vec<&str>) {
     }
 }
 
-#[tauri::command]
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: Channel<QueueEvent>) -> Result<(), String> {
     let _ = DOWNLOAD_EVENT.set(download_event);
     let _ = QUEUE_EVENT.set(queue_event);
@@ -358,10 +396,10 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
                 async_runtime::spawn(async move {
                     update_queue_event(vec!["waiting", "doing"]).await;
                     process_download(info.clone()).await.map_err(|e| e.to_string())?;
-                    if info.tasks.iter().any(|task| task.media_type == "merge") {
+                    if info.tasks.iter().any(|task| task.media_type == MediaType::Merge) {
                         let event = DOWNLOAD_EVENT.get().unwrap();
                         ffmpeg::merge(info.clone(), event).await.map_err(|e| e.to_string())?;
-                    } else if info.tasks.iter().any(|task| task.media_type == "flac") { 
+                    } else if info.tasks.iter().any(|task| task.media_type == MediaType::Flac) { 
                         ffmpeg::raw_flac(info.clone()).await.map_err(|e| e.to_string())?;
                     } else {                        
                         fs::rename(info.tasks[0].clone().path.unwrap(), &info.output).map_err(|e| e.to_string())?;
@@ -391,7 +429,7 @@ pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: 
 async fn process_download(info: Arc<QueueInfo>) -> Result<(), Value> {
     fs::create_dir_all(info.output.parent().unwrap()).map_err(|e| e.to_string())?;
     for task in &info.tasks {
-        if task.media_type.as_str() == "merge" || task.media_type.as_str() == "flac" { continue }
+        if task.media_type == MediaType::Merge || task.media_type == MediaType::Flac { continue }
         let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
         let id = Arc::new(info.id.clone());
         let body: Aria2AddUri = serde_json::from_value(
@@ -422,8 +460,8 @@ async fn process_download(info: Arc<QueueInfo>) -> Result<(), Value> {
                         event.send(DownloadEvent::Progress {
                             id: id.clone(),
                             gid,
-                            content_length: result.total_length.parse().unwrap(),
-                            chunk_length: result.completed_length.parse::<u64>().unwrap_or(0),
+                            content_length: result.total_length.parse::<u64>().unwrap(),
+                            chunk_length: result.completed_length.parse::<u64>().unwrap(),
                         }).unwrap();
                     },
                     "complete" => {

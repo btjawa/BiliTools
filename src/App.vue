@@ -17,14 +17,13 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 import { provide } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
-import { listen } from "@tauri-apps/api/event";
 import { ApplicationError } from "@/services/utils";
-import { invoke } from "@tauri-apps/api/core";
 import { fetchUser, checkRefresh } from "@/services/login";
-import { InitData } from "@/types/data.d";
-import { getCurrentWindow, Theme } from '@tauri-apps/api/window';
+import { commands, events } from "@/services/backend";
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { version as osVersion } from "@tauri-apps/plugin-os";
 import { SearchPage } from "@/views";
+
 
 export default {
     components: {
@@ -40,20 +39,19 @@ export default {
     },
     async mounted() {
 		this.$router.push("/");
-		listen('headers', e => {
+		events.headers.listen(e => {
 			this.$store.commit('updateState', { 'data.headers': e.payload });
-		});
-		listen('rw_config:settings', async e => {
+		})
+		events.settings.listen(async e => {
 			this.$store.commit('updateState', { settings: e.payload });
 			const window = getCurrentWindow();
-			const theme = this.$store.state.settings.theme as Theme;
 			const version = osVersion().split('.');
 			if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
 				document.body.classList.remove('override-dark');
 				document.body.classList.remove('override-light');
-				document.body.classList.add('override-' + theme);
+				document.body.classList.add('override-' + e.payload.theme);
 			}
-			await window.setTheme(theme);
+			await window.setTheme(e.payload.theme);
 			this.$i18n.locale = this.$store.state.settings.language;
 		});
 		provide('trySearch', async (input?: string) => {
@@ -69,16 +67,21 @@ export default {
 			checkCondition();
 		});
         try {
-			const secret = await invoke('ready');
-			const data: InitData = await invoke('init', { secret });
+			const ready = await commands.ready();
+			if (ready.status === 'error') throw ready.error;
+			const secret = ready.data;
+			const init = await commands.init(secret);
+			if (init.status === 'error') throw init.error;
+			const data = init.data;
 			this.$store.commit('updateState', { 'data.secret': secret });
 			this.$store.commit('updateState', { 'queue.complete': data.downloads });
 			this.$store.commit('updateState', { 'data.hash': data.hash });
+			this.$store.commit('updateState', { 'data.binary_path': data.binary_path });
 			await checkRefresh();
 			await fetchUser();
 		} catch(err) {
-			const error = err instanceof ApplicationError ? err : new ApplicationError(err as string);
-			return error.handleError();
+			err instanceof ApplicationError ? err.handleError() :
+			new ApplicationError(err as string).handleError();
 		} finally {
 			this.$store.commit('updateState', { 'data.inited': true });
 		}

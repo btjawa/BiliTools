@@ -95,7 +95,7 @@
                         <span>{{ othersPage ? $t('common.verifyCode') : $t('common.password') }}</span>
                         <input v-model="pwd"
                             :oninput="pwd=pwd.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
-                            autocomplete="new-password" type="password" spellcheck="false"
+                            autocomplete="new-password" :type="othersPage ? undefined : 'password'" spellcheck="false"
                             :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'password' : 'verifyCode'}`)])"
                         />
                     </div>
@@ -124,10 +124,10 @@
 
 <script lang="ts">
 import { ApplicationError, iziInfo } from '@/services/utils';
-import { emit } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
 import { ask } from '@tauri-apps/plugin-dialog';
 import * as login from '@/services/login';
+import { commands } from '@/services/backend';
 
 export default {
     data() {
@@ -221,7 +221,7 @@ export default {
         this.login('init');
     },
     deactivated() {
-        emit('stop_login');
+        commands.stopLogin();
     }
 
 }

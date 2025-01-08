@@ -84,12 +84,13 @@
 </div></template>
 <script lang="ts">
 import { ApplicationError, formatProxyUrl, iziInfo } from '@/services/utils';
-import { Channel, invoke } from '@tauri-apps/api/core';
+import { Channel } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { fetch } from '@tauri-apps/plugin-http';
 import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
 import { Empty } from '@/components';
+import { commands } from '@/services/backend';
 import locales from '@/locales/index.json';
 import store from '@/store';
 import * as path from '@tauri-apps/api/path';
@@ -184,7 +185,11 @@ export default {
                     ] },
                     { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
                         { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
-                    ] }
+                    ] },
+                    { name: t('settings.advanced.config.name'), icon: "fa-wrench", desc: t('settings.advanced.config.desc'), data: [
+                        { name: t('home.label.danmaku'), type: "button", data: () => this.openPath({ getPath: true, pathName: "danmaku" }), icon: "fa-file-circle-info" },
+                        { name: "Aria2c", type: "button", data: () => this.openPath({ getPath: true, pathName: "aria2c" }), icon: "fa-file-circle-info" },
+                    ] },
                 ] },
                 { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
                     { data: [{ type: "about" }] },
@@ -238,10 +243,11 @@ export default {
             this.$store.commit('updateState', { [`settings.${key}`]: data });
             this.updateSettings(parent, this.store.settings[parent]);
         },
-        updateSettings(key: string, item: any) {
-            invoke('rw_config', { action: 'write', settings: { [key]: item }, secret: this.store.data.secret });
+        async updateSettings(key: string, item: any) {
+            const rw_config = await commands.rwConfig('write', { [key]: item }, this.store.data.secret);
+            if (rw_config.status === 'error') throw rw_config.status;
         },
-        async getPath(type: PathAlias) {
+        async getPath(type: PathAlias | "danmaku" | "aria2c") {
             switch (type) {
                 case 'log': return await path.appLogDir();
                 case 'temp': return path.join(await path.tempDir(), 'com.btjawa.bilitools');
@@ -254,6 +260,11 @@ export default {
                     }
                 })()
                 case 'database': return path.join(await path.appDataDir(), 'Storage');
+                case 'danmaku': return path.join(this.store.data.binary_path, 'DanmakuFactoryConfig.json');
+                case 'aria2c': return (() => {
+                    console.log(path.join(this.store.data.binary_path, 'aria2.conf'))
+                    return path.join(this.store.data.binary_path, 'aria2.conf');
+                })()
             }
         },
         async checkProxy() {
@@ -280,7 +291,7 @@ export default {
                 new ApplicationError(err as string).handleError();
             }
         },
-        async openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias }) {
+        async openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias | "danmaku" | "aria2c" }) {
             if (!options.path) {
                 if (!options?.getPath || !options.pathName) return;
                 const path = await this.getPath(options.pathName);
@@ -294,12 +305,14 @@ export default {
             event.onmessage = (bytes) => {
                 (this.store.data.cache as any)[pathName] = bytes;
             }
-            await invoke('get_size', { path: await this.getPath(pathName), event });
+            const get_size = await commands.getSize(await this.getPath(pathName), event);
+            if (get_size.status === 'error') throw get_size.error;
         },
         async cleanCache(pathName: PathAlias) {
             const result = await dialog.ask(this.$t('settings.askDelete'), { 'kind': 'warning' });
             if (!result) return;
-            await invoke('clean_cache', { path: await this.getPath(pathName) });
+            const clean_cache = await commands.cleanCache(await this.getPath(pathName));
+            if (clean_cache.status === 'error') throw clean_cache.error;
             await this.getSize(pathName);
         },
         getNestedValue(obj: Record<string, any>, path: string): any {

@@ -44,13 +44,13 @@
 import { defineComponent } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { ApplicationError } from '@/services/utils';
-import { invoke } from '@tauri-apps/api/core';
+import { commands } from '@/services/backend';
 export default defineComponent({
     methods: {
         isActive(path: string) { return this.$route.path == path },
         async setTheme() {
             const newTheme = this.store.settings.theme === 'dark' ? 'light' : 'dark';
-            invoke('rw_config', { action: 'write', settings: { theme: newTheme }, secret: this.store.data.secret });
+            await commands.rwConfig('write', { theme: newTheme }, this.store.data.secret);
         },
         ApplicationError
     },

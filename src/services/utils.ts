@@ -131,7 +131,7 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
                     throw new ApplicationError(validateBody.message, { code: validateBody.code });
                 }
                 grisk_id = validateBody.data.grisk_id;
-                await new Promise(resolve => setTimeout(resolve, 250));
+                await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
                 continue;
             } else {
                 throw new ApplicationError(body.message || body.msg, { code: body.code });
@@ -259,7 +259,7 @@ export function filename(options: { mediaType: string, aid: number, title: strin
     return store.state.settings.filename.replace(/{(\w+)}/g, (_, key) => {
         switch(key) {
             case 'date': return timestamp(Date.now(), { file: true });
-            case 'timestamp': return String(Date.now());
+            case 'timestamp': return Date.now().toString();
             case 'title': return options.title.replace(/[\\/:*?"<>|]/g, "_");
             default: return key in options ? String(options[key as keyof typeof options]) : "";
         }
@@ -305,4 +305,8 @@ export function getFileExtension(options: { dms: number, ads: number, cdc: numbe
         videoExt = 'flv';
     }
     return options.dms >= 0 ? videoExt : audioExt;
+}
+
+export function getRandomInRange(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min) + min);
 }

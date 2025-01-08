@@ -1,9 +1,17 @@
-use std::{error::Error, sync::Arc};
 use serde::{Serialize, Deserialize};
+use std::{error::Error, sync::Arc};
+
+use sea_orm::sea_query::{TableCreateStatement, SqliteQueryBuilder};
 use sea_orm::{Database, DbBackend, Schema, Set, Statement};
 use sea_orm::entity::prelude::*;
-use sea_orm::sea_query::{TableCreateStatement, SqliteQueryBuilder};
-use crate::{aria2c::{QueueInfo, COMPLETE_QUEUE}, shared::STORAGE_PATH};
+
+use crate::{
+    aria2c::{
+        QueueInfo,
+        COMPLETE_QUEUE
+    },
+    shared::STORAGE_PATH
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "downloads")]

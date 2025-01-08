@@ -1,14 +1,26 @@
 use std::{collections::HashMap, env, path::PathBuf, sync::{Arc, RwLock}, time::{SystemTime, UNIX_EPOCH}};
-use lazy_static::lazy_static;
-use regex::Regex;
-use rand::{distributions::Alphanumeric, Rng};
+use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, WebviewWindow, Wry};
 use tauri_plugin_http::reqwest::{Client, Proxy};
+use serde_json::{Value, to_value, from_value};
+use rand::{distributions::Alphanumeric, Rng};
+use serde::{Deserialize, Serialize};
+use lazy_static::lazy_static;
 use tokio::sync::OnceCell;
-use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Emitter, Manager, WebviewWindow, Wry};
+use tauri_specta::Event;
+use specta::Type;
+use regex::Regex;
 
-use crate::{config::{Settings, SettingsAdvanced, SettingsProxy}, cookies};
+use crate::{
+    storage::config::{
+        Settings,
+        SettingsAdvanced,
+        SettingsProxy
+    },
+    storage::cookies,
+};
 
 lazy_static! {
+    pub static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
     pub static ref APP_HANDLE: Arc<OnceCell<AppHandle<Wry>>> = Arc::new(OnceCell::new());
     pub static ref CONFIG: Arc<RwLock<Settings>> = Arc::new(RwLock::new(Settings {
         temp_dir: env::temp_dir(),
@@ -30,7 +42,7 @@ lazy_static! {
             }).unwrap_or_else(|| "en-US".into()),
         filename: "{mediaType}_{title}_{date}".into(),
         auto_check_update: true,
-        theme: tauri::Theme::Dark,
+        theme: Theme::Dark,
         proxy: SettingsProxy {
             addr: String::new(),
             username: String::new(),
@@ -57,18 +69,44 @@ lazy_static! {
     };
 }
 
+// Copied from tauri::Theme because we need a Type and Event derive
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type, Event)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    /// Light theme.
+    Light,
+    /// Dark theme.
+    Dark,
+}
+
+#[derive(Clone, Serialize, Deserialize, Type, Event)]
+pub struct Headers {
+    #[serde(rename = "Cookie")]
+    cookie: String,
+    #[serde(rename = "User-Agent")]
+    user_agent: String,
+    #[serde(rename = "Referer")]
+    referer: String,
+    #[serde(rename = "Origin")]
+    origin: String,
+    #[serde(flatten)]
+    extra: HashMap<String, String>,
+}
+
 pub async fn init_headers() -> Result<HashMap<String, String>, String> {
-    let mut headers = HashMap::new();
+    let mut map = HashMap::new();
     let cookies = cookies::load().await.map_err(|e| e.to_string())?
         .iter().map(|(name, value)|
             format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
         ).collect::<Vec<_>>().join("; ");
-    headers.insert("Cookie".into(), cookies);
-    headers.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36".into());
-    headers.insert("Referer".into(), "https://www.bilibili.com".into());
-    headers.insert("Origin".into(), "https://www.bilibili.com".into());
-    get_window().emit("headers", &headers).unwrap();
-    Ok(headers)
+    map.insert("Cookie".into(), cookies);
+    map.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36".into());
+    map.insert("Referer".into(), "https://www.bilibili.com".into());
+    map.insert("Origin".into(), "https://www.bilibili.com".into());
+    let headers_value: Value = to_value(&map).unwrap();
+    let headers: Headers = from_value(headers_value).unwrap();
+    headers.emit(&get_app_handle()).unwrap();
+    Ok(map)
 }
 
 pub async fn init_client() -> Result<Client, String> {

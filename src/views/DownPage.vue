@@ -55,8 +55,8 @@
 
 <script lang="ts">
 import { ApplicationError } from '@/services/utils';
-import { DownloadEvent, QueueEvent } from '@/types/data.d';
-import { Channel, invoke } from '@tauri-apps/api/core';
+import { commands, DownloadEvent, QueueEvent } from '@/services/backend';
+import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
 import { Empty } from '@/components';
 import * as shell from '@tauri-apps/plugin-shell';
@@ -107,7 +107,9 @@ export default {
                 const status = this.statusList[id];
                 if (!status) return;
                 status.paused = !status.paused;
-                const body = await invoke('post_aria2c', { action: [status.paused ? 'unpause' : 'pause'], params: [status.gid] }) as any;
+                const post_aria2c = await commands.postAria2c(status.paused ? 'unpause' : 'pause', [status.gid]);
+                if (post_aria2c.status === 'error') throw post_aria2c.error;
+                const body = post_aria2c.data as any;
                 if (body.error) {
                     new ApplicationError(body.error.message, { code: body.error.code }).handleError();
                 }
@@ -126,7 +128,9 @@ export default {
                         case 'Finished': return 'complete';
                         case 'Error': return 'doing';
                     }})();
-                    return await invoke('remove_aria2c_task', { queue_id, id, gid: status.gid });
+                    const remove_aria2c_task = await commands.removeAria2cTask(queue_id, id, status.gid);
+                    if (remove_aria2c_task.status === 'error') throw remove_aria2c_task.status;
+                    return remove_aria2c_task.data;
                 }
                 const queue_id = queue as keyof typeof this.store.queue;
                 const index = this.store.queue[queue_id].findIndex(q => q.id === id);
@@ -135,7 +139,8 @@ export default {
                 for (let task of targetQueue.tasks) {
                     if (task.media_type === 'merge' || task.media_type === 'flac') continue;
                     try {
-                        await invoke('remove_aria2c_task', { queue_id, id, gid: task.gid });
+                        const remove_aria2c_task = await commands.removeAria2cTask(queue_id, id, task.gid);
+                        if (remove_aria2c_task.status === 'error') throw remove_aria2c_task.status;
                         this.store.queue[queue_id].splice(index, 1);
                     } catch(err) {
                         throw err;
@@ -204,7 +209,8 @@ export default {
                 queueEvent.onmessage = (message) => {
                     this.$store.commit('updateState', { ['queue.' + message.type.toLowerCase()]: message.data });
 				}
-                await invoke('process_queue', { downloadEvent, queueEvent });
+                const process_queue = await commands.processQueue(downloadEvent, queueEvent);
+                if (process_queue.status === 'error') throw process_queue.status;
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
                 new ApplicationError(err as string).handleError();

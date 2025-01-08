@@ -4,6 +4,7 @@ pub mod config;
 
 use std::{error::Error, fs};
 use tauri::Manager;
+
 use crate::shared::{get_app_handle, WORKING_PATH};
 
 async fn migrate() -> Result<(), Box<dyn Error>> {

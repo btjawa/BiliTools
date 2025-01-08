@@ -1,10 +1,11 @@
 use std::{collections::HashMap, error::Error};
-use regex::Regex;
 use serde::{Serialize, Deserialize};
+use regex::Regex;
 
 use sea_orm::{Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement};
-use sea_orm::entity::prelude::*;
 use sea_orm::sea_query::{OnConflict, SqliteQueryBuilder, TableCreateStatement};
+use sea_orm::entity::prelude::*;
+
 use crate::shared::STORAGE_PATH;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]

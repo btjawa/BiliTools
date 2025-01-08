@@ -67,10 +67,10 @@
 </div></template>
 
 <script lang="ts">
-import { ApplicationError, stat, formatBytes, parseId, filename } from '@/services/utils';
-import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo, CurrentSelect } from '@/types/data.d';
+import { ApplicationError, stat, formatBytes, parseId, filename, getRandomInRange } from '@/services/utils';
+import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo } from '@/types/data.d';
+import { commands, CurrentSelect } from '@/services/backend';
 import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
-import { invoke } from '@tauri-apps/api/core';
 import { transformImage } from '@tauri-apps/api/image';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
 import { type as osType } from '@tauri-apps/plugin-os';
@@ -292,12 +292,15 @@ export default {
 						defaultPath: `${await pathJoin(this.store.settings.down_dir, name)}.${suffix}`
 					});
 				if (!path) return;
-				switch (type) {
-					case 'cover': return await invoke('write_binary', { secret: this.store.data.secret, path, contents: transformImage(result as ArrayBuffer) });
-					case 'aiSummary': return await invoke('write_binary', { secret: this.store.data.secret, path, contents: new TextEncoder().encode(result as string) });
-					case 'liveDanmaku': return await invoke('xml_to_ass', { secret: this.store.data.secret, path, filename: name, contents: result })
-					case 'historyDanmaku': return await invoke('xml_to_ass', { secret: this.store.data.secret, path, filename: name, contents: result })
-				}
+				const finalResult = await (async () => {
+					switch (type) {
+						case 'cover': return await commands.writeBinary(this.store.data.secret, path, transformImage(result as ArrayBuffer));
+						case 'aiSummary': return await commands.writeBinary(this.store.data.secret, path, new TextEncoder().encode(result as string) as any);
+						case 'liveDanmaku':
+						case 'historyDanmaku': return await commands.xmlToAss(this.store.data.secret, path, name, result as any);
+					}
+				})();
+				if (finalResult?.status === 'error') throw finalResult.error;
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -378,12 +381,11 @@ export default {
 						const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _index === 0 });
 						output = await pathDirname(result?.output || this.store.settings.down_dir);
 					}
-					await new Promise(resolve => setTimeout(resolve, 100));
 				} catch(err) {
 					err instanceof ApplicationError ? err.handleError() :
 					new ApplicationError(err as string).handleError();
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 300)));
 			}
 		},
 		stat,

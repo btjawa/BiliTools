@@ -1,11 +1,11 @@
 import { fetch } from "@tauri-apps/plugin-http";
-import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension, filename } from "@/services/utils";
-import { invoke } from "@tauri-apps/api/core";
+import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
 import { checkRefresh } from "@/services/login";
 import { getM1AndKey } from "@/services/auth";
 import { join as pathJoin } from "@tauri-apps/api/path";
 import { transformImage } from "@tauri-apps/api/image";
 import * as Types from "@/types/data.d";
+import * as Backend from "@/services/backend";
 import * as dm_v1 from "@/proto/dm_v1";
 import * as pako from 'pako';
 import store from "@/store";
@@ -410,10 +410,15 @@ export async function getPlayUrl(
     }
 }
 
-export async function pushBackQueue(params: { info: Types.MediaInfoListItem, video?: Types.CommonDashData | Types.CommonDurlData, audio?: Types.CommonDashData | Types.MusicUrlData, output?: string, media_type: string }) {
+export async function pushBackQueue( params: {
+    info: Backend.MediaInfoListItem,
+    video?: Types.CommonDashData | Types.CommonDurlData,
+    audio?: Types.CommonDashData | Types.MusicUrlData,
+    output?: string, media_type: string
+}) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
     const _currentSelect = store.state.data.currentSelect;
-    const currentSelect: Types.CurrentSelect = {
+    const currentSelect: Backend.CurrentSelect = {
         dms: params.video ? _currentSelect.dms : -1,
         cdc: params.video ? _currentSelect.cdc : -1,
         ads: params.audio ? _currentSelect.ads : -1,
@@ -424,22 +429,29 @@ export async function pushBackQueue(params: { info: Types.MediaInfoListItem, vid
         ...(params.video ? [{
             urls: [params.video.base_url, ...params.video.backup_url],
             media_type: "video",
-        }] : []),
+        } as Backend.Task] : []),
         ...(params.audio ? [{
             urls: [params.audio.base_url, ...params.audio.backup_url],
             media_type: "audio",
-        }] : []),
-        ...(params.video && params.audio ? [{ urls: [], media_type: "merge" }] : []),
-        ...(ext === "flac" ? [{ urls: [], media_type: "flac" }] : [])
+        } as Backend.Task] : []),
+        ...(params.video && params.audio ? [{
+            urls: [""],
+            media_type: "merge"
+        } as Backend.Task] : []),
+        ...(ext === "flac" ? [{
+            urls: [""],
+            media_type: "flac"
+        } as Backend.Task] : [])
     ];
-    const ts = {
+    const ts: Backend.Timestamp = {
         millis: Date.now(),
         string: timestamp(Date.now(), { file: true })
     }
-    const ssTitle = filename({ mediaType: params.media_type, aid: params.info.id, title: params.info.ss_title });
-    const queueInfo: Types.QueueInfo = await invoke('push_back_queue', { info: params.info, currentSelect, tasks, ts, ext, output: params.output, ssTitle });
-    store.commit('pushToArray', { 'queue.waiting': queueInfo});
-    return queueInfo;
+    const ss_title = filename({ mediaType: params.media_type, aid: params.info.id, title: params.info.ss_title });
+    const pushBackQueue = await Backend.commands.pushBackQueue(params.info, currentSelect, tasks, ts, ext, params.output ?? null, ss_title);
+    if (pushBackQueue.status === 'error') throw pushBackQueue.error;
+    store.commit('pushToArray', { 'queue.waiting': pushBackQueue.data});
+    return pushBackQueue.data;
 }
 
 export async function getBinary(url: string | URL) {
@@ -486,7 +498,7 @@ export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
             }
             const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
             dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
         }
         return new TextEncoder().encode(new XMLSerializer().serializeToString(xmlDoc));
     } else {
@@ -554,12 +566,12 @@ export async function getMangaImages(epid: number, parent: string, name: string)
     for (let [index, image] of images.entries()) {
         const url = await getMangaToken(image);
         const path = await pathJoin(parent, name, index + 1 + '.jpg');
-        await invoke('write_binary', { 
-            contents: transformImage(await getBinary(url)),
-            secret: store.state.data.secret,
+        await Backend.commands.writeBinary(
+            store.state.data.secret,
             path,
-        });
-        await new Promise(resolve => setTimeout(resolve, 100));
+            transformImage(await getBinary(url)),
+        )
+        await new Promise(resolve => setTimeout(resolve, getRandomInRange(250, 1000)));
     }
 }
 

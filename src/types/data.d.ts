@@ -1,3 +1,5 @@
+import { MediaInfoListItem } from '@/services/backend';
+
 export interface Headers {
   'Cookie': string;
   'User-Agent': string;
@@ -24,18 +26,6 @@ export enum StreamCodecType {
   Dash = "dash",
   Mp4 = "mp4",
   Flv = "flv",
-}
-
-export interface MediaInfoListItem {
-  title: string;
-  cover: string;
-  desc: string;
-  id: number,
-  cid: number,
-  eid: number,
-  duration: number,
-  ss_title: string;
-  index: number;
 }
 
 export interface MediaInfo {
@@ -68,42 +58,6 @@ export interface MediaInfo {
   },
   list: MediaInfoListItem[]
 }
-
-export interface TasksInfo {
-  tasks: {
-    urls: string[];
-    gid: string;
-    media_type: "video" | "audio" | "merge" | "flac";
-    path: string;
-  }[];
-  output: string;
-}
-
-export interface QueueInfo extends TasksInfo {
-  id: string;
-  ts: {
-    millis: number,
-    string: string
-  };
-  info: MediaInfoListItem;
-  currentSelect: CurrentSelect;
-}
-
-export interface InitData {
-  downloads: QueueInfo[];
-  hash: String;
-}
-
-export type DownloadEvent = 
-  | { status: "Started"; id: string; gid: string; media_type: "video" | "audio" | "merge" | "flac"; }
-  | { status: "Progress"; id: string; gid: string; content_length: number; chunk_length: number }
-  | { status: "Finished"; id: string; gid: string }
-  | { status: "Error"; code: number; message: string };
-
-export type QueueEvent =
-  | { type: 'Waiting'; data: QueueInfo[] }
-  | { type: 'Doing'; data: QueueInfo[] }
-  | { type: 'Complete'; data: QueueInfo[] };
 
 export interface VideoInfo {
   code: number;
@@ -1733,13 +1687,6 @@ export interface DurlInfo {
 export interface MusicUrlInfo {
   type: 'music';
   audio: MusicUrlData[];
-}
-
-export interface CurrentSelect {
-  dms: number;
-  ads: number;
-  cdc: number;
-  fmt: number;
 }
 
 export interface AISummaryInfo {

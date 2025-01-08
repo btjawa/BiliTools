@@ -1,5 +1,6 @@
 import { fetch } from "@tauri-apps/plugin-http";
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel } from "@tauri-apps/api/core";
+import { commands } from "@/services/backend";
 import { ApplicationError, formatProxyUrl, tryFetch } from "@/services/utils";
 import store from "@/store";
 import qrcode from "qrcode-generator";
@@ -135,8 +136,9 @@ export async function sendSmsCode(cid: number, tel: string): Promise<string> {
 
 export async function smsLogin(cid: number, tel: string, code: string, captcha_key: string): Promise<number> {
     try {
-        const login_code = await invoke('sms_login', { cid, tel, code, captcha_key });
-        return login_code as number;
+        const sms_login = await commands.smsLogin(cid, tel, code, captcha_key);
+        if (sms_login.status === 'error') throw sms_login.status;
+        return sms_login.data;
     } catch(err) {
         if (typeof err === 'string') throw err;
         const error = err as { code: number, message: string };
@@ -165,8 +167,9 @@ export async function pwdLogin(username: string, pwd: string): Promise<number> {
         const encoded_pwd = enc.encrypt(hash + pwd);
         const { token, gt, challenge } = await getCaptchaParams();
         const captcha = await auth.captcha(gt, challenge);
-        const login_code = await invoke('pwd_login', { username, encoded_pwd, token, ...captcha });
-        return login_code as number;
+        const pwd_login = await commands.pwdLogin(username, encoded_pwd || "", token, captcha.challenge, captcha.validate, captcha.seccode);
+        if (pwd_login.status === 'error') throw pwd_login.error;
+        return pwd_login.data;
     } catch(err) {
         if (typeof err === 'string') throw err;
         const error = err as { code: number, message: string, tmp_code?: string };
@@ -237,8 +240,9 @@ export async function verifyTel(tmp_code: string, captcha_key: string, code: str
     }
     const switch_code = verify_tel_body.data.code;
     try {
-        const switch_cookie_code = await invoke('switch_cookie', { switch_code });
-        return switch_cookie_code as number;
+        const switch_cookie = await commands.switchCookie(switch_code);
+        if (switch_cookie.status === 'error') throw switch_cookie.status;
+        return switch_cookie.data;
     } catch(err) {
         if (typeof err === 'string') throw err;
         const error = err as { code: number, message: string };
@@ -292,8 +296,9 @@ export async function scanLogin(qrcode_key: string, onEvent: (event: { code: num
         event.onmessage = (code) => {
             onEvent({ code });
         }
-        const login_code = await invoke('scan_login', { qrcode_key, event });
-        return login_code as number;
+        const scan_login = await commands.scanLogin(qrcode_key, event);
+        if (scan_login.status === 'error') throw scan_login.error;
+        return scan_login.data;
     } catch(err) {
         if (typeof err === 'string') throw err;
         const error = err as { code: number, message: string };
@@ -303,8 +308,9 @@ export async function scanLogin(qrcode_key: string, onEvent: (event: { code: num
 
 export async function exitLogin(): Promise<number> {
     try {
-        const exit_code = await invoke('exit');
-        return exit_code as number;
+        const exit = await commands.exit();
+        if (exit.status === 'error') throw exit.error;
+        return exit.data;
     } catch(err) {
         if (typeof err === 'string') throw err;
         const error = err as { code: number, message: string };
@@ -352,8 +358,9 @@ export async function checkRefresh(): Promise<number> {
     }
     console.log('Got refresh_csrf', refresh_csrf?.slice(0, 7))
     try {
-        const refresh_cookie_code = await invoke('refresh_cookie', { refresh_csrf });
-        return refresh_cookie_code as number;
+        const refresh_cookie = await commands.refreshCookie(refresh_csrf);
+        if (refresh_cookie.status === 'error') throw refresh_cookie.error;
+        return refresh_cookie.data;
     } catch(err) {
         if (typeof err === 'string') throw err;
         const error = err as { code: number, message: string };
