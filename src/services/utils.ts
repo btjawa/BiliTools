@@ -1,6 +1,8 @@
-import { fetch } from '@tauri-apps/plugin-http';
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
+import { version as osVersion } from "@tauri-apps/plugin-os";
+import { TauriError, events } from '@/services/backend';
 import { MediaType } from '@/types/data.d';
-import { TauriError } from '@/services/backend';
+import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
 import iziToast from "izitoast";
@@ -65,6 +67,46 @@ function iziError(message: string) {
         icon: 'fa-regular fa-circle-exclamation',
         layout: 2, timeout: 10000,
         title: t('common.iziToast.error'), message
+    });
+}
+
+export function setEventHook() {
+    events.headers.listen(e => {
+        store.commit('updateState', { 'data.headers': e.payload });
+    })
+    events.settings.listen(async e => {
+        store.commit('updateState', { settings: e.payload });
+        const version = osVersion().split('.');
+        if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
+            document.body.classList.remove('override-dark');
+            document.body.classList.remove('override-light');
+            document.body.classList.add('override-' + e.payload.theme);
+        }
+        i18n.global.locale.value = store.state.settings.language;
+    });
+    events.queueEvent.listen(e => {
+        console.log(e)
+        store.commit('updateState', {
+            ['queue.' + e.payload.type.toLowerCase()]: e.payload.data }
+        );
+    })
+    events.notification.listen(async e => {
+        let permissionGranted = await isPermissionGranted();
+
+        // If not we need to request it
+        if (!permissionGranted) {
+            const permission = await requestPermission();
+            permissionGranted = permission === 'granted';
+        }
+
+        // Once permission has been granted we can send the notification
+        if (permissionGranted) {
+            const info = e.payload.info;
+            sendNotification({
+                title: 'BiliTools',
+                body: `${info.ss_title}\nDownload Complete.`
+            });
+        }
     });
 }
 

@@ -13,6 +13,7 @@
         "historyDanmaku": "History Danmaku",
         "metaSnapshot": "Metadata Snapshot",
         "multiSelect": "Multi-Select",
+        "selectAll": "Select All",
         "manga": "Manga"
     },
     "empty": "No available resources~"

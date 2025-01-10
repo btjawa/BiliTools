@@ -136,9 +136,9 @@ async togglePause(pause: boolean, gid: string) : Promise<Result<null, TauriError
     else return { status: "error", error: e  as any };
 }
 },
-async removeTask(id: string, gid: string, queueType: QueueType) : Promise<Result<null, TauriError>> {
+async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("remove_task", { id, gid, queueType }) };
+    return { status: "ok", data: await TAURI_INVOKE("remove_task", { id, queueType, gid }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -151,10 +151,12 @@ async removeTask(id: string, gid: string, queueType: QueueType) : Promise<Result
 
 export const events = __makeEvents__<{
 headers: Headers,
+notification: Notification,
 queueEvent: QueueEvent,
 settings: Settings
 }>({
 headers: "headers",
+notification: "notification",
 queueEvent: "queue-event",
 settings: "settings"
 })
@@ -172,6 +174,7 @@ export type InitData = { downloads: QueueInfo[]; hash: string; binary_path: stri
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
 export type MediaInfoListItem = { title: string; cover: string; desc: string; id: number; cid: number; eid: number; duration?: number; ss_title: string; index: number }
 export type MediaType = "video" | "audio" | "merge" | "flac"
+export type Notification = { id: string; info: MediaInfoListItem }
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; ts: Timestamp; tasks: Task[]; output: string; info: MediaInfoListItem; currentSelect: CurrentSelect }
 export type QueueType = "waiting" | "doing" | "complete"

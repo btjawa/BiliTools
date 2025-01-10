@@ -52,7 +52,7 @@ async fn get_frames(input: PathBuf) -> Result<u64> {
         .output().await?;
 
     let stderr = String::from_utf8_lossy(&meta_output.stderr);
-    log::info!("{:?}", &stderr);
+    // log::info!("{:?}", &stderr);
     return Regex::new(r"frame=\s*(\d+)")?.captures_iter(&stderr)
         .filter_map(|caps| caps.get(1)?.as_str().trim().parse::<u64>().ok())
         .max().ok_or(anyhow!("Failed to parse frame count"));

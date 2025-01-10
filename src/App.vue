@@ -17,13 +17,10 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 import { provide } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
-import { ApplicationError } from "@/services/utils";
+import { ApplicationError, setEventHook } from "@/services/utils";
 import { fetchUser, checkRefresh } from "@/services/login";
-import { commands, events } from "@/services/backend";
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { version as osVersion } from "@tauri-apps/plugin-os";
+import { commands } from "@/services/backend";
 import { SearchPage } from "@/views";
-
 
 export default {
     components: {
@@ -39,26 +36,7 @@ export default {
     },
     async mounted() {
 		this.$router.push("/");
-		events.headers.listen(e => {
-			this.$store.commit('updateState', { 'data.headers': e.payload });
-		})
-		events.settings.listen(async e => {
-			this.$store.commit('updateState', { settings: e.payload });
-			const window = getCurrentWindow();
-			const version = osVersion().split('.');
-			if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
-				document.body.classList.remove('override-dark');
-				document.body.classList.remove('override-light');
-				document.body.classList.add('override-' + e.payload.theme);
-			}
-			await window.setTheme(e.payload.theme);
-			this.$i18n.locale = this.$store.state.settings.language;
-		});
-		events.queueEvent.listen(e => {
-			this.$store.commit('updateState', {
-				['queue.' + e.payload.type.toLowerCase()]: e.payload.data }
-			);
-		})
+		setEventHook();
 		provide('trySearch', async (input?: string) => {
 			this.$router.push('/');
 			const start = Date.now();
@@ -90,7 +68,7 @@ export default {
 		} finally {
 			this.$store.commit('updateState', { 'data.inited': true });
 		}
-    }
+	}
 }
 
 </script>

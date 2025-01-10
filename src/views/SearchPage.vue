@@ -48,14 +48,21 @@
 					@click="updateStein(quesion.id)"
 				>{{ quesion.option }}</button>
 			</template>
-		</div> 
-		<button
-			class="fixed bottom-6 left-[73px] multi-select" v-if="mediaInfo.type !== 'manga'"
-			:class="{ 'active': checkbox }" @click="checkbox = !checkbox"
-		>
-			<i :class="[fa_dyn, 'fa-square-check']"></i>
-			<span>{{ $t('home.label.multiSelect') }}</span>
-		</button>
+		</div>
+		<div class="fixed bottom-6 left-[73px] flex flex-col gap-3">
+			<button v-if="checkbox" :class="{ 'active': checkbox }"
+				@click=" multiSelect = multiSelect.length === mediaInfo.list.length 
+					? [] : Array.from({ length: mediaInfo.list.length }, (_, i) => i)
+				"
+			>
+				<i :class="[fa_dyn, 'fa-check-double']"></i>
+				<span>{{ $t('home.label.selectAll') }}</span>
+			</button>
+			<button v-if="mediaInfo.type !== 'manga'" @click="checkbox = !checkbox">
+				<i :class="[fa_dyn, 'fa-square-check']"></i>
+				<span>{{ $t('home.label.multiSelect') }}</span>
+			</button>
+		</div>
 		<div class="fixed bottom-6 right-4 flex flex-col gap-3" v-if="checkbox">
 			<button v-for="(item, _index) in options" @click="options[_index].multi" class="primary-color">
 				<i :class="[fa_dyn, item.icon]"></i>

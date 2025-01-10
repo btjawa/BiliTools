@@ -55,7 +55,7 @@ pub async fn load() -> Result<Vec<Arc<QueueInfo>>> {
     for info in &infos {
         QUEUE_MANAGER.push_back(info.clone(), QueueType::Complete).await?;
     }
-    QUEUE_MANAGER.update_all().await;
+    QUEUE_MANAGER.update(QueueType::Complete).await;
     Ok(infos)
 }
 

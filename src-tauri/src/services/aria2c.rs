@@ -41,6 +41,12 @@ pub struct QueueInfo {
     pub current_select: CurrentSelect,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Type, Event)]
+pub struct Notification {
+    pub id: String,
+    pub info: Arc<MediaInfoListItem>
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct Timestamp {
     pub millis: u64,
@@ -205,19 +211,18 @@ impl QueueManager {
             QueueType::Complete => self.complete_queue.read().await.len(),
         }
     }
-    pub async fn update_all(&self) {
-        let waiting_data = self.waiting_queue.read().await.clone();
-        let doing_data = self.doing_queue.read().await.clone();
-        let complete_data = self.complete_queue.read().await.clone();
-        QueueEvent::Waiting { data: waiting_data }
-            .emit(&get_app_handle())
-            .unwrap();
-        QueueEvent::Doing { data: doing_data }
-            .emit(&get_app_handle())
-            .unwrap();
-        QueueEvent::Complete { data: complete_data }
-            .emit(&get_app_handle())
-            .unwrap();
+    pub async fn update(&self, queue_type: QueueType) {
+        match queue_type {
+            QueueType::Waiting => QueueEvent::Waiting {
+                data: self.waiting_queue.read().await.clone(),
+            },
+            QueueType::Doing => QueueEvent::Doing {
+                data: self.doing_queue.read().await.clone(),
+            },
+            QueueType::Complete => QueueEvent::Complete {
+                data: self.complete_queue.read().await.clone(),
+            },
+        }.emit(&get_app_handle()).unwrap()
     }
     pub async fn push_back(&self, info: Arc<QueueInfo>, queue_type: QueueType) -> Result<()> {
         let mut guard = match queue_type {
@@ -237,7 +242,7 @@ impl QueueManager {
         };
         guard.retain(|task| *task.id != id);
         drop(guard);
-        self.update_all().await;
+        self.update(queue_type).await;
         Ok(())
     }
     async fn waiting_to_doing(&self) -> Result<Option<Arc<QueueInfo>>> {
@@ -245,7 +250,8 @@ impl QueueManager {
         if let Some(info) = waiting_queue.pop_front() {
             drop(waiting_queue);
             self.push_back(info.clone(), QueueType::Doing).await?;
-            self.update_all().await;
+            self.update(QueueType::Waiting).await;
+            self.update(QueueType::Doing).await;
             return Ok(Some(info));
         }
         Ok(None)
@@ -253,8 +259,9 @@ impl QueueManager {
     async fn doing_to_complete(&self, info: Arc<QueueInfo>) -> Result<()> {
         self.retain(QueueType::Doing, info.id.clone()).await?;
         self.push_back(info, QueueType::Complete).await?;
-        self.update_all().await;
-        Ok(())
+        self.update(QueueType::Doing).await;
+        self.update(QueueType::Complete).await;
+    Ok(())
     }
 }
 
@@ -268,7 +275,7 @@ impl DownloadManager {
     }
     pub async fn process_tasks(
         self: Arc<Self>, 
-        tx: Arc<mpsc::Sender<Result<(), TauriError>>>, 
+        tx: Arc<mpsc::Sender<Result<Arc<QueueInfo>, TauriError>>>, 
     ) -> Result<()> {
         let max_conc = CONFIG.read().unwrap().max_conc;
         let doing_len = QUEUE_MANAGER.get_len(QueueType::Doing).await;
@@ -280,7 +287,7 @@ impl DownloadManager {
                     let result = async {
                         self_cloned.download(info.clone()).await?;
                         self_cloned.clean_up(info.clone()).await?;
-                        Ok::<(), TauriError>(())
+                        Ok::<Arc<QueueInfo>, TauriError>(info)
                     }.await;
                     tx_cloned.send(result).await.context("Failed to send task result")?;
                     Ok::<(), TauriError>(())
@@ -500,28 +507,38 @@ pub async fn push_back_queue(
     }
     let info = Arc::new(video_info);
     QUEUE_MANAGER.push_back(info.clone(), QueueType::Waiting).await?;
-    QUEUE_MANAGER.update_all().await;
-    Ok(info)
+    QUEUE_MANAGER.update(QueueType::Waiting).await;
+Ok(info)
 }
 
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
     let manager = Arc::new(DownloadManager::new(event));
-    let (result_tx, mut result_rx) = mpsc::channel::<Result<(), TauriError>>(100);
+    let (result_tx, mut result_rx) = mpsc::channel::<Result<Arc<QueueInfo>, TauriError>>(100);
     let tx_arc = Arc::new(result_tx);
     loop {
-        manager.clone().process_tasks(tx_arc.clone()).await?;
-        if QUEUE_MANAGER.get_len(QueueType::Waiting).await == 0 {
-            break;
+        if QUEUE_MANAGER.get_len(QueueType::Waiting).await > 0 {
+            manager.clone().process_tasks(tx_arc.clone()).await?;
         }
         tokio::select! {
             Some(result) = result_rx.recv() => {
-                result.map_err(|e| {
-                    manager.event.send(DownloadEvent::Error {
-                        code: e.code.unwrap_or(-1), message: e.message.clone()
-                    }).unwrap(); anyhow!(e)
-                })?;
+                match result {
+                    Err(e) => {
+                        manager.event.send(DownloadEvent::Error {
+                            code: e.code.unwrap_or(-1), message: e.message.clone()
+                        }).unwrap();
+                    },
+                    Ok(r) => {
+                        if QUEUE_MANAGER.get_len(QueueType::Doing).await == 0 {
+                            Notification {
+                                id: r.id.clone(),
+                                info: r.info.clone(),
+                            }.emit(&get_app_handle()).unwrap();
+                            break;
+                        }
+                    }
+                }
             }
             else => ()
         }
@@ -531,17 +548,19 @@ pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn remove_task(id: String, gid: String, queue_type: QueueType) -> TauriResult<()> {
+pub async fn remove_task(id: String, queue_type: QueueType, gid: Option<String>) -> TauriResult<()> {
     match queue_type {
         QueueType::Complete => {
             downloads::delete(id.clone()).await?;
         },
         _ => {
-            let body: Aria2General = serde_json::from_value(
-                post_aria2c("remove", vec![json!(gid)]).await?
-            )?;
-            if let Some(error) = body.error {
-                return Err(anyhow!(TauriError::new_full(error.code, error.message)).into());
+            if let Some(gid) = gid {
+                let body: Aria2General = serde_json::from_value(
+                    post_aria2c("remove", vec![json!(gid)]).await?
+                )?;
+                if let Some(error) = body.error {
+                    return Err(anyhow!(TauriError::new_full(error.code, error.message)).into());
+                }
             }
         }
     }

@@ -25,7 +25,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
         ])
         .events(collect_events![
-            config::Settings, shared::Headers, services::aria2c::QueueEvent
+            config::Settings, shared::Headers, services::aria2c::QueueEvent, services::aria2c::Notification
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -54,6 +54,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             let windows = app.webview_windows();

@@ -124,19 +124,13 @@ export default {
                         case 'Finished': return 'complete';
                         case 'Error': return 'doing';
                     }})();
-                    const result = await commands.removeTask(id, status.gid, queueType);
+                    const result = await commands.removeTask(id, queueType, status.gid);
                     if (result.status === 'error') throw new ApplicationError(result.error);
                     return result.data;
                 }
                 const queueType = queue as keyof typeof this.store.queue;
-                const index = this.store.queue[queueType].findIndex(q => q.id === id);
-                if (index < 0) return;
-                const targetQueue = this.store.queue[queueType][index];
-                for (let task of targetQueue.tasks) {
-                    if (task.media_type === 'merge' || task.media_type === 'flac') continue;
-                    const result = await commands.removeTask(id, task.gid ?? '', queueType);
-                    if (result.status === 'error') throw new ApplicationError(result.error);
-                }
+                const result = await commands.removeTask(id, queueType, null);
+                if (result.status === 'error') throw new ApplicationError(result.error);
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
                 new ApplicationError(err as string).handleError();

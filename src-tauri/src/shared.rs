@@ -80,6 +80,15 @@ pub enum Theme {
     Dark,
 }
 
+impl From<Theme> for tauri::Theme {
+    fn from(theme: Theme) -> Self {
+        match theme {
+            Theme::Light => tauri::Theme::Light,
+            Theme::Dark => tauri::Theme::Dark,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Type, Event)]
 pub struct Headers {
     #[serde(rename = "Cookie")]
