@@ -1,7 +1,8 @@
+pub mod commands;
 pub mod services;
 pub mod storage;
 pub mod shared;
-pub mod commands;
+pub mod errors;
 
 use tauri_specta::{collect_commands, collect_events, Builder};
 use specta_typescript::{Typescript, BigIntExportBehavior};
@@ -21,10 +22,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
             ready, init, get_size, clean_cache, write_binary, xml_to_ass, rw_config, // Essentials
-            push_back_queue, process_queue, post_aria2c, remove_aria2c_task // Aria2c
+            push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
         ])
         .events(collect_events![
-            config::Settings, shared::Headers
+            config::Settings, shared::Headers, services::aria2c::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

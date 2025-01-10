@@ -8,7 +8,7 @@ export const commands = {
 async stopLogin() : Promise<void> {
     await TAURI_INVOKE("stop_login");
 },
-async exit() : Promise<Result<number, JsonValue>> {
+async exit() : Promise<Result<number, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("exit") };
 } catch (e) {
@@ -16,7 +16,7 @@ async exit() : Promise<Result<number, JsonValue>> {
     else return { status: "error", error: e  as any };
 }
 },
-async smsLogin(cid: number, tel: string, code: string, captchaKey: string) : Promise<Result<number, JsonValue>> {
+async smsLogin(cid: number, tel: string, code: string, captchaKey: string) : Promise<Result<number, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("sms_login", { cid, tel, code, captchaKey }) };
 } catch (e) {
@@ -24,7 +24,7 @@ async smsLogin(cid: number, tel: string, code: string, captchaKey: string) : Pro
     else return { status: "error", error: e  as any };
 }
 },
-async pwdLogin(username: string, encodedPwd: string, token: string, challenge: string, validate: string, seccode: string) : Promise<Result<number, JsonValue>> {
+async pwdLogin(username: string, encodedPwd: string, token: string, challenge: string, validate: string, seccode: string) : Promise<Result<number, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("pwd_login", { username, encodedPwd, token, challenge, validate, seccode }) };
 } catch (e) {
@@ -32,7 +32,7 @@ async pwdLogin(username: string, encodedPwd: string, token: string, challenge: s
     else return { status: "error", error: e  as any };
 }
 },
-async switchCookie(switchCode: string) : Promise<Result<number, JsonValue>> {
+async switchCookie(switchCode: string) : Promise<Result<number, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("switch_cookie", { switchCode }) };
 } catch (e) {
@@ -40,7 +40,7 @@ async switchCookie(switchCode: string) : Promise<Result<number, JsonValue>> {
     else return { status: "error", error: e  as any };
 }
 },
-async scanLogin(qrcodeKey: string, event: TAURI_CHANNEL<number>) : Promise<Result<number, JsonValue>> {
+async scanLogin(qrcodeKey: string, event: TAURI_CHANNEL<number>) : Promise<Result<number, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("scan_login", { qrcodeKey, event }) };
 } catch (e) {
@@ -48,7 +48,7 @@ async scanLogin(qrcodeKey: string, event: TAURI_CHANNEL<number>) : Promise<Resul
     else return { status: "error", error: e  as any };
 }
 },
-async refreshCookie(refreshCsrf: string) : Promise<Result<number, JsonValue>> {
+async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("refresh_cookie", { refreshCsrf }) };
 } catch (e) {
@@ -56,7 +56,7 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, JsonValue>> {
     else return { status: "error", error: e  as any };
 }
 },
-async ready() : Promise<Result<string, string>> {
+async ready() : Promise<Result<string, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("ready") };
 } catch (e) {
@@ -64,7 +64,7 @@ async ready() : Promise<Result<string, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async init(secret: string) : Promise<Result<InitData, JsonValue>> {
+async init(secret: string) : Promise<Result<InitData, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("init", { secret }) };
 } catch (e) {
@@ -72,7 +72,7 @@ async init(secret: string) : Promise<Result<InitData, JsonValue>> {
     else return { status: "error", error: e  as any };
 }
 },
-async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null, string>> {
+async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_size", { path, event }) };
 } catch (e) {
@@ -80,7 +80,7 @@ async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null,
     else return { status: "error", error: e  as any };
 }
 },
-async cleanCache(path: string) : Promise<Result<null, string>> {
+async cleanCache(path: string) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path }) };
 } catch (e) {
@@ -88,7 +88,7 @@ async cleanCache(path: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async writeBinary(secret: string, path: string, contents: number[]) : Promise<Result<null, string>> {
+async writeBinary(secret: string, path: string, contents: number[]) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("write_binary", { secret, path, contents }) };
 } catch (e) {
@@ -96,7 +96,7 @@ async writeBinary(secret: string, path: string, contents: number[]) : Promise<Re
     else return { status: "error", error: e  as any };
 }
 },
-async xmlToAss(secret: string, path: string, filename: string, contents: number[]) : Promise<Result<null, string>> {
+async xmlToAss(secret: string, path: string, filename: string, contents: number[]) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("xml_to_ass", { secret, path, filename, contents }) };
 } catch (e) {
@@ -104,7 +104,7 @@ async xmlToAss(secret: string, path: string, filename: string, contents: number[
     else return { status: "error", error: e  as any };
 }
 },
-async rwConfig(action: string, settings: { [key in string]: JsonValue } | null, secret: string) : Promise<Result<null, string>> {
+async rwConfig(action: string, settings: { [key in string]: JsonValue } | null, secret: string) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("rw_config", { action, settings, secret }) };
 } catch (e) {
@@ -112,7 +112,7 @@ async rwConfig(action: string, settings: { [key in string]: JsonValue } | null, 
     else return { status: "error", error: e  as any };
 }
 },
-async pushBackQueue(info: MediaInfoListItem, currentSelect: CurrentSelect, tasks: Task[], ts: Timestamp, ext: string, output: string | null, ssTitle: string) : Promise<Result<QueueInfo, JsonValue>> {
+async pushBackQueue(info: MediaInfoListItem, currentSelect: CurrentSelect, tasks: Task[], ts: Timestamp, ext: string, output: string | null, ssTitle: string) : Promise<Result<QueueInfo, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("push_back_queue", { info, currentSelect, tasks, ts, ext, output, ssTitle }) };
 } catch (e) {
@@ -120,25 +120,25 @@ async pushBackQueue(info: MediaInfoListItem, currentSelect: CurrentSelect, tasks
     else return { status: "error", error: e  as any };
 }
 },
-async processQueue(downloadEvent: TAURI_CHANNEL<DownloadEvent>, queueEvent: TAURI_CHANNEL<QueueEvent>) : Promise<Result<null, string>> {
+async processQueue(event: TAURI_CHANNEL<DownloadEvent>) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("process_queue", { downloadEvent, queueEvent }) };
+    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async postAria2c(action: string, params: JsonValue[]) : Promise<Result<JsonValue, JsonValue>> {
+async togglePause(pause: boolean, gid: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("post_aria2c", { action, params }) };
+    return { status: "ok", data: await TAURI_INVOKE("toggle_pause", { pause, gid }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async removeAria2cTask(queueId: string, id: string, gid: string | null) : Promise<Result<null, JsonValue>> {
+async removeTask(id: string, gid: string, queueType: QueueType) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("remove_aria2c_task", { queueId, id, gid }) };
+    return { status: "ok", data: await TAURI_INVOKE("remove_task", { id, gid, queueType }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -151,9 +151,11 @@ async removeAria2cTask(queueId: string, id: string, gid: string | null) : Promis
 
 export const events = __makeEvents__<{
 headers: Headers,
+queueEvent: QueueEvent,
 settings: Settings
 }>({
 headers: "headers",
+queueEvent: "queue-event",
 settings: "settings"
 })
 
@@ -168,14 +170,16 @@ export type DownloadEvent = { status: "Started"; id: string; gid: string; media_
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { downloads: QueueInfo[]; hash: string; binary_path: string }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
-export type MediaInfoListItem = { title: string; cover: string; desc: string; id: number; cid: number; eid: number; duration: number; ss_title: string; index: number }
+export type MediaInfoListItem = { title: string; cover: string; desc: string; id: number; cid: number; eid: number; duration?: number; ss_title: string; index: number }
 export type MediaType = "video" | "audio" | "merge" | "flac"
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; ts: Timestamp; tasks: Task[]; output: string; info: MediaInfoListItem; currentSelect: CurrentSelect }
+export type QueueType = "waiting" | "doing" | "complete"
 export type Settings = { max_conc: number; temp_dir: string; down_dir: string; df_dms: number; df_ads: number; df_cdc: number; auto_check_update: boolean; filename: string; proxy: SettingsProxy; advanced: SettingsAdvanced; theme: Theme; language: string }
 export type SettingsAdvanced = { auto_convert_flac: boolean; prefer_pb_danmaku: boolean }
 export type SettingsProxy = { addr: string; username: string; password: string }
 export type Task = { urls: string[]; gid: string | null; media_type: MediaType; path: string | null }
+export type TauriError = { code: number | null; message: string }
 export type Theme = 
 /**
  * Light theme.

@@ -54,6 +54,11 @@ export default {
 			await window.setTheme(e.payload.theme);
 			this.$i18n.locale = this.$store.state.settings.language;
 		});
+		events.queueEvent.listen(e => {
+			this.$store.commit('updateState', {
+				['queue.' + e.payload.type.toLowerCase()]: e.payload.data }
+			);
+		})
 		provide('trySearch', async (input?: string) => {
 			this.$router.push('/');
 			const start = Date.now();
@@ -68,10 +73,10 @@ export default {
 		});
         try {
 			const ready = await commands.ready();
-			if (ready.status === 'error') throw ready.error;
+			if (ready.status === 'error') throw new ApplicationError(ready.error);
 			const secret = ready.data;
 			const init = await commands.init(secret);
-			if (init.status === 'error') throw init.error;
+			if (init.status === 'error') throw new ApplicationError(init.error);
 			const data = init.data;
 			this.$store.commit('updateState', { 'data.secret': secret });
 			this.$store.commit('updateState', { 'queue.complete': data.downloads });

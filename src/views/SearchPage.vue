@@ -275,7 +275,7 @@ export default {
 					if (!result) return;
 					return await data.getMangaImages(info.id, parent, name);
 				}
-				const result = await (async () => { switch (type) {
+				const _data = await (async () => { switch (type) {
 					case 'cover': return await data.getBinary(info.cover);
 					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);
 					case 'liveDanmaku': return await data.getLiveDanmaku(info);
@@ -292,15 +292,14 @@ export default {
 						defaultPath: `${await pathJoin(this.store.settings.down_dir, name)}.${suffix}`
 					});
 				if (!path) return;
-				const finalResult = await (async () => {
+				const result = await (async () => {
 					switch (type) {
-						case 'cover': return await commands.writeBinary(this.store.data.secret, path, transformImage(result as ArrayBuffer));
-						case 'aiSummary': return await commands.writeBinary(this.store.data.secret, path, new TextEncoder().encode(result as string) as any);
-						case 'liveDanmaku':
-						case 'historyDanmaku': return await commands.xmlToAss(this.store.data.secret, path, name, result as any);
+						case 'cover': return await commands.writeBinary(this.store.data.secret, path, transformImage(_data as ArrayBuffer));
+						case 'aiSummary': return await commands.writeBinary(this.store.data.secret, path, new TextEncoder().encode(_data as string) as any);
+						case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(this.store.data.secret, path, name, _data as any);
 					}
 				})();
-				if (finalResult?.status === 'error') throw finalResult.error;
+                if (result?.status === 'error') throw new ApplicationError(result.error);
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -341,7 +340,7 @@ export default {
 				noFmt: this.mediaInfo.type !== MediaType.Video
 			});
 		},
-		async pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output?: string, init?: boolean }) {
+		async pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output?: string, init?: boolean, index?: number }) {
 			try {
 				const playUrlInfo = this.playUrlInfo as DashInfo;
 				const video = type === 'audio' ? null : 
@@ -349,7 +348,7 @@ export default {
 				const audio = type === 'video' ? null : 
 					playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
 				const info = await data.pushBackQueue({
-					info: this.mediaInfo.list[this.index],
+					info: this.mediaInfo.list[options?.index || this.index],
 					...(video && { video }),
 					...(audio && { audio }),
 					output: options?.output,
@@ -370,15 +369,14 @@ export default {
 			let output = String();
 			const othersParent = type in this.othersMap ? await this.getFolder() : '_';
 			if (!othersParent) return;
-			for (const [index, _index] of this.multiSelect.entries()) {
-				this.index = index;
+			for (const [_, index] of this.multiSelect.entries()) {
 				try {
 					if (type in this.othersMap) {
 						await this.getOthers(type as any, { ...options, parent: othersParent });
 					} else {
 						for (const key in this.currentSelect) (this.currentSelect as any)[key] = (currentSelect as any)[key];
 						await this.updateStream(index, this.currentSelect.fmt, { currentSelect });
-						const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _index === 0 });
+						const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _ === 0, index });
 						output = await pathDirname(result?.output || this.store.settings.down_dir);
 					}
 				} catch(err) {

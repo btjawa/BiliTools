@@ -194,6 +194,9 @@ select {
 .iziToast-wrapper-topRight,
 .iziToast-wrapper-topLeft {
     transform: translateY(30px);
+    .iziToast-capsule > div > .iziToast-body > .iziToast-texts > .iziToast-message {
+        white-space: pre-wrap;
+    }
 }
 
 markdown-style {

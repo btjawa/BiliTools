@@ -50,7 +50,8 @@ export default defineComponent({
         isActive(path: string) { return this.$route.path == path },
         async setTheme() {
             const newTheme = this.store.settings.theme === 'dark' ? 'light' : 'dark';
-            await commands.rwConfig('write', { theme: newTheme }, this.store.data.secret);
+            const result = await commands.rwConfig('write', { theme: newTheme }, this.store.data.secret);
+            if (result.status === 'error') throw new ApplicationError(result.error);
         },
         ApplicationError
     },

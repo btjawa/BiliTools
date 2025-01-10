@@ -1,10 +1,17 @@
-use std::{collections::HashMap, error::Error};
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 
-use sea_orm::{Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement};
-use sea_orm::sea_query::{OnConflict, SqliteQueryBuilder, TableCreateStatement};
-use sea_orm::entity::prelude::*;
+use sea_orm::{
+    Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement,
+    entity::prelude::*,
+    sea_query::{
+        TableCreateStatement,
+        SqliteQueryBuilder,
+        OnConflict,
+    },
+};
 
 use crate::shared::STORAGE_PATH;
 
@@ -22,8 +29,9 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
+pub async fn init() -> Result<()> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
     db.execute(Statement::from_string(
@@ -33,11 +41,11 @@ pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn parse_cookie_header(cookie: String) -> Result<Model, Box<dyn Error>> {
+fn parse_cookie_header(cookie: String) -> Result<Model> {
     let re_name_value = Regex::new(r"^([^=]+)=([^;]+);?")?;
     let re_attribute = Regex::new(r"([^=]+)=([^;]+);?")?;
 
-    let captures = re_name_value.captures(&cookie).unwrap();
+    let captures = re_name_value.captures(&cookie).ok_or_else(|| anyhow!("Invalid Cookie"))?;
     let name = captures.get(1).unwrap().as_str().trim().to_string();
     let value: JsonValue = captures.get(2).unwrap().as_str().trim().into();
 
@@ -58,9 +66,11 @@ fn parse_cookie_header(cookie: String) -> Result<Model, Box<dyn Error>> {
     })
 }
 
-pub async fn load() -> Result<HashMap<String, JsonValue>, Box<dyn Error>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
-    let cookies = Entity::find().all(&db).await?;
+pub async fn load() -> Result<HashMap<String, JsonValue>> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
+    let cookies = Entity::find().all(&db)
+        .await.context("Failed to load Cookies")?;
     let mut result = HashMap::new();
     for cookie in cookies {
         result.insert(cookie.name, cookie.value);
@@ -68,26 +78,29 @@ pub async fn load() -> Result<HashMap<String, JsonValue>, Box<dyn Error>> {
     Ok(result)
 }
 
-pub async fn insert(cookie: String) -> Result<(), Box<dyn Error>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
+pub async fn insert(cookie: String) -> Result<()> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
     let parsed_cookie = parse_cookie_header(cookie)?.into_active_model();
+    let name = parsed_cookie.name.clone();
     Entity::insert(parsed_cookie)
         .on_conflict(
         OnConflict::column(Column::Name)
             .update_columns([Column::Value, Column::Expires])
             .to_owned())
-        .exec(&db)
-        .await?;
+        .exec(&db).await
+        .with_context(|| format!("Failed to insert Cookie: {:?}", name))?;
 
     Ok(())
 }
 
-pub async fn delete(cookie: String) -> Result<(), Box<dyn Error>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
+pub async fn delete(name: String) -> Result<()> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
     Entity::delete_many()
-        .filter(Column::Name.eq(cookie))
-        .exec(&db)
-        .await?;
+        .filter(Column::Name.eq(&name))
+        .exec(&db).await
+        .with_context(|| format!("Failed to delete Cookie: {}", name))?;
 
     Ok(())
 }

@@ -1,5 +1,6 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import { MediaType } from '@/types/data.d';
+import { TauriError } from '@/services/backend';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
 import iziToast from "izitoast";
@@ -21,9 +22,15 @@ iziToast.settings({
 export class ApplicationError extends Error {
     code?: number | string;
     noStack?: boolean;
-    constructor(message: string, options?: { code?: number | string | undefined, noStack?: boolean }) {
-        super(message);
-        this.code = options?.code;
+    constructor(message: string | TauriError, options?: { code?: number | string | undefined, noStack?: boolean }) {
+        if (typeof (message as TauriError).message === 'string') {
+            const error = message as TauriError;
+            super(error.message);
+            this.code = error.code ?? undefined;
+        } else {
+            super(message as any)
+            this.code = options?.code;
+        }
         this.noStack = options?.noStack;
         (Error as any).captureStackTrace(this, this.constructor);
         this.stack = this.cleanStack(this.stack);
@@ -57,7 +64,7 @@ function iziError(message: string) {
     iziToast.error({
         icon: 'fa-regular fa-circle-exclamation',
         layout: 2, timeout: 10000,
-        title: t('common.iziToast.error'), message: message.replace(/\n/g, '<br>')
+        title: t('common.iziToast.error'), message
     });
 }
 

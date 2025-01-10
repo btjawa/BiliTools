@@ -447,11 +447,16 @@ export async function pushBackQueue( params: {
         millis: Date.now(),
         string: timestamp(Date.now(), { file: true })
     }
-    const ss_title = filename({ mediaType: params.media_type, aid: params.info.id, title: params.info.ss_title });
-    const pushBackQueue = await Backend.commands.pushBackQueue(params.info, currentSelect, tasks, ts, ext, params.output ?? null, ss_title);
-    if (pushBackQueue.status === 'error') throw pushBackQueue.error;
-    store.commit('pushToArray', { 'queue.waiting': pushBackQueue.data});
-    return pushBackQueue.data;
+    const ss_title = filename({
+        mediaType: params.media_type, aid: params.info.id, title: params.info.ss_title
+    });
+    const result = await Backend.commands.pushBackQueue(
+        params.info, currentSelect,
+        tasks, ts, ext,
+        params.output ?? null, ss_title
+    );
+    if (result.status === 'error') throw new ApplicationError(result.error);
+    return result.data;
 }
 
 export async function getBinary(url: string | URL) {
@@ -492,7 +497,7 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
 export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
     if (store.state.settings.advanced.prefer_pb_danmaku) {
         let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
-        for (let i = 0; i < Math.ceil(info.duration / 360); i++) {
+        for (let i = 0; i < Math.ceil((info.duration || 0) / 360); i++) {
             const params = {
                 type: 1, oid: info.cid, pid: info.id, segment_index: i + 1,
             }
@@ -566,11 +571,12 @@ export async function getMangaImages(epid: number, parent: string, name: string)
     for (let [index, image] of images.entries()) {
         const url = await getMangaToken(image);
         const path = await pathJoin(parent, name, index + 1 + '.jpg');
-        await Backend.commands.writeBinary(
+        const result = await Backend.commands.writeBinary(
             store.state.data.secret,
             path,
             transformImage(await getBinary(url)),
         )
+        if (result.status === 'error') throw new ApplicationError(result.error);
         await new Promise(resolve => setTimeout(resolve, getRandomInRange(250, 1000)));
     }
 }

@@ -55,7 +55,7 @@
 
 <script lang="ts">
 import { ApplicationError } from '@/services/utils';
-import { commands, DownloadEvent, QueueEvent } from '@/services/backend';
+import { commands, DownloadEvent } from '@/services/backend';
 import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
 import { Empty } from '@/components';
@@ -107,12 +107,8 @@ export default {
                 const status = this.statusList[id];
                 if (!status) return;
                 status.paused = !status.paused;
-                const post_aria2c = await commands.postAria2c(status.paused ? 'unpause' : 'pause', [status.gid]);
-                if (post_aria2c.status === 'error') throw post_aria2c.error;
-                const body = post_aria2c.data as any;
-                if (body.error) {
-                    new ApplicationError(body.error.message, { code: body.error.code }).handleError();
-                }
+                const result = await commands.togglePause(!status.paused, status.gid);
+                if (result.status === 'error') throw new ApplicationError(result.error);
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
                 new ApplicationError(err as string).handleError();
@@ -122,29 +118,24 @@ export default {
             try {
                 const status = this.statusList[id];
                 if (status) {
-                    const queue_id = (() => { switch(status.status) {
+                    const queueType = (() => { switch(status.status) {
                         case 'Started': return 'doing';
                         case 'Progress': return 'doing';
                         case 'Finished': return 'complete';
                         case 'Error': return 'doing';
                     }})();
-                    const remove_aria2c_task = await commands.removeAria2cTask(queue_id, id, status.gid);
-                    if (remove_aria2c_task.status === 'error') throw remove_aria2c_task.status;
-                    return remove_aria2c_task.data;
+                    const result = await commands.removeTask(id, status.gid, queueType);
+                    if (result.status === 'error') throw new ApplicationError(result.error);
+                    return result.data;
                 }
-                const queue_id = queue as keyof typeof this.store.queue;
-                const index = this.store.queue[queue_id].findIndex(q => q.id === id);
+                const queueType = queue as keyof typeof this.store.queue;
+                const index = this.store.queue[queueType].findIndex(q => q.id === id);
                 if (index < 0) return;
-                const targetQueue = this.store.queue[queue_id][index];
+                const targetQueue = this.store.queue[queueType][index];
                 for (let task of targetQueue.tasks) {
                     if (task.media_type === 'merge' || task.media_type === 'flac') continue;
-                    try {
-                        const remove_aria2c_task = await commands.removeAria2cTask(queue_id, id, task.gid);
-                        if (remove_aria2c_task.status === 'error') throw remove_aria2c_task.status;
-                        this.store.queue[queue_id].splice(index, 1);
-                    } catch(err) {
-                        throw err;
-                    }
+                    const result = await commands.removeTask(id, task.gid ?? '', queueType);
+                    if (result.status === 'error') throw new ApplicationError(result.error);
                 }
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
@@ -162,9 +153,8 @@ export default {
         async processQueue() {
             this.queuePage = 1;
             try {
-				const downloadEvent = new Channel<DownloadEvent>();
-                const queueEvent = new Channel<QueueEvent>();
-                downloadEvent.onmessage = (message) => {
+				const event = new Channel<DownloadEvent>();
+                event.onmessage = (message) => {
                     switch(message.status) {
                     case 'Started': 
                         this.statusList[message.id] = {
@@ -198,7 +188,11 @@ export default {
                         break;
 
                     case 'Finished':
-                        this.statusList[message.id].status = message.status;
+                        const _status = this.statusList[message.id];
+                        if (_status) {
+                            _status.progress = 100.0;
+                            _status.status = message.status;
+                        }
                         break;
 
                     case 'Error':
@@ -206,11 +200,8 @@ export default {
                         break;
                     }
 				}
-                queueEvent.onmessage = (message) => {
-                    this.$store.commit('updateState', { ['queue.' + message.type.toLowerCase()]: message.data });
-				}
-                const process_queue = await commands.processQueue(downloadEvent, queueEvent);
-                if (process_queue.status === 'error') throw process_queue.status;
+                const result = await commands.processQueue(event);
+                if (result.status === 'error') throw new ApplicationError(result.error);
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
                 new ApplicationError(err as string).handleError();

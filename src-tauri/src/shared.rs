@@ -1,12 +1,13 @@
 use std::{collections::HashMap, env, path::PathBuf, sync::{Arc, RwLock}, time::{SystemTime, UNIX_EPOCH}};
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, WebviewWindow, Wry};
 use tauri_plugin_http::reqwest::{Client, Proxy};
-use serde_json::{Value, to_value, from_value};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
+use anyhow::{anyhow, Result};
 use tokio::sync::OnceCell;
 use tauri_specta::Event;
+use serde_json::Value;
 use specta::Type;
 use regex::Regex;
 
@@ -93,9 +94,9 @@ pub struct Headers {
     extra: HashMap<String, String>,
 }
 
-pub async fn init_headers() -> Result<HashMap<String, String>, String> {
+pub async fn init_headers() -> Result<HashMap<String, String>> {
     let mut map = HashMap::new();
-    let cookies = cookies::load().await.map_err(|e| e.to_string())?
+    let cookies = cookies::load().await?
         .iter().map(|(name, value)|
             format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
         ).collect::<Vec<_>>().join("; ");
@@ -103,18 +104,18 @@ pub async fn init_headers() -> Result<HashMap<String, String>, String> {
     map.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36".into());
     map.insert("Referer".into(), "https://www.bilibili.com".into());
     map.insert("Origin".into(), "https://www.bilibili.com".into());
-    let headers_value: Value = to_value(&map).unwrap();
-    let headers: Headers = from_value(headers_value).unwrap();
+    let headers_value: Value = serde_json::to_value(&map)?;
+    let headers: Headers = serde_json::from_value(headers_value)?;
     headers.emit(&get_app_handle()).unwrap();
     Ok(map)
 }
 
-pub async fn init_client() -> Result<Client, String> {
+pub async fn init_client() -> Result<Client> {
     let mut headers = HeaderMap::new();
     for (key, value) in init_headers().await? {
     headers.insert(
-        HeaderName::from_bytes(key.as_bytes()).unwrap(),
-        HeaderValue::from_str(&value).unwrap()
+        HeaderName::from_bytes(key.as_bytes())?,
+        HeaderValue::from_str(&value)?
     ); }
     let config = CONFIG.read().unwrap();
     let client_builder = Client::builder()
@@ -125,11 +126,11 @@ pub async fn init_client() -> Result<Client, String> {
                 true => Proxy::https(&config.proxy.addr),
                 false => Proxy::http(&config.proxy.addr),
             }
-            .map_err(|e| e.to_string())?
+            .map_err(|e| anyhow!(e))?
             .basic_auth(&config.proxy.username, &config.proxy.password)
         )
     } else { client_builder };
-    Ok(client_builder.build().unwrap())
+    Ok(client_builder.build()?)
 }
 
 pub fn get_app_handle() -> AppHandle<Wry> {

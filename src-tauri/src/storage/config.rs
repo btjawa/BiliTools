@@ -1,18 +1,25 @@
-use std::{collections::HashMap, error::Error};
+use anyhow::{anyhow, Context, Result};
 use serde::{Serialize, Deserialize};
-use specta::Type;
+use std::collections::HashMap;
+use serde_json::{Value, json};
 use tauri::async_runtime;
 use tauri_specta::Event;
-use std::{fs, path::PathBuf};
-use serde_json::{Value, json};
+use std::path::PathBuf;
+use specta::Type;
 
-use sea_orm::{Database, DbBackend, FromJsonQueryResult, IntoActiveModel, JsonValue, Schema, Statement};
-use sea_orm::sea_query::{OnConflict, SqliteQueryBuilder, TableCreateStatement};
-use sea_orm::entity::prelude::*;
-
-use crate::shared::{
-    get_app_handle, Theme, CONFIG, SECRET, STORAGE_PATH
+use sea_orm::{
+    Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement, FromJsonQueryResult,
+    entity::prelude::*,
+    sea_query::{
+        TableCreateStatement,
+        SqliteQueryBuilder,
+        OnConflict,
+    },
 };
+
+use crate::{shared::{
+    get_app_handle, Theme, CONFIG, SECRET, STORAGE_PATH
+}, TauriResult};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "config")]
@@ -56,21 +63,23 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
-    if !STORAGE_PATH.exists() { fs::write(STORAGE_PATH.as_path(), &[])?; }
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
+pub async fn init() -> Result<()> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
     db.execute(Statement::from_string(
         DbBackend::Sqlite, 
         stmt.to_string(SqliteQueryBuilder)
-    )).await?;
+    )).await.context("Failed to init Config")?;
     Ok(())
 }
 
-pub async fn load() -> Result<HashMap<String, JsonValue>, Box<dyn Error>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
-    let configs = Entity::find().all(&db).await?;
+pub async fn load() -> Result<HashMap<String, JsonValue>> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
+    let configs = Entity::find().all(&db)
+        .await.context("Failed to load Settings")?;
     let mut result = HashMap::new();
     for config in configs {
         result.insert(config.name, config.value);
@@ -78,28 +87,29 @@ pub async fn load() -> Result<HashMap<String, JsonValue>, Box<dyn Error>> {
     Ok(result)
 }
 
-pub async fn insert(name: String, value: JsonValue) -> Result<(), Box<dyn Error>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display())).await?;
-    Entity::insert(Model { name, value }.into_active_model())
+pub async fn insert(name: String, value: JsonValue) -> Result<()> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
+    Entity::insert(Model { name: name.clone(), value }.into_active_model())
         .on_conflict(
         OnConflict::column(Column::Name)
             .update_columns([Column::Value])
             .to_owned())
-        .exec(&db)
-        .await?;
+        .exec(&db).await
+        .with_context(|| format!("Failed to insert Setting: {:?}", &name))?;
 
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> Result<(), String> {
+pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> TauriResult<()> {
     if secret != *SECRET.read().unwrap() {
-        return Err("403 Forbidden".into());
+        return Err(anyhow!("403 Forbidden").into());
     }
     let update_config = |source: HashMap<String, Value>| {
         let mut config = CONFIG.write().unwrap();
-        let mut config_json = serde_json::to_value(&*config).unwrap();
+        let mut config_json = serde_json::to_value(&*config)?;
         if let Value::Object(ref mut config_obj) = config_json {
             for (key, value) in source {
                 if let (Some(Value::Object(original)), Value::Object(new)) = (config_obj.get_mut(&key), &value) {
@@ -108,27 +118,30 @@ pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, s
                     }
                     let merged = json!(original);
                     async_runtime::spawn(async move {
-                        insert(key, merged).await.map_err(|e| e.to_string()).unwrap();
+                        let _ = insert(key, merged).await;
                     });
                 } else {
                     config_obj.insert(key.clone(), value.clone());
                     async_runtime::spawn(async move {
-                        insert(key, value).await.map_err(|e| e.to_string()).unwrap();
+                        let _ = insert(key, value).await;
                     });
                 }
             }
         }
-        *config = serde_json::from_value(config_json).map_err(|e| e.to_string()).unwrap();
+        *config = serde_json::from_value(config_json)?;
+        Ok::<(), anyhow::Error>(())
     };
     if action == "init" || action == "read" {
-        update_config(load().await.map_err(|e| e.to_string())?);
+        update_config(load().await?)?;
     } else if action == "write" {
-        if let Some(new_config) = settings { update_config(new_config.clone()) }
+        if let Some(new_config) = settings {
+            update_config(new_config.clone())?;
+        }
     }
     let config = CONFIG.read().unwrap().clone();
     if action != "read" {
         if let Value::Object(map) = serde_json::to_value(&config).unwrap() {
-            update_config(map.into_iter().collect::<HashMap<String, Value>>());
+            update_config(map.into_iter().collect::<HashMap<String, Value>>())?;
         }
         #[cfg(debug_assertions)]
         log::info!("{:?}", config);

@@ -135,15 +135,9 @@ export async function sendSmsCode(cid: number, tel: string): Promise<string> {
 }
 
 export async function smsLogin(cid: number, tel: string, code: string, captcha_key: string): Promise<number> {
-    try {
-        const sms_login = await commands.smsLogin(cid, tel, code, captcha_key);
-        if (sms_login.status === 'error') throw sms_login.status;
-        return sms_login.data;
-    } catch(err) {
-        if (typeof err === 'string') throw err;
-        const error = err as { code: number, message: string };
-        throw new ApplicationError(error.message, { code: error.code });
-    }
+    const result = await commands.smsLogin(cid, tel, code, captcha_key);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+    return result.data;
 }
 
 export async function pwdLogin(username: string, pwd: string): Promise<number> {
@@ -161,23 +155,14 @@ export async function pwdLogin(username: string, pwd: string): Promise<number> {
         throw new ApplicationError(key_body?.message, { code: key_body?.code });
     }
     const { hash, key } = key_body.data;
-    try {
-        const enc = new JSEncrypt();
-        enc.setPublicKey(key.replace(/\n/g, ''));
-        const encoded_pwd = enc.encrypt(hash + pwd);
-        const { token, gt, challenge } = await getCaptchaParams();
-        const captcha = await auth.captcha(gt, challenge);
-        const pwd_login = await commands.pwdLogin(username, encoded_pwd || "", token, captcha.challenge, captcha.validate, captcha.seccode);
-        if (pwd_login.status === 'error') throw pwd_login.error;
-        return pwd_login.data;
-    } catch(err) {
-        if (typeof err === 'string') throw err;
-        const error = err as { code: number, message: string, tmp_code?: string };
-        if (error.code === 2 || error.tmp_code) {
-            throw error;
-        }
-        throw new ApplicationError(error.message, { code: error.code });
-    }
+    const enc = new JSEncrypt();
+    enc.setPublicKey(key.replace(/\n/g, ''));
+    const encoded_pwd = enc.encrypt(hash + pwd);
+    const { token, gt, challenge } = await getCaptchaParams();
+    const captcha = await auth.captcha(gt, challenge);
+    const result = await commands.pwdLogin(username, encoded_pwd || "", token, captcha.challenge, captcha.validate, captcha.seccode);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+    return result.data;
 }
 
 export async function verifyTelSendSmsCode(tmp_code: string): Promise<string> {
@@ -239,15 +224,9 @@ export async function verifyTel(tmp_code: string, captcha_key: string, code: str
         throw new ApplicationError(verify_tel_body?.message, { code: verify_tel_body?.code });
     }
     const switch_code = verify_tel_body.data.code;
-    try {
-        const switch_cookie = await commands.switchCookie(switch_code);
-        if (switch_cookie.status === 'error') throw switch_cookie.status;
-        return switch_cookie.data;
-    } catch(err) {
-        if (typeof err === 'string') throw err;
-        const error = err as { code: number, message: string };
-        throw new ApplicationError(error.message, { code: error.code });
-    }
+    const result = await commands.switchCookie(switch_code);
+    if (result.status === 'error') throw new ApplicationError(result.status);
+    return result.data;
 }
 
 export async function genQrcode(canvas: HTMLCanvasElement): Promise<string> {
@@ -291,31 +270,19 @@ export async function genQrcode(canvas: HTMLCanvasElement): Promise<string> {
 }
 
 export async function scanLogin(qrcode_key: string, onEvent: (event: { code: number }) => void): Promise<number> {
-    try {
-        const event = new Channel<number>();
-        event.onmessage = (code) => {
-            onEvent({ code });
-        }
-        const scan_login = await commands.scanLogin(qrcode_key, event);
-        if (scan_login.status === 'error') throw scan_login.error;
-        return scan_login.data;
-    } catch(err) {
-        if (typeof err === 'string') throw err;
-        const error = err as { code: number, message: string };
-        throw new ApplicationError(error.message, { code: error.code });
+    const event = new Channel<number>();
+    event.onmessage = (code) => {
+        onEvent({ code });
     }
+    const result = await commands.scanLogin(qrcode_key, event);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+    return result.data;
 }
 
 export async function exitLogin(): Promise<number> {
-    try {
-        const exit = await commands.exit();
-        if (exit.status === 'error') throw exit.error;
-        return exit.data;
-    } catch(err) {
-        if (typeof err === 'string') throw err;
-        const error = err as { code: number, message: string };
-        throw new ApplicationError(error.message, { code: error.code });
-    }
+    const result = await commands.exit();
+    if (result.status === 'error') throw new ApplicationError(result.error);
+    return result.data;
 }
 
 export async function checkRefresh(): Promise<number> {
@@ -357,13 +324,7 @@ export async function checkRefresh(): Promise<number> {
         throw "Failed to get refresh_csrf";
     }
     console.log('Got refresh_csrf', refresh_csrf?.slice(0, 7))
-    try {
-        const refresh_cookie = await commands.refreshCookie(refresh_csrf);
-        if (refresh_cookie.status === 'error') throw refresh_cookie.error;
-        return refresh_cookie.data;
-    } catch(err) {
-        if (typeof err === 'string') throw err;
-        const error = err as { code: number, message: string };
-        throw new ApplicationError(error.message, { code: error.code });
-    }
+    const result = await commands.refreshCookie(refresh_csrf);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+    return result.data;
 }

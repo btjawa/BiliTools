@@ -244,8 +244,8 @@ export default {
             this.updateSettings(parent, this.store.settings[parent]);
         },
         async updateSettings(key: string, item: any) {
-            const rw_config = await commands.rwConfig('write', { [key]: item }, this.store.data.secret);
-            if (rw_config.status === 'error') throw rw_config.status;
+            const result = await commands.rwConfig('write', { [key]: item }, this.store.data.secret);
+            if (result.status === 'error') throw new ApplicationError(result.error);
         },
         async getPath(type: PathAlias | "danmaku" | "aria2c") {
             switch (type) {
@@ -261,10 +261,7 @@ export default {
                 })()
                 case 'database': return path.join(await path.appDataDir(), 'Storage');
                 case 'danmaku': return path.join(this.store.data.binary_path, 'DanmakuFactoryConfig.json');
-                case 'aria2c': return (() => {
-                    console.log(path.join(this.store.data.binary_path, 'aria2.conf'))
-                    return path.join(this.store.data.binary_path, 'aria2.conf');
-                })()
+                case 'aria2c': return path.join(this.store.data.binary_path, 'aria2.conf');
             }
         },
         async checkProxy() {
@@ -305,14 +302,14 @@ export default {
             event.onmessage = (bytes) => {
                 (this.store.data.cache as any)[pathName] = bytes;
             }
-            const get_size = await commands.getSize(await this.getPath(pathName), event);
-            if (get_size.status === 'error') throw get_size.error;
+            const result = await commands.getSize(await this.getPath(pathName), event);
+            if (result.status === 'error') throw new ApplicationError(result.error);
         },
         async cleanCache(pathName: PathAlias) {
             const result = await dialog.ask(this.$t('settings.askDelete'), { 'kind': 'warning' });
             if (!result) return;
-            const clean_cache = await commands.cleanCache(await this.getPath(pathName));
-            if (clean_cache.status === 'error') throw clean_cache.error;
+            const clean = await commands.cleanCache(await this.getPath(pathName));
+            if (clean.status === 'error') throw new ApplicationError(clean.error);
             await this.getSize(pathName);
         },
         getNestedValue(obj: Record<string, any>, path: string): any {

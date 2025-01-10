@@ -1,16 +1,18 @@
-use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{RwLock as StdRwLock, Arc}, time::Duration};
-use tokio::{sync::{RwLock, Notify, OnceCell}, time::sleep};
+use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{Arc, RwLock as StdRwLock}, time::Duration};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
+use tokio::{sync::{mpsc, RwLock}, time::sleep};
 use tauri::{async_runtime, ipc::Channel};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use sea_orm::FromJsonQueryResult;
 use tauri_plugin_http::reqwest;
 use serde_json::{json, Value};
 use lazy_static::lazy_static;
+use tauri_specta::Event;
 use specta::Type;
 
 use crate::{
-    shared::{
+    downloads, errors::TauriResult, ffmpeg, shared::{
         filename,
         get_app_handle,
         init_client,
@@ -19,20 +21,13 @@ use crate::{
         BINARY_RELATIVE,
         CONFIG,
         SECRET,
-    },
-    downloads,
-    ffmpeg,
+    }, TauriError
 };
 
 lazy_static! {
-    pub static ref WAITING_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
-    pub static ref DOING_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
-    pub static ref COMPLETE_QUEUE: RwLock<VecDeque<Arc<QueueInfo>>> = RwLock::new(VecDeque::new());
+    pub static ref QUEUE_MANAGER: QueueManager = QueueManager::new();
     static ref ARIA2C_PORT: Arc<StdRwLock<u16>> = Arc::new(StdRwLock::new(0));
     static ref ARIA2C_CHILD: Arc<StdRwLock<Option<CommandChild>>> = Arc::new(StdRwLock::new(None));
-    static ref DOWNLOAD_NOTIFY: Notify = Notify::new();
-    pub static ref DOWNLOAD_EVENT: Arc<OnceCell<Channel<DownloadEvent>>> = Arc::new(OnceCell::new());
-    pub static ref QUEUE_EVENT: Arc<OnceCell<Channel<QueueEvent>>> = Arc::new(OnceCell::new());
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
@@ -47,11 +42,9 @@ pub struct QueueInfo {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct CurrentSelect {
-    pub dms: i32,
-    pub ads: i32,
-    pub cdc: i32,
-    pub fmt: i32,
+pub struct Timestamp {
+    pub millis: u64,
+    pub string: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -60,6 +53,50 @@ pub struct Task {
     pub gid: Option<String>,
     pub media_type: MediaType,
     pub path: Option<PathBuf>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct MediaInfoListItem {
+    title: String,
+    cover: String,
+    desc: String,
+    id: usize,
+    cid: usize,
+    eid: usize,
+    #[serde(default)]
+    duration: usize,
+    ss_title: String,
+    index: usize
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct CurrentSelect {
+    pub dms: i32,
+    pub ads: i32,
+    pub cdc: i32,
+    pub fmt: i32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum QueueType {
+    Waiting,
+    Doing,
+    Complete,
+}
+
+#[derive(Clone, Serialize, Type, Event)]
+#[serde(tag = "type")]
+pub enum QueueEvent {
+    Waiting {
+        data: VecDeque<Arc<QueueInfo>>
+    },
+    Doing {
+        data: VecDeque<Arc<QueueInfo>>
+    },
+    Complete {
+        data: VecDeque<Arc<QueueInfo>>
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Type)]
@@ -95,69 +132,28 @@ pub enum MediaType {
     Flac,
 }
 
-#[derive(Clone, Serialize, Type)]
-#[serde(tag = "type")]
-pub enum QueueEvent {
-    Waiting {
-        data: VecDeque<Arc<QueueInfo>>
-    },
-    Doing {
-        data: VecDeque<Arc<QueueInfo>>
-    },
-    Complete {
-        data: VecDeque<Arc<QueueInfo>>
-    },
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct MediaInfoListItem {
-    title: String,
-    cover: String,
-    desc: String,
-    id: usize,
-    cid: usize,
-    eid: usize,
-    duration: usize,
-    ss_title: String,
-    index: usize
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct Timestamp {
-    pub millis: u64,
-    pub string: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aria2Error {
     code: isize,
     message: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Aria2AddUri {
+#[derive(Debug, Serialize, Deserialize)]
+struct Aria2General {
     id: String,
     jsonrpc: String,
     result: Option<String>,
     error: Option<Aria2Error>
 }
 
-#[derive(Serialize, Deserialize)]
-struct Aria2Remove {
-    id: String,
-    jsonrpc: String,
-    result: Option<String>,
-    error: Option<Aria2Error>
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Aria2TellStatus {
     id: String,
     jsonrpc: String,
-    result: Option<Aria2TellStatusResult>,
+    result: Aria2TellStatusResult,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Aria2TellStatusResult {
     gid: String,
     status: String,
@@ -188,25 +184,198 @@ struct Aria2TellStatusResult {
     error_message: Option<String>
 }
 
-pub fn init() -> Result<(), String> {
+pub struct QueueManager {
+    waiting_queue: RwLock<VecDeque<Arc<QueueInfo>>>,
+    doing_queue: RwLock<VecDeque<Arc<QueueInfo>>>,
+    complete_queue: RwLock<VecDeque<Arc<QueueInfo>>>,
+}
+
+impl QueueManager {
+    pub fn new() -> Self {
+        Self {
+            waiting_queue: RwLock::new(VecDeque::new()),
+            doing_queue: RwLock::new(VecDeque::new()),
+            complete_queue: RwLock::new(VecDeque::new()),
+        }
+    }
+    pub async fn get_len(&self, queue_type: QueueType) -> usize {
+        match queue_type {
+            QueueType::Waiting => self.waiting_queue.read().await.len(),
+            QueueType::Doing => self.doing_queue.read().await.len(),
+            QueueType::Complete => self.complete_queue.read().await.len(),
+        }
+    }
+    pub async fn update_all(&self) {
+        let waiting_data = self.waiting_queue.read().await.clone();
+        let doing_data = self.doing_queue.read().await.clone();
+        let complete_data = self.complete_queue.read().await.clone();
+        QueueEvent::Waiting { data: waiting_data }
+            .emit(&get_app_handle())
+            .unwrap();
+        QueueEvent::Doing { data: doing_data }
+            .emit(&get_app_handle())
+            .unwrap();
+        QueueEvent::Complete { data: complete_data }
+            .emit(&get_app_handle())
+            .unwrap();
+    }
+    pub async fn push_back(&self, info: Arc<QueueInfo>, queue_type: QueueType) -> Result<()> {
+        let mut guard = match queue_type {
+            QueueType::Waiting => self.waiting_queue.write().await,
+            QueueType::Doing => self.doing_queue.write().await,
+            QueueType::Complete => self.complete_queue.write().await,
+        };
+        guard.push_back(info);
+        drop(guard);
+        Ok(())
+    }
+    pub async fn retain(&self, queue_type: QueueType, id: String) -> Result<()> {
+        let mut guard = match queue_type {
+            QueueType::Waiting => self.waiting_queue.write().await,
+            QueueType::Doing => self.doing_queue.write().await,
+            QueueType::Complete => self.complete_queue.write().await,
+        };
+        guard.retain(|task| *task.id != id);
+        drop(guard);
+        self.update_all().await;
+        Ok(())
+    }
+    async fn waiting_to_doing(&self) -> Result<Option<Arc<QueueInfo>>> {
+        let mut waiting_queue = self.waiting_queue.write().await;
+        if let Some(info) = waiting_queue.pop_front() {
+            drop(waiting_queue);
+            self.push_back(info.clone(), QueueType::Doing).await?;
+            self.update_all().await;
+            return Ok(Some(info));
+        }
+        Ok(None)
+    }
+    async fn doing_to_complete(&self, info: Arc<QueueInfo>) -> Result<()> {
+        self.retain(QueueType::Doing, info.id.clone()).await?;
+        self.push_back(info, QueueType::Complete).await?;
+        self.update_all().await;
+        Ok(())
+    }
+}
+
+struct DownloadManager {
+    event: Channel<DownloadEvent>,
+}
+
+impl DownloadManager {
+    pub fn new(event: Channel<DownloadEvent>) -> Self {
+        Self { event }
+    }
+    pub async fn process_tasks(
+        self: Arc<Self>, 
+        tx: Arc<mpsc::Sender<Result<(), TauriError>>>, 
+    ) -> Result<()> {
+        let max_conc = CONFIG.read().unwrap().max_conc;
+        let doing_len = QUEUE_MANAGER.get_len(QueueType::Doing).await;
+        for _ in 0..(max_conc - doing_len) {
+            if let Some(info) = QUEUE_MANAGER.waiting_to_doing().await? {
+                let self_cloned = self.clone();
+                let tx_cloned = tx.clone();
+                async_runtime::spawn(async move {
+                    let result = async {
+                        self_cloned.download(info.clone()).await?;
+                        self_cloned.clean_up(info.clone()).await?;
+                        Ok::<(), TauriError>(())
+                    }.await;
+                    tx_cloned.send(result).await.context("Failed to send task result")?;
+                    Ok::<(), TauriError>(())
+                });
+            } else {
+                break;
+            }
+        }
+        Ok(())
+    }
+    async fn clean_up(&self, info: Arc<QueueInfo>) -> Result<()> {
+        let path = info.tasks[0].clone().path.unwrap();
+        if info.tasks.iter().any(|task| task.media_type == MediaType::Merge) {
+            ffmpeg::merge(info.clone(), &self.event).await?;
+        } else if info.tasks.iter().any(|task| task.media_type == MediaType::Flac) {
+            ffmpeg::raw_flac(info.clone()).await?;
+        } else {                        
+            fs::rename(&path, &info.output)?;
+        }
+        fs::remove_dir_all(path.parent().unwrap())?;
+        downloads::insert(info.clone()).await?;
+        QUEUE_MANAGER.doing_to_complete(info.clone()).await?;
+        Ok(())
+    }
+    async fn download(&self, info: Arc<QueueInfo>) -> TauriResult<()> {
+        fs::create_dir_all(info.output.parent().unwrap())?;
+        let id = Arc::new(info.id.clone());
+        for task in &info.clone().tasks {
+            if task.media_type == MediaType::Merge || task.media_type == MediaType::Flac {
+                continue;
+            }
+            let gid = Arc::new(task.gid.as_ref().unwrap().clone());
+            let body: Aria2General = serde_json::from_value(
+                post_aria2c("unpause", vec![json!(gid)]).await?
+            ).context("Failed to decode aria2c unpause response")?;
+            if let Some(err) = body.error {
+                QUEUE_MANAGER.retain(QueueType::Doing, (*id).clone()).await?;
+                return Err(TauriError::new_full(err.code, err.message));
+            }
+            self.event.send(DownloadEvent::Started {
+                id: id.clone(), gid: gid.clone(), media_type: task.media_type.clone()
+            })?;
+            loop {
+                let body: Aria2TellStatus = serde_json::from_value(
+                    post_aria2c("tellStatus", vec![json!(gid)]).await?
+                ).context("Failed to decode aria2c tellStatus response")?;
+                let data = body.result;
+                if let Some(code) = data.error_code {
+                    let code = code.parse::<isize>()?;
+                    if code != 0 {
+                        QUEUE_MANAGER.retain(QueueType::Doing, (*id).clone()).await?;
+                        return Err(TauriError::new_full(
+                            code, data.error_message.unwrap_or(String::new())
+                        ));
+                    }
+                }
+                match data.status.as_str() {
+                    "active" => {
+                        self.event.send(DownloadEvent::Progress {
+                            id: id.clone(), gid: gid.clone(),
+                            content_length: data.total_length.parse::<u64>()?,
+                            chunk_length: data.completed_length.parse::<u64>()?,
+                        })?;
+                    },
+                    "complete" => {
+                        self.event.send(DownloadEvent::Finished { id: id.clone(), gid: gid.clone() })?;
+                        break;
+                    },
+                    _ => ()
+                }
+                sleep(Duration::from_millis(100)).await;
+            }
+        }
+        Ok(())
+    }
+}
+
+pub fn init() -> Result<()> {
     let start_port = 6800;
     let end_port = 65535;
     let port = (start_port..end_port)
         .find_map(|port| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).ok())
-        .ok_or("No free port found".to_string())?.local_addr().unwrap().port();
+        .ok_or(anyhow!("No free port found"))?.local_addr()?.port();
     *ARIA2C_PORT.write().unwrap() = port;
     let app = get_app_handle();
-    let (_, child) = app.shell().sidecar(format!("{}/aria2c", &*BINARY_RELATIVE)).unwrap()
+    let (_, child) = app.shell().sidecar(format!("{}/aria2c", &*BINARY_RELATIVE))?
         .current_dir(&*BINARY_PATH)
         .args([
             format!("--conf-path={}", BINARY_PATH.join("aria2.conf").to_string_lossy()),
             format!("--rpc-listen-port={}", port),
             format!("--rpc-secret={}", &SECRET.read().unwrap()),
-            // format!("--max-concurrent-downloads={}", CONFIG.read().unwrap().max_conc)
-        ]).spawn().map_err(|e| e.to_string())?;
+        ]).spawn().context("Failed to spawn aria2c process")?;
 
     #[cfg(target_os = "windows")]
-    app.shell().sidecar("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe").unwrap()
+    app.shell().sidecar("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")?
         .args([
             "-Command",
             &format!(
@@ -215,10 +384,10 @@ pub fn init() -> Result<(), String> {
                 std::process::id(),
                 child.pid()
             )
-        ]).spawn().map_err(|e| e.to_string())?;
+        ]).spawn().context("Failed to spawn aria2c daemon")?;
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
-    app.shell().sidecar("/bin/bash").unwrap()
+    app.shell().sidecar("/bin/bash")?
     .args([
         "-c",
         &format!(
@@ -226,38 +395,32 @@ pub fn init() -> Result<(), String> {
             std::process::id(),
             child.pid()
         )
-        ]).spawn().map_err(|e| e.to_string())?;
+        ]).spawn().context("Failed to spawn aria2c daemon")?;
     
     *ARIA2C_CHILD.write().unwrap() = Some(child);
     Ok(())
 }
 
-pub fn _kill() -> Result<(), String> {
+pub fn kill() -> Result<()> {
     if let Some(sc) = ARIA2C_CHILD.write().unwrap().take() {
-        sc.kill().map_err(|e| e.to_string())?;
+        sc.kill().context("Failed to kill aria2c process")?;
     }
     Ok(())
 }
 
-fn param_to_value(value: Value) -> Result<Value, String> {
-    match value {
-        Value::String(s) => Ok(Value::String(s)),
-        Value::Number(n) => Ok(Value::Number(n)),
-        Value::Bool(b) => Ok(Value::Bool(b)),
-        Value::Array(arr) => Ok(Value::Array(arr)),
-        Value::Object(obj) => Ok(Value::Object(obj)),
-        _ => Err("Unsupported type".to_string()),
-    }
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Value> {
+pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value> {
     let client = init_client().await?;
     let mut params_vec = vec![Value::String(format!("token:{}", *SECRET.read().unwrap()))];
     for param in params {
-        let param_str = param_to_value(param)?;
-        params_vec.push(param_str);
+        let value = match param {
+            Value::String(s) => Ok(Value::String(s)),
+            Value::Number(n) => Ok(Value::Number(n)),
+            Value::Bool(b) => Ok(Value::Bool(b)),
+            Value::Array(arr) => Ok(Value::Array(arr)),
+            Value::Object(obj) => Ok(Value::Object(obj)),
+            _ => Err(anyhow!("Unsupported type")),
+        }?;
+        params_vec.push(value);
     }
     let payload = json!({
         "jsonrpc": "2.0",
@@ -267,45 +430,25 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value, Valu
     });
     let response = client
         .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
-        .json(&payload).send().await.map_err(|e| e.to_string())?;
+        .json(&payload).send().await?;
 
-    let body = response.json::<serde_json::Value>().await.map_err(|e| e.to_string())?;
+    let body: Value = response.json().await
+        .context("Failed to decode aria2c JsonRPC response")?;
+
     Ok(body)
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn remove_aria2c_task(queue_id: &str, id: Arc<String>, gid: Option<Arc<String>>) -> Result<(), Value> {
-    match queue_id {
-        "waiting" | "doing" => {
-            let mut queue = if queue_id == "waiting" {
-                WAITING_QUEUE.write().await
-            } else {
-                DOING_QUEUE.write().await
-            };
-            queue.retain(|task| *task.id != *id);
-            let body_value: Value = post_aria2c("remove", vec![json!(gid)]).await.map_err(|e| e.to_string())?;
-            let body: Aria2Remove = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
-            if let Some(error) = body.error {
-                return Err(json!({ "code": error.code, "message": error.message }));
-            }    
-        },
-        "complete" => {
-            downloads::delete(id).await.map_err(|e| e.to_string())?;
-            downloads::load().await.map_err(|e| e.to_string())?;
-        },
-        _ => {},
-    }
-    match QUEUE_EVENT.get() {
-        Some(_) => update_queue_event(vec![queue_id]).await,
-        None => {}
-    }
-    Ok(())
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn push_back_queue(info: Arc<MediaInfoListItem>, current_select: CurrentSelect, tasks: Vec<Task>, ts: Arc<Timestamp>, ext: String, output: Option<String>, ss_title: String) -> Result<Arc<QueueInfo>, Value> {
+pub async fn push_back_queue(
+    info: Arc<MediaInfoListItem>,
+    current_select: CurrentSelect,
+    tasks: Vec<Task>,
+    ts: Arc<Timestamp>,
+    ext: String,
+    output: Option<String>,
+    ss_title: String
+) -> TauriResult<Arc<QueueInfo>> {
     let mut parent = if let Some(output) = &output {
         PathBuf::from(output)
     } else {
@@ -316,9 +459,8 @@ pub async fn push_back_queue(info: Arc<MediaInfoListItem>, current_select: Curre
         let original = parent.clone();
         while parent.exists() {
             parent = original.with_file_name(format!(
-                "{}_{}",
+                "{}_{count}",
                 original.file_name().unwrap().to_string_lossy(),
-                count
             ));
             count += 1;
         }
@@ -336,149 +478,86 @@ pub async fn push_back_queue(info: Arc<MediaInfoListItem>, current_select: Curre
             task.gid = Some(random_string(16));
             continue;
         }
-        let parsed_url = reqwest::Url::parse(&task.urls[0]).map_err(|e| e.to_string())?;
+        let parsed_url = reqwest::Url::parse(&task.urls[0])?;
         let name = parsed_url.path_segments().unwrap().last().unwrap();
         let dir = {
             let config = CONFIG.read().unwrap();
-            config.temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", info.clone().id, ts.millis))
+            config.temp_dir.join("com.btjawa.bilitools").join(format!("{}_{}", info.id, ts.millis))
         };
         let params = vec![
             json!(task.urls),
             json!({ "dir": dir, "out": name, "pause": "true" })
         ];
-        let body_value: Value = post_aria2c("addUri", params).await.map_err(|e| e.to_string())?;
-        let body: Aria2AddUri = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
+        let body_raw = post_aria2c("addUri", params).await?;
+        let body: Aria2General = serde_json::from_value(body_raw)
+            .context("Failed to decode aria2c addUri response")?;
         if let Some(error) = body.error {
-            return Err(json!({ "code": error.code, "message": error.message }));
+            return Err(anyhow!(TauriError::new_full(error.code, error.message)).into());
         }
         let gid = body.result.unwrap_or(String::new());
         task.gid = Some(gid);
         task.path = Some(dir.join(name));
     }
-    let mut waiting_queue = WAITING_QUEUE.write().await;
-    let video_info_arc = Arc::new(video_info);
-    waiting_queue.push_back(video_info_arc.clone());
-    Ok(video_info_arc.clone())
-}
-
-async fn update_queue_event(queue_types: Vec<&str>) {
-    let event = QUEUE_EVENT.get().unwrap();
-    for queue_type in queue_types {
-        match queue_type {
-            "waiting" => {
-                let waiting_data = WAITING_QUEUE.read().await.clone();
-                event.send(QueueEvent::Waiting { data: waiting_data }).unwrap();
-            },
-            "doing" => {
-                let doing_data = DOING_QUEUE.read().await.clone();
-                event.send(QueueEvent::Doing { data: doing_data }).unwrap();
-            },
-            "complete" => {
-                let complete_data = COMPLETE_QUEUE.read().await.clone();
-                event.send(QueueEvent::Complete { data: complete_data }).unwrap();
-            },
-            _ => {}
-        }
-    }
+    let info = Arc::new(video_info);
+    QUEUE_MANAGER.push_back(info.clone(), QueueType::Waiting).await?;
+    QUEUE_MANAGER.update_all().await;
+    Ok(info)
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn process_queue(download_event: Channel<DownloadEvent>, queue_event: Channel<QueueEvent>) -> Result<(), String> {
-    let _ = DOWNLOAD_EVENT.set(download_event);
-    let _ = QUEUE_EVENT.set(queue_event);
+pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
+    let manager = Arc::new(DownloadManager::new(event));
+    let (result_tx, mut result_rx) = mpsc::channel::<Result<(), TauriError>>(100);
+    let tx_arc = Arc::new(result_tx);
     loop {
-        let max_conc = CONFIG.read().unwrap().max_conc;
-        let doing_len = DOING_QUEUE.read().await.len();
-        for _ in 0..(max_conc - doing_len) {
-            if let Some(info) = { WAITING_QUEUE.write().await.pop_front() } {
-                { DOING_QUEUE.write().await.push_back(info.clone()); }
-                async_runtime::spawn(async move {
-                    update_queue_event(vec!["waiting", "doing"]).await;
-                    process_download(info.clone()).await.map_err(|e| e.to_string())?;
-                    if info.tasks.iter().any(|task| task.media_type == MediaType::Merge) {
-                        let event = DOWNLOAD_EVENT.get().unwrap();
-                        ffmpeg::merge(info.clone(), event).await.map_err(|e| e.to_string())?;
-                    } else if info.tasks.iter().any(|task| task.media_type == MediaType::Flac) { 
-                        ffmpeg::raw_flac(info.clone()).await.map_err(|e| e.to_string())?;
-                    } else {                        
-                        fs::rename(info.tasks[0].clone().path.unwrap(), &info.output).map_err(|e| e.to_string())?;
-                    }
-                    fs::remove_dir_all(info.tasks[0].clone().path.unwrap().parent().unwrap()).map_err(|e| e.to_string())?;
-                    {
-                        DOING_QUEUE.write().await.retain(|task| *task != info);
-                        COMPLETE_QUEUE.write().await.push_back(info.clone());
-                    }
-                    downloads::insert(info.clone()).await.map_err(|e| e.to_string())?;
-                    update_queue_event(vec!["doing", "complete"]).await;
-                    sleep(Duration::from_millis(100)).await;
-                    DOWNLOAD_NOTIFY.notify_one();
-                    Ok::<(), String>(())
-                });
-            }
-        }
-        update_queue_event(vec!["waiting", "doing"]).await;
-        if WAITING_QUEUE.read().await.is_empty() {
+        manager.clone().process_tasks(tx_arc.clone()).await?;
+        if QUEUE_MANAGER.get_len(QueueType::Waiting).await == 0 {
             break;
         }
-        DOWNLOAD_NOTIFY.notified().await;
+        tokio::select! {
+            Some(result) = result_rx.recv() => {
+                result.map_err(|e| {
+                    manager.event.send(DownloadEvent::Error {
+                        code: e.code.unwrap_or(-1), message: e.message.clone()
+                    }).unwrap(); anyhow!(e)
+                })?;
+            }
+            else => ()
+        }
     }
     Ok(())
 }
 
-async fn process_download(info: Arc<QueueInfo>) -> Result<(), Value> {
-    fs::create_dir_all(info.output.parent().unwrap()).map_err(|e| e.to_string())?;
-    for task in &info.tasks {
-        if task.media_type == MediaType::Merge || task.media_type == MediaType::Flac { continue }
-        let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
-        let id = Arc::new(info.id.clone());
-        let body: Aria2AddUri = serde_json::from_value(
-            post_aria2c("unpause", vec![json!(gid)]).await.map_err(|e| e.to_string())?
-        ).map_err(|e| e.to_string())?;
-        let event = DOWNLOAD_EVENT.get().unwrap();
-        if let Some(error) = body.error {
-            event.send(DownloadEvent::Error { code: error.clone().code, message: error.clone().message }).unwrap();
-            remove_aria2c_task("doing", id.clone(), Some(gid)).await?;
-            return Err(json!({ "code": error.code, "message": error.message }));
-        }
-        event.send(DownloadEvent::Started { id: id.clone(), gid, media_type: task.media_type.clone() }).unwrap();
-        loop {
-            let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
-            let body_value: Value = post_aria2c("tellStatus", vec![json!(gid)]).await.map_err(|e| e.to_string())?;
-            let body: Aria2TellStatus = serde_json::from_value(body_value).map_err(|e| e.to_string())?;
-            if let Some(result) = body.result {
-                if let Some(error) = result.error_code {
-                    let code = error.parse::<isize>().unwrap();
-                    if code != 0 {
-                        let message = result.error_message.unwrap();
-                        event.send(DownloadEvent::Error { code: code.clone(), message: message.clone() }).unwrap();
-                        return Err(json!({ "code": code.clone(), "message": message.clone() }));
-                    }
-                }    
-                match result.status.as_str() {
-                    "active" => {
-                        event.send(DownloadEvent::Progress {
-                            id: id.clone(),
-                            gid,
-                            content_length: result.total_length.parse::<u64>().unwrap(),
-                            chunk_length: result.completed_length.parse::<u64>().unwrap(),
-                        }).unwrap();
-                    },
-                    "complete" => {
-                        event.send(DownloadEvent::Progress {
-                            id: id.clone(),
-                            gid: gid.clone(),
-                            content_length: result.total_length.parse().unwrap(),
-                            chunk_length: result.total_length.parse().unwrap(),
-                        }).unwrap();
-                        event.send(DownloadEvent::Finished { id: id.clone(), gid }).unwrap();
-                        break;
-                    },
-                    _ => {},
-                }
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn remove_task(id: String, gid: String, queue_type: QueueType) -> TauriResult<()> {
+    match queue_type {
+        QueueType::Complete => {
+            downloads::delete(id.clone()).await?;
+        },
+        _ => {
+            let body: Aria2General = serde_json::from_value(
+                post_aria2c("remove", vec![json!(gid)]).await?
+            )?;
+            if let Some(error) = body.error {
+                return Err(anyhow!(TauriError::new_full(error.code, error.message)).into());
             }
-            sleep(Duration::from_millis(100)).await;
         }
+    }
+    QUEUE_MANAGER.retain(queue_type, id).await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn toggle_pause(pause: bool, gid: String) -> TauriResult<()> {
+    let action = if pause { "pause" } else { "unpause" };
+    let body: Aria2General = serde_json::from_value(
+        post_aria2c(action, vec![json!(gid)]).await?
+    )?;
+    if let Some(error) = body.error {
+        return Err(anyhow!(TauriError::new_full(error.code, error.message)).into());
     }
     Ok(())
 }
