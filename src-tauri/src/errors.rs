@@ -11,15 +11,9 @@ pub struct TauriError {
 }
 
 impl TauriError {
-    pub fn new(message: impl Into<String>) -> Self {
+    pub fn new(message: impl Into<String>, code: Option<isize>) -> Self {
         Self {
-            code: None,
-            message: message.into()
-        }
-    }
-    pub fn new_full(code: isize, message: impl Into<String>) -> Self {
-        Self {
-            code: Some(code),
+            code,
             message: message.into()
         }
     }
@@ -51,7 +45,7 @@ where
     E: Into<anyhow::Error>,
 {
     fn from(err: E) -> Self {
-        Self::new(err.into().to_string_chain())
+        Self::new(err.into().to_string_chain(), None)
     }
 }
 

@@ -106,9 +106,9 @@ export default {
             try {
                 const status = this.statusList[id];
                 if (!status) return;
-                status.paused = !status.paused;
                 const result = await commands.togglePause(!status.paused, status.gid);
                 if (result.status === 'error') throw new ApplicationError(result.error);
+                status.paused = !status.paused;
             } catch (err) {
                 err instanceof ApplicationError ? err.handleError() :
                 new ApplicationError(err as string).handleError();

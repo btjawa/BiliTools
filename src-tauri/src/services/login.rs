@@ -186,7 +186,7 @@ pub async fn get_extra_cookies() -> Result<()> {
     let buvid_body: BuvidResponse = buvid_resp.json()
         .await.context("Failed to decode Buvid response")?;
     if buvid_body.code != 0 {
-        return Err(anyhow!(TauriError::new_full(buvid_body.code, buvid_body.message)))
+        return Err(anyhow!(TauriError::new(buvid_body.message, Some(buvid_body.code))).into());
     }
     if !has_buvid_3 {
         cookies::insert(format!("buvid3={}", buvid_body.data.b_3)).await?;
@@ -211,7 +211,7 @@ pub async fn get_extra_cookies() -> Result<()> {
     let bili_ticket_body: BiliTicketResponse = bili_ticket_resp.json()
         .await.context("Failed to decode BiliTicket response")?;
     if bili_ticket_body.code != 0 || bili_ticket_body.data.is_none() {
-        return Err(anyhow!(TauriError::new_full(bili_ticket_body.code, bili_ticket_body.message)))
+        return Err(anyhow!(TauriError::new(bili_ticket_body.message, Some(bili_ticket_body.code))).into());
     }
     cookies::insert(format!("bili_ticket={}", bili_ticket_body.data.unwrap().ticket)).await?;
 
@@ -255,7 +255,7 @@ pub async fn exit() -> TauriResult<isize> {
     let body: ExitLoginResponse = response.json()
         .await.context("Failed to decode Exit Login response")?;
     if body.code != 0 {
-        return Err(anyhow!(TauriError::new_full(body.code, body.message)).into())
+        return Err(anyhow!(TauriError::new(body.message, Some(body.code))).into());
     }
     for cookie in cookies {
         cookies::delete(cookie.split_once('=').map(|(name, _)| name).unwrap_or("").into()).await?;
@@ -294,7 +294,7 @@ pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String)
             1007 => "短信验证码已过期",
             _ => "未知错误"
         };
-        return Err(anyhow!(TauriError::new_full(body.code, message)).into());
+        return Err(anyhow!(TauriError::new(message, Some(body.code))).into());
     }
     for cookie in cookies {
         cookies::insert(cookie).await?;
@@ -330,7 +330,7 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
     let body: PwdLoginResponse = response.json()
         .await.context("Failed to decode password login response")?;
     if body.code != 0 || body.data.is_none() {
-        return Err(anyhow!(TauriError::new_full(body.code, body.message)).into());
+        return Err(anyhow!(TauriError::new(body.message, Some(body.code))).into());
     }
     let data = body.data.unwrap();
     if data.refresh_token.is_empty() || data.status != 0 {
@@ -344,7 +344,7 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
             .find(|(key, _)| key == "request_id")
             .map(|(_, value)| value.to_string())
         }).unwrap_or_default();
-        return Err(anyhow!(TauriError::new_full(data.status, data.message)).into());
+        return Err(anyhow!(TauriError::new(data.message, Some(data.status))).into());
     }
     for cookie in cookies {
         cookies::insert(cookie).await?;
@@ -374,7 +374,7 @@ pub async fn switch_cookie(switch_code: String) -> TauriResult<isize> {
     let body: SwitchCookieResponse = response.json()
         .await.context("Failed to decode switch cookie response")?;
     if body.code != 0 || body.data.is_none() {
-        return Err(anyhow!(TauriError::new_full(body.code, body.message)).into());
+        return Err(anyhow!(TauriError::new(body.message, Some(body.code))).into());
     }
     for cookie in cookies {
         cookies::insert(cookie).await?;
@@ -406,7 +406,7 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
         let body: ScanLoginResponse = response.json()
             .await.context("Failed to decode QR code polling response")?;
         if body.code != 0 || body.data.is_none() {
-            return Err(anyhow!(TauriError::new_full(body.code, body.message)).into());
+            return Err(anyhow!(TauriError::new(body.message, Some(body.code))).into());
         }
         let data = body.data.unwrap();
         event.send(data.code).unwrap();
@@ -423,7 +423,7 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
             86101 | 86090 => log::info!("{masked_key}: {}", data.message),
             _ => {
                 log::error!("{masked_key}: {}, {}", data.code, data.message);
-                return Err(anyhow!(TauriError::new_full(data.code, data.message)).into());
+                return Err(anyhow!(TauriError::new(data.message, Some(data.code))).into());
             },
         }
         sleep(Duration::from_secs(1)).await;
@@ -456,7 +456,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
         .collect();
     let refresh_token_body: RefreshCookieResponse = refresh_token_resp.json().await?;
     if refresh_token_body.code != 0 || refresh_token_body.data.is_none() {
-        return Err(TauriError::new_full(refresh_token_body.code, refresh_token_body.message))
+        return Err(anyhow!(TauriError::new(refresh_token_body.message, Some(refresh_token_body.code))).into());
     }
     for cookie in cookies {
         cookies::insert(cookie).await?;
@@ -474,7 +474,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
     }
     let confirm_refresh_body: ConfirmRefreshResponse = confirm_refresh_resp.json().await?;
     if confirm_refresh_body.code != 0 {
-        return Err(TauriError::new_full(confirm_refresh_body.code, confirm_refresh_body.message))
+        return Err(anyhow!(TauriError::new(confirm_refresh_body.message, Some(confirm_refresh_body.code))).into());
     }
     Ok(confirm_refresh_body.code)
 }

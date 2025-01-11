@@ -85,7 +85,6 @@ export function setEventHook() {
         i18n.global.locale.value = store.state.settings.language;
     });
     events.queueEvent.listen(e => {
-        console.log(e)
         store.commit('updateState', {
             ['queue.' + e.payload.type.toLowerCase()]: e.payload.data }
         );
