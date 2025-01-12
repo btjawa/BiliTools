@@ -174,10 +174,7 @@ export default {
                         this.scanCode = 0;
                         (this.$refs.loginQrcode as HTMLCanvasElement).height = 160;
                         const qrcodeKey = await login.genQrcode(this.$refs.loginQrcode as HTMLCanvasElement);
-                        code = await login.scanLogin(qrcodeKey, ({ code }) => {
-                            this.scanCode = code;
-                            if (code === 86114) return; // USER CANCELED
-                        });
+                        code = await login.scanLogin(qrcodeKey, ({ code }) => { this.scanCode = code });
                         break;
                     };
                     case 'pwd': {

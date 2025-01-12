@@ -8,6 +8,7 @@ import * as auth from '@/services/auth';
 import iziToast from "izitoast";
 import store from "@/store";
 import i18n from '@/i18n';
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const t = i18n.global.t;
 
@@ -77,6 +78,8 @@ export function setEventHook() {
     events.settings.listen(async e => {
         store.commit('updateState', { settings: e.payload });
         const version = osVersion().split('.');
+        const window = getCurrentWindow();
+        window.setTheme(e.payload.theme);
         if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
             document.body.classList.remove('override-dark');
             document.body.classList.remove('override-light');

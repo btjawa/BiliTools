@@ -5,7 +5,6 @@ pub mod shared;
 pub mod errors;
 
 use tauri_specta::{collect_commands, collect_events, Builder};
-use specta_typescript::{Typescript, BigIntExportBehavior};
 use tauri::{async_runtime, Manager};
 use commands::*;
 
@@ -31,8 +30,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)] // <- Only export on non-release builds
         builder
             .export(
-                Typescript::default()
-                    .bigint(BigIntExportBehavior::Number)
+                specta_typescript::Typescript::default()
+                    .bigint(specta_typescript::BigIntExportBehavior::Number)
                     .header("// @ts-nocheck"),
                 "../src/services/backend.ts",
             )

@@ -146,8 +146,6 @@ pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, s
         #[cfg(debug_assertions)]
         log::info!("{:?}", config);
     }
-    let app = get_app_handle();
-    app.set_theme(Some(config.theme.clone().into()));
-    config.emit(&app).unwrap();
+    config.emit(&get_app_handle()).unwrap();
     Ok(())
 }

@@ -118,7 +118,7 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, fil
 #[specta::specta]
 pub async fn ready() -> TauriResult<String> {
     #[cfg(not(debug_assertions))]
-    if *READY.read().unwrap() {
+    if *shared::READY.read().unwrap() {
         return Ok("403 Forbidden".into());
     }
     *shared::READY.write().unwrap() = true;

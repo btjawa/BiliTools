@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.3.1] - 2025-01-12
+
+包含逻辑/BUG更新<br>
+使用 anyhow 优化错误处理方式
+
+### 更新
+
+Linux支持<br>
+支持解析漫画<br>
+支持断点续传<br>
+支持下载完成时通知<br>
+支持自定义文件名格式<br>
+支持解析 XML 实时弹幕<br>
+支持自定义 Aria2c / DanmakuFactory 配置
+
+### 修复
+
+重构 Aria2c 队列管理逻辑<br>
+修复 FFmpeg 解析帧数与更新进度不正确问题<br>
+修复 ASS / ProtoBuf 方式实时弹幕解析不完整问题
+
 ## [1.3.0] - 2025-01-01
 
 使用 Vue 与 Typescript 完全重构所有功能<br>

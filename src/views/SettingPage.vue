@@ -83,11 +83,10 @@
     </div>
 </div></template>
 <script lang="ts">
-import { ApplicationError, formatProxyUrl, iziInfo } from '@/services/utils';
+import { ApplicationError, iziInfo, tryFetch } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { type as osType } from '@tauri-apps/plugin-os';
-import { fetch } from '@tauri-apps/plugin-http';
 import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
 import { Empty } from '@/components';
 import { commands } from '@/services/backend';
@@ -266,16 +265,7 @@ export default {
         },
         async checkProxy() {
             try {
-                const response = await fetch('https://api.bilibili.com/x/click-interface/click/now', {
-                    headers: this.store.data.headers,
-                    ...(this.store.settings.proxy.addr && {
-                        proxy: { all: formatProxyUrl(this.store.settings.proxy) }
-                    })
-                });
-                if (!response.ok) {
-                    throw new ApplicationError(response.statusText, { code: response.status });
-                }
-                const body = await response.json();
+                const body = await tryFetch('https://api.bilibili.com/x/click-interface/click/now');
                 const timestamp = JSON.stringify(body?.data);
                 if (timestamp) {
                     iziInfo(this.$t('common.iziToast.success') + ': ' + timestamp);
