@@ -19,11 +19,5 @@
       }
     ],
     "macOSPrivateApi": true
-  },
-  "bundle": {
-    "resources": {
-      "resources/bin/*": "bin",
-      "resources/bin/macos/*": "bin/"
-    }
   }
 }

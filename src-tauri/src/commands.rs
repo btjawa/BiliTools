@@ -32,7 +32,7 @@ pub use crate::{
 pub struct InitData {
     downloads: Vec<Arc<aria2c::QueueInfo>>,
     hash: String,
-    binary_path: String,
+    resources_path: String,
 }
 
 #[tauri::command(async)]
@@ -105,7 +105,7 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, fil
         config.temp_dir.join("com.btjawa.bilitools").join(format!("{filename}_{}.xml", shared::get_ts(true)))
     };
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
-    let output = app.shell().sidecar(format!("{}/DanmakuFactory", &*shared::BINARY_RELATIVE))?
+    let output = app.shell().sidecar("DanmakuFactory")?
         .args(["-i", input.to_str().unwrap(), "-o", &path])
         .output().await?;
 
@@ -137,6 +137,6 @@ pub async fn init(secret: String) -> TauriResult<InitData> {
     shared::init_headers().await?;
     let downloads = downloads::load().await?;
     let hash = env!("GIT_HASH").to_string();
-    let binary_path = shared::BINARY_PATH.to_string_lossy().to_string();
-    Ok(InitData { downloads, hash, binary_path })
+    let resources_path = shared::RESOURCES_PATH.to_string_lossy().to_string();
+    Ok(InitData { downloads, hash, resources_path })
 }
