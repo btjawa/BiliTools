@@ -259,8 +259,8 @@ export default {
                     }
                 })()
                 case 'database': return path.join(await path.appDataDir(), 'Storage');
-                case 'danmaku': return path.join(this.store.data.binary_path, 'DanmakuFactoryConfig.json');
-                case 'aria2c': return path.join(this.store.data.binary_path, 'aria2.conf');
+                case 'danmaku': return path.join(this.store.data.resources_path, 'DanmakuFactoryConfig.json');
+                case 'aria2c': return path.join(this.store.data.resources_path, 'aria2.conf');
             }
         },
         async checkProxy() {

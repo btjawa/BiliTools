@@ -17,8 +17,7 @@ use crate::{
         get_app_handle,
         init_client,
         random_string,
-        BINARY_PATH,
-        BINARY_RELATIVE,
+        RESOURCES_PATH,
         CONFIG,
         SECRET,
     }, TauriError
@@ -386,10 +385,13 @@ pub fn init() -> Result<()> {
         .ok_or(anyhow!("No free port found"))?.local_addr()?.port();
     *ARIA2C_PORT.write().unwrap() = port;
     let app = get_app_handle();
-    let (_, child) = app.shell().sidecar(format!("{}/aria2c", &*BINARY_RELATIVE))?
-        .current_dir(&*BINARY_PATH)
+    // let log_path = app.path().app_log_dir()?
+    //     .join("aria2.log");
+    let (_, child) = app.shell().sidecar("aria2c")?
+        .current_dir(&*RESOURCES_PATH)
         .args([
-            format!("--conf-path={}", BINARY_PATH.join("aria2.conf").to_string_lossy()),
+            format!("--conf-path={}", RESOURCES_PATH.join("aria2.conf").to_string_lossy()),
+            // format!("--log={}", log_path.to_string_lossy()),
             format!("--rpc-listen-port={}", port),
             format!("--rpc-secret={}", &SECRET.read().unwrap()),
         ]).spawn().context("Failed to spawn aria2c process")?;
@@ -524,6 +526,7 @@ pub async fn push_back_queue(
         let parsed_url = reqwest::Url::parse(&task.urls[0])?;
         let name = parsed_url.path_segments().unwrap().last().unwrap();
         let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
+        fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
         let dir = check_breakpoint(
             &temp_dir, format!("{}_{}", info.id, info.cid)
         )?.unwrap_or(temp_dir.join(format!("{}_{}_{}", info.id, info.cid, ts.millis)));

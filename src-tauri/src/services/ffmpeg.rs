@@ -1,10 +1,10 @@
 use std::{io::SeekFrom, path::PathBuf, sync::{Arc, RwLock}, time::Duration};
 use tokio::{fs, io::{self, AsyncBufReadExt, AsyncSeekExt}, time::sleep};
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
-use tauri::{async_runtime, ipc::Channel, Manager};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
+use tauri::{ipc::Channel, Manager};
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -15,10 +15,7 @@ use super::aria2c::{
     DownloadEvent,
 };
 
-use crate::{shared::{
-    get_app_handle,
-    BINARY_RELATIVE
-}, TauriError};
+use crate::{shared::get_app_handle, TauriError, TauriResult};
 
 lazy_static! {
     static ref FFMPEG_CHILD: Arc<RwLock<Option<CommandChild>>> = Arc::new(RwLock::new(None));
@@ -42,7 +39,7 @@ struct FFmpegLog {
 
 async fn get_frames(input: PathBuf) -> Result<u64> {
     let app = get_app_handle();
-    let meta_output = app.shell().sidecar(format!("{}/ffmpeg", &*BINARY_RELATIVE))?
+    let meta_output = app.shell().sidecar("ffmpeg")?
         .args([
             "-i", input.to_str().unwrap(),
             "-map", "0:v:0",
@@ -58,9 +55,9 @@ async fn get_frames(input: PathBuf) -> Result<u64> {
         .max().ok_or(anyhow!("Failed to parse frame count"));
 }
 
-pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Result<()> {
+pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> TauriResult<()> {
     if info.tasks.len() < 2 {
-        return Err(anyhow!("Insufficient number of input paths, {}", info.tasks.len()));
+        return Err(anyhow!("Insufficient number of input paths, {}", info.tasks.len()).into());
     }
     let paths = {
         let _paths: Vec<_> = info.tasks.iter().map(|task| task.path.clone()).collect();
@@ -83,8 +80,8 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Resu
     fs::create_dir_all(progress_path.parent().unwrap()).await
         .context("Failed to create FFmpeg progress Folder")?;
     let frames = get_frames(video_path.unwrap()).await.map_err(|e| anyhow!(e)).unwrap_or(0);
-    async_runtime::spawn(async move {
-        let status = app.shell().sidecar(format!("{}/ffmpeg", &*BINARY_RELATIVE))?
+    let ffmpeg = async {
+        let status = app.shell().sidecar("ffmpeg")?
             .args([
                 "-i", paths[0].clone().unwrap().to_str().unwrap(),
                 "-i", paths[1].clone().unwrap().to_str().unwrap(),
@@ -94,7 +91,7 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Resu
                 &output.to_str().unwrap(), "-progress",
                 progress_path_clone.to_str().unwrap(), "-y"
             ])
-            .status().await?;
+            .status().await.context("Failed to spawn aria2c process")?;
     
         if status.success() {
             Ok::<(), TauriError>(())
@@ -103,9 +100,14 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Resu
                 anyhow!("FFmpeg exited with status: {}", status.code().unwrap_or(-1)).into()
             )
         }
-    });
-    let ffmpeg_task = info.tasks.iter().find(|task| task.media_type == MediaType::Video).unwrap();
-    monitor(info.id.clone(), ffmpeg_task, progress_path, frames, event).await?;
+    };
+    let monitor = async {
+        let task = info.tasks.iter().find(|task| task.media_type == MediaType::Video).unwrap();
+        monitor(info.id.clone(), task, progress_path, frames, event).await?;
+        Ok::<(), TauriError>(())
+    };
+    let result = tokio::try_join!(ffmpeg, monitor);
+    result?;
     Ok(())
 }
 
@@ -116,7 +118,7 @@ pub async fn raw_flac(info: Arc<QueueInfo>) -> Result<()> {
         .map(|task| task.path.clone()).unwrap();
 
     let app = get_app_handle();
-    let status = app.shell().sidecar(format!("{}/ffmpeg", &*BINARY_RELATIVE))?
+    let status = app.shell().sidecar("ffmpeg")?
         .args([
             "-i", input_path.unwrap().to_str().unwrap(),
             "-vn", "-acodec", "flac",

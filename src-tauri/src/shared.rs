@@ -57,16 +57,11 @@ lazy_static! {
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
     pub static ref STORAGE_PATH: PathBuf = WORKING_PATH.join("Storage");
-    pub static ref BINARY_PATH: PathBuf = {
+    pub static ref RESOURCES_PATH: PathBuf = {
         let current = env::current_exe().unwrap().parent().unwrap().to_path_buf();
-        if cfg!(target_os = "macos")  && cfg!(not(debug_assertions)){
-            current.parent().unwrap().join("Resources").join("bin")
-        } else { current.join("bin") }
-    };
-    pub static ref BINARY_RELATIVE: String = {
-        if cfg!(target_os = "macos")  && cfg!(not(debug_assertions)){
-            "../Resources/bin".into()
-        } else { "./bin".into() }
+        if cfg!(target_os = "macos") && cfg!(not(debug_assertions)){
+            current.parent().unwrap().join("Resources").join("resources")
+        } else { current.join("resources") }
     };
 }
 

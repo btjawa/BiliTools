@@ -59,7 +59,7 @@ export default {
 			this.$store.commit('updateState', { 'data.secret': secret });
 			this.$store.commit('updateState', { 'queue.complete': data.downloads });
 			this.$store.commit('updateState', { 'data.hash': data.hash });
-			this.$store.commit('updateState', { 'data.binary_path': data.binary_path });
+			this.$store.commit('updateState', { 'data.resources_path': data.resources_path });
 			await checkRefresh();
 			await fetchUser();
 		} catch(err) {

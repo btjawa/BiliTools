@@ -51,7 +51,7 @@ export default createStore({
                 inited: false,
                 secret: String(),
                 hash: String(),
-                binary_path: String(),
+                resources_path: String(),
                 headers: {} as Headers,
                 currentSelect: {
                     dms: -1,
