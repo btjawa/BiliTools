@@ -58,7 +58,8 @@
 | 漫画    | ❌ 不稳定 | 见下                    |
 
 ### 关于漫画
- - 使用新版API接口，可获得一话中大部分图像，仅个别图像格式不正确
+ - 使用新版API接口，可以获得大部分图像，少部分需要进一步解密获得真实图像，这一点暂时还无法完成
+ - 可参考 [SocialSisterYi/bilibili-API-collect#1168](https://github.com/SocialSisterYi/bilibili-API-collect/issues/1168) 和 [Nemo2011/bilibili-api#875](https://github.com/Nemo2011/bilibili-api/issues/875)
  - 目前有一个获取全部图像的方法，但是极不稳定，因此不考虑添加此功能
 
 ### 国际化 I18N
