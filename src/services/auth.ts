@@ -1,11 +1,10 @@
+import { ApplicationError, formatProxyUrl } from "@/services/utils";
+import { GeetestOptions, initGeetest } from '@/lib/geetest';
 import { fetch } from '@tauri-apps/plugin-http';
-import store from "@/store";
-import * as user from "@/types/user";
 import * as login from "@/types/login";
-import { ApplicationError, formatProxyUrl } from "./utils";
+import * as user from "@/types/user";
+import store from "@/store";
 import md5 from "md5";
-
-declare function initGeetest(params: any, callback: (captchaObj: any) => void): Promise<void>;
 
 function getWebGLFingerPrint() {
     let dm_img_str = "bm8gd2ViZ2", dm_cover_img_str = "bm8gd2ViZ2wgZXh0ZW5zaW";
@@ -63,21 +62,19 @@ export async function wbi(params: { [key: string]: string | number | object }) {
 
 export async function captcha(gt: string, challenge: string): Promise<login.Captcha> {
     const settings_lang = store.state.settings.language;
-    const lang = (() => { if (settings_lang.startsWith('zh')) {
-        return settings_lang;
-    } else {
-        return settings_lang.slice(0, 2);
-    }})();
-    return new Promise(async (resolve) => {
-        // 更多前端接口说明请参见：http://docs.geetest.com/install/client/web-front/
-        await initGeetest({
+    return new Promise(async (resolve, reject) => {
+        initGeetest({
             gt,
             challenge,
-            lang,
             offline: false,
             new_captcha: true,
             product: "bind",
             width: "300px",
+            lang: (() => { if (settings_lang.startsWith('zh')) {
+                return settings_lang;
+            } else {
+                return settings_lang.slice(0, 2);
+            }})() as GeetestOptions['lang'],
             https: true,
         }, function (captchaObj) {
             captchaObj.onReady(function () {
@@ -87,6 +84,8 @@ export async function captcha(gt: string, challenge: string): Promise<login.Capt
                 const validate = result.geetest_validate;
                 const seccode = result.geetest_seccode;
                 return resolve({ challenge, validate, seccode });
+            }).onError(function (err) {
+                return reject(new ApplicationError(err.msg, { code: err.error_code }));
             })
         });
     })
