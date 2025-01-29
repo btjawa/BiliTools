@@ -245,7 +245,7 @@ export default {
 					this.othersReqs.danmaku = false;
 				} else if (this.mediaInfo.type === MediaType.Manga) {
 					this.othersReqs.danmaku = false;
-					this.othersReqs.manga = true;
+					// this.othersReqs.manga = true;
 				} else {
 					this.othersReqs.aiSummary = await data.getAISummary(info, this.mediaInfo.upper.mid || 0, { check: true }) as number;
 					this.othersReqs.danmaku = true;
