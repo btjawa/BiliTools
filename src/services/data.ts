@@ -1,39 +1,44 @@
-import { fetch } from "@tauri-apps/plugin-http";
 import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
-import { checkRefresh } from "@/services/login";
-import { getM1AndKey } from "@/services/auth";
+import { getM1AndKey, genReqSign } from "@/services/auth";
 import { join as pathJoin } from "@tauri-apps/api/path";
 import { transformImage } from "@tauri-apps/api/image";
+import { checkRefresh } from "@/services/login";
+import { fetch } from "@tauri-apps/plugin-http";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
 import * as dm_v1 from "@/proto/dm_v1";
-import * as pako from 'pako';
 import store from "@/store";
+import pako from 'pako';
 
 export async function getMediaInfo(id: string, type: Types.MediaType): Promise<Types.MediaInfo> {
     let url = "https://api.bilibili.com";
+    const _id = Number(id.match(/\d+/)?.[0]);
     switch(type) {
         case Types.MediaType.Video:
             url += `/x/web-interface/view/detail?${isNaN(+id) ? 'bv' : 'a'}id=` + id;
             break;
         case Types.MediaType.Bangumi:
-            url += `/pgc/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + id.match(/\d+/)?.[0];
+            url += `/pgc/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + _id;
             break;
         case Types.MediaType.Lesson:
-            url += `/pugv/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + id.match(/\d+/)?.[0];
+            url += `/pugv/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + _id;
             break;
         case Types.MediaType.Music:
             url = "https://www.bilibili.com/audio/music-service-c/web/song/info?sid=" + id;
             break;
         case Types.MediaType.Manga:
-            url = "https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&nov=25&comic_id=" + id.match(/\d+/)?.[0];
+            const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", { comic_id: _id });
+            url = `https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&ultra_sign=${ultra_sign}&&nov=25`;
     }
     const response = await fetch(url, {
         headers: store.state.data.headers,
         ...(store.state.settings.proxy.addr && {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
         }),
-        ...(type === Types.MediaType.Manga && { method: 'POST' })
+        ...(type === Types.MediaType.Manga && {
+            method: 'POST',
+            body: JSON.stringify({ comid_id: _id })
+        }),
     });
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
@@ -200,7 +205,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             if (info.code !== 0) {
                 throw new ApplicationError(info.msg, { code: info.code });
             }
-            const tagsResp = await fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=` + id.match(/\d+/)?.[0], {
+            const tagsResp = await fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=` + _id, {
                 headers: store.state.data.headers,
                 ...(store.state.settings.proxy.addr && {
                     proxy: { all: formatProxyUrl(store.state.settings.proxy) }

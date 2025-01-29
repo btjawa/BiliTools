@@ -59,6 +59,7 @@ export default createStore({
                     cdc: -1,
                     fmt: -1,
                 } as CurrentSelect,
+                goInstance: null as WebAssembly.Instance | null,
                 playUrlInfo: {} as DashInfo | DurlInfo | MusicUrlInfo,
                 cache: {
                     log: Number(),

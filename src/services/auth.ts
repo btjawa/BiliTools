@@ -1,6 +1,7 @@
 import { ApplicationError, formatProxyUrl } from "@/services/utils";
 import { GeetestOptions, initGeetest } from '@/lib/geetest';
 import { fetch } from '@tauri-apps/plugin-http';
+import { Go } from "@/lib/wasm_exec";
 import * as login from "@/types/login";
 import * as user from "@/types/user";
 import store from "@/store";
@@ -115,6 +116,36 @@ export async function getM1AndKey() {
     const jwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
     const jwkString = JSON.stringify(jwk);
     return { m1: btoa(jwkString), key: btoa(String.fromCharCode.apply(null, new Uint8Array(raw) as any)) };
+}
+
+export async function genReqSign(query: string | URLSearchParams, params: { [key: string]: string | number | object }) {
+    if (!store.state.data.goInstance) {
+        const go = new Go();
+        const url = new URL('@/lib/manga.wasm', import.meta.url).href;
+        const wasm = await globalThis.fetch(url);
+        const buffer = await wasm.arrayBuffer();
+        const result = await WebAssembly.compile(buffer);
+        const instance = await WebAssembly.instantiate(result, go.importObject);    
+        go.run(instance);
+        store.state.data.goInstance = instance;
+    }
+    const genReqSign = (globalThis as any).genReqSign as (query: string, params: string, timestamp: number) => {
+        error?: string;
+        sign?: string
+    };
+    if (!genReqSign) {
+        throw new ApplicationError("Failed to load WASM module");
+    }
+    const result = genReqSign(
+        query.toString(),
+        JSON.stringify(params),
+        Date.now()
+    );
+    if (result.error) {
+        throw new ApplicationError(result.error);
+    }
+    console.log(result)
+    return result.sign;
 }
 
 export function getDecryptedDataIndex(binary: Uint8Array, epid: number, mcid: number) {
