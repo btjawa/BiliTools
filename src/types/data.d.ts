@@ -1392,6 +1392,7 @@ export interface MangaInfo {
 export interface MangaImageIndex {
   code: number;
   msg: string;
+  bytesData: string;
   data: {
     path: string;
     images: {
@@ -1425,6 +1426,7 @@ export interface MangaImageIndex {
 export interface MangaImageToken {
   code: number;
   msg: string;
+  bytesData: string;
   data: {
     url: string;
     token: string;

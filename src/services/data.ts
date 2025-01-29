@@ -28,22 +28,24 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             break;
         case Types.MediaType.Manga:
             const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", { comic_id: _id });
-            url = `https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&ultra_sign=${ultra_sign}&&nov=25`;
+            url = `https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&ultra_sign=${ultra_sign}&nov=25`;
     }
-    const response = await fetch(url, {
-        headers: store.state.data.headers,
+    const options = {
+        headers: { ...store.state.data.headers },
         ...(store.state.settings.proxy.addr && {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
         }),
-        ...(type === Types.MediaType.Manga && {
-            method: 'POST',
-            body: JSON.stringify({ comid_id: _id })
-        }),
-    });
+    } as any;
+    if (type === Types.MediaType.Manga) {
+        options.headers["Content-Type"] = "application/json";
+        options.method = 'POST';
+        options.body = JSON.stringify({ comic_id: _id });
+    }
+    const response = await fetch(url, options);
+    const body = await response.json();
     if (!response.ok) {
         throw new ApplicationError(response.statusText, { code: response.status });
     }
-    const body = await response.json();
     switch(type) {
         case Types.MediaType.Video: {
             const info = body as Types.VideoInfo;
@@ -554,7 +556,9 @@ export async function getFavoriteContent(media_id: number, pn: number) {
 }
 
 export async function getMangaImages(epid: number, parent: string, name: string) {
-    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex?device=pc&platform=web&nov=25', {
+    const params = { ep_id: epid };
+    const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", params);
+    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex?device=pc&platform=web&nov=25&ultra_sign=' + ultra_sign, {
         headers: {
             ...store.state.data.headers,
             'Content-Type': 'application/json',
@@ -563,11 +567,8 @@ export async function getMangaImages(epid: number, parent: string, name: string)
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
         }),
         method: 'POST',
-        body: JSON.stringify({ ep_id: epid })
+        body: JSON.stringify(params)
     });
-    if (!response.ok) {
-        throw new ApplicationError(response.statusText, { code: response.status });
-    }
     const body = await response.json() as Types.MangaImageIndex;
     if (body.code !== 0) {
         throw new ApplicationError(body.msg, { code: body.code });
@@ -582,12 +583,18 @@ export async function getMangaImages(epid: number, parent: string, name: string)
             transformImage(await getBinary(url)),
         )
         if (result.status === 'error') throw new ApplicationError(result.error);
+        break;
         await new Promise(resolve => setTimeout(resolve, getRandomInRange(250, 1000)));
     }
 }
 
 async function getMangaToken(path: string) {
-    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken?device=pc&platform=web&nov=25', {
+    const params = {
+        urls: `[\"${path}\"]`,
+        m1: (await getM1AndKey()).key,
+    };
+    const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", params);
+    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken?device=pc&platform=web&nov=25&ultra_sign=' + ultra_sign, {
         headers: {
             ...store.state.data.headers,
             'Content-Type': 'application/json',
@@ -596,14 +603,11 @@ async function getMangaToken(path: string) {
             proxy: { all: formatProxyUrl(store.state.settings.proxy) }
         }),
         method: 'POST',
-        body: JSON.stringify({
-            urls: `[\"${path}\"]`,
-            m1: (await getM1AndKey()).key,
-        })
+        body: JSON.stringify(params)
     });
-    if (!response.ok) {
-        throw new ApplicationError(response.statusText, { code: response.status });
-    }
     const body = await response.json() as Types.MangaImageToken;
+    if (body.code !== 0) {
+        throw new ApplicationError(body.msg, { code: body.code });
+    }
     return body.data[0].complete_url;
 }

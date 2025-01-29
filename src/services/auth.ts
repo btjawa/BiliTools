@@ -144,7 +144,6 @@ export async function genReqSign(query: string | URLSearchParams, params: { [key
     if (result.error) {
         throw new ApplicationError(result.error);
     }
-    console.log(result)
     return result.sign;
 }
 
