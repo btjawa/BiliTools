@@ -1,9 +1,8 @@
-import { ApplicationError, formatProxyUrl, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
-import { getM1AndKey, genReqSign } from "@/services/auth";
+import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
+import { getM1AndKey } from "@/services/auth";
 import { join as pathJoin } from "@tauri-apps/api/path";
 import { transformImage } from "@tauri-apps/api/image";
 import { checkRefresh } from "@/services/login";
-import { fetch } from "@tauri-apps/plugin-http";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
 import * as dm_v1 from "@/proto/dm_v1";
@@ -12,40 +11,37 @@ import pako from 'pako';
 
 export async function getMediaInfo(id: string, type: Types.MediaType): Promise<Types.MediaInfo> {
     let url = "https://api.bilibili.com";
+    let params = {} as any;
     const _id = Number(id.match(/\d+/)?.[0]);
     switch(type) {
         case Types.MediaType.Video:
-            url += `/x/web-interface/view/detail?${isNaN(+id) ? 'bv' : 'a'}id=` + id;
+            url += '/x/web-interface/view/detail';
+            params = { [`${isNaN(+id) ? 'bv' : 'a'}id`]: id }
             break;
         case Types.MediaType.Bangumi:
-            url += `/pgc/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + _id;
+            url += '/pgc/view/web/season';
+            params = { [`${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id`]: _id }
             break;
         case Types.MediaType.Lesson:
-            url += `/pugv/view/web/season?${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id=` + _id;
+            url += '/pugv/view/web/season';
+            params = { [`${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id`]: _id }
             break;
         case Types.MediaType.Music:
-            url = "https://www.bilibili.com/audio/music-service-c/web/song/info?sid=" + id;
+            url = "https://www.bilibili.com/audio/music-service-c/web/song/info";
+            params = { sid: id }
             break;
         case Types.MediaType.Manga:
-            const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", { comic_id: _id });
-            url = `https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?device=pc&platform=web&ultra_sign=${ultra_sign}&nov=25`;
+            url = "https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail";
+            params = { device: "pc", platform: "web", nov: 25 }
+            break;
     }
-    const options = {
-        headers: { ...store.state.data.headers },
-        ...(store.state.settings.proxy.addr && {
-            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-        }),
-    } as any;
-    if (type === Types.MediaType.Manga) {
-        options.headers["Content-Type"] = "application/json";
-        options.method = 'POST';
-        options.body = JSON.stringify({ comic_id: _id });
-    }
-    const response = await fetch(url, options);
-    const body = await response.json();
-    if (!response.ok) {
-        throw new ApplicationError(response.statusText, { code: response.status });
-    }
+    const body = await tryFetch(url, {
+        params,
+        ...(type === Types.MediaType.Manga && {
+            auth: 'ultra_sign',
+            post: { type: 'json', body: { comic_id: _id } }
+        })
+    });
     switch(type) {
         case Types.MediaType.Video: {
             const info = body as Types.VideoInfo;
@@ -207,19 +203,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             if (info.code !== 0) {
                 throw new ApplicationError(info.msg, { code: info.code });
             }
-            const tagsResp = await fetch(`https://www.bilibili.com/audio/music-service-c/web/tag/song?sid=` + _id, {
-                headers: store.state.data.headers,
-                ...(store.state.settings.proxy.addr && {
-                    proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-                })
-            });
-            if (!tagsResp.ok) {
-                throw new ApplicationError(tagsResp.statusText, { code: tagsResp.status });
-            }        
-            const tagsBody = await tagsResp.json() as Types.MusicTagsInfo;
-            if (tagsBody.code !== 0) {
-                throw new ApplicationError(tagsBody.msg, { code: tagsBody.code });
-            }
             const data = info.data;
             return {
                 id: data.aid,
@@ -375,7 +358,12 @@ export async function getPlayUrl(
             }
             break;
     }
-    const body = await tryFetch(url, { wbi: type === Types.MediaType.Video, params });
+    const body = await tryFetch(url, {
+        ...(type === Types.MediaType.Video && {
+            auth: 'wbi'
+        }),
+        params
+    });
     switch(type) {
         case Types.MediaType.Video: {
             const data = (body as Types.VideoPlayUrlInfo).data;
@@ -467,23 +455,14 @@ export async function pushBackQueue( params: {
 }
 
 export async function getBinary(url: string | URL) {
-    const response = await fetch(url, {
-        headers: store.state.data.headers,
-        ...(store.state.settings.proxy.addr && {
-            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-        })
-    });
-    if (!response.ok) {
-        throw new ApplicationError(response.statusText, { code: response.status });
-    }
-    return await response.arrayBuffer();
+    return await tryFetch(url, { type: 'binary' });
 }
 
 export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
     const params = {
         aid: info.id, cid: info.cid, up_mid: mid
     };
-    const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { wbi: true, params });
+    const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { auth: 'wbi', params });
     const body = response as Types.AISummaryInfo;
     if (options?.check) return body.data.code;
     if (!body.data.model_result.result_type) {
@@ -508,7 +487,7 @@ export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
             const params = {
                 type: 1, oid: info.cid, pid: info.id, segment_index: i + 1,
             }
-            const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', wbi: true, params });
+            const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', auth: 'wbi', params });
             dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
             await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
         }
@@ -528,14 +507,14 @@ export async function getHistoryDanmaku(oid: number, date: string) {
 
 export async function getPlayerInfo(id: number, cid: number) {
     const params = { aid: id, cid };
-    const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { wbi: true, params });
+    const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { auth: 'wbi', params });
     const body = response as Types.PlayerInfo;
     return body.data;
 }
 
 export async function getSteinInfo(id: number, graph_version: number, edge_id?: number) {
     const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
-    const response = await tryFetch('https://api.bilibili.com/x/stein/edgeinfo_v2', { wbi: true, params });
+    const response = await tryFetch('https://api.bilibili.com/x/stein/edgeinfo_v2', { auth: 'wbi', params });
     const body = response as Types.SteinInfo;
     return body.data;
 }
@@ -556,23 +535,11 @@ export async function getFavoriteContent(media_id: number, pn: number) {
 }
 
 export async function getMangaImages(epid: number, parent: string, name: string) {
-    const params = { ep_id: epid };
-    const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", params);
-    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex?device=pc&platform=web&nov=25&ultra_sign=' + ultra_sign, {
-        headers: {
-            ...store.state.data.headers,
-            'Content-Type': 'application/json',
-        },
-        ...(store.state.settings.proxy.addr && {
-            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-        }),
-        method: 'POST',
-        body: JSON.stringify(params)
-    });
-    const body = await response.json() as Types.MangaImageIndex;
-    if (body.code !== 0) {
-        throw new ApplicationError(body.msg, { code: body.code });
-    }
+    const body = await tryFetch('https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex', {
+        params: { device: "pc", platform: "web", nov: 25 },
+        post: { type: 'json', body: { ep_id: epid } },
+        auth: 'ultra_sign',
+    }) as Types.MangaImageIndex;
     let images = body.data.images.map(i => i.path);
     for (let [index, image] of images.entries()) {
         const url = await getMangaToken(image);
@@ -583,31 +550,18 @@ export async function getMangaImages(epid: number, parent: string, name: string)
             transformImage(await getBinary(url)),
         )
         if (result.status === 'error') throw new ApplicationError(result.error);
-        break;
         await new Promise(resolve => setTimeout(resolve, getRandomInRange(250, 1000)));
     }
 }
 
 async function getMangaToken(path: string) {
-    const params = {
-        urls: `[\"${path}\"]`,
-        m1: (await getM1AndKey()).key,
-    };
-    const ultra_sign = await genReqSign("device=pc&platform=web&nov=25", params);
-    const response = await fetch('https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken?device=pc&platform=web&nov=25&ultra_sign=' + ultra_sign, {
-        headers: {
-            ...store.state.data.headers,
-            'Content-Type': 'application/json',
-        },
-        ...(store.state.settings.proxy.addr && {
-            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-        }),
-        method: 'POST',
-        body: JSON.stringify(params)
-    });
-    const body = await response.json() as Types.MangaImageToken;
-    if (body.code !== 0) {
-        throw new ApplicationError(body.msg, { code: body.code });
-    }
+    const body = await tryFetch('https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken', {
+        params: { device: "pc", platform: "web", nov: 25 },
+        post: { type: 'json', body: {
+            urls: `[\"${path}\"]`,
+            m1: (await getM1AndKey()).key,    
+        } },
+        auth: 'ultra_sign',
+    }) as Types.MangaImageToken;
     return body.data[0].complete_url;
 }

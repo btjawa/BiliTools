@@ -125,7 +125,7 @@ var loadScript = function (url, cb) {
     script.charset = "UTF-8";
     script.async = true;
 
-    // ¶ÔgeetestµÄ¾²Ì¬×ÊÔ´Ìí¼Ó crossOrigin
+    // å¯¹geetestçš„é™æ€èµ„æºæ·»åŠ  crossOrigin
     if ( /static\.geetest\.com/g.test(url)) {
         script.crossOrigin = "anonymous";
     }
@@ -263,8 +263,8 @@ var reportError = function (config, url) {
 
 var throwError = function (errorType, config) {
     var errors = {
-        networkError: 'ÍøÂç´íÎó',
-        gtTypeError: 'gt×Ö¶Î²»ÊÇ×Ö·û´®ÀàĞÍ'
+        networkError: 'ç½‘ç»œé”™è¯¯',
+        gtTypeError: 'gtå­—æ®µä¸æ˜¯å­—ç¬¦ä¸²ç±»å‹'
     };
     if (typeof config.onError === 'function') {
         config.onError(errors[errorType]);
@@ -281,7 +281,7 @@ if (detect()) {
     status.slide = "loaded";
 }
 
-const initGeetest = function (userConfig, callback) {
+export const initGeetest = function (userConfig, callback) {
 
     var config = new Config(userConfig);
 
@@ -349,5 +349,3 @@ const initGeetest = function (userConfig, callback) {
     });
 
 };
-
-export { initGeetest };

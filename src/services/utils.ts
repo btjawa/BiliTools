@@ -112,38 +112,77 @@ export function setEventHook() {
     });
 }
 
-export async function tryFetch(url: string, options?: { wbi?: boolean, params?: { [key: string]: string | number | object }, times?: number, type?: 'text' | 'binary', post?: boolean }) {
+export async function tryFetch(url: string | URL, options?: {
+    auth?: 'wbi' | 'ultra_sign',
+    params?: Record<string, string | number | Object>,
+    post?: {
+        type: 'json' | 'form',
+        body?: Record<string, string | number | Object>
+    },
+    type?: 'text' | 'binary',
+    times?: number,
+    handleError?: boolean
+}) {
     let grisk_id: string = '';
     for (let i = 0; i < (options?.times ?? 3); i++) {
+        try {
         const rawParams = {
             ...options?.params, 
             ...(grisk_id && { gaia_vtoken: grisk_id })
         };
-        let params;
-        if (options?.wbi) {
-            params = '?' + await auth.wbi(rawParams);  
+        let params = '?';
+        if (options?.auth === 'wbi' && options.params) {
+            params += await auth.wbi(rawParams);
+        } else if (options?.auth === 'ultra_sign' && options.params && options.post?.body) {
+            const _params = new URLSearchParams(options.params as any);
+            const ultra_sign = await auth.genReqSign(
+                _params,
+                options.post.body
+            );
+            _params.set('ultra_sign', ultra_sign);
+            params += _params.toString();
         } else if (options?.params) {
-            params = '?' + new URLSearchParams(rawParams).toString();
-        } else params = '';
-        const response = await fetch(url + params, {
+            params += new URLSearchParams(rawParams).toString();
+        }
+        const fetchOptions = {
             headers: store.state.data.headers,
             ...(store.state.settings.proxy.addr && {
                 proxy: { all: formatProxyUrl(store.state.settings.proxy) }
             }),
-            ...(options?.post && { method: 'POST' })
-        });
-        if (!response.ok) {
+            method: 'GET',
+            body: undefined as string | undefined
+        };
+        if (options?.post) {
+            fetchOptions.method = 'POST';
+            fetchOptions.headers['Content-Type'] = (() => {
+                switch(options.post.type) {
+                    case 'json': return 'application/json';
+                    case 'form': return 'application/x-www-form-urlencoded';
+                }
+            })();
+            if (options.post.body) {
+                fetchOptions.body = JSON.stringify(options.post.body);
+            }
+        }
+        const response = await fetch(url + params, fetchOptions);
+        if (options?.type) {
+            if (!response.ok) {
+                throw new ApplicationError(response.statusText, { code: response.status });
+            }
+            switch(options?.type) {
+                case 'text': return await response.text();
+                case 'binary': return await response.arrayBuffer();
+            }
+        }
+        let body = {} as any;
+        try {
+            body = await response.json();
+        } catch(_) {
             throw new ApplicationError(response.statusText, { code: response.status });
         }
-        switch(options?.type) {
-            case 'text': return await response.text();
-            case 'binary': return await response.arrayBuffer();
-        }
-        const body = await response.json();
         if (body.code !== 0) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
                 const csrf = new Headers(store.state.data.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
-                console.log(csrf.slice(0, 7))
                 const captchaParams = new URLSearchParams({
                     v_voucher: body.data.v_voucher, ...(csrf && { csrf })
                 }).toString();
@@ -155,7 +194,6 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
                     })
                 });
                 const captchaBody = await captchaResp.json();
-                console.log(captchaBody);
                 if (captchaBody.code !== 0) {
                     throw new ApplicationError(captchaBody.message, { code: captchaBody.code });
                 }
@@ -165,7 +203,6 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
                 }
                 iziInfo(t('error.risk'));
                 const captcha = await auth.captcha(gt, challenge);
-
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })
                 }).toString();
@@ -177,7 +214,6 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
                     })
                 });
                 const validateBody = await validateResp.json();
-                console.log(validateBody)
                 if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
                     throw new ApplicationError(validateBody.message, { code: validateBody.code });
                 }
@@ -185,10 +221,14 @@ export async function tryFetch(url: string, options?: { wbi?: boolean, params?: 
                 await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
                 continue;
             } else {
-                throw new ApplicationError(body.message || body.msg, { code: body.code });
-            };
+                console.error(body)
+                if (options?.handleError !== false) {
+                    throw new ApplicationError(body.message || body.msg, { code: body.code });
+                }
+            }
         }
         return body;
+        } catch(e) { throw e }
     }
 }
 

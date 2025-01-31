@@ -106,7 +106,7 @@ pub async fn init_headers() -> Result<HashMap<String, String>> {
         ).collect::<Vec<_>>().join("; ");
     map.insert("Cookie".into(), cookies);
     map.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36".into());
-    map.insert("Referer".into(), "https://www.bilibili.com".into());
+    map.insert("Referer".into(), "https://www.bilibili.com/".into());
     map.insert("Origin".into(), "https://www.bilibili.com".into());
     let headers_value: Value = serde_json::to_value(&map)?;
     let headers: Headers = serde_json::from_value(headers_value)?;

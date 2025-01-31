@@ -1,6 +1,5 @@
-import { ApplicationError, formatProxyUrl } from "@/services/utils";
+import { ApplicationError, tryFetch } from "@/services/utils";
 import { GeetestOptions, initGeetest } from '@/lib/geetest';
-import { fetch } from '@tauri-apps/plugin-http';
 import { Go } from "@/lib/wasm_exec";
 import * as login from "@/types/login";
 import * as user from "@/types/user";
@@ -32,19 +31,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
         61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
         36, 20, 34, 44, 52
     ];
-    const response = await fetch('https://api.bilibili.com/x/web-interface/nav', {
-        headers: store.state.data.headers,
-        ...(store.state.settings.proxy.addr && {
-            proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-        })
-    });
-    if (!response.ok) {
-        throw new ApplicationError(response.statusText, { code: response.status });
-    }
-    const body = await response.json() as user.NavInfoResp;
-    if (body?.code !== 0) {
-        throw new ApplicationError(body?.message, { code: body?.code });
-    }
+    const body = await tryFetch('https://api.bilibili.com/x/web-interface/nav') as user.NavInfoResp;
     const { img_url, sub_url } = body.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
@@ -118,11 +105,11 @@ export async function getM1AndKey() {
     return { m1: btoa(jwkString), key: btoa(String.fromCharCode.apply(null, new Uint8Array(raw) as any)) };
 }
 
-export async function genReqSign(query: string | URLSearchParams, params: { [key: string]: string | number | object }) {
+export async function genReqSign(query: string | URLSearchParams, params: { [key: string]: string | number | object }): Promise<string> {
     if (!store.state.data.goInstance) {
         const go = new Go();
         const url = new URL('@/lib/manga.wasm', import.meta.url).href;
-        const wasm = await globalThis.fetch(url);
+        const wasm = await (window || globalThis).fetch(url);
         const buffer = await wasm.arrayBuffer();
         const result = await WebAssembly.compile(buffer);
         const instance = await WebAssembly.instantiate(result, go.importObject);    
@@ -131,7 +118,7 @@ export async function genReqSign(query: string | URLSearchParams, params: { [key
     }
     const genReqSign = (globalThis as any).genReqSign as (query: string, params: string, timestamp: number) => {
         error?: string;
-        sign?: string
+        sign: string
     };
     if (!genReqSign) {
         throw new ApplicationError("Failed to load WASM module");
@@ -139,7 +126,7 @@ export async function genReqSign(query: string | URLSearchParams, params: { [key
     const result = genReqSign(
         query.toString(),
         JSON.stringify(params),
-        Date.now()
+        1738219594115
     );
     if (result.error) {
         throw new ApplicationError(result.error);
