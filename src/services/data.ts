@@ -36,7 +36,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             break;
     }
     const body = await tryFetch(url, {
-        params,
+        params, handleError: false,
         ...(type === Types.MediaType.Manga && {
             auth: 'ultra_sign',
             post: { type: 'json', body: { comic_id: _id } }

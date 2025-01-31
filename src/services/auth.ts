@@ -126,7 +126,7 @@ export async function genReqSign(query: string | URLSearchParams, params: { [key
     const result = genReqSign(
         query.toString(),
         JSON.stringify(params),
-        1738219594115
+        Date.now()
     );
     if (result.error) {
         throw new ApplicationError(result.error);

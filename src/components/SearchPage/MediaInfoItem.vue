@@ -1,4 +1,6 @@
-<template><div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
+<template><div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full"
+    :class="{ 'border-2 border-solid border-[var(--primary-color)]': props.index === props.target }"
+>
     <div class="checkbox" v-if="props.checkbox">
         <input type="checkbox" :value="props.index" v-model="model"/>
         <i class="fa-solid fa-check"></i>
@@ -22,6 +24,10 @@ const model = defineModel();
 
 const props = defineProps({
     index: {
+        type: Number,
+        required: true
+    },
+    target: {
         type: Number,
         required: true
     },

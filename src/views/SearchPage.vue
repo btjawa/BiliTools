@@ -16,7 +16,7 @@
 	<div :style="{ 'opacity': mediaRootActive ? 1 : 0, 'pointerEvents': mediaRootActive ? 'all' : 'none' }"
 		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
-		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open="open" />
+		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open />
         <Empty v-if="mediaInfo.list" :expression="mediaInfo.list.length === 0" text="home.empty" />
 		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="mediaInfo?.stein_gate">
 			<template v-for="story in mediaInfo.stein_gate.story_list">
@@ -27,17 +27,17 @@
 			</button>
 			</template>
 		</div>
-		<div v-if="mediaInfo.list && osType === 'linux'" class="flex flex-col h-[calc(100%-158px)] overflow-auto gap-0.5">
+		<div v-if="mediaInfo.list && osType === 'linux'" class="scrollList flex flex-col h-[calc(100%-158px)] overflow-auto gap-0.5">
 			<template v-for="(item, index) in mediaInfo.list">
-				<MediaInfoItem :index="index" :item="item" :checkbox="checkbox" :options="options" v-model="multiSelect" />
+				<MediaInfoItem :index :target :item :checkbox :options v-model="multiSelect" />
 			</template>
 		</div>
 		<RecycleScroller v-else v-if="mediaInfo.list"
-			class="h-[calc(100%-158px)]"
+			class="scrollList h-[calc(100%-158px)]"
 			:items="mediaInfo.list" :item-size="50"
 			key-field="index" v-slot="{ item, index }"
 		>
-			<MediaInfoItem :index="index" :item="item" :checkbox="checkbox" :options="options" v-model="multiSelect" />
+			<MediaInfoItem :index :target :item :checkbox :options v-model="multiSelect" />
 		</RecycleScroller>
 		<div class="my-2 flex justify-center gap-[5px] absolute w-full"
 			v-if="mediaInfo?.stein_gate" :style="{ 'top': 216 + mediaInfo.list.length * 50 + 'px' }"
@@ -49,8 +49,8 @@
 				>{{ quesion.option }}</button>
 			</template>
 		</div>
-		<div class="fixed bottom-6 left-[73px] flex flex-col gap-3">
-			<button v-if="checkbox" :class="{ 'active': checkbox }"
+		<div class="fixed bottom-6 left-[73px] flex flex-col gap-3 multi-select">
+			<button v-if="checkbox"
 				@click=" multiSelect = multiSelect.length === mediaInfo.list.length 
 					? [] : Array.from({ length: mediaInfo.list.length }, (_, i) => i)
 				"
@@ -58,7 +58,7 @@
 				<i :class="[fa_dyn, 'fa-check-double']"></i>
 				<span>{{ $t('home.label.selectAll') }}</span>
 			</button>
-			<button v-if="mediaInfo.type !== 'manga'" @click="checkbox = !checkbox">
+			<button v-if="mediaInfo.type !== 'manga'" @click="checkbox = !checkbox" :class="{ 'active': checkbox }">
 				<i :class="[fa_dyn, 'fa-square-check']"></i>
 				<span>{{ $t('home.label.multiSelect') }}</span>
 			</button>
@@ -100,6 +100,7 @@ export default {
 			searchActive: false,
 			mediaRootActive: false,
 			index: 0,
+			target: 0,
 			checkbox: false,
 			multiSelect: [] as number[],
 			store: this.$store.state,
@@ -179,8 +180,21 @@ export default {
 				this.searchActive = true;
 				const { id, type } = await parseId(this.searchInput);
 				const info = await data.getMediaInfo(id, type);
+				this.target = info.list.findIndex(item => item.id === info.id);
 				this.mediaInfo = info;
 				this.mediaRootActive = true;
+				const start = Date.now();
+				const checkCondition = () => {
+					const scrollList = document.querySelector('.scrollList');
+					if (Date.now() - start > 1000) return;
+					if (scrollList) {
+						scrollList.scrollTo({
+							top: this.target * 50,
+							behavior: 'smooth'
+						});
+					} else setTimeout(checkCondition, 50);
+				};
+				checkCondition();
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();
@@ -404,7 +418,7 @@ export default {
 .search_input, .media_root {
 	transition: top .3s cubic-bezier(0,1,.6,1), opacity .2s;
 }
-.multi-select.active {
+.multi-select .active {
 	@apply text-[color:var(--dark-button-color)] bg-[color:var(--primary-color)];;
 }
 </style>
