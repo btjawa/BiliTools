@@ -63,7 +63,7 @@
                         </span>
                     </div>
                     <div v-if="unit.type === 'reference'" class="desc">
-                        Copyright &copy; {{(new Date()).getFullYear()}} btjawa, MIT License<br>
+                        Copyright &copy; {{(new Date()).getFullYear()}} btjawa, GPL-3.0-or-later License<br>
                         {{ $t('common.exempt') }}<br>
                         {{ $t('settings.about.thanks') }}
                     </div>

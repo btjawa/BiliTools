@@ -2,7 +2,7 @@
 /**
  * Convert DmSegMobileReply binary to readable XML.
  * @author https://github.com/btjawa
- * @license MIT
+ * @license GPL-3.0-or-later
  */
 export function DmSegMobileReplyToXML(binary: Uint8Array, options?: { inputXml?: Document }) {
   const decoded = decodeDmSegMobileReply(binary);

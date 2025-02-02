@@ -110,7 +110,7 @@ npm run tauri build
 
 本项目仅作学习用途，作者不承担因使用本项目而导致的一切后果，若有侵权，可随时联系删除
 
-本项目的代码部分依据 [MIT 许可证](https://opensource.org/license/mit) 授权，请参考项目根目录下的 `LICENSE` 文件。
+该项目根据 `GPL-3.0-or-later` 许可证进行授权，请参考 [LICENSE](/LICENSE) 文件
 
 本项目参考了 [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 项目的内容，由 [SocialSisterYi](https://github.com/SocialSisterYi) 根据 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.en) 协议发布，并仅限于非商业用途。
 

@@ -20,6 +20,7 @@
     "targets": "all",
     "shortDescription": "BiliTools - A Bilibili toolbox",
     "createUpdaterArtifacts": "v1Compatible",
+    "license": "GPL-3.0-or-later",
     "icon": [
       "icons/128x128.png",
       "icons/128x128@2x.png",
