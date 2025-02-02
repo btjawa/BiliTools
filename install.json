@@ -7,10 +7,6 @@
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2pTNnNKRlhKZ2ZOODVnbkRSelducGlhS1d4cFk2SkVyajVkMDBqa0FnajljZ3BmcytqVTJPL0lpMUQrZUtnbmFST29waWprMDUwN21zRTFMMVRrY2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3ODczCWZpbGU6QmlsaVRvb2xzXzEuMy4yX3g2NC1zZXR1cC5uc2lzLnppcApKYXE2c3VGRnRFa0NydXpkWjR1ZWZNMmROVUNtTy9LNm1FUXFyN2JqSmRWRFcrL2NNV2c5cVlLd0xsVjVpcDV3OHhvcVhKbnRkRjVxYkFPS0hJSkxEQT09Cg==",
       "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_1.3.2_x64-setup.nsis.zip"
     },
-    "linux": {
-      "signature": "",
-      "url": ""
-    },
     "darwin": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ErWG9mWnFyZ21DL0VrZFRsMGhOcDQzdWxrT0FrR1d6emsyeG5TcUxJREYxV2tlSW8rdytscUVuNGYvaWVkcUdNNEhYbWdYRytBdjk1ck15SXlRWUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3NDE0CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKblBtMmF5OWtYVEl2MTlISm9RM1c3NG9YM2dvdjhxdE9scnFtRElISTBwRVgxVzlaZjU1SjZhalB4RHNadWk2ZmpmMjFCVHF6QXErc1lmVHYxZVUzQ1E9PQo=",
       "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_x64.app.tar.gz"
@@ -18,10 +14,6 @@
     "darwin-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ErWG9mWnFyZ21DL0VrZFRsMGhOcDQzdWxrT0FrR1d6emsyeG5TcUxJREYxV2tlSW8rdytscUVuNGYvaWVkcUdNNEhYbWdYRytBdjk1ck15SXlRWUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3NDE0CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKblBtMmF5OWtYVEl2MTlISm9RM1c3NG9YM2dvdjhxdE9scnFtRElISTBwRVgxVzlaZjU1SjZhalB4RHNadWk2ZmpmMjFCVHF6QXErc1lmVHYxZVUzQ1E9PQo=",
       "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_x64.app.tar.gz"
-    },
-    "linux-x86_64": {
-      "signature": "",
-      "url": ""
     },
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2pTNnNKRlhKZ2ZOODVnbkRSelducGlhS1d4cFk2SkVyajVkMDBqa0FnajljZ3BmcytqVTJPL0lpMUQrZUtnbmFST29waWprMDUwN21zRTFMMVRrY2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3ODczCWZpbGU6QmlsaVRvb2xzXzEuMy4yX3g2NC1zZXR1cC5uc2lzLnppcApKYXE2c3VGRnRFa0NydXpkWjR1ZWZNMmROVUNtTy9LNm1FUXFyN2JqSmRWRFcrL2NNV2c5cVlLd0xsVjVpcDV3OHhvcVhKbnRkRjVxYkFPS0hJSkxEQT09Cg==",
