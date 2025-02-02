@@ -1,31 +1,31 @@
 {
-  "version": "v1.3.2-1",
-  "notes": "### 修复\n\n修复 Unix-like 系统上的权限问题<br>\n修复 FFmpeg 的错误处理",
-  "pub_date": "2025-01-19T11:47:30.082Z",
+  "version": "v1.3.2",
+  "notes": "### 更新\n\n- [`2049ad7`](https://github.com/btjawa/BiliTools/commit/2049ad755da6d0d9a5b483b14419c54baba836a1) 搜索时可自动滚动至目标视频\n\n### 修复\n\n- [`d929ed0`](https://github.com/btjawa/BiliTools/commit/d929ed0b8e634c499cb0afe0567023d9e4fd5364) ([#8](https://github.com/btjawa/BiliTools/issues/8) by [@hqc8848](https://github.com/hqc8848)) 修复 Unix-like 系统上的权限问题\n- [`74fb013`](https://github.com/btjawa/BiliTools/commit/74fb0135c24f19cb86883c7a7ab913101d884fb6) [`3cab821`](https://github.com/btjawa/BiliTools/commit/3cab821efa71d8b9e55ee90e2d40ab0eb43b36d0) ([#13](https://github.com/btjawa/BiliTools/issues/13) by [@masterrite](https://github.com/masterrite)) 补充漫画接口的 `ultra_sign` 验证参数\n- [`fc1a15d`](https://github.com/btjawa/BiliTools/commit/fc1a15dd96b0328a5604495504cf81dce83268c9) 由于漫画接口不稳定，因此暂时关闭漫画解析入口\n- [`41582bc`](https://github.com/btjawa/BiliTools/commit/41582bc4c021b9601215c4c9643c29c6998f0d88) [`d929ed0`](https://github.com/btjawa/BiliTools/commit/d929ed0b8e634c499cb0afe0567023d9e4fd5364) 修复对 `geetest` `FFmpeg` 的错误处理",
+  "pub_date": "2025-02-02T03:46:19.246Z",
   "platforms": {
     "win64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN25RQmQwbWZLWlRiR3NkaU1RMWs2Q2IxUmRFVDNQQUIxYlo1NzhoT2g2VWlMVHFIMEdsYjE1bjJSZ3RFR0M0WkhnRWI4SW4zUkdNeCtuU0IwcS9xOWd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3Mjg3MTMzCWZpbGU6QmlsaVRvb2xzXzEuMy4yLTFfeDY0LXNldHVwLm5zaXMuemlwCktRQk5GOUx1NUFKTXhtUjJKUFJJM0Q1bXErN1JDMVZWZU1JMVhaMnZwclBQTnA2K3hjOCs4Yk9ORC9WNjZ5Mzc4QlAvRDRvSFg3a2hhMDRGenp3RkNRPT0K",
-      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2-1/BiliTools_1.3.2-1_x64-setup.nsis.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2pTNnNKRlhKZ2ZOODVnbkRSelducGlhS1d4cFk2SkVyajVkMDBqa0FnajljZ3BmcytqVTJPL0lpMUQrZUtnbmFST29waWprMDUwN21zRTFMMVRrY2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3ODczCWZpbGU6QmlsaVRvb2xzXzEuMy4yX3g2NC1zZXR1cC5uc2lzLnppcApKYXE2c3VGRnRFa0NydXpkWjR1ZWZNMmROVUNtTy9LNm1FUXFyN2JqSmRWRFcrL2NNV2c5cVlLd0xsVjVpcDV3OHhvcVhKbnRkRjVxYkFPS0hJSkxEQT09Cg==",
+      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_1.3.2_x64-setup.nsis.zip"
     },
     "linux": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3FFTUpKUkp6Y21na3loZ1ZtSUdrWjJlaTVPMWl0SUdvb3VtZGhXb0dUaGJxczRXSVpDRWJMVVp0OHBjQ3RDTzdoUjFNVkdqVzQyNWJXZFRXdzFrZ2c4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3Mjg2NzcxCWZpbGU6QmlsaVRvb2xzXzEuMy4yLTFfYW1kNjQuQXBwSW1hZ2UudGFyLmd6ClFqZ1BiaEJ3cjcyV1ZEVGYvMWovMkhtcGVXUjg1V3BJUENvT1hzMUltcXVtY2cxVFM5S09FOFdxYjdiK1I2Z1NXcitwRXhvdlVLMGRnTWF3Y25SdkRnPT0K",
-      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2-1/BiliTools_1.3.2-1_amd64.AppImage.tar.gz"
+      "signature": "",
+      "url": ""
     },
     "darwin": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ZXNFRzSC9ZUVRsSjJrL3YxcUZZVmV3c01KUGVQSGgyT2ZWMWJaUjV4bXZoOXZZOWw4SVFTWFhWZ1hBazRpeVF5V09kYWh3eVlYVjlWcU5EQTdaQndjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3Mjg2NTQ3CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKWjd5RDdEdFZETmU3TjJ6dnQ0cEVhT1JQZ3phL1M3ZDZwS2Y3QmI3clBLMFZBTGMxb2lFSlY0NlZjV2hpVkpJSVZzRHRSdEhwUlRwSXVPL2ppS3JVQmc9PQo=",
-      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2-1/BiliTools_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ErWG9mWnFyZ21DL0VrZFRsMGhOcDQzdWxrT0FrR1d6emsyeG5TcUxJREYxV2tlSW8rdytscUVuNGYvaWVkcUdNNEhYbWdYRytBdjk1ck15SXlRWUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3NDE0CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKblBtMmF5OWtYVEl2MTlISm9RM1c3NG9YM2dvdjhxdE9scnFtRElISTBwRVgxVzlaZjU1SjZhalB4RHNadWk2ZmpmMjFCVHF6QXErc1lmVHYxZVUzQ1E9PQo=",
+      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_x64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ZXNFRzSC9ZUVRsSjJrL3YxcUZZVmV3c01KUGVQSGgyT2ZWMWJaUjV4bXZoOXZZOWw4SVFTWFhWZ1hBazRpeVF5V09kYWh3eVlYVjlWcU5EQTdaQndjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3Mjg2NTQ3CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKWjd5RDdEdFZETmU3TjJ6dnQ0cEVhT1JQZ3phL1M3ZDZwS2Y3QmI3clBLMFZBTGMxb2lFSlY0NlZjV2hpVkpJSVZzRHRSdEhwUlRwSXVPL2ppS3JVQmc9PQo=",
-      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2-1/BiliTools_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ErWG9mWnFyZ21DL0VrZFRsMGhOcDQzdWxrT0FrR1d6emsyeG5TcUxJREYxV2tlSW8rdytscUVuNGYvaWVkcUdNNEhYbWdYRytBdjk1ck15SXlRWUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3NDE0CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKblBtMmF5OWtYVEl2MTlISm9RM1c3NG9YM2dvdjhxdE9scnFtRElISTBwRVgxVzlaZjU1SjZhalB4RHNadWk2ZmpmMjFCVHF6QXErc1lmVHYxZVUzQ1E9PQo=",
+      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_x64.app.tar.gz"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3FFTUpKUkp6Y21na3loZ1ZtSUdrWjJlaTVPMWl0SUdvb3VtZGhXb0dUaGJxczRXSVpDRWJMVVp0OHBjQ3RDTzdoUjFNVkdqVzQyNWJXZFRXdzFrZ2c4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3Mjg2NzcxCWZpbGU6QmlsaVRvb2xzXzEuMy4yLTFfYW1kNjQuQXBwSW1hZ2UudGFyLmd6ClFqZ1BiaEJ3cjcyV1ZEVGYvMWovMkhtcGVXUjg1V3BJUENvT1hzMUltcXVtY2cxVFM5S09FOFdxYjdiK1I2Z1NXcitwRXhvdlVLMGRnTWF3Y25SdkRnPT0K",
-      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2-1/BiliTools_1.3.2-1_amd64.AppImage.tar.gz"
+      "signature": "",
+      "url": ""
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN25RQmQwbWZLWlRiR3NkaU1RMWs2Q2IxUmRFVDNQQUIxYlo1NzhoT2g2VWlMVHFIMEdsYjE1bjJSZ3RFR0M0WkhnRWI4SW4zUkdNeCtuU0IwcS9xOWd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM3Mjg3MTMzCWZpbGU6QmlsaVRvb2xzXzEuMy4yLTFfeDY0LXNldHVwLm5zaXMuemlwCktRQk5GOUx1NUFKTXhtUjJKUFJJM0Q1bXErN1JDMVZWZU1JMVhaMnZwclBQTnA2K3hjOCs4Yk9ORC9WNjZ5Mzc4QlAvRDRvSFg3a2hhMDRGenp3RkNRPT0K",
-      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2-1/BiliTools_1.3.2-1_x64-setup.nsis.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2pTNnNKRlhKZ2ZOODVnbkRSelducGlhS1d4cFk2SkVyajVkMDBqa0FnajljZ3BmcytqVTJPL0lpMUQrZUtnbmFST29waWprMDUwN21zRTFMMVRrY2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzM4NDY3ODczCWZpbGU6QmlsaVRvb2xzXzEuMy4yX3g2NC1zZXR1cC5uc2lzLnppcApKYXE2c3VGRnRFa0NydXpkWjR1ZWZNMmROVUNtTy9LNm1FUXFyN2JqSmRWRFcrL2NNV2c5cVlLd0xsVjVpcDV3OHhvcVhKbnRkRjVxYkFPS0hJSkxEQT09Cg==",
+      "url": "https://ghp.ci/https://github.com/btjawa/BiliTools/releases/download/v1.3.2/BiliTools_1.3.2_x64-setup.nsis.zip"
     }
   }
 }
