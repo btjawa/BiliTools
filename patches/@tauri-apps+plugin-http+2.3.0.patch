@@ -1,5 +1,5 @@
 diff --git a/node_modules/@tauri-apps/plugin-http/dist-js/index.js b/node_modules/@tauri-apps/plugin-http/dist-js/index.js
-index e3e56b9..44866e8 100644
+index 56da449..31ff01a 100644
 --- a/node_modules/@tauri-apps/plugin-http/dist-js/index.js
 +++ b/node_modules/@tauri-apps/plugin-http/dist-js/index.js
 @@ -42,6 +42,8 @@ const ERROR_REQUEST_CANCELLED = 'Request canceled';
@@ -11,7 +11,7 @@ index e3e56b9..44866e8 100644
      // abort early here if needed
      const signal = init?.signal;
      if (signal?.aborted) {
-@@ -107,12 +109,16 @@ async function fetch(input, init) {
+@@ -110,12 +112,16 @@ async function fetch(input, init) {
          throw new Error(ERROR_REQUEST_CANCELLED);
      }
      signal?.addEventListener('abort', () => void abort());

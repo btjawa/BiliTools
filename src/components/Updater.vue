@@ -79,6 +79,7 @@ export default defineComponent({
             if (update?.available) {
                 this.update = markRaw(update);
                 this.body = await marked.parse(this.update.body || '');
+                this.body = this.body.replace(/<a href=/g, '<a target="_blank" href=');
                 this.mainElement = (document.querySelector('.main') as HTMLElement);
                 this.sidebarElement = (document.querySelector('.sidebar') as HTMLElement);
                 this.mainElement.animate(

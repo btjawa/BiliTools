@@ -1,11 +1,24 @@
 # Changelog
 
+## [1.3.2] - 2025-02-02
+
+### 更新
+
+- [`2049ad7`](https://github.com/btjawa/BiliTools/commit/2049ad755da6d0d9a5b483b14419c54baba836a1) 搜索时可自动滚动至目标视频
+
+### 修复
+
+- [`d929ed0`](https://github.com/btjawa/BiliTools/commit/d929ed0b8e634c499cb0afe0567023d9e4fd5364) ([#8](https://github.com/btjawa/BiliTools/issues/8) by [@hqc8848](https://github.com/hqc8848)) 修复 Unix-like 系统上的权限问题
+- [`74fb013`](https://github.com/btjawa/BiliTools/commit/74fb0135c24f19cb86883c7a7ab913101d884fb6) [`3cab821`](https://github.com/btjawa/BiliTools/commit/3cab821efa71d8b9e55ee90e2d40ab0eb43b36d0) ([#13](https://github.com/btjawa/BiliTools/issues/13) by [@masterrite](https://github.com/masterrite)) 补充漫画接口的 `ultra_sign` 验证参数
+- [`fc1a15d`](https://github.com/btjawa/BiliTools/commit/fc1a15dd96b0328a5604495504cf81dce83268c9) 由于漫画接口不稳定，因此暂时关闭漫画解析入口
+- [`41582bc`](https://github.com/btjawa/BiliTools/commit/41582bc4c021b9601215c4c9643c29c6998f0d88) [`d929ed0`](https://github.com/btjawa/BiliTools/commit/d929ed0b8e634c499cb0afe0567023d9e4fd5364) 修复对 `geetest` `FFmpeg` 的错误处理
+
 ## [1.3.2-1] - 2025-01-19
 
 ### 修复
 
-修复 Unix-like 系统上的权限问题<br>
-修复 FFmpeg 的错误处理
+- 修复 Unix-like 系统上的权限问题
+- 修复 FFmpeg 的错误处理
 
 ## [1.3.1] - 2025-01-12
 
@@ -14,19 +27,19 @@
 
 ### 更新
 
-Linux支持<br>
-支持解析漫画<br>
-支持断点续传<br>
-支持下载完成时通知<br>
-支持自定义文件名格式<br>
-支持解析 XML 实时弹幕<br>
-支持自定义 Aria2c / DanmakuFactory 配置
+- Linux支持
+- 支持解析漫画
+- 支持断点续传
+- 支持下载完成时通知
+- 支持自定义文件名格式
+- 支持解析 XML 实时弹幕
+- 支持自定义 Aria2c / DanmakuFactory 配置
 
 ### 修复
 
-重构 Aria2c 队列管理逻辑<br>
-修复 FFmpeg 解析帧数与更新进度不正确问题<br>
-修复 ASS / ProtoBuf 方式实时弹幕解析不完整问题
+- 重构 Aria2c 队列管理逻辑
+- 修复 FFmpeg 解析帧数与更新进度不正确问题
+- 修复 ASS / ProtoBuf 方式实时弹幕解析不完整问题
 
 ## [1.3.0] - 2025-01-01
 
@@ -37,11 +50,10 @@ Linux支持<br>
 
 ### 更新
 
-更新内核版本至 Tauri v2.1.1<br>
-完全重构操作界面<br>
-macOS支持<br>
-明暗主题
-
+- 更新内核版本至 Tauri v2.1.1
+- 完全重构操作界面
+- macOS支持
+- 明暗主题
 - 下载相关
     - DASH / MP4
     - 支持收藏夹解析
@@ -57,12 +69,11 @@ macOS支持<br>
   
 ### 修复
 
-优化数据持久化逻辑<br>
-完善错误捕获与处理<br>
-规范数据处理方式<br>
-优化性能与内存效率<br>
-提高登录稳定性
-
+- 优化数据持久化逻辑
+- 完善错误捕获与处理
+- 规范数据处理方式
+- 优化性能与内存效率
+- 提高登录稳定性
 - 下载相关
     - 优化大量数据列表的滚动效率
     - 提升资源解析稳定性
