@@ -96,6 +96,7 @@ export default {
                 this.favorateList = list;
                 this.media_id = list[0].id;
                 this.favorateActive = true;
+                this.page = 1;
             } catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();

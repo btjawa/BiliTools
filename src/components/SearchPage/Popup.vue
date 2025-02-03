@@ -104,7 +104,7 @@ export default defineComponent({
         },
         general() {
             const info = this.playUrlInfo as DashInfo;
-            return [
+            return this.mediaType !== MediaType.Manga ? [
                 ...(info.video ? [{
                     content: [...new Set(info.video.map(item => item.id))],
                     id: 'dms', icon: 'fa-file-video'
@@ -121,7 +121,7 @@ export default defineComponent({
                     content: this.mediaMap.fmt.map(item => item.id),
                     id: 'fmt', icon: 'fa-file-code'
                 }] : []),
-            ]
+            ] : [];
         },
         others() {
             return [

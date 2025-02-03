@@ -184,17 +184,15 @@ export default {
 				this.mediaInfo = info;
 				this.mediaRootActive = true;
 				const start = Date.now();
-				const checkCondition = () => {
-					const scrollList = document.querySelector('.scrollList');
-					if (Date.now() - start > 1000) return;
-					if (scrollList) {
-						scrollList.scrollTo({
-							top: this.target * 50,
-							behavior: 'smooth'
-						});
-					} else setTimeout(checkCondition, 50);
-				};
-				checkCondition();
+				await new Promise(resolve => setTimeout(resolve, 100));
+				const scrollList = document.querySelector('.scrollList');
+				if (Date.now() - start > 1000) return;
+				if (scrollList) {
+					scrollList.scrollTo({
+						top: this.target * 50,
+						behavior: 'smooth'
+					});
+				}
 			} catch(err) {
 				err instanceof ApplicationError ? err.handleError() :
 				new ApplicationError(err as string).handleError();

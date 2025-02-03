@@ -252,8 +252,8 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                 tags: data.tags.map(tag => tag.name),
                 stat: {
                     play: null,
-                    reply: data.ep_list.map(episode => episode.comments).reduce((a, b) => a + b),
-                    like: data.ep_list.map(episode => episode.like_count).reduce((a, b) => a + b),
+                    reply: data.ep_list.length ? data.ep_list.map(episode => episode.comments).reduce((a, b) => a + b) : null,
+                    like: data.ep_list.length ? data.ep_list.map(episode => episode.like_count).reduce((a, b) => a + b) : null,
                     coin: null,
                     favorite: null,
                     share: null,
@@ -263,7 +263,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     name: data.authors[0].name,
                     mid: data.authors[0].id,
                 },
-                list: data.ep_list.reverse().map((episode, index) => ({
+                list: data.ep_list.length ? data.ep_list.reverse().map((episode, index) => ({
                     title: episode.title.trim() || episode.short_title,
                     cover: episode.cover.replace("http:", "https:"),
                     desc: data.evaluate,
@@ -273,7 +273,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     duration: episode.image_count,
                     ss_title: data.title,
                     index
-                })),
+                })) : [],
             }
         }
         default: throw 'No type named ' + type;
