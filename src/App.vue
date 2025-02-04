@@ -13,64 +13,60 @@
     </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-import { provide } from "vue";
+import { onMounted, provide, ref } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { ApplicationError, setEventHook } from "@/services/utils";
 import { fetchUser, checkRefresh } from "@/services/login";
 import { commands } from "@/services/backend";
 import { SearchPage } from "@/views";
+import { useRouter } from "vue-router";
+import store from "@/store";
 
-export default {
-    components: {
-        TitleBar,
-        ContextMenu,
-        SideBar,
-		Updater
-    },
-    methods: {
-        showMenu(e: MouseEvent) {
-            (this.$refs.contextMenu as InstanceType<typeof ContextMenu>).showMenu(e);
-        }
-    },
-    async mounted() {
-		this.$router.push("/");
-		setEventHook();
-		provide('trySearch', async (input?: string) => {
-			this.$router.push('/');
-			const start = Date.now();
-			const checkCondition = () => {
-				const page = this.$refs.page as InstanceType<typeof SearchPage>;
-				if (Date.now() - start > 1000) return;
-				if (page && typeof page.search === 'function') {
-					page.search(input);
-				} else setTimeout(checkCondition, 50);
-			};
-			checkCondition();
-		});
-        try {
-			const ready = await commands.ready();
-			if (ready.status === 'error') throw new ApplicationError(ready.error);
-			const secret = ready.data;
-			const init = await commands.init(secret);
-			if (init.status === 'error') throw new ApplicationError(init.error);
-			const data = init.data;
-			this.$store.commit('updateState', { 'data.secret': secret });
-			this.$store.commit('updateState', { 'queue.complete': data.downloads });
-			this.$store.commit('updateState', { 'data.hash': data.hash });
-			this.$store.commit('updateState', { 'data.resources_path': data.resources_path });
-			await checkRefresh();
-			await fetchUser();
-		} catch(err) {
-			err instanceof ApplicationError ? err.handleError() :
-			new ApplicationError(err as string).handleError();
-		} finally {
-			this.$store.commit('updateState', { 'data.inited': true });
-		}
-	}
+const page = ref<unknown | null>(null);
+const contextMenu = ref<unknown | null>(null);
+
+function showMenu(e: MouseEvent) {
+	(contextMenu.value as InstanceType<typeof ContextMenu>).showMenu(e);
 }
 
+onMounted(async () => {
+	const router = useRouter();
+	router.push("/");
+	setEventHook();
+	provide('trySearch', async (input?: string) => {
+		router.push('/');
+		const start = Date.now();
+		const checkCondition = () => {
+			const _page = page.value as InstanceType<typeof SearchPage>;
+			if (Date.now() - start > 1000) return;
+			if (_page && typeof _page.search === 'function') {
+				_page.search(input);
+			} else setTimeout(checkCondition, 50);
+		};
+		checkCondition();
+	});
+	try {
+		const ready = await commands.ready();
+		if (ready.status === 'error') throw new ApplicationError(ready.error);
+		const secret = ready.data;
+		const init = await commands.init(secret);
+		if (init.status === 'error') throw new ApplicationError(init.error);
+		const data = init.data;
+		store.commit('updateState', { 'data.secret': secret });
+		store.commit('updateState', { 'queue.complete': data.downloads });
+		store.commit('updateState', { 'data.hash': data.hash });
+		store.commit('updateState', { 'data.resources_path': data.resources_path });
+		await checkRefresh();
+		await fetchUser();
+	} catch(err) {
+		err instanceof ApplicationError ? err.handleError() :
+		new ApplicationError(err as string).handleError();
+	} finally {
+		store.commit('updateState', { 'data.inited': true });
+	}
+})
 </script>
 
 <style lang="scss">

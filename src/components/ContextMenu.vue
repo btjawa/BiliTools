@@ -1,6 +1,6 @@
 <template>
 <div v-show="active" @contextmenu.prevent @transitionend.prevent
-    class="context-menu" :style="{ opacity: Number(active), top: pos.y + 'px', left: pos.x + 'px' }"
+    class="context-menu" :style="{ opacity: Number(active), top: pos.y + 'px', left: pos.x + 'px' }" ref="$el"
 >
     <button @click="handleAction('cut')" class="context-menu__item">
         <i class="fa-light fa-cut"></i>
@@ -16,74 +16,75 @@
     </button>
 </div></template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script setup lang="ts">
+import { onMounted, ref, watch, nextTick } from 'vue';
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
 
-export default defineComponent({
-    mounted() {
-        document.addEventListener('click', this.hideMenu);
-        document.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.keyCode === 27) this.hideMenu();
-        })
-    },
-    data() {
-        return {
-            active: false,
-            pos: { x: 0, y: 0 },
-            activeElement: null as HTMLInputElement | HTMLTextAreaElement | null,
-            selection: '',
-        }
-    },
-    watch: {
-        active(_) {
-            this.$el.style.transition = 'none';
-            this.$nextTick(() => requestAnimationFrame(() => {
-                this.$el.style.transition = 'top 0.1s, left 0.1s';
-            }));
-        }
-    },
-    methods: {
-        async handleAction(action: string) {
-            switch (action) {
-                case 'cut':
-                    return document.execCommand('cut');
-                case 'copy':
-                    return document.execCommand('copy');
-                case 'paste':
-                    return this.handleTextUpdate(this.activeElement, await readText());
-            }
-        },
-        hideMenu() {
-            this.active = false;
-        },
-        handleTextUpdate(element: HTMLInputElement | HTMLTextAreaElement | null, text: string = '') {
-            if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
-                const start = element.selectionStart ?? 0;
-                const end = element.selectionEnd ?? 0;
-                element.value = element.value.substring(0, start) + text + element.value.substring(end);
-                const pos = start + text.length;
-                element.setSelectionRange(pos, pos);
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                return element.value.substring(start, end) || this.selection;
-            }
-            return text;
-        },
-        showMenu(e: MouseEvent) {
-            this.activeElement = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
-            this.selection = window.getSelection()?.toString() || "";
-            this.active = true;
-            this.$nextTick(() => {
-                const menuHeight = this.$el.offsetHeight;
-                const menuWidth = this.$el.offsetWidth;
-                this.pos = {
-                    x: e.clientX + menuWidth > document.body.clientWidth ? e.clientX - menuWidth - 1 : e.clientX + 1,
-                    y: e.clientY + menuHeight > document.body.clientHeight ? e.clientY - menuHeight - 1 : e.clientY + 1,
-                };
-            });
-        }
-    }
+const $el = ref<HTMLElement>();
+const active = ref(false);
+const pos = ref({
+    x: 0, y: 0
 });
+const activeElement = ref<HTMLInputElement | HTMLTextAreaElement | null>(null);
+const selection = ref(String());
+
+onMounted(() => {
+    const hideMenu = () => active.value = false;
+    document.addEventListener('click', hideMenu);
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.keyCode === 27) hideMenu();
+    })
+});
+
+watch(active, () => {
+    if (!$el.value) return;
+    $el.value.style.transition = 'none';
+    nextTick(() => requestAnimationFrame(() => {
+        if (!$el.value) return;
+        $el.value.style.transition = 'top 0.1s, left 0.1s';
+    }));
+})
+
+async function handleAction(action: string) {
+    switch (action) {
+        case 'cut':
+            return document.execCommand('cut');
+        case 'copy':
+            return document.execCommand('copy');
+        case 'paste':
+            return handleTextUpdate(activeElement.value, await readText());
+    }
+}
+
+function handleTextUpdate(element: HTMLInputElement | HTMLTextAreaElement | null, text: string = '') {
+    if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
+        const start = element.selectionStart ?? 0;
+        const end = element.selectionEnd ?? 0;
+        element.value = element.value.substring(0, start) + text + element.value.substring(end);
+        const pos = start + text.length;
+        element.setSelectionRange(pos, pos);
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        return element.value.substring(start, end) || selection.value;
+    }
+    return text;
+}
+
+function showMenu(e: MouseEvent) {
+    activeElement.value = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+    selection.value = window.getSelection()?.toString() || "";
+    active.value = true;
+    nextTick(() => {
+        if (!$el.value) return;
+        const menuHeight = $el.value.offsetHeight;
+        const menuWidth = $el.value.offsetWidth;
+        pos.value = {
+            x: e.clientX + menuWidth > document.body.clientWidth ? e.clientX - menuWidth - 1 : e.clientX + 1,
+            y: e.clientY + menuHeight > document.body.clientHeight ? e.clientY - menuHeight - 1 : e.clientY + 1,
+        };
+    });
+}
+
+defineExpose({ showMenu });
 </script>
 
 <style scoped lang="scss">

@@ -4,7 +4,7 @@
         {{ $t('favorites.title') }}
     </h1>
     <hr />
-    <Empty :expression="favorateList.length === 0" text="home.empty" class="absolute"/>
+    <Empty :exp="favorateList.length === 0" text="home.empty" class="absolute"/>
     <div class="setting-page__sub flex w-full h-[calc(100%-74px)]" :class="{ 'active': favorateActive }">
         <div class="flex flex-col flex-1 mr-6" ref="subPage">
             <div class="mb-4">

@@ -272,12 +272,11 @@ export async function parseId(input: string) {
             'mc': MediaType.Manga
         };
         const prefix = input.slice(0, 2).toLowerCase() as keyof typeof map;
-        const id = prefix === 'av' || prefix === 'au' ? input.slice(2) : input;
-        return { id: id, type: map[prefix] || null };
+        return { id: input, type: map[prefix] || null };
     }
 }
 
-export function debounce(fn: any, wait: number) {
+export function debounce(fn: Function, wait: number) {
     let bouncing = false;
     return function(this: any, ...args: any[]) {
         if (bouncing) return null;

@@ -22,60 +22,38 @@
 </div>
 </div></template>
 
-<script lang="ts">
-import { defineComponent, PropType } from 'vue';
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
+import store from '@/store';
 
-export default defineComponent({
-    components: {
-        VueDraggable
-    },
-    data() {
-        return {
-            store: this.$store.state,
-            sources: [] as { id: string | number, name: string | number }[],
-            target: [] as { id: string | number, name: string | number }[],
-        }
-    },
-    props: {
-        placeholders: {
-            type: Array as PropType<{ id: number | string, name: string | number }[]>,
-            required: true,
-        },
-        update: {
-            type: Function as PropType<(key: string, data: any) => any>,
-            required: true,
-        },
-        shorten: {
-            type: String as PropType<string>,
-            required: true,
-        },
-        data: {
-            type: String as PropType<string>,
-            required: true,
-        },
-    },
-    computed: {
-        fa_dyn() {
-            return this.store.settings.theme === 'light' ? 'fa-light' : 'fa-solid';
-        }
-    },
-    methods: {
-        onUpdate(e: any) {
-            console.log(e.data)
-            if (!this.target.length) this.target.push(e.data);
-            this.target = Array.from(new Map(this.target.map(item => [item.id, item])).values());
-            this.update(this.data, this.target.map(item => item.id).join('_'));
-        },
-        onSourceAdd() { this.sources = this.placeholders },
-    },
-    mounted() {
-        this.onSourceAdd();
-        this.target = this.store.settings.filename.split('_').map((id) => {
-            return { id, name: this.placeholders.find(item => item.id === id)?.name || id };
-        });
-    },
-});
+const sources = ref<{ id: string | number, name: string | number }[]>([]);
+const target = ref<{ id: string | number, name: string | number }[]>([]);
+
+const props = defineProps<{
+    placeholders: { id: number | string, name: string | number }[],
+    update: (key: string, data: any) => any,
+    shorten: string,
+    data: string,
+}>();
+
+function onUpdate(e: any) {
+    console.log(e.data)
+    if (!target.value.length) target.value.push(e.data);
+    target.value = Array.from(new Map(target.value.map(item => [item.id, item])).values());
+    props.update(props.data, target.value.map(item => item.id).join('_'));
+}
+
+function onSourceAdd() {
+    sources.value = props.placeholders;
+}
+
+onMounted(() => {
+    onSourceAdd();
+    target.value = store.state.settings.filename.split('_').map((id) => {
+        return { id, name: props.placeholders.find(item => item.id === id)?.name || id };
+    });
+})
 </script>
 
 <style scoped lang="scss">

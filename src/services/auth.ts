@@ -49,7 +49,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
 }
 
 export async function captcha(gt: string, challenge: string): Promise<login.Captcha> {
-    const settings_lang = store.state.settings.language;
+    const lang = store.state.settings.language;
     return new Promise(async (resolve, reject) => {
         initGeetest({
             gt,
@@ -58,11 +58,7 @@ export async function captcha(gt: string, challenge: string): Promise<login.Capt
             new_captcha: true,
             product: "bind",
             width: "300px",
-            lang: (() => { if (settings_lang.startsWith('zh')) {
-                return settings_lang;
-            } else {
-                return settings_lang.slice(0, 2);
-            }})() as GeetestOptions['lang'],
+            lang: (lang.startsWith('zh') ? lang : lang.slice(0, 2)) as GeetestOptions['lang'],
             https: true,
         }, function (captchaObj) {
             captchaObj.onReady(function () {

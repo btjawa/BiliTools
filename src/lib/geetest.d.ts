@@ -39,4 +39,4 @@ export interface CaptchaInstance {
     destroy(): this;
 }
 
-export function initGeetest(config: ConfigOptions, callback: (captchaObj: CaptchaInstance) => void): void;
+export function initGeetest(config: GeetestOptions, callback: (captchaObj: CaptchaInstance) => void): void;

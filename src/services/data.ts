@@ -16,23 +16,23 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
     switch(type) {
         case Types.MediaType.Video:
             url += '/x/web-interface/view/detail';
-            params = { [`${isNaN(+id) ? 'bv' : 'a'}id`]: id }
+            params = id.toLowerCase().startsWith('bv') ? { bvid: id } : { aid: _id };
             break;
         case Types.MediaType.Bangumi:
             url += '/pgc/view/web/season';
-            params = { [`${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id`]: _id }
+            params = id.toLowerCase().startsWith('ss') ? { season_id: _id } : { ep_id: _id };
             break;
         case Types.MediaType.Lesson:
             url += '/pugv/view/web/season';
-            params = { [`${id.toLowerCase().startsWith('ss') ? 'season' : 'ep'}_id`]: _id }
+            params = id.toLowerCase().startsWith('ss') ? { season_id: _id } : { ep_id: _id };
             break;
         case Types.MediaType.Music:
             url = "https://www.bilibili.com/audio/music-service-c/web/song/info";
-            params = { sid: id }
+            params = { sid: _id };
             break;
         case Types.MediaType.Manga:
             url = "https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail";
-            params = { device: "pc", platform: "web", nov: 25 }
+            params = { device: "pc", platform: "web", nov: 25 };
             break;
     }
     const body = await tryFetch(url, {

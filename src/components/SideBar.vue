@@ -1,10 +1,10 @@
 <template>
 <ul @contextmenu.prevent
-	class="sidebar absolute flex flex-col py-2.5 px-2.5 w-[61px] h-screen bottom-0 bg-transparent transition-opacity"
+	class="sidebar absolute flex flex-col py-2.5 px-2.5 w-[61px] h-screen bottom-0 bg-transparent transition-opacity" ref="$el"
 >
     <router-link to="/user-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/user-page') }" class="cursor-pointer"
-            @click="store.data.inited ? navigate() : new ApplicationError($t('error.waitInit'), { noStack: true }).handleError()">
+            @click="store.state.data.inited ? navigate() : new ApplicationError($t('error.waitInit'), { noStack: true }).handleError()">
             <img class="w-9 h-9 rounded-[50%]" :src="avatarUrl" raggable="false" />
         </li>
     </router-link>
@@ -40,35 +40,31 @@
     </router-link>
 </ul></template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script setup lang="ts">
+import { onMounted, computed, ref } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { ApplicationError } from '@/services/utils';
 import { commands } from '@/services/backend';
-export default defineComponent({
-    methods: {
-        isActive(path: string) { return this.$route.path == path },
-        async setTheme() {
-            const newTheme = this.store.settings.theme === 'dark' ? 'light' : 'dark';
-            const result = await commands.rwConfig('write', { theme: newTheme }, this.store.data.secret);
-            if (result.status === 'error') throw new ApplicationError(result.error);
-        },
-        ApplicationError
-    },
-	data() {
-		return {
-			store: this.$store.state,
-		}
-	},
-    computed: {
-        avatarUrl(): string {
-            return this.store.user.isLogin ? this.store.user.avatar : new URL('@/assets/img/profile/default-avatar.jpg', import.meta.url).href;
-        },
-    },
-    async mounted() {
-        if (osType() === 'macos') this.$el.style.paddingTop = '30px';
-    }
+import { useRoute } from 'vue-router';
+import store from '@/store';
+
+const $el = ref<HTMLElement>();
+const isActive = computed(() => {
+    return (path: string) => useRoute().path == path;
 });
+const avatarUrl = computed(() => {
+    return store.state.user.isLogin ? store.state.user.avatar : new URL('@/assets/img/profile/default-avatar.jpg', import.meta.url).href;
+});
+
+async function setTheme() {
+    const newTheme = store.state.settings.theme === 'dark' ? 'light' : 'dark';
+    const result = await commands.rwConfig('write', { theme: newTheme }, store.state.data.secret);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+}
+
+onMounted(() => {
+    if (osType() === 'macos' && $el.value) $el.value.style.paddingTop = '30px';
+})
 </script>
 
 <style scoped lang="scss">

@@ -17,7 +17,7 @@
 		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
 		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open />
-        <Empty v-if="mediaInfo.list" :expression="mediaInfo.list.length === 0" text="home.empty" />
+        <Empty v-if="mediaInfo.list" :exp="mediaInfo.list.length === 0" text="home.empty" />
 		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="mediaInfo?.stein_gate">
 			<template v-for="story in mediaInfo.stein_gate.story_list">
 			<button class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"

@@ -22,48 +22,40 @@
     </div>
 </div></template>
 
-<script lang="ts">
-import { defineComponent, PropType } from 'vue';
+<script setup lang="ts">
 import { stat } from '@/services/utils';
 import { MediaInfo } from '@/types/data.d';
+import { nextTick, onMounted, ref, watch } from 'vue';
 
-export default defineComponent({
-    props: {
-        info: {
-            type: Object as PropType<MediaInfo>,
-            required: true,
-        },
-        open: {
-            type: Function as PropType<(path: string) => void>,
-            required: true,
-        },
-    },
-    data() {
-        return {
-            iconMap: {
-				'play': 'bcc-icon-icon_list_player_x1',
-				'danmaku': 'bcc-icon-danmuguanli',
-				'reply': 'bcc-icon-pinglunguanli',
-				'like': 'bcc-icon-ic_Likesx',
-				'coin': 'bcc-icon-icon_action_reward_n_x',
-				'favorite': 'bcc-icon-icon_action_collection_n_x',
-				'share': 'bcc-icon-icon_action_share_n_x'
-			},
-            stat
-        }
-    },
-    watch: {
-        info(_) {
-            this.$nextTick(() => {
-                const title = this.$refs.title as HTMLElement;
-                const desc = this.$refs.desc as HTMLElement;
-                const titleHeight = title.offsetHeight;
-                const lineHeight = parseFloat(getComputedStyle(title).lineHeight);
-                desc.style.webkitLineClamp = titleHeight <= lineHeight ? '3' : '2';
-            });
-        }
-    }
-});
+const props = defineProps<{
+    info: MediaInfo,
+    open: (path: string) => void
+}>();
+
+const title = ref<HTMLElement>();
+const desc = ref<HTMLElement>();
+
+const iconMap = {
+    'play': 'bcc-icon-icon_list_player_x1',
+    'danmaku': 'bcc-icon-danmuguanli',
+    'reply': 'bcc-icon-pinglunguanli',
+    'like': 'bcc-icon-ic_Likesx',
+    'coin': 'bcc-icon-icon_action_reward_n_x',
+    'favorite': 'bcc-icon-icon_action_collection_n_x',
+    'share': 'bcc-icon-icon_action_share_n_x'
+}
+
+function handleDesc() {
+    nextTick(() => {
+        if (!title.value || !desc.value) return;
+        const titleHeight = title.value.offsetHeight;
+        const lineHeight = parseFloat(getComputedStyle(title.value).lineHeight);
+        desc.value.style.webkitLineClamp = titleHeight <= lineHeight ? '3' : '2';
+    });
+}
+
+onMounted(handleDesc);
+watch(() => props.info, handleDesc, { deep: true });
 </script>
 
 <style scoped lang="scss">

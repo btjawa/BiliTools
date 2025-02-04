@@ -9,7 +9,7 @@
     <hr />
     <div class="setting-page__sub flex w-full h-full">
         <div class="flex flex-col flex-1 mr-6" ref="subPage">
-            <Empty :expression="settings.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
+            <Empty :exp="settings.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
             <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
                 <h3 v-if="item.name" class="font-semibold">
                     <i class="mr-1" :class="[fa_dyn, item.icon]"></i>

@@ -49,7 +49,7 @@
         >
             <i :class="[fa_dyn, 'fa-download']"></i><span>{{ recycleI18n()[3] }}</span>
         </button>
-        <Empty :expression="Object.values(store.queue)[queuePage].length === 0" text="downloads.empty" />
+        <Empty :exp="Object.values(store.queue)[queuePage].length === 0" text="downloads.empty" />
     </div>
 </div></template>
 

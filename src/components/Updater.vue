@@ -1,7 +1,7 @@
 <template>
-<div class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9">
-    <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>{{ $t('updater.title') }}<span class="desc ml-3">{{ $t('updater.current', [update?.currentVersion]) }}</span></h1>
-    <h3 class="text-lg">BiliTools v{{ update?.version }}<span class="desc ml-3">{{ update?.date }}</span></h3>
+<div class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9" :class="{ active }">
+    <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>{{ $t('updater.title') }}<span class="desc ml-3">{{ $t('updater.current', [updateData?.currentVersion]) }}</span></h1>
+    <h3 class="text-lg">BiliTools v{{ updateData?.version }}<span class="desc ml-3">{{ updateData?.date }}</span></h3>
     <span class="desc">{{ $t('updater.disableUpdate') }}</span>
     <markdown-style v-html="body"
         class="updater-body leading-7 max-h-[calc(100%-165px)] overflow-auto mt-3 mb-6"
@@ -9,17 +9,17 @@
     <div ref="updaterAction"
         class="updater-action inline-block relative transition-opacity z-[2]"
     >
-        <button @click="handleAction(true)" class="primary-color">
+        <button @click="doUpdate" class="primary-color">
             <i class="fa-solid fa-download"></i>
             <span>{{ $t('updater.install') }}</span>
         </button>
-        <button @click="handleAction()">{{ $t('common.cancel') }}</button>
+        <button @click="cancel">{{ $t('common.cancel') }}</button>
     </div>
-    <div ref="updaterProgress"
-        class="updater-progress opacity-0 inline-block absolute z-[1] left-12 transition-opacity leading-8"
+    <div ref="progress"
+        class="progress opacity-0 inline-block absolute z-[1] left-12 transition-opacity leading-8"
     >
         <div :style="'--progress-width: ' + updateProgress.bytes * 160 / updateProgress.length + 'px;'"
-            class="updater-progress-bar inline-block mr-3 relative h-1.5 bg-[color:var(--block-color)] w-40 rounded-[3px]"
+            class="progress-bar inline-block mr-3 relative h-1.5 bg-[color:var(--block-color)] w-40 rounded-[3px]"
         ></div>
         <span class="inline-block min-w-[70px]">{{
             updateProgress.length ? 
@@ -30,116 +30,109 @@
 </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, markRaw } from 'vue';
+<script setup lang="ts">
 import { ApplicationError, formatBytes, formatProxyUrl } from '@/services/utils';
-import { check as checkUpdate, Update } from '@tauri-apps/plugin-updater';
+import { markRaw, reactive, ref, watch } from 'vue';
+import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { marked } from 'marked';
+import store from '@/store';
+import i18n from '@/i18n';
 
-export default defineComponent({
-    data() {
-        return {
-            update: null as Update | null,
-            body: String(),
-            mainElement: {} as HTMLElement,
-            sidebarElement: {} as HTMLElement,
-            updateProgress: {
-                bytes: 0,
-                length: 1,
-                completed: false,
-            },
-            store: this.$store.state
-        }
-    },
-    computed: {
-        auto_check_update() {
-            return this.store.settings.auto_check_update;
-        }
-    },
-    watch: {
-        async auto_check_update(v, _) {
-            if (!v) return null;
-            try {
-                await this.checkUpdate();
-            } catch(err) {
-                new ApplicationError(err as string + '\n' + this.$t('error.tryManualUpdate')).handleError();
-            }
-        }
-    },
-    methods: {
-        formatBytes,
-        async checkUpdate() {
-            const update = await checkUpdate({
-                ...(this.store.settings.proxy.addr && {
-                    proxy: formatProxyUrl(this.store.settings.proxy)
-                })
-            });
-            console.log('Update:', update);
-            if (update?.available) {
-                this.update = markRaw(update);
-                this.body = await marked.parse(this.update.body || '');
-                this.body = this.body.replace(/<a href=/g, '<a target="_blank" href=');
-                this.mainElement = (document.querySelector('.main') as HTMLElement);
-                this.sidebarElement = (document.querySelector('.sidebar') as HTMLElement);
-                this.mainElement.animate(
-                    [ { maskPosition: '0' },
-                        { maskPosition: '-100vw' } ],
-                    { duration: 600,
-                        easing: 'cubic-bezier(0.2,1,1,1)',
-                        fill: 'forwards' } );
-                this.sidebarElement.style.opacity = '0';
-                this.sidebarElement.style.pointerEvents = 'none';
-                setTimeout(() => {
-                    this.$el.classList.add('active');
-                }, 400);
-            }
-        },
-        async handleAction(action?: boolean) {
-            if (action) {
-                const updaterAction = (this.$refs.updaterAction as HTMLElement);
-                updaterAction.style.opacity = '0';
-                updaterAction.style.pointerEvents = 'none';
-                (this.$refs.updaterProgress as HTMLElement).classList.add('active');
-                try {
-                    await this.update?.downloadAndInstall((event) => {
-                        switch (event.event) {
-                        case 'Started':
-                            this.updateProgress.length = event.data?.contentLength || 0;
-                            console.log(`started downloading ${event.data.contentLength} bytes`);
-                            break;
-                        case 'Progress':
-                            this.updateProgress.bytes += event.data.chunkLength;
-                            console.log(`downloaded ${this.updateProgress.bytes} from ${this.updateProgress.length}`);
-                            break;
-                        case 'Finished':
-                            this.updateProgress.completed = true;
-                            console.log('download finished');
-                            break;
-                        }
-                    });
-                    await relaunch();
-                } catch(err) {
-                    new ApplicationError(err as string).handleError();
-                }
-            } else {
-                this.mainElement.animate(
-                    [ { maskPosition: '-100vw' },
-                        { maskPosition: '0' } ],
-                    { duration: 600,
-                        easing: 'cubic-bezier(0.2,1,1,1)',
-                        fill: 'forwards' } );
-                this.sidebarElement.style.opacity = '1';
-                this.sidebarElement.style.pointerEvents = 'all';
-                this.$el.classList.remove('active');
-            }
-        }
-    }
+const updateData = ref<Update | null>(null);
+const body = ref(String());
+const active = ref(false);
+const updaterAction = ref<HTMLElement>();
+const progress = ref<HTMLElement>();
+const mainElement = ref<HTMLElement>();
+const sidebarElement = ref<HTMLElement>();
+
+const updateProgress = reactive({
+  bytes: 0,
+  length: 1,
+  completed: false,
 });
+
+watch(() => store.state.settings.auto_check_update,
+    async (v, _) => {
+        if (!v) return null;
+        try {
+            await checkUpdate();
+        } catch(err) {
+            new ApplicationError(err as string + '\n' + i18n.global.t('error.tryManualUpdate')).handleError();
+        }
+    }, { deep: true }
+);
+
+async function checkUpdate() {
+    const update = await check({
+        ...(store.state.settings.proxy.addr && {
+            proxy: formatProxyUrl(store.state.settings.proxy)
+        })
+    });
+    console.log('Update:', update);
+    if (update?.available) {
+        updateData.value = markRaw(update);
+        body.value = await marked.parse(update.body || '');
+        body.value = body.value.replace(/<a href=/g, '<a target="_blank" href=');
+        mainElement.value = (document.querySelector('.main') as HTMLElement);
+        sidebarElement.value = (document.querySelector('.sidebar') as HTMLElement);
+        mainElement.value.animate(
+            [ { maskPosition: '0' },
+                { maskPosition: '-100vw' } ],
+            { duration: 600,
+                easing: 'cubic-bezier(0.2,1,1,1)',
+                fill: 'forwards' } );
+        sidebarElement.value.style.opacity = '0';
+        sidebarElement.value.style.pointerEvents = 'none';
+        setTimeout(() => active.value = true, 400);
+    }
+}
+
+async function doUpdate() {
+    if (!updaterAction.value || !progress.value) return;
+    updaterAction.value.style.opacity = '0';
+    updaterAction.value.style.pointerEvents = 'none';
+    progress.value.classList.add('active');
+    try {
+        await updateData.value?.downloadAndInstall((event) => {
+            switch (event.event) {
+            case 'Started':
+                updateProgress.length = event.data?.contentLength || 0;
+                console.log(`started downloading ${event.data.contentLength} bytes`);
+                break;
+            case 'Progress':
+                updateProgress.bytes += event.data.chunkLength;
+                console.log(`downloaded ${updateProgress.bytes} from ${updateProgress.length}`);
+                break;
+            case 'Finished':
+                updateProgress.completed = true;
+                console.log('download finished');
+                break;
+            }
+        });
+        await relaunch();
+    } catch(err) {
+        new ApplicationError(err as string).handleError();
+    }
+}
+
+function cancel() {
+    if (!sidebarElement.value) return;
+    mainElement.value?.animate(
+        [ { maskPosition: '-100vw' },
+            { maskPosition: '0' } ],
+        { duration: 600,
+            easing: 'cubic-bezier(0.2,1,1,1)',
+            fill: 'forwards' } );
+    sidebarElement.value.style.opacity = '1';
+    sidebarElement.value.style.pointerEvents = 'all';
+    active.value = false;
+}
 </script>
     
 <style scoped lang="scss">
-.updater.active, .updater-progress.active {
+.updater.active, .progress.active {
     opacity: 1;
     pointer-events: all;
 }
@@ -154,7 +147,7 @@ button {
         margin-right: 8px;
     }
 }
-.updater-progress-bar::after {
+.progress-bar::after {
     content: '';
     position: absolute;
     width: var(--progress-width);
