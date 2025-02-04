@@ -7,8 +7,8 @@
         <h3 @click="queuePage = 2" :class="queuePage !== 2 || 'active'">{{ $t('downloads.tab.complete') }}</h3>
     </div>
     <hr class="w-full my-4 flex-shrink-0" />
-    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-full gap-0.5 overflow-auto" ref="queuePage">
-        <div v-for="item in Object.values(store.queue)[queuePage]"
+    <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-full gap-0.5 overflow-auto" ref="$queuePage">
+        <div v-for="item in Object.values(store.state.queue)[queuePage]"
             class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
         >
             <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
@@ -24,7 +24,7 @@
             </div>
             <span class="absolute top-3 right-4 desc text">{{ item.info.id }}</span>
             <div class="progress flex items-center justify-center">
-                <span class="pr-2 min-w-fit text-sm">{{ queuePage === 2 ? recycleI18n()[1] : (statusList[item.id]?.message ?? recycleI18n()[2]) }}</span>
+                <span class="pr-2 min-w-fit text-sm">{{ queuePage === 2 ? $t('downloads.label.complete') : (statusList[item.id]?.message ?? $t('downloads.label.waiting')) }}</span>
                 <div :style="`--progress-width: ${queuePage === 2 ? 100.0 : (statusList[item.id]?.progress ?? 0)}%`"
                     class="progress-bar relative h-1.5 rounded-[3px] mx-2 bg-[color:var(--button-color)] w-full"
                 ></div>
@@ -38,172 +38,157 @@
                     <button @click="openPath(item.output, { parent: true })">
                         <i :class="[fa_dyn, 'fa-folder-open']"></i>
                     </button>
-                    <button @click="removeTask(item.id, Object.keys(store.queue)[queuePage])">
+                    <button @click="removeTask(item.id, Object.keys(store.state.queue)[queuePage])">
                         <i :class="[fa_dyn, 'fa-trash']"></i>
                     </button>
                 </div>
             </div>
         </div>
-        <button v-if="queuePage === 0 && store.queue.waiting.length > 0" @click="processQueue()"
+        <button v-if="queuePage === 0 && store.state.queue.waiting.length > 0" @click="processQueue()"
             class="absolute right-6 bottom-6"
         >
-            <i :class="[fa_dyn, 'fa-download']"></i><span>{{ recycleI18n()[3] }}</span>
+            <i :class="[fa_dyn, 'fa-download']"></i><span>{{ $t('downloads.label.download') }}</span>
         </button>
-        <Empty :exp="Object.values(store.queue)[queuePage].length === 0" text="downloads.empty" />
+        <Empty :exp="Object.values(store.state.queue)[queuePage].length === 0" text="downloads.empty" />
     </div>
 </div></template>
 
-<script lang="ts">
+<script setup lang="ts">
 import { ApplicationError } from '@/services/utils';
 import { commands, DownloadEvent } from '@/services/backend';
 import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
 import { Empty } from '@/components';
 import * as shell from '@tauri-apps/plugin-shell';
+import { computed, nextTick, ref, watch } from 'vue';
+import store from '@/store';
+import i18n from '@/i18n';
 
-interface Status {
+const statusList = ref<{ [id: string]: {
   gid: string;
   message: string;
   status: DownloadEvent['status'];
   progress: number;
   paused: boolean;
+} }>({});
+
+const $queuePage = ref<HTMLElement>();
+const queuePage = computed({
+    get: () => store.state.status.queuePage,
+    set: (v: number) => store.state.status.queuePage = v,
+})
+const fa_dyn = computed(() => store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light');
+
+watch(queuePage, (oldPage, newPage) => {
+    if (oldPage !== newPage) {
+        if (!$queuePage.value) return;
+        $queuePage.value.style.transition = 'none';
+        $queuePage.value.style.opacity = '0';
+        nextTick(() => requestAnimationFrame(() => {
+            if (!$queuePage.value) return;
+            $queuePage.value.style.transition = 'opacity 0.3s';
+            $queuePage.value.style.opacity = '1';
+        }));
+    }
+})
+
+async function togglePause(id: string) {
+    try {
+        const status = statusList.value[id];
+        if (!status) return;
+        const result = await commands.togglePause(!status.paused, status.gid);
+        if (result.status === 'error') throw new ApplicationError(result.error);
+        status.paused = !status.paused;
+    } catch (err) {
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
+    }
 }
+async function removeTask(id: string, queue: string) {
+    try {
+        const status = statusList.value[id];
+        if (status) {
+            const queueType = (() => { switch(status.status) {
+                case 'Started': return 'doing';
+                case 'Progress': return 'doing';
+                case 'Finished': return 'complete';
+                case 'Error': return 'doing';
+            }})();
+            const result = await commands.removeTask(id, queueType, status.gid);
+            if (result.status === 'error') throw new ApplicationError(result.error);
+            return result.data;
+        }
+        const queueType = queue as keyof typeof store.state.queue;
+        const result = await commands.removeTask(id, queueType, null);
+        if (result.status === 'error') throw new ApplicationError(result.error);
+    } catch (err) {
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
+    }
+}
+async function processQueue() {
+    queuePage.value = 1;
+    try {
+        const event = new Channel<DownloadEvent>();
+        event.onmessage = (message) => {
+            switch(message.status) {
+            case 'Started': 
+                statusList.value[message.id] = {
+                    gid: message.gid,
+                    message: (() => {
+                        const t = i18n.global.t;
+                        switch(message.media_type) {
+                            case 'video': 
+                                return t('downloads.label.video'); 
+                            case 'audio': 
+                                return t('downloads.label.audio'); 
+                            case 'merge': 
+                                return t('downloads.label.merge'); 
+                            default: return message.media_type;
+                        }
+                    })(),
+                    status: message.status,
+                    progress: 0.0,
+                    paused: false,
+                };
+                break;
 
-export default {
-    components: {
-        Empty
-    },
-    data() {
-        return {
-            store: this.$store.state,
-            statusList: {} as { [id: string]: Status },
-        }
-    },
-    computed: {
-        queuePage: {
-            get() { return this.store.status.queuePage },
-            set(v: number) { this.store.status.queuePage = v }
-        },
-        fa_dyn() {
-			return this.$store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
-		},
-    },
-    watch: {
-        queuePage(oldPage, newPage) {
-            if (oldPage !== newPage) {
-                const queuePage = this.$refs.queuePage as HTMLElement;
-                queuePage.style.transition = 'none';
-                queuePage.style.opacity = '0';
-                this.$nextTick(() => requestAnimationFrame(() => {
-                    queuePage.style.transition = 'opacity 0.3s';
-                    queuePage.style.opacity = '1';
-                }));
-            }
-        }
-    },
-    methods: {
-        async togglePause(id: string) {
-            try {
-                const status = this.statusList[id];
-                if (!status) return;
-                const result = await commands.togglePause(!status.paused, status.gid);
-                if (result.status === 'error') throw new ApplicationError(result.error);
-                status.paused = !status.paused;
-            } catch (err) {
-                err instanceof ApplicationError ? err.handleError() :
-                new ApplicationError(err as string).handleError();
-            }
-        },
-        async removeTask(id: string, queue: string) {
-            try {
-                const status = this.statusList[id];
+            case 'Progress':
+                const status = statusList.value[message.id];
                 if (status) {
-                    const queueType = (() => { switch(status.status) {
-                        case 'Started': return 'doing';
-                        case 'Progress': return 'doing';
-                        case 'Finished': return 'complete';
-                        case 'Error': return 'doing';
-                    }})();
-                    const result = await commands.removeTask(id, queueType, status.gid);
-                    if (result.status === 'error') throw new ApplicationError(result.error);
-                    return result.data;
-                }
-                const queueType = queue as keyof typeof this.store.queue;
-                const result = await commands.removeTask(id, queueType, null);
-                if (result.status === 'error') throw new ApplicationError(result.error);
-            } catch (err) {
-                err instanceof ApplicationError ? err.handleError() :
-                new ApplicationError(err as string).handleError();
-            }
-        },
-        recycleI18n() {
-			return [
-                '',
-                this.$t('downloads.label.complete'),
-                this.$t('downloads.label.waiting'),
-                this.$t('downloads.label.download'),
-            ];
-		},
-        async processQueue() {
-            this.queuePage = 1;
-            try {
-				const event = new Channel<DownloadEvent>();
-                event.onmessage = (message) => {
-                    switch(message.status) {
-                    case 'Started': 
-                        this.statusList[message.id] = {
-                            gid: message.gid,
-                            message: (() => {
-                                switch(message.media_type) {
-                                    case 'video': 
-                                        return this.$t('downloads.label.video'); 
-                                    case 'audio': 
-                                        return this.$t('downloads.label.audio'); 
-                                    case 'merge': 
-                                        return this.$t('downloads.label.merge'); 
-                                    default: return message.media_type;
-                                }
-                            })(),
-                            status: message.status,
-                            progress: 0.0,
-                            paused: false,
-                        };
-                        break;
-
-                    case 'Progress':
-                        const status = this.statusList[message.id];
-                        if (status) {
-                            status.progress = message.chunk_length / message.content_length * 100;
-                            if ( Number.isNaN(status.progress) || status.progress === Infinity ) {
-                                status.progress = 0.0;
-                            }
-                            status.status = message.status;
-                        }
-                        break;
-
-                    case 'Finished':
-                        const _status = this.statusList[message.id];
-                        if (_status) {
-                            _status.progress = 100.0;
-                            _status.status = message.status;
-                        }
-                        break;
-
-                    case 'Error':
-                        new ApplicationError(message.message, { code: message.code }).handleError();
-                        break;
+                    status.progress = message.chunk_length / message.content_length * 100;
+                    if ( Number.isNaN(status.progress) || status.progress === Infinity ) {
+                        status.progress = 0.0;
                     }
-				}
-                const result = await commands.processQueue(event);
-                if (result.status === 'error') throw new ApplicationError(result.error);
-            } catch (err) {
-                err instanceof ApplicationError ? err.handleError() :
-                new ApplicationError(err as string).handleError();
+                    status.status = message.status;
+                }
+                break;
+
+            case 'Finished':
+                const _status = statusList.value[message.id];
+                if (_status) {
+                    _status.progress = 100.0;
+                    _status.status = message.status;
+                }
+                break;
+
+            case 'Error':
+                new ApplicationError(message.message, { code: message.code }).handleError();
+                break;
             }
-        },
-        async openPath(path: string, options?: { parent: boolean }) {
-            return shell.open(options?.parent ? await dirname(path) : path);
-        },
+        }
+        const result = await commands.processQueue(event);
+        if (result.status === 'error') throw new ApplicationError(result.error);
+    } catch (err) {
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
+    }
+}
+async function openPath(path: string, options?: { parent: boolean }) {
+    try {
+        await shell.open(options?.parent ? await dirname(path) : path);
+    } catch(err) {
+        new ApplicationError(err as string).handleError();
     }
 }
 </script>

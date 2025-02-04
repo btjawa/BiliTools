@@ -1,25 +1,25 @@
 <template><div>
-    <div ref="searchInput" :style="{ 'top': searchActive ? '13px' : 'calc(50% - 13px)' }"
+    <div ref="searchInput" :style="{ 'top': s.searchActive ? '13px' : 'calc(50% - 13px)' }"
 		class="search_input absolute flex h-[52px] w-[calc(100%-397px)] rounded-[26px] p-2.5 bg-[color:var(--block-color)]"
 	>
         <input
 			type="text" :placeholder="$t('home.inputPlaceholder', [$t('common.bilibili')])"
-			@keydown.enter="search()" @keydown.esc.stop="searchActive = false; mediaRootActive = false"
+			@keydown.enter="search()" @keydown.esc.stop="s.searchActive = false; s.mediaRootActive = false"
 			autocomplete="off" spellcheck="false"
-			@input="searchInput=searchInput.replace(/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g, '')"
-			v-model="searchInput" class="w-full mr-2.5 !rounded-2xl"
+			@input="s.searchInput=s.searchInput.replace(/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g, '')"
+			v-model="s.searchInput" class="w-full mr-2.5 !rounded-2xl"
 		/>
         <button @click="search()"
 			:class="[fa_dyn, 'fa-search rounded-[50%]']"
 		></button>
     </div>
-	<div :style="{ 'opacity': mediaRootActive ? 1 : 0, 'pointerEvents': mediaRootActive ? 'all' : 'none' }"
+	<div :style="{ 'opacity': s.mediaRootActive ? 1 : 0, 'pointerEvents': s.mediaRootActive ? 'all' : 'none' }"
 		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
-		<MediaInfo class="media_info mb-[13px]" :info="mediaInfo" :open />
-        <Empty v-if="mediaInfo.list" :exp="mediaInfo.list.length === 0" text="home.empty" />
-		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="mediaInfo?.stein_gate">
-			<template v-for="story in mediaInfo.stein_gate.story_list">
+		<MediaInfo class="media_info mb-[13px]" :info="s.mediaInfo" :open />
+        <Empty v-if="s.mediaInfo.list" :exp="s.mediaInfo.list.length === 0" text="home.empty" />
+		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="s.mediaInfo?.stein_gate">
+			<template v-for="story in s.mediaInfo.stein_gate.story_list">
 			<button class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
 				@click="updateStein(story.edge_id)"
 			>
@@ -27,389 +27,373 @@
 			</button>
 			</template>
 		</div>
-		<div v-if="mediaInfo.list && osType === 'linux'" class="scrollList flex flex-col h-[calc(100%-158px)] overflow-auto gap-0.5">
-			<template v-for="(item, index) in mediaInfo.list">
-				<MediaInfoItem :index :target :item :checkbox :options v-model="multiSelect" />
+		<div v-if="s.mediaInfo.list && osType() === 'linux'" class="scrollList flex flex-col h-[calc(100%-158px)] overflow-auto gap-0.5">
+			<template v-for="(item, index) in s.mediaInfo.list">
+				<MediaInfoItem :index :target="s.target" :item :checkbox="s.checkbox" :options v-model="s.multiSelect" />
 			</template>
 		</div>
-		<RecycleScroller v-else v-if="mediaInfo.list"
+		<RecycleScroller v-else v-if="s.mediaInfo.list"
 			class="scrollList h-[calc(100%-158px)]"
-			:items="mediaInfo.list" :item-size="50"
+			:items="s.mediaInfo.list" :item-size="50"
 			key-field="index" v-slot="{ item, index }"
 		>
-			<MediaInfoItem :index :target :item :checkbox :options v-model="multiSelect" />
+			<MediaInfoItem :index :target="s.target" :item :checkbox="s.checkbox" :options v-model="s.multiSelect" />
 		</RecycleScroller>
 		<div class="my-2 flex justify-center gap-[5px] absolute w-full"
-			v-if="mediaInfo?.stein_gate" :style="{ 'top': 216 + mediaInfo.list.length * 50 + 'px' }"
+			v-if="s.mediaInfo?.stein_gate" :style="{ 'top': 216 + s.mediaInfo.list.length * 50 + 'px' }"
 		>
-			<template v-for="(quesion, index) in mediaInfo.stein_gate.choices">
+			<template v-for="(quesion, index) in s.mediaInfo.stein_gate.choices">
 				<button
-					v-if="getSteinCondition(mediaInfo.stein_gate, index)"
+					v-if="getSteinCondition(s.mediaInfo.stein_gate, index)"
 					@click="updateStein(quesion.id)"
 				>{{ quesion.option }}</button>
 			</template>
 		</div>
 		<div class="fixed bottom-6 left-[73px] flex flex-col gap-3 multi-select">
-			<button v-if="checkbox"
-				@click=" multiSelect = multiSelect.length === mediaInfo.list.length 
-					? [] : Array.from({ length: mediaInfo.list.length }, (_, i) => i)
+			<button v-if="s.checkbox"
+				@click=" s.multiSelect = s.multiSelect.length === s.mediaInfo.list.length 
+					? [] : Array.from({ length: s.mediaInfo.list.length }, (_, i) => i)
 				"
 			>
 				<i :class="[fa_dyn, 'fa-check-double']"></i>
 				<span>{{ $t('home.label.selectAll') }}</span>
 			</button>
-			<button v-if="mediaInfo.type !== 'manga'" @click="checkbox = !checkbox" :class="{ 'active': checkbox }">
+			<button v-if="s.mediaInfo.type !== 'manga'" @click="s.checkbox = !s.checkbox" :class="{ 'active': s.checkbox }">
 				<i :class="[fa_dyn, 'fa-square-check']"></i>
 				<span>{{ $t('home.label.multiSelect') }}</span>
 			</button>
 		</div>
-		<div class="fixed bottom-6 right-4 flex flex-col gap-3" v-if="checkbox">
+		<div class="fixed bottom-6 right-4 flex flex-col gap-3" v-if="s.checkbox">
 			<button v-for="(item, _index) in options" @click="options[_index].multi" class="primary-color">
 				<i :class="[fa_dyn, item.icon]"></i>
 				<span>{{ options[_index].text }}</span>
 			</button>
 		</div>
 	</div>
-	<Popup ref="popup" :get-others="checkbox ? pushBackMulti : getOthers" :push-back="checkbox ? pushBackMulti : pushBackQueue" :open="open" />
+	<Popup ref="popup" :get-others="s.checkbox ? pushBackMulti : getOthers" :push-back="s.checkbox ? pushBackMulti : pushBackQueue" :open="open" />
 </div></template>
 
-<script lang="ts">
-import { ApplicationError, stat, formatBytes, parseId, filename, getRandomInRange } from '@/services/utils';
+<script setup lang="ts">
+import { ApplicationError, parseId, filename, getRandomInRange } from '@/services/utils';
 import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo } from '@/types/data.d';
 import { commands, CurrentSelect } from '@/services/backend';
 import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
 import { transformImage } from '@tauri-apps/api/image';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
+import { computed, reactive, ref, watch, defineExpose } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
+import { useRouter } from 'vue-router';
 import { Empty } from '@/components';
 import { open } from '@tauri-apps/plugin-shell';
 import * as data from '@/services/data';
 import * as dialog from '@tauri-apps/plugin-dialog';
+import store from '@/store';
+import i18n from '@/i18n';
 
-export default {
-	components: {
-		MediaInfo,
-		MediaInfoItem,
-		Popup,
-		Empty
+const s = reactive({
+	searchInput: ref(String()),
+	mediaInfo: ref<MediaInfoType>({} as any),
+	searchActive: ref(false),
+	mediaRootActive: ref(false),
+	checkbox: ref(false),
+	index: ref(0),
+	target: ref(0),
+	multiSelect: ref<number[]>([]),
+	currentSelect: computed(() => store.state.data.currentSelect),
+	playUrlInfo: computed({
+		get: () => store.state.data.playUrlInfo,
+		set: (v: any) => store.state.data.playUrlInfo = v
+	}),
+});
+
+const othersReqs = reactive({
+	aiSummary: -1,
+	danmaku: false,
+	cover: false,
+	manga: false,
+});
+
+const othersMap = {
+	'cover': { suffix: 'jpg', desc: 'JPG Image' },
+	'aiSummary': { suffix: 'md', desc: 'Markdown Document' },
+	'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
+	'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
+	'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
+	'manga': { suffix: 'jpg', desc: 'JPG Image' },
+}
+
+const fa_dyn = computed(() => store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light');
+const options = computed(() => [
+	...((s.mediaInfo.type !== MediaType.Music && s.mediaInfo.type !== MediaType.Manga) ? [{
+		icon: 'fa-file-arrow-down',
+		text: i18n.global.t('home.downloadOptions.audioVisual'),
+		action: (index: number) => updateStream(index, 0, { init: true }),
+		multi: () => initMulti('audioVisual')
+	}] : []),
+	{
+		icon: 'fa-file-export',
+		text: i18n.global.t('home.downloadOptions.others'),
+		action: (index: number) => checkOthers(index, { init: true }),
+		multi: () => initMulti('others')
 	},
-	data() {
-		return {
-			searchInput: String(),
-			mediaInfo: {} as MediaInfoType,
-			searchActive: false,
-			mediaRootActive: false,
-			index: 0,
-			target: 0,
-			checkbox: false,
-			multiSelect: [] as number[],
-			store: this.$store.state,
-			othersReqs: {
-				aiSummary: -1,
-				danmaku: false,
-				cover: false,
-				manga: false,
-			},
-			osType: osType(),
-			othersMap: {
-				'cover': { suffix: 'jpg', desc: 'JPG Image' },
-				'aiSummary': { suffix: 'md', desc: 'Markdown Document' },
-				'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
-				'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
-				'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
-				'manga': { suffix: 'jpg', desc: 'JPG Image' },
-			}
-		}
-	},
-	computed: {
-		fa_dyn() {
-			return this.store.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
-		},
-		currentSelect() {
-			return this.store.data.currentSelect;
-		},
-		playUrlInfo: {
-            get() { return this.store.data.playUrlInfo },
-            set(v: any) { this.store.data.playUrlInfo = v }
-		},
-		options() {
-			return [
-				...((this.mediaInfo.type !== MediaType.Music && this.mediaInfo.type !== MediaType.Manga) ? [{
-					icon: 'fa-file-arrow-down',
-					text: this.$t('home.downloadOptions.audioVisual'),
-					action: (index: number) => this.updateStream(index, 0, { init: true }),
-					multi: () => this.initMulti('audioVisual')
-				}] : []),
-				{
-					icon: 'fa-file-export',
-					text: this.$t('home.downloadOptions.others'),
-					action: (index: number) => this.checkOthers(index, { init: true }),
-					multi: () => this.initMulti('others')
-				},
-			];
-		}
-	},
-	watch: {
-		'currentSelect.fmt': function(newFmt, oldFmt) {
-			if (oldFmt === -1) return;
-			this.updateStream(this.index, Number(newFmt));
-		},
-		'currentSelect.dms': function() {
-			this.updateCodec();
-		},
-    },
-	methods: {
-		getSteinCondition(stein_gate: typeof this.mediaInfo.stein_gate, index: number) {
-			const question = stein_gate?.choices?.[index];
-			if (!question) return false;
-			const exp = question.condition ? question.condition.replace(/\$[\w]+/g, (match) => {
-				const hiddenVar = stein_gate.hidden_vars.find(v => v.id_v2 === match.slice());
-				return hiddenVar?.value.toString() || '0';
-			}) : '1';
-			return /^[\d+\-*/.()=<>\s]+$/.test(exp) ? (new Function('return ' + exp))() : false;
-		},
-		async search(input?: string) {
-			this.searchInput = input ?? this.searchInput;
-			if (!this.searchInput) return null;
-			this.mediaRootActive = false;
-			this.searchActive = false;
-			this.checkbox = false;
-			this.multiSelect = [];
-			try {
-				this.mediaInfo = {} as MediaInfoType;
-				this.searchActive = true;
-				const { id, type } = await parseId(this.searchInput);
-				const info = await data.getMediaInfo(id, type);
-				this.target = info.list.findIndex(item => item.id === info.id);
-				this.mediaInfo = info;
-				this.mediaRootActive = true;
-				const start = Date.now();
-				await new Promise(resolve => setTimeout(resolve, 100));
-				const scrollList = document.querySelector('.scrollList');
-				if (Date.now() - start > 1000) return;
-				if (scrollList) {
-					scrollList.scrollTo({
-						top: this.target * 50,
-						behavior: 'smooth'
-					});
-				}
-			} catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-				this.mediaRootActive = false;
-				this.searchActive = false;
-			}
-		},
-		updateDefault(ids: number[], df: "df_dms" | "df_ads" | "df_cdc", opt: keyof CurrentSelect, currentSelect?: CurrentSelect) {
-			this.currentSelect[opt] = ids.includes(
-				currentSelect ? currentSelect[opt] : this.store.settings[df]
-			) ?(currentSelect ? currentSelect[opt] : this.store.settings[df]) : ids.sort((a, b) => b - a)[0];
-		},
-		async updateStream(index: number, fmt: number, options?: { init?: boolean, currentSelect?: CurrentSelect }) {
-			try {
-				for (const key in this.playUrlInfo) this.playUrlInfo[key as keyof typeof this.playUrlInfo] = null as never;
-				this.index = index;
-				if (this.mediaInfo.type === MediaType.Music) {
-					if (options?.init) this.currentSelect.fmt = 0;
-					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { qn: 0 });
-					this.playUrlInfo = info as MusicUrlInfo;
-					this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads", options?.currentSelect);
-				} else {
-					if (options?.init) this.currentSelect.fmt = fmt;
-					const codecMap = {
-						0: StreamCodecType.Dash,
-						1: StreamCodecType.Mp4,
-						2: StreamCodecType.Flv,
-					};
-					const info = await data.getPlayUrl(this.mediaInfo.list[index], this.mediaInfo.type, { codec: codecMap[fmt as keyof typeof codecMap] });
-					if ('type' in info && info.type === 'dash') {
-						if (options?.init) this.currentSelect.fmt = 0;
-						this.playUrlInfo = info as DashInfo;
-						if (!('video' in this.playUrlInfo)) return;
-						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms", options?.currentSelect);
-						this.updateDefault(this.playUrlInfo.audio.map(item => item.id), "df_ads", "ads", options?.currentSelect);
-					} else if ('type' in info && (info.type === 'mp4' || info.type === 'flv')) {
-						if (options?.init) this.currentSelect.fmt = info.type === 'mp4' ? 1 : 2;
-						this.playUrlInfo = info as DurlInfo;
-						this.updateDefault(this.playUrlInfo.video.map(item => item.id), "df_dms", "dms", options?.currentSelect);
-					}
-					this.updateCodec(options?.currentSelect);
-				}
-				if (options?.init) {
-					(this.$refs.popup as InstanceType<typeof Popup>).init("audioVisual", this.mediaInfo.type, { req: this.othersReqs });
-				}
-			} catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-			}
-		},
-		updateCodec(currentSelect?: CurrentSelect) {
-			if (!('video' in this.playUrlInfo) || !this.playUrlInfo.video) return;
-			this.updateDefault(
-				this.playUrlInfo.video.filter(item => item.id === this.currentSelect.dms).map(item => item.codecid),
-			"df_cdc", "cdc", currentSelect);
-		},
-		async checkOthers(index: number, options?: { init?: boolean }) {
-			try {
-				this.index = index;
-				const info = this.mediaInfo.list[this.index];
-				if (this.mediaInfo.type === MediaType.Music) {
-					this.othersReqs.danmaku = false;
-				} else if (this.mediaInfo.type === MediaType.Manga) {
-					this.othersReqs.danmaku = false;
-					// this.othersReqs.manga = true;
-				} else {
-					this.othersReqs.aiSummary = await data.getAISummary(info, this.mediaInfo.upper.mid || 0, { check: true }) as number;
-					this.othersReqs.danmaku = true;
-				}
-				this.othersReqs.cover = true;
-				if (options?.init) {
-					if (this.mediaInfo.type !== MediaType.Manga) await this.updateStream(index, 0);
-					(this.$refs.popup as InstanceType<typeof Popup>).init("others", this.mediaInfo.type, { req: this.othersReqs });
-				}
-			} catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-			}
-		},
-		async getFolder() {
-			const parent = await dialog.open({
-				directory: true,
-				multiple: false,
+]);
+const popup = ref<InstanceType<typeof Popup>>();
+const router = useRouter();
+
+watch(() => s.currentSelect.fmt, (newFmt, oldFmt) => {
+	if (oldFmt === -1) return;
+	updateStream(s.index, Number(newFmt));
+}, { deep: true });
+
+watch(() => s.currentSelect.dms, () => updateCodec(), { deep: true });
+
+function getSteinCondition(stein_gate: typeof s.mediaInfo.stein_gate, index: number) {
+	const question = stein_gate?.choices?.[index];
+	if (!question) return false;
+	const exp = question.condition ? question.condition.replace(/\$[\w]+/g, (match) => {
+		const hiddenVar = stein_gate.hidden_vars.find(v => v.id_v2 === match.slice());
+		return hiddenVar?.value.toString() || '0';
+	}) : '1';
+	return /^[\d+\-*/.()=<>\s]+$/.test(exp) ? (new Function('return ' + exp))() : false;
+}
+async function search(input?: string) {
+	s.searchInput = input ?? s.searchInput;
+	if (!s.searchInput) return null;
+	s.mediaRootActive = false;
+	s.searchActive = false;
+	s.checkbox = false;
+	s.multiSelect = [];
+	try {
+		s.mediaInfo = {} as MediaInfoType;
+		s.searchActive = true;
+		const { id, type } = await parseId(s.searchInput);
+		const info = await data.getMediaInfo(id, type);
+		s.target = info.list.findIndex(item => item.id === info.id);
+		s.mediaInfo = info;
+		s.mediaRootActive = true;
+		const start = Date.now();
+		await new Promise(resolve => setTimeout(resolve, 100));
+		const scrollList = document.querySelector('.scrollList');
+		if (Date.now() - start > 1000) return;
+		if (scrollList) {
+			scrollList.scrollTo({
+				top: s.target * 50,
+				behavior: 'smooth'
 			});
-			return parent;
-		},
-		async getOthers(type: keyof typeof this.othersMap, options?: { date?: string, parent?: string }) {
-			try {
-				const info = this.mediaInfo.list[this.index];
-				const name = filename({
-					title: info.title + (type === 'historyDanmaku' && options?.date ? `_${options.date}` : ''),
-					mediaType: this.$t(`home.label.${type}`),
-					aid: info.id,
-				});
-				if (type === 'manga') {
-					const parent = await this.getFolder();
-					if (!parent) return;
-					const result = await dialog.ask(this.$t('common.unstable'), { 'kind': 'warning' });
-					if (!result) return;
-					return await data.getMangaImages(info.id, parent, name);
-				}
-				const _data = await (async () => { switch (type) {
-					case 'cover': return await data.getBinary(info.cover);
-					case 'aiSummary': return await data.getAISummary(info, this.mediaInfo.upper.mid || 0);
-					case 'liveDanmaku': return await data.getLiveDanmaku(info);
-					case 'historyDanmaku': return await data.getHistoryDanmaku(info.cid, options?.date || "");
-				}})();
-				const suffix = this.othersMap[type].suffix;
-				const path =
-					options?.parent ? `${await pathJoin(options.parent, name)}.${suffix}`
-					: await dialog.save({
-						filters: [{
-							name: this.othersMap[type].desc,
-							extensions: [this.othersMap[type].suffix]
-						}],
-						defaultPath: `${await pathJoin(this.store.settings.down_dir, name)}.${suffix}`
-					});
-				if (!path) return;
-				const result = await (async () => {
-					switch (type) {
-						case 'cover': return await commands.writeBinary(this.store.data.secret, path, transformImage(_data as ArrayBuffer));
-						case 'aiSummary': return await commands.writeBinary(this.store.data.secret, path, new TextEncoder().encode(_data as string) as any);
-						case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(this.store.data.secret, path, name, _data as any);
-					}
-				})();
-                if (result?.status === 'error') throw new ApplicationError(result.error);
-			} catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-			}
-		},
-		async updateStein(edge_id: number) {
-			const stein_gate = this.mediaInfo.stein_gate;
-			if (!stein_gate) return;
-			const stein_info = await data.getSteinInfo(this.mediaInfo.id, stein_gate.grapth_version, edge_id);
-			this.mediaInfo.stein_gate = {
-				edge_id: 1,
-				grapth_version: stein_gate.grapth_version,
-				story_list: stein_info.story_list,
-				choices: stein_info.edges.questions[0].choices,
-				hidden_vars: stein_info.hidden_vars,
-			};
-			const current = stein_info.story_list.find(story => story.edge_id === edge_id);
-			if (!current) return;
-			this.mediaInfo.list = [{
-				id: this.mediaInfo.id,
-				cid: current.cid,
-				title: current.title,
-				cover: current.cover,
-				desc: this.mediaInfo.desc,
-				eid: this.mediaInfo.list[0].eid,
-				duration: this.mediaInfo.list[0].duration,
-				ss_title: this.mediaInfo.list[0].ss_title,
-				index: 0,
-			}];
-		},
-		async initMulti(type: 'audioVisual' | 'others') {
-			if (!this.checkbox) return;
-			this.currentSelect.fmt = 0;
-			await this.updateStream(this.multiSelect[0], 0);
-			await this.checkOthers(this.multiSelect[0]);
-			(this.$refs.popup as InstanceType<typeof Popup>).init(type, this.mediaInfo.type, {
-				req: this.othersReqs,
-				noFmt: this.mediaInfo.type !== MediaType.Video
-			});
-		},
-		async pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output?: string, init?: boolean, index?: number }) {
-			try {
-				const playUrlInfo = this.playUrlInfo as DashInfo;
-				const video = type === 'audio' ? null : 
-					playUrlInfo.video ? playUrlInfo.video.find(item => item.id === this.currentSelect.dms && item.codecid === this.currentSelect.cdc) : null;
-				const audio = type === 'video' ? null : 
-					playUrlInfo.audio ? playUrlInfo.audio.find(item => item.id === this.currentSelect.ads) : null;
-				const info = await data.pushBackQueue({
-					info: this.mediaInfo.list[options?.index || this.index],
-					...(video && { video }),
-					...(audio && { audio }),
-					output: options?.output,
-					media_type: this.$t('downloads.media_type.' + this.mediaInfo.type)
-				});
-				if (options?.init) {
-					this.$router.push('/down-page');
-					this.store.status.queuePage = 0;
-				}
-				return info;
-			} catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-			}
-		},
-		async pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof this.othersMap, options?: { date?: string }) {
-			const currentSelect = { ...this.currentSelect };
-			let output = String();
-			const othersParent = type in this.othersMap ? await this.getFolder() : '_';
-			if (!othersParent) return;
-			for (const [_, index] of this.multiSelect.entries()) {
-				try {
-					if (type in this.othersMap) {
-						await this.getOthers(type as any, { ...options, parent: othersParent });
-					} else {
-						for (const key in this.currentSelect) (this.currentSelect as any)[key] = (currentSelect as any)[key];
-						await this.updateStream(index, this.currentSelect.fmt, { currentSelect });
-						const result = await this.pushBackQueue(type as any, { ...(output && { output }), init: _ === 0, index });
-						output = await pathDirname(result?.output || this.store.settings.down_dir);
-					}
-				} catch(err) {
-					err instanceof ApplicationError ? err.handleError() :
-					new ApplicationError(err as string).handleError();
-				}
-				await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 300)));
-			}
-		},
-		stat,
-		formatBytes,
-		open,
+		}
+	} catch(err) {
+		err instanceof ApplicationError ? err.handleError() :
+		new ApplicationError(err as string).handleError();
+		s.mediaRootActive = false;
+		s.searchActive = false;
 	}
 }
+function updateDefault(ids: number[], df: "df_dms" | "df_ads" | "df_cdc", opt: keyof CurrentSelect, cs?: CurrentSelect) {
+	s.currentSelect[opt] = ids.includes(
+		cs ? cs[opt] : store.state.settings[df]
+	) ?(cs ? cs[opt] : store.state.settings[df]) : ids.sort((a, b) => b - a)[0];
+}
+async function updateStream(i: number, fmt: number, options?: { init?: boolean, cs?: CurrentSelect }) {
+	try {
+		for (const key in s.playUrlInfo) (s.playUrlInfo as any)[key] = null as never;
+		s.index = i;
+		if (s.mediaInfo.type === MediaType.Music) {
+			if (options?.init) s.currentSelect.fmt = 0;
+			const info = await data.getPlayUrl(s.mediaInfo.list[i], s.mediaInfo.type, { qn: 0 });
+			s.playUrlInfo = info as MusicUrlInfo;
+			updateDefault(s.playUrlInfo.audio.map(item => item.id), "df_ads", "ads", options?.cs);
+		} else {
+			if (options?.init) s.currentSelect.fmt = fmt;
+			const codecMap = {
+				0: StreamCodecType.Dash,
+				1: StreamCodecType.Mp4,
+				2: StreamCodecType.Flv,
+			};
+			const info = await data.getPlayUrl(s.mediaInfo.list[i], s.mediaInfo.type, { codec: codecMap[fmt as keyof typeof codecMap] });
+			if ('type' in info && info.type === 'dash') {
+				if (options?.init) s.currentSelect.fmt = 0;
+				s.playUrlInfo = info as DashInfo;
+				if (!('video' in s.playUrlInfo)) return;
+				updateDefault(s.playUrlInfo.video.map(item => item.id), "df_dms", "dms", options?.cs);
+				updateDefault(s.playUrlInfo.audio.map(item => item.id), "df_ads", "ads", options?.cs);
+			} else if ('type' in info && (info.type === 'mp4' || info.type === 'flv')) {
+				if (options?.init) s.currentSelect.fmt = info.type === 'mp4' ? 1 : 2;
+				s.playUrlInfo = info as DurlInfo;
+				updateDefault(s.playUrlInfo.video.map(item => item.id), "df_dms", "dms", options?.cs);
+			}
+			updateCodec(options?.cs);
+		}
+		if (options?.init && popup.value) {
+			popup.value.init("audioVisual", s.mediaInfo.type, { req: othersReqs });
+		}
+	} catch(err) {
+		err instanceof ApplicationError ? err.handleError() :
+		new ApplicationError(err as string).handleError();
+	}
+}
+function updateCodec(cs?: CurrentSelect) {
+	if (!('video' in s.playUrlInfo) || !s.playUrlInfo.video) return;
+	updateDefault(
+		s.playUrlInfo.video.filter(item => item.id === s.currentSelect.dms).map(item => item.codecid),
+	"df_cdc", "cdc", cs);
+}
+async function checkOthers(index: number, options?: { init?: boolean }) {
+	try {
+		s.index = index;
+		const info = s.mediaInfo.list[s.index];
+		if (s.mediaInfo.type === MediaType.Music) {
+			othersReqs.danmaku = false;
+		} else if (s.mediaInfo.type === MediaType.Manga) {
+			othersReqs.danmaku = false;
+			// this.othersReqs.manga = true;
+		} else {
+			othersReqs.aiSummary = await data.getAISummary(info, s.mediaInfo.upper.mid || 0, { check: true }) as number;
+			othersReqs.danmaku = true;
+		}
+		othersReqs.cover = true;
+		if (options?.init && popup.value) {
+			if (s.mediaInfo.type !== MediaType.Manga) await updateStream(index, 0);
+			popup.value.init("others", s.mediaInfo.type, { req: othersReqs });
+		}
+	} catch(err) {
+		err instanceof ApplicationError ? err.handleError() :
+		new ApplicationError(err as string).handleError();
+	}
+}
+async function getFolder() {
+	const parent = await dialog.open({
+		directory: true,
+		multiple: false,
+	});
+	return parent;
+}
+async function getOthers(type: keyof typeof othersMap, options?: { date?: string, parent?: string }) {
+	try {
+		const info = s.mediaInfo.list[s.index];
+		const name = filename({
+			title: info.title + (type === 'historyDanmaku' && options?.date ? `_${options.date}` : ''),
+			mediaType: i18n.global.t(`home.label.${type}`),
+			aid: info.id,
+		});
+		if (type === 'manga') {
+			const parent = await getFolder();
+			if (!parent) return;
+			const result = await dialog.ask(i18n.global.t('common.unstable'), { 'kind': 'warning' });
+			if (!result) return;
+			return await data.getMangaImages(info.id, parent, name);
+		}
+		const _data = await (async () => { switch (type) {
+			case 'cover': return await data.getBinary(info.cover);
+			case 'aiSummary': return await data.getAISummary(info, s.mediaInfo.upper.mid || 0);
+			case 'liveDanmaku': return await data.getLiveDanmaku(info);
+			case 'historyDanmaku': return await data.getHistoryDanmaku(info.cid, options?.date || "");
+		}})();
+		const suffix = othersMap[type].suffix;
+		const path =
+			options?.parent ? `${await pathJoin(options.parent, name)}.${suffix}`
+			: await dialog.save({
+				filters: [{
+					name: othersMap[type].desc,
+					extensions: [othersMap[type].suffix]
+				}],
+				defaultPath: `${await pathJoin(store.state.settings.down_dir, name)}.${suffix}`
+			});
+		if (!path) return;
+		const result = await (async () => {
+			switch (type) {
+				case 'cover': return await commands.writeBinary(store.state.data.secret, path, transformImage(_data as ArrayBuffer));
+				case 'aiSummary': return await commands.writeBinary(store.state.data.secret, path, new TextEncoder().encode(_data as string) as any);
+				case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(store.state.data.secret, path, name, _data as any);
+			}
+		})();
+		if (result?.status === 'error') throw new ApplicationError(result.error);
+	} catch(err) {
+		err instanceof ApplicationError ? err.handleError() :
+		new ApplicationError(err as string).handleError();
+	}
+}
+async function updateStein(edge_id: number) {
+	const info = s.mediaInfo;
+	const stein_gate = info.stein_gate;
+	if (!stein_gate) return;
+	const stein_info = await data.getSteinInfo(info.id, stein_gate.grapth_version, edge_id);
+	s.mediaInfo.stein_gate = {
+		edge_id: 1,
+		grapth_version: stein_gate.grapth_version,
+		story_list: stein_info.story_list,
+		choices: stein_info.edges.questions[0].choices,
+		hidden_vars: stein_info.hidden_vars,
+	};
+	const current = stein_info.story_list.find(story => story.edge_id === edge_id);
+	if (!current) return;
+	s.mediaInfo.list = [{
+		id: info.id,
+		cid: current.cid,
+		title: current.title,
+		cover: current.cover,
+		desc: info.desc,
+		eid: info.list[0].eid,
+		duration: info.list[0].duration,
+		ss_title: info.list[0].ss_title,
+		index: 0,
+	}];
+}
+async function initMulti(type: 'audioVisual' | 'others') {
+	if (!s.checkbox || !popup.value) return;
+	s.currentSelect.fmt = 0;
+	await updateStream(s.multiSelect[0], 0);
+	await checkOthers(s.multiSelect[0]);
+	popup.value.init(type, s.mediaInfo.type, {
+		req: othersReqs,
+		noFmt: s.mediaInfo.type !== MediaType.Video
+	});
+}
+async function pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output?: string, init?: boolean, i?: number }) {
+	try {
+		const info = s.playUrlInfo as DashInfo;
+		const video = type === 'audio' ? null : 
+			info.video ? info.video.find(item => item.id === s.currentSelect.dms && item.codecid === s.currentSelect.cdc) : null;
+		const audio = type === 'video' ? null : 
+			info.audio ? info.audio.find(item => item.id === s.currentSelect.ads) : null;
+		if (options?.init) {
+			router.push('/down-page');
+			store.state.status.queuePage = 0;
+		}
+		return await data.pushBackQueue({
+			info: s.mediaInfo.list[options?.i || s.index],
+			...(video && { video }),
+			...(audio && { audio }),
+			output: options?.output,
+			media_type: i18n.global.t('downloads.media_type.' + s.mediaInfo.type)
+		});
+	} catch(err) {
+		err instanceof ApplicationError ? err.handleError() :
+		new ApplicationError(err as string).handleError();
+	}
+}
+async function pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof othersMap, options?: { date?: string }) {
+	const cs = { ...s.currentSelect };
+	let output = String();
+	const othersParent = type in othersMap ? await getFolder() : '_';
+	if (!othersParent) return;
+	for (const [_, i] of s.multiSelect.entries()) {
+		try {
+			if (type in othersMap) {
+				await getOthers(type as any, { ...options, parent: othersParent });
+			} else {
+				for (const key in cs) (s.currentSelect as any)[key] = (cs as any)[key];
+				await updateStream(i, s.currentSelect.fmt, { cs });
+				const result = await pushBackQueue(type as any, { ...(output && { output }), init: _ === 0, i });
+				output = await pathDirname(result?.output || store.state.settings.down_dir);
+			}
+		} catch(err) {
+			err instanceof ApplicationError ? err.handleError() :
+			new ApplicationError(err as string).handleError();
+		}
+		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 300)));
+	}
+}
+defineExpose({ search });
 </script>
 
 <style scoped lang="scss">

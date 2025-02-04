@@ -24,25 +24,22 @@ import { SearchPage } from "@/views";
 import { useRouter } from "vue-router";
 import store from "@/store";
 
-const page = ref<unknown | null>(null);
-const contextMenu = ref<unknown | null>(null);
+const page = ref<InstanceType<typeof SearchPage>>();
+const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
+const router = useRouter();
 
-function showMenu(e: MouseEvent) {
-	(contextMenu.value as InstanceType<typeof ContextMenu>).showMenu(e);
-}
+const showMenu = (e: MouseEvent) => contextMenu.value?.showMenu(e);
 
 onMounted(async () => {
-	const router = useRouter();
 	router.push("/");
 	setEventHook();
 	provide('trySearch', async (input?: string) => {
 		router.push('/');
 		const start = Date.now();
 		const checkCondition = () => {
-			const _page = page.value as InstanceType<typeof SearchPage>;
 			if (Date.now() - start > 1000) return;
-			if (_page && typeof _page.search === 'function') {
-				_page.search(input);
+			if (typeof page.value?.search === 'function') {
+				page.value.search(input);
 			} else setTimeout(checkCondition, 50);
 		};
 		checkCondition();

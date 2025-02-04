@@ -40,87 +40,72 @@
         </div>
     </div>
 </div></template>
-<script lang="ts">
+<script setup lang="ts">
+import { inject, ref, computed, watch, nextTick, onActivated } from 'vue';
 import { getFavoriteContent, getFavoriteList } from '@/services/data';
-import { ApplicationError } from '@/services/utils';
 import { FavoriteList, FavoriteContent } from '@/types/data.d';
+import { ApplicationError } from '@/services/utils';
 import { Empty } from '@/components';
-import { inject } from 'vue';
+import store from '@/store';
 
-export default {
-    components: {
-        Empty,
-    },
-    data() {
-        return {
-            media_id: Number(),
-            page: 1,
-            medias: Number(),
-            store: this.$store.state,
-            favorateList: [] as FavoriteList["data"]["list"],
-            favorateActive: false,
-            favorateContent: {} as { [id: number]: FavoriteContent['data']['medias'] },
-        }
-    },
-    computed: {
-        fa_dyn() {
-            return this.store.settings.theme === 'dark' ? 'fa-solid' : 'fa-light';
-        },
-        maxPage() {
-            return Math.ceil(this.medias / 20);
-        },
-    },
-    watch: {
-        media_id(newVal, oldVal) {
-            if (oldVal !== newVal && newVal) {
-                const subPage = this.$refs.subPage as HTMLElement;
-                subPage.style.transition = 'none';
-                subPage.style.opacity = '0';
-                this.$nextTick(() => requestAnimationFrame(() => {
-                    subPage.style.transition = 'opacity 0.3s';
-                    subPage.style.opacity = '1';
-                }));
-                this.getContent(newVal, 1);
-            }
-        },
-        page(newVal, _) {
-            this.getContent(this.media_id, newVal);
-        }
-    },
-    methods: {
-        async getList() {
-            try {
-                this.favorateActive = false;
-                this.media_id = Number();
-                const list = await getFavoriteList() || [];
-                this.favorateList = list;
-                this.media_id = list[0].id;
-                this.favorateActive = true;
-                this.page = 1;
-            } catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-			}
-        },
-        async getContent(media_id: number, pn: number) {
-            try {
-                const body = await getFavoriteContent(media_id, pn);
-                this.favorateContent[media_id] = body.medias;
-                this.medias = body.info.media_count;
-            } catch(err) {
-				err instanceof ApplicationError ? err.handleError() :
-				new ApplicationError(err as string).handleError();
-			}
-        },
-    },
-    async activated() {
-        if (!this.favorateList.length) this.getList();
-    },
-    setup() {
-        const trySearch = inject<(input?: string) => void>('trySearch') || (() => {});
-        return { trySearch };
-    },
-};
+const media_id = ref(Number());
+const page = ref(1);
+const medias = ref(Number());
+const favorateList = ref<FavoriteList["data"]["list"]>([]);
+const favorateActive = ref(false);
+const favorateContent = ref<{ [id: number]: FavoriteContent['data']['medias'] }>({});
+
+const subPage = ref<HTMLElement>();
+
+const fa_dyn = computed(() => store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light');
+const maxPage = computed(() => Math.ceil(medias.value / 20));
+
+watch(media_id, (newVal, oldVal) => {
+    if (oldVal !== newVal && newVal && subPage.value) {
+        subPage.value.style.transition = 'none';
+        subPage.value.style.opacity = '0';
+        nextTick(() => requestAnimationFrame(() => {
+            if (!subPage.value) return;
+            subPage.value.style.transition = 'opacity 0.3s';
+            subPage.value.style.opacity = '1';
+        }));
+        getContent(newVal, 1);
+    }
+})
+
+watch(page, (newVal) => getContent(media_id.value, newVal))
+
+async function getContent(media_id: number, pn: number) {
+    try {
+        const body = await getFavoriteContent(media_id, pn);
+        favorateContent.value[media_id] = body.medias;
+        medias.value = body.info.media_count;
+    } catch(err) {
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
+    }
+}
+
+async function getList() {
+    try {
+        favorateActive.value = false;
+        media_id.value = Number();
+        const list = await getFavoriteList() || [];
+        favorateList.value = list;
+        media_id.value = list[0].id;
+        favorateActive.value = true;
+        page.value = 1;
+    } catch(err) {
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
+    }
+}
+
+onActivated(() => {
+    if (!favorateList.value.length) getList()   
+})
+
+const trySearch = inject<(input?: string) => void>('trySearch') || (() => {});
 </script>
 <style lang="scss" scoped>
 $color: red;

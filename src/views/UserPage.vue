@@ -22,7 +22,7 @@
                     <span>{{ (user.stat as any)[item] }}</span>
                 </div>
             </div>
-            <button @click="login('exit')">{{ $t('user.exit') }}</button>
+            <button @click="tryLogin('exit')">{{ $t('user.exit') }}</button>
         </div>
     </div>
     <div v-else class="login flex relative border border-solid border-[var(--split-color)] rounded-lg">
@@ -31,7 +31,7 @@
             <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-[color:var(--solid-block-color)]">
                 <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" :class="{ 'invert': dark }" />
                 <canvas ref="loginQrcode" :class="{ 'invert': dark }" class="relative z-1"></canvas>
-                <div v-if="scanCode === 86038 || scanCode === 86090" @click="login('scan')"
+                <div v-if="scanCode === 86038 || scanCode === 86090" @click="tryLogin('scan')"
                     class="absolute flex w-[172px] h-[172px] z-2 bg-opacity-50 bg-black -top-px -left-px
                     flex-col gap-2.5 justify-center items-center cursor-pointer rounded-md text-sm"
                 >
@@ -80,13 +80,13 @@
                         </select>
                         </template>
                         <input v-model="tel"
-                            :oninput="tel=tel.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
+                            @input="tel=tel.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
                             autocomplete="new-password" class="z-20" spellcheck="false"
                             :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'account' : 'telephone'}`)])"
                         />
                         <template v-if="othersPage">
                         <div class="split h-[22px] mx-[20px]"></div>
-                        <button type="button" @click="login('sendSms')"
+                        <button type="button" @click="tryLogin('sendSms')"
                             class="bg-[color:unset] p-0 h-fit leading-[22px]"
                         >{{ $t('user.others.get', [$t('common.verifyCode')]) }}</button>
                         </template>
@@ -94,13 +94,13 @@
                     <div class="form_item">
                         <span>{{ othersPage ? $t('common.verifyCode') : $t('common.password') }}</span>
                         <input v-model="pwd"
-                            :oninput="pwd=pwd.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
+                            @input="pwd=pwd.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
                             autocomplete="new-password" :type="othersPage ? undefined : 'password'" spellcheck="false"
                             :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'password' : 'verifyCode'}`)])"
                         />
                     </div>
                 </form>
-                <button @click="login(othersPage ? 'sms' : 'pwd')"
+                <button @click="tryLogin(othersPage ? 'sms' : 'pwd')"
                     class="mt-5 rounded-lg h-10 w-full hover:bg-[color:var(--primary-color)]"
                 >{{ $t('user.login') }}</button>
             </div>
@@ -122,107 +122,96 @@
     </div>
 </div></template>
 
-<script lang="ts">
-import { ApplicationError, iziInfo } from '@/services/utils';
+<script setup lang="ts">
+import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
+import { ApplicationError } from '@/services/utils';
+import { useRouter } from 'vue-router';
+import { commands } from '@/services/backend';
 import { open } from '@tauri-apps/plugin-shell';
 import { ask } from '@tauri-apps/plugin-dialog';
 import * as login from '@/services/login';
-import { commands } from '@/services/backend';
+import store from '@/store';
 
-export default {
-    data() {
-        return {
-            tel: String(),
-            pwd: String(),
-            captchaKey: String(),
-            scanCode: 0,
-            cid: 86,
-            countryList: [] as {
-                id: number;
-                cname: string;
-                country_id: string;
-            }[],
-            othersPage: 1,
-        }
-    },
-    watch: {
-        othersPage() {
-            this.tel = String();
-            this.pwd = String();
-        }
-    },
-    computed: {
-        user() {
-            return this.$store.state.user;
-        },
-        dark() {
-            return this.$store.state.settings.theme === 'dark';
-        },
-        level() {
-            return new URL(`/src/assets/img/profile/level/level${this.user.level}.svg`, import.meta.url).href;
-        }
-    },
-    methods: {
-        iziInfo,
-        open,
-        ask,
-        async login(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
-            try {
-                let code = -1;
-                switch(type) {
-                    case 'scan': {
-                        this.scanCode = 0;
-                        (this.$refs.loginQrcode as HTMLCanvasElement).height = 160;
-                        const qrcodeKey = await login.genQrcode(this.$refs.loginQrcode as HTMLCanvasElement);
-                        code = await login.scanLogin(qrcodeKey, ({ code }) => { this.scanCode = code });
-                        break;
-                    };
-                    case 'pwd': {
-                        if (!this.tel || !this.pwd) return;
-                        code = await login.pwdLogin(this.tel, this.pwd);
-                        break;
-                    };
-                    case 'sms': {
-                        if (!this.tel || !this.pwd || !this.captchaKey) return;
-                        code = await login.smsLogin(this.cid, this.tel, this.pwd, this.captchaKey);
-                        break;
-                    };
-                    case 'sendSms': {
-                        if (!this.tel || !this.cid) return;
-                        this.captchaKey = await login.sendSmsCode(this.cid, this.tel);
-                        break;
-                    }
-                    case 'exit': {
-                        code = await login.exitLogin();
-                        break;
-                    }
-                    case 'init': {
-                        this.cid = await login.getZoneCode();
-                        this.countryList = await login.getCountryList();
-                        break;
-                    }
-                }
-                if (code === 0) {
-                    this.$router.push('/');
-                    await login.fetchUser();
-                }
-            } catch (err) {
-                const error = err instanceof ApplicationError ? err : new ApplicationError(err as string);
-                return error.handleError();
+const tel = ref(String());
+const pwd = ref(String());
+const captchaKey = ref(String());
+const scanCode = ref(0);
+const cid = ref(86);
+const othersPage = ref(1);
+const countryList = ref<{
+    id: number;
+    cname: string;
+    country_id: string;
+}[]>([]);
+
+const loginQrcode = ref<HTMLCanvasElement>();
+const router = useRouter();
+
+watch(othersPage, () => {
+    tel.value = String();
+    pwd.value = String();
+})
+
+const user = computed(() => store.state.user);
+const dark = computed(() => store.state.settings.theme === 'dark');
+const level = computed(() => {
+    return new URL(`/src/assets/img/profile/level/level${user.value.level}.svg`, import.meta.url).href;
+});
+
+async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
+    try {
+        let code = -1;
+        switch(type) {
+            case 'scan': {
+                scanCode.value = 0;
+                if (!loginQrcode.value) return;
+                loginQrcode.value.height = 160;
+                const qrcodeKey = await login.genQrcode(loginQrcode.value);
+                code = await login.scanLogin(qrcodeKey, ({ code }) => { scanCode.value = code });
+                break;
+            };
+            case 'pwd': {
+                if (!tel.value || !pwd.value) return;
+                code = await login.pwdLogin(tel.value, pwd.value);
+                break;
+            };
+            case 'sms': {
+                if (!tel.value || !pwd.value || !captchaKey.value) return;
+                code = await login.smsLogin(cid.value, tel.value, pwd.value, captchaKey.value);
+                break;
+            };
+            case 'sendSms': {
+                if (!tel.value || !cid.value) return;
+                captchaKey.value = await login.sendSmsCode(cid.value, tel.value);
+                break;
+            }
+            case 'exit': {
+                code = await login.exitLogin();
+                break;
+            }
+            case 'init': {
+                cid.value = await login.getZoneCode();
+                countryList.value = await login.getCountryList();
+                break;
             }
         }
-    },
-    async activated() {
-        if (this.$store.state.user.isLogin) return;
-        this.login('scan');
-        this.login('init');
-    },
-    deactivated() {
-        commands.stopLogin();
+        if (code === 0) {
+            router.push('/');
+            await login.fetchUser();
+        }
+    } catch (err) {
+        const error = err instanceof ApplicationError ? err : new ApplicationError(err as string);
+        return error.handleError();
     }
-
 }
 
+onActivated(() => {
+    if (store.state.user.isLogin) return;
+    tryLogin('scan');
+    tryLogin('init');
+})
+
+onDeactivated(commands.stopLogin);
 </script>
 
 <style lang="scss" scoped>

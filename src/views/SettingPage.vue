@@ -8,7 +8,7 @@
     </h1>
     <hr />
     <div class="setting-page__sub flex w-full h-full">
-        <div class="flex flex-col flex-1 mr-6" ref="subPage">
+        <div class="flex flex-col flex-1 mr-6" ref="$subPage">
             <Empty :exp="settings.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
             <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
                 <h3 v-if="item.name" class="font-semibold">
@@ -39,8 +39,8 @@
                         autocorrect="off" spellcheck="false" autocapitalize="off"
                     />
                     <button v-if="unit.type === 'switch'"
-                        @click="updateNest(unit.data, !getNestedValue(store.settings, unit.data))"
-                        :class="{ 'active': getNestedValue(store.settings, unit.data) }"
+                        @click="updateNest(unit.data, !getNestedValue(store.state.settings, unit.data))"
+                        :class="{ 'active': getNestedValue(store.state.settings, unit.data) }"
                         class="inline-block w-11 h-[22px] relative delay-100 p-[3px] rounded-xl"
                     >
                         <div class="circle h-4 w-4 rounded-lg bg-[color:var(--desc-color)] absolute left-[3px] top-[3px]"></div>
@@ -59,7 +59,7 @@
                         >{{ version }}</span>
                         <span class="text desc ml-2">
                             <i :class="fa_dyn" class="fa-code-commit"></i>
-                            {{ store.data.hash.slice(0, 7) }}
+                            {{ store.state.data.hash.slice(0, 7) }}
                         </span>
                     </div>
                     <div v-if="unit.type === 'reference'" class="desc">
@@ -82,7 +82,8 @@
         </div>
     </div>
 </div></template>
-<script lang="ts">
+<script setup lang="ts">
+import { computed, nextTick, onActivated, ref, watch } from 'vue';
 import { ApplicationError, iziInfo, tryFetch } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
@@ -95,6 +96,7 @@ import store from '@/store';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import * as shell from '@tauri-apps/plugin-shell';
+import i18n from '@/i18n';
 
 type PathAlias = keyof typeof store.state.data.cache;
 
@@ -109,215 +111,198 @@ type UnitType =
 | { name: string; type: 'about' }
 | { name: string; type: 'reference' };
 
-export default {
-    components: {
-        Path,
-        Cache,
-        Dropdown,
-        Drag,
-        Empty
-    },
-    data() {
-        return {
-            subPage: "storage",
-            store: store.state,
-            version: String(),
-        }
-    },
-    computed: {
-        fa_dyn() {
-            return this.store.settings.theme === 'light' ? 'fa-light' : 'fa-solid';
-        },
-        settings() {
-            const t = this.$t;
-            return [
-                { id: "storage", name: t('settings.storage.name'), icon: "fa-database", content: [
-                    { name: t('settings.storage.paths.name'), icon: "fa-folder", data: [
-                        { name: t('settings.label.down_dir'), type: "path", data: "down_dir" },
-                        { name: t('settings.label.temp_dir'), type: "path", desc: t('settings.storage.paths.temp_dir.desc'), data: "temp_dir" },
-                    ] },
-                    { name: t('settings.storage.cache.name'), icon: "fa-database", desc: t('settings.storage.cache.desc'), data: [
-                        { name: t('settings.label.log'), type: "cache", data: "log" },
-                        { name: t('settings.label.temp'), type: "cache", data: "temp" },
-                        { name: t('settings.label.webview'), type: "cache", data: "webview" },
-                        { name: t('settings.label.database'), type: "cache", data: "database" },
-                    ] },
-                    { name: t('settings.storage.language.name'), icon: "fa-earth-americas", data: [
-                        { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: locales.languages.map(lang => ({
-                            id: lang.id,
-                            name: `${lang.name} ${lang.flag}`
-                        })) }
-                    ] },
+const subPage = ref("storage");
+const $subPage = ref<HTMLElement>();
+const version = await getVersion();
+
+const fa_dyn = computed(() => store.state.settings.theme === 'light' ? 'fa-light' : 'fa-solid');
+const settings = computed(() => {
+    const t = i18n.global.t;
+    return [
+        { id: "storage", name: t('settings.storage.name'), icon: "fa-database", content: [
+            { name: t('settings.storage.paths.name'), icon: "fa-folder", data: [
+                { name: t('settings.label.down_dir'), type: "path", data: "down_dir" },
+                { name: t('settings.label.temp_dir'), type: "path", desc: t('settings.storage.paths.temp_dir.desc'), data: "temp_dir" },
+            ] },
+            { name: t('settings.storage.cache.name'), icon: "fa-database", desc: t('settings.storage.cache.desc'), data: [
+                { name: t('settings.label.log'), type: "cache", data: "log" },
+                { name: t('settings.label.temp'), type: "cache", data: "temp" },
+                { name: t('settings.label.webview'), type: "cache", data: "webview" },
+                { name: t('settings.label.database'), type: "cache", data: "database" },
+            ] },
+            { name: t('settings.storage.language.name'), icon: "fa-earth-americas", data: [
+                { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: locales.languages.map(lang => ({
+                    id: lang.id,
+                    name: `${lang.name} ${lang.flag}`
+                })) }
+            ] },
+        ] },
+        { id: "download", name: t('settings.download.name'), icon: "fa-download", content: [
+            { name: t('settings.download.default.name'), icon: "fa-user", desc: t('settings.download.default.desc'), data: [
+                { name: t('common.default.dms.name'), type: "dropdown", data: "df_dms", drop: "dms" },
+                { name: t('common.default.ads.name'), type: "dropdown", data: "df_ads", drop: "ads" },
+                { name: t('common.default.cdc.name'), type: "dropdown", data: "df_cdc", drop: "cdc" },
+                { name: t('settings.label.max_conc'), type: "dropdown", data: "max_conc", drop: [
+                    { id: 1, name: "1" },
+                    { id: 2, name: "2" },
+                    { id: 3, name: "3" },
+                    { id: 4, name: "4" },
+                    { id: 5, name: "5" },
                 ] },
-                { id: "download", name: t('settings.download.name'), icon: "fa-download", content: [
-                    { name: t('settings.download.default.name'), icon: "fa-user", desc: t('settings.download.default.desc'), data: [
-                        { name: t('common.default.dms.name'), type: "dropdown", data: "df_dms", drop: "dms" },
-                        { name: t('common.default.ads.name'), type: "dropdown", data: "df_ads", drop: "ads" },
-                        { name: t('common.default.cdc.name'), type: "dropdown", data: "df_cdc", drop: "cdc" },
-                        { name: t('settings.label.max_conc'), type: "dropdown", data: "max_conc", drop: [
-                            { id: 1, name: "1" },
-                            { id: 2, name: "2" },
-                            { id: 3, name: "3" },
-                            { id: 4, name: "4" },
-                            { id: 5, name: "5" },
-                        ] },
-                    ] },
-                    { name: t('settings.download.filename.name'), icon: "fa-file", data: [
-                        { name: String(), type: "drag", data: 'filename', shorten: t('settings.download.filename.shorten'), placeholders: [
-                            { id: "{mediaType}", name: t('settings.download.filename.data.mediaType') },
-                            { id: "{aid}", name: t('settings.download.filename.data.aid') },
-                            { id: "{title}", name: t('settings.download.filename.data.title') },
-                            { id: "{date}", name: t('settings.download.filename.data.date') },
-                            { id: "{timestamp}", name: t('settings.download.filename.data.timestamp') },
-                        ] },
-                    ] },
-                    { name: t('settings.download.proxy.name'), icon: "fa-globe", desc: t('settings.download.proxy.desc'), data: [
-                        { name: t('common.address'), type: "input", data: "proxy.addr", placeholder: "http(s)://server:port" },
-                        { name: t('common.username'), type: "input", data: "proxy.username", placeholder: t('common.optional') },
-                        { name: t('common.password'), type: "input", data: "proxy.password", placeholder: t('common.optional') },
-                        { name: t('settings.label.checkProxy'), type: "button", data: this.checkProxy.bind(this), icon: "fa-cloud-question" },
-                    ] }
+            ] },
+            { name: t('settings.download.filename.name'), icon: "fa-file", data: [
+                { name: String(), type: "drag", data: 'filename', shorten: t('settings.download.filename.shorten'), placeholders: [
+                    { id: "{mediaType}", name: t('settings.download.filename.data.mediaType') },
+                    { id: "{aid}", name: t('settings.download.filename.data.aid') },
+                    { id: "{title}", name: t('settings.download.filename.data.title') },
+                    { id: "{date}", name: t('settings.download.filename.data.date') },
+                    { id: "{timestamp}", name: t('settings.download.filename.data.timestamp') },
                 ] },
-                { id: "advanced", name: t('settings.advanced.name'), icon: "fa-flask", content: [
-                    { name: t('settings.advanced.auto_convert_flac.name'), icon: "fa-exchange", desc: t('settings.advanced.auto_convert_flac.desc'), data: [
-                        { name: t('settings.label.enable'), type: "switch", data: "advanced.auto_convert_flac" },
-                    ] },
-                    { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
-                        { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
-                    ] },
-                    { name: t('settings.advanced.config.name'), icon: "fa-wrench", desc: t('settings.advanced.config.desc'), data: [
-                        { name: t('home.label.danmaku'), type: "button", data: () => this.openPath({ getPath: true, pathName: "danmaku" }), icon: "fa-file-circle-info" },
-                        { name: "Aria2c", type: "button", data: () => this.openPath({ getPath: true, pathName: "aria2c" }), icon: "fa-file-circle-info" },
-                    ] },
-                ] },
-                { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
-                    { data: [{ type: "about" }] },
-                    { name: t('settings.about.update.name'), icon: "fa-upload", data: [
-                        { name: t('settings.label.auto_check_update'), type: "switch", data: "auto_check_update" },
-                        { name: t('settings.label.checkUpdate'), type: "button", data: this.checkUpdate.bind(this), icon: "fa-wrench" },
-                    ] },
-                    { name: t('settings.about.links.name'), icon: "fa-link", data: [
-                        { name: t('settings.label.documentation'), type: "button", data: () => this.openPath({ path: "https://btjawa.top/bilitools" }), icon: "fa-book" },
-                        { name: t('settings.label.feedback'), type: "button", data: () => this.openPath({ path: "https://github.com/btjawa/BiliTools/issues/new/choose" }), icon: "fa-comment-exclamation" }
-                    ] },
-                    { data: [{ type: "reference" }] }
-                ] }
-            ];
-        }
-    },
-    watch: {
-        subPage(oldPage, newPage) {
-            if (oldPage !== newPage) {
-                const subPage = this.$refs.subPage as HTMLElement;
-                subPage.style.transition = 'none';
-                subPage.style.opacity = '0';
-                this.$nextTick(() => requestAnimationFrame(() => {
-                    subPage.style.transition = 'opacity 0.3s';
-                    subPage.style.opacity = '1';
-                }));
-            }
-        },
-    },
-    methods: {
-        checkUpdate() {
-            const status = this.store.settings.auto_check_update;
-            this.updateSettings('auto_check_update', !status);
-            this.updateSettings('auto_check_update', status);
-        },
-        updatePath(type: string) {
-            dialog.open({
-                directory: true,
-                defaultPath: (this.store.settings as any)[type]
-            }).then(path => {
-                if (!path) return null;
-                this.updateSettings(type, path);
-            }).catch(err => {
-                new ApplicationError(err).handleError();
-            })
-        },
-        updateNest(key: string, data: any) {
-            const parent = key.split('.')[0] as keyof typeof this.store.settings;
-            let value = this.getNestedValue(this.store.settings, key);
-            if (data === value) return null;
-            this.$store.commit('updateState', { [`settings.${key}`]: data });
-            this.updateSettings(parent, this.store.settings[parent]);
-        },
-        async updateSettings(key: string, item: any) {
-            const result = await commands.rwConfig('write', { [key]: item }, this.store.data.secret);
-            if (result.status === 'error') throw new ApplicationError(result.error);
-        },
-        async getPath(type: PathAlias | "danmaku" | "aria2c") {
-            switch (type) {
-                case 'log': return await path.appLogDir();
-                case 'temp': return path.join(await path.tempDir(), 'com.btjawa.bilitools');
-                case 'webview': return (async () => {
-                    switch(osType()) {
-                        case 'windows': return path.join(await path.appLocalDataDir(), 'EBWebView');
-                        case 'macos': return path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
-                        case 'linux': return path.join(await path.cacheDir(), 'bilitools');
-                        default: return '';
-                    }
-                })()
-                case 'database': return path.join(await path.appDataDir(), 'Storage');
-                case 'danmaku': return path.join(this.store.data.resources_path, 'DanmakuFactoryConfig.json');
-                case 'aria2c': return path.join(this.store.data.resources_path, 'aria2.conf');
-            }
-        },
-        async checkProxy() {
-            try {
-                const body = await tryFetch('https://api.bilibili.com/x/click-interface/click/now');
-                const timestamp = JSON.stringify(body?.data);
-                if (timestamp) {
-                    iziInfo(this.$t('common.iziToast.success') + ': ' + timestamp);
-                    return timestamp;
-                } else {
-                    throw new ApplicationError(body?.message, { code: body?.code });
-                }
-            } catch(err) {
-                err instanceof ApplicationError ? err.handleError() :
-                new ApplicationError(err as string).handleError();
-            }
-        },
-        async openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias | "danmaku" | "aria2c" }) {
-            if (!options.path) {
-                if (!options?.getPath || !options.pathName) return;
-                const path = await this.getPath(options.pathName);
-                return shell.open(path);
-            }
-            return shell.open(options.path);
-        },
-        async getSize(pathName: PathAlias) {
-            (this.store.data.cache as any)[pathName] = 0;
-            const event = new Channel<number>();
-            event.onmessage = (bytes) => {
-                (this.store.data.cache as any)[pathName] = bytes;
-            }
-            const result = await commands.getSize(await this.getPath(pathName), event);
-            if (result.status === 'error') throw new ApplicationError(result.error);
-        },
-        async cleanCache(pathName: PathAlias) {
-            const result = await dialog.ask(this.$t('settings.askDelete'), { 'kind': 'warning' });
-            if (!result) return;
-            const clean = await commands.cleanCache(await this.getPath(pathName));
-            if (clean.status === 'error') throw new ApplicationError(clean.error);
-            await this.getSize(pathName);
-        },
-        getNestedValue(obj: Record<string, any>, path: string): any {
-            if (!path.includes('.')) return obj[path];
-            const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
-            if (value && typeof value === 'object') {
-                return Array.isArray(value) ? [...value] : { ...value };
-            }
-            return value;
-        }
-    },
-    async activated() {
-        Object.keys(this.store.data.cache).forEach(key => this.getSize(key as PathAlias));
-    },
-    async mounted() {
-        this.version = await getVersion();
+            ] },
+            { name: t('settings.download.proxy.name'), icon: "fa-globe", desc: t('settings.download.proxy.desc'), data: [
+                { name: t('common.address'), type: "input", data: "proxy.addr", placeholder: "http(s)://server:port" },
+                { name: t('common.username'), type: "input", data: "proxy.username", placeholder: t('common.optional') },
+                { name: t('common.password'), type: "input", data: "proxy.password", placeholder: t('common.optional') },
+                { name: t('settings.label.checkProxy'), type: "button", data: checkProxy.bind(this), icon: "fa-cloud-question" },
+            ] }
+        ] },
+        { id: "advanced", name: t('settings.advanced.name'), icon: "fa-flask", content: [
+            { name: t('settings.advanced.auto_convert_flac.name'), icon: "fa-exchange", desc: t('settings.advanced.auto_convert_flac.desc'), data: [
+                { name: t('settings.label.enable'), type: "switch", data: "advanced.auto_convert_flac" },
+            ] },
+            { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
+                { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
+            ] },
+            { name: t('settings.advanced.config.name'), icon: "fa-wrench", desc: t('settings.advanced.config.desc'), data: [
+                { name: t('home.label.danmaku'), type: "button", data: () => openPath({ getPath: true, pathName: "danmaku" }), icon: "fa-file-circle-info" },
+                { name: "Aria2c", type: "button", data: () => openPath({ getPath: true, pathName: "aria2c" }), icon: "fa-file-circle-info" },
+            ] },
+        ] },
+        { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
+            { data: [{ type: "about" }] },
+            { name: t('settings.about.update.name'), icon: "fa-upload", data: [
+                { name: t('settings.label.auto_check_update'), type: "switch", data: "auto_check_update" },
+                { name: t('settings.label.checkUpdate'), type: "button", data: checkUpdate.bind(this), icon: "fa-wrench" },
+            ] },
+            { name: t('settings.about.links.name'), icon: "fa-link", data: [
+                { name: t('settings.label.documentation'), type: "button", data: () => openPath({ path: "https://btjawa.top/bilitools" }), icon: "fa-book" },
+                { name: t('settings.label.feedback'), type: "button", data: () => openPath({ path: "https://github.com/btjawa/BiliTools/issues/new/choose" }), icon: "fa-comment-exclamation" }
+            ] },
+            { data: [{ type: "reference" }] }
+        ] }
+    ];
+});
+
+watch(subPage, (oldPage, newPage) => {
+    if (oldPage !== newPage) {
+        if (!$subPage.value) return;
+        $subPage.value.style.transition = 'none';
+        $subPage.value.style.opacity = '0';
+        nextTick(() => requestAnimationFrame(() => {
+            if (!$subPage.value) return;
+            $subPage.value.style.transition = 'opacity 0.3s';
+            $subPage.value.style.opacity = '1';
+        }));
     }
-};
+})
+
+function checkUpdate() {
+    const status = store.state.settings.auto_check_update;
+    updateSettings('auto_check_update', !status);
+    updateSettings('auto_check_update', status);
+}
+
+function updatePath(type: string) {
+    dialog.open({
+        directory: true,
+        defaultPath: (store.state.settings as any)[type]
+    }).then(path => {
+        if (!path) return null;
+        updateSettings(type, path);
+    }).catch(err => {
+        new ApplicationError(err).handleError();
+    })
+}
+
+function updateNest(key: string, data: any) {
+    const parent = key.split('.')[0] as keyof typeof store.state.settings;
+    let value = getNestedValue(store.state.settings, key);
+    if (data === value) return null;
+    store.commit('updateState', { [`settings.${key}`]: data });
+    updateSettings(parent, store.state.settings[parent]);
+}
+
+async function updateSettings(key: string, item: any) {
+    const result = await commands.rwConfig('write', { [key]: item }, store.state.data.secret);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+}
+
+async function getPath(type: PathAlias | "danmaku" | "aria2c") {
+    switch (type) {
+        case 'log': return await path.appLogDir();
+        case 'temp': return path.join(await path.tempDir(), 'com.btjawa.bilitools');
+        case 'webview': return (async () => {
+            switch(osType()) {
+                case 'windows': return path.join(await path.appLocalDataDir(), 'EBWebView');
+                case 'macos': return path.join(await path.cacheDir(), '..', 'WebKit', 'BiliTools', 'WebsiteData');
+                case 'linux': return path.join(await path.cacheDir(), 'bilitools');
+                default: return '';
+            }
+        })()
+        case 'database': return path.join(await path.appDataDir(), 'Storage');
+        case 'danmaku': return path.join(store.state.data.resources_path, 'DanmakuFactoryConfig.json');
+        case 'aria2c': return path.join(store.state.data.resources_path, 'aria2.conf');
+    }
+}
+
+async function checkProxy() {
+    try {
+        const body = await tryFetch('https://api.bilibili.com/x/click-interface/click/now');
+        const timestamp = JSON.stringify(body?.data);
+        if (timestamp) {
+            iziInfo(i18n.global.t('common.iziToast.success') + ': ' + timestamp);
+            return timestamp;
+        } else {
+            throw new ApplicationError(body?.message, { code: body?.code });
+        }
+    } catch(err) {
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
+    }
+}
+async function openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias | "danmaku" | "aria2c" }) {
+    if (!options.path) {
+        if (!options?.getPath || !options.pathName) return;
+        const path = await getPath(options.pathName);
+        return shell.open(path);
+    }
+    return shell.open(options.path);
+}
+async function getSize(pathName: PathAlias) {
+    (store.state.data.cache as any)[pathName] = 0;
+    const event = new Channel<number>();
+    event.onmessage = (bytes) => {
+        (store.state.data.cache as any)[pathName] = bytes;
+    }
+    const result = await commands.getSize(await getPath(pathName), event);
+    if (result.status === 'error') throw new ApplicationError(result.error);
+}
+async function cleanCache(pathName: PathAlias) {
+    const result = await dialog.ask(i18n.global.t('settings.askDelete'), { 'kind': 'warning' });
+    if (!result) return;
+    const clean = await commands.cleanCache(await getPath(pathName));
+    if (clean.status === 'error') throw new ApplicationError(clean.error);
+    await getSize(pathName);
+}
+function getNestedValue(obj: Record<string, any>, path: string): any {
+    if (!path.includes('.')) return obj[path];
+    const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    if (value && typeof value === 'object') {
+        return Array.isArray(value) ? [...value] : { ...value };
+    }
+    return value;
+}
+onActivated(() => Object.keys(store.state.data.cache).forEach(key => getSize(key as PathAlias)));
 </script>
 <style lang="scss" scoped>
 .ghost {

@@ -17,12 +17,12 @@
 </div></template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick } from 'vue';
+import { onMounted, ref, watch, nextTick, reactive } from 'vue';
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
 
 const $el = ref<HTMLElement>();
 const active = ref(false);
-const pos = ref({
+const pos = reactive({
     x: 0, y: 0
 });
 const activeElement = ref<HTMLInputElement | HTMLTextAreaElement | null>(null);
@@ -77,10 +77,8 @@ function showMenu(e: MouseEvent) {
         if (!$el.value) return;
         const menuHeight = $el.value.offsetHeight;
         const menuWidth = $el.value.offsetWidth;
-        pos.value = {
-            x: e.clientX + menuWidth > document.body.clientWidth ? e.clientX - menuWidth - 1 : e.clientX + 1,
-            y: e.clientY + menuHeight > document.body.clientHeight ? e.clientY - menuHeight - 1 : e.clientY + 1,
-        };
+        pos.x = e.clientX + menuWidth > document.body.clientWidth ? e.clientX - menuWidth - 1 : e.clientX + 1;
+        pos.y = e.clientY + menuHeight > document.body.clientHeight ? e.clientY - menuHeight - 1 : e.clientY + 1
     });
 }
 
