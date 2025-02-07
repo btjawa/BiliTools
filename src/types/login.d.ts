@@ -106,33 +106,3 @@ export interface CookieInfoResp {
         timestamp: number,
     };
 }
-
-export interface VerifyTelCaptchaResp {
-    code: number;
-    message: string;
-    ttl: number;
-    data: {
-        recaptcha_type: string,
-        recaptcha_token: string,
-        gee_challenge: string,
-        gee_gt: string,
-    };
-}
-
-export interface VerifyTelSendSmsCodeResp {
-    code: number;
-    message: string;
-    ttl: number;
-    data: {
-        captcha_key: string,
-    };
-}
-
-export interface VerifyTelResp {
-    code: number;
-    message: string;
-    ttl: number;
-    data: {
-        code: string,
-    };
-}

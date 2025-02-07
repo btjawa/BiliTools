@@ -74,13 +74,13 @@
 </div></template>
 
 <script setup lang="ts">
-import { ApplicationError, parseId, filename, getRandomInRange } from '@/services/utils';
+import { ApplicationError, parseId, filename, getRandomInRange, getImageBlob } from '@/services/utils';
 import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo } from '@/types/data.d';
 import { commands, CurrentSelect } from '@/services/backend';
 import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
 import { transformImage } from '@tauri-apps/api/image';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
-import { computed, reactive, ref, watch, defineExpose } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useRouter } from 'vue-router';
 import { Empty } from '@/components';
@@ -169,6 +169,8 @@ async function search(input?: string) {
 		const { id, type } = await parseId(s.searchInput);
 		const info = await data.getMediaInfo(id, type);
 		s.target = info.list.findIndex(item => item.id === info.id);
+		info.cover = await getImageBlob(info.cover + '@128h');
+		if (info.upper.avatar) info.upper.avatar = await getImageBlob(info.upper.avatar + '@36h');
 		s.mediaInfo = info;
 		s.mediaRootActive = true;
 		const start = Date.now();
@@ -299,11 +301,12 @@ async function getOthers(type: keyof typeof othersMap, options?: { date?: string
 				defaultPath: `${await pathJoin(store.state.settings.down_dir, name)}.${suffix}`
 			});
 		if (!path) return;
+		const secret = store.state.data.constant.secret;
 		const result = await (async () => {
 			switch (type) {
-				case 'cover': return await commands.writeBinary(store.state.data.secret, path, transformImage(_data as ArrayBuffer));
-				case 'aiSummary': return await commands.writeBinary(store.state.data.secret, path, new TextEncoder().encode(_data as string) as any);
-				case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(store.state.data.secret, path, name, _data as any);
+				case 'cover': return await commands.writeBinary(secret, path, transformImage(_data as ArrayBuffer));
+				case 'aiSummary': return await commands.writeBinary(secret, path, new TextEncoder().encode(_data as string) as any);
+				case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(secret, path, name, _data as any);
 			}
 		})();
 		if (result?.status === 'error') throw new ApplicationError(result.error);

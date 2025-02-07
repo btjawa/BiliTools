@@ -6,6 +6,62 @@ import * as user from "@/types/user";
 import store from "@/store";
 import md5 from "md5";
 
+declare global {
+    interface Navigator {
+        deviceMemory?: number,
+        cpuClass?: number,
+    }
+    interface Window {
+        genReqSign: (query: string, params: string, timestamp: number) => {
+            error?: string;
+            sign: string
+        };
+    }
+}
+
+// Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/933#issue-2073916390
+export function getFingerPrint(_uuid: string) {
+  return {
+    "3064": 1, "5062": Date.now(),
+    "03bf": "https%3A%2F%2Fwww.bilibili.com%2F",
+    "39c8": "333.1007.fp.risk",
+    "34f1": "", "d402": "", "654a": "",
+    "6e7c": window.innerWidth + "x" + window.innerHeight,
+    "3c43": {
+      "2673": 0, "641c": 0, "6527": 0, "7003": 1, "807e": 1,
+      "5766": window.screen.colorDepth || 24,
+      "b8ce": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+      "07a4": navigator.language,
+      "1c57": navigator.deviceMemory || 8,
+      "0bd0": navigator.hardwareConcurrency,
+      "748e": [screen.width, screen.height],
+      "d61f": [screen.availWidth, screen.availHeight],
+      "fc9d": (new Date).getTimezoneOffset(),
+      "6aa9": Intl.DateTimeFormat().resolvedOptions().timeZone,
+      "75b8": 1, "3b21": 1, "8a1c": 0,
+      "d52f": navigator.cpuClass || "not available",
+      "adca": navigator.platform || 'Win32',
+      "80c9": [["Chrome PDF Plugin","Portable Document Format",[["application/x-google-chrome-pdf","pdf"]]],["Chrome PDF Viewer","",[["application/pdf","pdf"]]]],
+      "13ab": "", "bfe9": "", "a3c1": [],
+      "6bc5": (() => {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl") as WebGLRenderingContext | undefined;
+        const debugInfo = gl?.getExtension("WEBGL_debug_renderer_info");
+        return debugInfo && gl
+          ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) + "~" + gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+          : "not available";
+      })(),
+      "ed31": 0, "72bd": 0, "097b": 0, "52cd": [0, 0, 0], "d02f": "124.04347527516074",
+      "a658": ["Arial","Verdana","Times New Roman","Courier New","Georgia","Tahoma","Trebuchet MS","Helvetica","Impact"],
+    },
+    "54ef": "{\"b_ut\":null,\"home_version\":\"V8\",\"in_new_ab\":true,\"ab_version\":{\"for_ai_home_version\":\"V8\",\"enable_web_push\":\"DISABLE\",\"ad_style_version\":\"DEFAULT\",\"enable_feed_channel\":\"DISABLE\"},\"ab_split_num\":{\"for_ai_home_version\":54,\"enable_web_push\":10,\"ad_style_version\":54,\"enable_feed_channel\":54},\"uniq_page_id\":\"509597991467\",\"is_modern\":true}",
+    "8b94": "https%3A%2F%2Fwww.bilibili.com%2F",
+    "df35": _uuid, "07a4": navigator.language,
+    "5f45": null, "db46": 0
+  }
+}
+
+// Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/951#issue-2099503271
 function getWebGLFingerPrint() {
     let dm_img_str = "bm8gd2ViZ2", dm_cover_img_str = "bm8gd2ViZ2wgZXh0ZW5zaW";
     const gl = document.createElement("canvas").getContext("webgl");
@@ -24,6 +80,7 @@ function getWebGLFingerPrint() {
     return { dm_img_str, dm_cover_img_str };
 }
 
+// Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/1107
 export async function wbi(params: { [key: string]: string | number | object }) {
     const mixinKeyEncTab = [
         46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
@@ -75,6 +132,7 @@ export async function captcha(gt: string, challenge: string): Promise<login.Capt
     })
 }
 
+// Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/524
 export async function correspondPath(timestamp: number) {
     const publicKey = await crypto.subtle.importKey(
         "jwk", {
@@ -105,21 +163,17 @@ export async function genReqSign(query: string | URLSearchParams, params: { [key
     if (!store.state.data.goInstance) {
         const go = new Go();
         const url = new URL('@/lib/manga.wasm', import.meta.url).href;
-        const wasm = await (window || globalThis).fetch(url);
+        const wasm = await window.fetch(url);
         const buffer = await wasm.arrayBuffer();
         const result = await WebAssembly.compile(buffer);
         const instance = await WebAssembly.instantiate(result, go.importObject);    
         go.run(instance);
         store.state.data.goInstance = instance;
     }
-    const genReqSign = (globalThis as any).genReqSign as (query: string, params: string, timestamp: number) => {
-        error?: string;
-        sign: string
-    };
-    if (!genReqSign) {
+    if (!window.genReqSign) {
         throw new ApplicationError("Failed to load WASM module");
     }
-    const result = genReqSign(
+    const result = window.genReqSign(
         query.toString(),
         JSON.stringify(params),
         Date.now()

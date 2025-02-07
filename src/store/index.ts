@@ -48,10 +48,13 @@ export default createStore({
                 }
             }),
             data: {
+                constant: {                    
+                    version: String(),
+                    hash: String(),
+                    secret: String(),
+                    resources_path: String(),
+                },
                 inited: false,
-                secret: String(),
-                hash: String(),
-                resources_path: String(),
                 headers: {} as Headers,
                 currentSelect: {
                     dms: -1,
@@ -94,36 +97,5 @@ export default createStore({
                 queuePage: 0
             }
         };
-    },
-    mutations: {
-        updateState(state, payload) {
-            Object.entries(payload).forEach(([key, value]) => {
-                if (key.includes('.')) {
-                    const keys = key.split('.');
-                    let current = state as any;
-                    for (let i = 0; i < keys.length - 1; i++) {
-                        current = current[keys[i]];
-                    }
-                    current[keys[keys.length - 1]] = value;
-                } else (state as any)[key] = value;
-            });
-        },
-        pushToArray(state, payload) {
-            Object.entries(payload).forEach(([key, value]) => {
-                if (key.includes('.')) {
-                    const keys = key.split('.');
-                    let current = state as any;
-                    for (let i = 0; i < keys.length - 1; i++) {
-                        current = current[keys[i]];
-                    }
-                    const lastKey = keys[keys.length - 1];
-                    if (Array.isArray(current[lastKey])) {
-                        current[lastKey].push(value);
-                    } else console.warn(`Attempt to push to a non-array property ${key}`);
-                } else if (Array.isArray((state as any)[key])) {
-                    (state as any)[key].push(value);
-                } else console.warn(`Attempt to push to a non-array property ${key}`);
-            });
-        }
-    },
+    }
 });

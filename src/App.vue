@@ -18,7 +18,7 @@
 import { onMounted, provide, ref } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { ApplicationError, setEventHook } from "@/services/utils";
-import { fetchUser, checkRefresh } from "@/services/login";
+import { fetchUser, activateCookies, checkRefresh } from "@/services/login";
 import { commands } from "@/services/backend";
 import { SearchPage } from "@/views";
 import { useRouter } from "vue-router";
@@ -51,17 +51,23 @@ onMounted(async () => {
 		const init = await commands.init(secret);
 		if (init.status === 'error') throw new ApplicationError(init.error);
 		const data = init.data;
-		store.commit('updateState', { 'data.secret': secret });
-		store.commit('updateState', { 'queue.complete': data.downloads });
-		store.commit('updateState', { 'data.hash': data.hash });
-		store.commit('updateState', { 'data.resources_path': data.resources_path });
+		const { downloads, ...initData } = init.data;
+		store.state.queue.complete = data.downloads;
+		store.state.data.constant = {
+			secret, ...initData
+		};
 		await checkRefresh();
 		await fetchUser();
 	} catch(err) {
 		err instanceof ApplicationError ? err.handleError() :
 		new ApplicationError(err as string).handleError();
 	} finally {
-		store.commit('updateState', { 'data.inited': true });
+		try {
+			await activateCookies();
+		} catch(err) {
+			new ApplicationError(err as string).handleError();
+		}
+		store.state.data.inited = true;
 	}
 })
 </script>

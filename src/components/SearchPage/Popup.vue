@@ -139,6 +139,8 @@ const others = computed(() => {
     ];
 })
 
+defineExpose({ init });
+
 function init(type: 'audioVisual' | 'others', media_type: MediaType, options: { req: OthersReqs, noFmt?: boolean }) {
     popupType.value = type;
     othersReqs.value = options.req;
@@ -162,8 +164,6 @@ function confirm(id: string) {
     }
     close();
 }
-
-defineExpose({ init });
 </script>
 
 <style lang="scss">

@@ -29,10 +29,9 @@ const activeElement = ref<HTMLInputElement | HTMLTextAreaElement | null>(null);
 const selection = ref(String());
 
 onMounted(() => {
-    const hideMenu = () => active.value = false;
-    document.addEventListener('click', hideMenu);
+    document.addEventListener('click', () => active.value = false);
     document.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.keyCode === 27) hideMenu();
+        if (e.keyCode === 27) active.value = false;
     })
 });
 

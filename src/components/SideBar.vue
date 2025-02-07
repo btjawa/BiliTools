@@ -56,15 +56,13 @@ const avatarUrl = computed(() => {
     return store.state.user.isLogin ? store.state.user.avatar : new URL('@/assets/img/profile/default-avatar.jpg', import.meta.url).href;
 });
 
+onMounted(() => osType() === 'macos' && $el.value && ($el.value.style.paddingTop = '30px'))
+
 async function setTheme() {
     const newTheme = store.state.settings.theme === 'dark' ? 'light' : 'dark';
-    const result = await commands.rwConfig('write', { theme: newTheme }, store.state.data.secret);
+    const result = await commands.rwConfig('write', { theme: newTheme }, store.state.data.constant.secret);
     if (result.status === 'error') throw new ApplicationError(result.error);
 }
-
-onMounted(() => {
-    if (osType() === 'macos' && $el.value) $el.value.style.paddingTop = '30px';
-})
 </script>
 
 <style scoped lang="scss">

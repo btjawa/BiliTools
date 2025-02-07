@@ -545,7 +545,7 @@ export async function getMangaImages(epid: number, parent: string, name: string)
         const url = await getMangaToken(image);
         const path = await pathJoin(parent, name, index + 1 + '.jpg');
         const result = await Backend.commands.writeBinary(
-            store.state.data.secret,
+            store.state.data.constant.secret,
             path,
             transformImage(await getBinary(url)),
         )

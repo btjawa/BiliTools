@@ -4,14 +4,14 @@
 >
     <div v-if="osType() == 'windows'" class='relative z-[100] !visible ml-auto'>
         <div class="titlebar-button translate-y-[-5px]" @click="appWindow.minimize()">
-            <div class="!h-[1px]" style="mask-image:url('/src/assets/img/titlebar/minimize.svg')"></div>
+            <div class="!h-[1px]" :style='`mask-image:url("${icons.minimize}")`'></div>
         </div>
         <div class="titlebar-button" @click="appWindow.toggleMaximize()">
-            <div v-if="!maxed" style="mask-image:url('/src/assets/img/titlebar/maximize-0.svg')"></div>
-            <div v-else style="mask-image:url('/src/assets/img/titlebar/maximize-1.svg')"></div>
+            <div v-if="!maxed" :style='`mask-image:url("${icons.maximize_0}")`'></div>
+            <div v-else :style='`mask-image:url("${icons.maximize_1}")`'></div>
         </div>
         <div class="titlebar-button hover:!bg-[color:#c42b1c]" @click="appWindow.close()">
-            <div style="mask-image:url('/src/assets/img/titlebar/close.svg')"></div>
+            <div :style='`mask-image:url("${icons.close}")`'></div>
         </div>
     </div>
 </div>
@@ -26,7 +26,15 @@ import { type as osType } from '@tauri-apps/plugin-os';
 const maxed = ref(false);
 const appWindow = getCurrentWindow();
 
+const icons = {
+    minimize: new URL('@/assets/img/titlebar/minimize.svg', import.meta.url).href,
+    maximize_0: new URL('@/assets/img/titlebar/maximize-0.svg', import.meta.url).href,
+    maximize_1: new URL('@/assets/img/titlebar/maximize-1.svg', import.meta.url).href,
+    close: new URL('@/assets/img/titlebar/close.svg', import.meta.url).href,
+}
+
 onMounted(() => {
+    console.log(icons)
     appWindow.onResized(debounce(async () => {
         maxed.value = await appWindow.isMaximized();
     }, 250));

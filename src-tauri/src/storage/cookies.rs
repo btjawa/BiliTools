@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 
@@ -49,7 +49,7 @@ fn parse_cookie_header(cookie: String) -> Result<Model> {
     let name = captures.get(1).unwrap().as_str().trim().to_string();
     let value: JsonValue = captures.get(2).unwrap().as_str().trim().into();
 
-    let mut attributes: HashMap<String, String> = HashMap::new();
+    let mut attributes: BTreeMap<String, String> = BTreeMap::new();
 
     for cap in re_attribute.captures_iter(&cookie) {
         let key = cap.get(1).unwrap().as_str().trim().to_string();
@@ -66,12 +66,12 @@ fn parse_cookie_header(cookie: String) -> Result<Model> {
     })
 }
 
-pub async fn load() -> Result<HashMap<String, JsonValue>> {
+pub async fn load() -> Result<BTreeMap<String, JsonValue>> {
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
         .await.context("Failed to connect to the database")?;
     let cookies = Entity::find().all(&db)
         .await.context("Failed to load Cookies")?;
-    let mut result = HashMap::new();
+    let mut result = BTreeMap::new();
     for cookie in cookies {
         result.insert(cookie.name, cookie.value);
     }

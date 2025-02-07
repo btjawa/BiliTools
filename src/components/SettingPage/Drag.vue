@@ -37,6 +37,13 @@ const props = defineProps<{
     data: string,
 }>();
 
+onMounted(() => {
+    onSourceAdd();
+    target.value = store.state.settings.filename.split('_').map((id) => {
+        return { id, name: props.placeholders.find(item => item.id === id)?.name || id };
+    });
+})
+
 function onUpdate(e: any) {
     console.log(e.data)
     if (!target.value.length) target.value.push(e.data);
@@ -47,13 +54,6 @@ function onUpdate(e: any) {
 function onSourceAdd() {
     sources.value = props.placeholders;
 }
-
-onMounted(() => {
-    onSourceAdd();
-    target.value = store.state.settings.filename.split('_').map((id) => {
-        return { id, name: props.placeholders.find(item => item.id === id)?.name || id };
-    });
-})
 </script>
 
 <style scoped lang="scss">

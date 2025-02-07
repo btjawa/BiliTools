@@ -45,6 +45,9 @@ const iconMap = {
     'share': 'bcc-icon-icon_action_share_n_x'
 }
 
+onMounted(handleDesc);
+watch(() => props.info, handleDesc, { deep: true });
+
 function handleDesc() {
     nextTick(() => {
         if (!title.value || !desc.value) return;
@@ -53,9 +56,6 @@ function handleDesc() {
         desc.value.style.webkitLineClamp = titleHeight <= lineHeight ? '3' : '2';
     });
 }
-
-onMounted(handleDesc);
-watch(() => props.info, handleDesc, { deep: true });
 </script>
 
 <style scoped lang="scss">

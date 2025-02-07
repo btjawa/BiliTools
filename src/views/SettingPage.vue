@@ -54,12 +54,12 @@
                             <img class="h-16 mr-6 w-auto inline" src="@/assets/img/icon.svg" draggable="false" />
                             <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
-                        {{ $t('common.version') }}: <span @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/v' + version })"
+                        {{ $t('common.version') }}: <span @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/v' + constant.version })"
                             class="mx-2 text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
-                        >{{ version }}</span>
+                        >{{ constant.version }}</span>
                         <span class="text desc ml-2">
                             <i :class="fa_dyn" class="fa-code-commit"></i>
-                            {{ store.state.data.hash.slice(0, 7) }}
+                            {{ constant.hash.slice(0, 7) }}
                         </span>
                     </div>
                     <div v-if="unit.type === 'reference'" class="desc">
@@ -86,7 +86,6 @@
 import { computed, nextTick, onActivated, ref, watch } from 'vue';
 import { ApplicationError, iziInfo, tryFetch } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
-import { getVersion } from '@tauri-apps/api/app';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
 import { Empty } from '@/components';
@@ -113,7 +112,7 @@ type UnitType =
 
 const subPage = ref("storage");
 const $subPage = ref<HTMLElement>();
-const version = await getVersion();
+const constant = computed(() => store.state.data.constant);
 
 const fa_dyn = computed(() => store.state.settings.theme === 'light' ? 'fa-light' : 'fa-solid');
 const settings = computed(() => {
@@ -206,6 +205,8 @@ watch(subPage, (oldPage, newPage) => {
     }
 })
 
+onActivated(() => Object.keys(store.state.data.cache).forEach(key => getSize(key as PathAlias)));
+
 function checkUpdate() {
     const status = store.state.settings.auto_check_update;
     updateSettings('auto_check_update', !status);
@@ -228,12 +229,12 @@ function updateNest(key: string, data: any) {
     const parent = key.split('.')[0] as keyof typeof store.state.settings;
     let value = getNestedValue(store.state.settings, key);
     if (data === value) return null;
-    store.commit('updateState', { [`settings.${key}`]: data });
+    (store.state.settings as any)[key] = data;
     updateSettings(parent, store.state.settings[parent]);
 }
 
 async function updateSettings(key: string, item: any) {
-    const result = await commands.rwConfig('write', { [key]: item }, store.state.data.secret);
+    const result = await commands.rwConfig('write', { [key]: item }, constant.value.secret);
     if (result.status === 'error') throw new ApplicationError(result.error);
 }
 
@@ -250,8 +251,8 @@ async function getPath(type: PathAlias | "danmaku" | "aria2c") {
             }
         })()
         case 'database': return path.join(await path.appDataDir(), 'Storage');
-        case 'danmaku': return path.join(store.state.data.resources_path, 'DanmakuFactoryConfig.json');
-        case 'aria2c': return path.join(store.state.data.resources_path, 'aria2.conf');
+        case 'danmaku': return path.join(constant.value.resources_path, 'DanmakuFactoryConfig.json');
+        case 'aria2c': return path.join(constant.value.resources_path, 'aria2.conf');
     }
 }
 
@@ -302,7 +303,6 @@ function getNestedValue(obj: Record<string, any>, path: string): any {
     }
     return value;
 }
-onActivated(() => Object.keys(store.state.data.cache).forEach(key => getSize(key as PathAlias)));
 </script>
 <style lang="scss" scoped>
 .ghost {

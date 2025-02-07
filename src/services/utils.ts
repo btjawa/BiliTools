@@ -1,6 +1,7 @@
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { version as osVersion } from "@tauri-apps/plugin-os";
 import { TauriError, events } from '@/services/backend';
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MediaType } from '@/types/data.d';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
@@ -8,7 +9,6 @@ import * as auth from '@/services/auth';
 import iziToast from "izitoast";
 import store from "@/store";
 import i18n from '@/i18n';
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const t = i18n.global.t;
 
@@ -73,10 +73,10 @@ function iziError(message: string) {
 
 export function setEventHook() {
     events.headers.listen(e => {
-        store.commit('updateState', { 'data.headers': e.payload });
+        store.state.data.headers = e.payload;
     })
     events.settings.listen(async e => {
-        store.commit('updateState', { settings: e.payload });
+        store.state.settings = e.payload;
         const version = osVersion().split('.');
         const window = getCurrentWindow();
         window.setTheme(e.payload.theme);
@@ -88,9 +88,8 @@ export function setEventHook() {
         i18n.global.locale.value = store.state.settings.language;
     });
     events.queueEvent.listen(e => {
-        store.commit('updateState', {
-            ['queue.' + e.payload.type.toLowerCase()]: e.payload.data }
-        );
+        const queue = e.payload.type.toLowerCase() as keyof typeof store.state.queue;
+        store.state.queue[queue] = e.payload.data;
     })
     events.notification.listen(async e => {
         let permissionGranted = await isPermissionGranted();
@@ -119,7 +118,7 @@ export async function tryFetch(url: string | URL, options?: {
         type: 'json' | 'form',
         body?: Record<string, string | number | Object>
     },
-    type?: 'text' | 'binary',
+    type?: 'text' | 'binary' | 'blob',
     times?: number,
     handleError?: boolean
 }) {
@@ -143,7 +142,7 @@ export async function tryFetch(url: string | URL, options?: {
             params += _params.toString();
         } else if (options?.params) {
             params += new URLSearchParams(rawParams).toString();
-        }
+        } else params = String();
         const fetchOptions = {
             headers: store.state.data.headers,
             ...(store.state.settings.proxy.addr && {
@@ -172,6 +171,7 @@ export async function tryFetch(url: string | URL, options?: {
             switch(options?.type) {
                 case 'text': return await response.text();
                 case 'binary': return await response.arrayBuffer();
+                case 'blob': return await response.blob();
             }
         }
         let body = {} as any;
@@ -399,4 +399,9 @@ export function getFileExtension(options: { dms: number, ads: number, cdc: numbe
 
 export function getRandomInRange(min: number, max: number) {
     return Math.floor(Math.random() * (max - min) + min);
+}
+
+export async function getImageBlob(url: string | URL) {
+    const blob = await tryFetch(url, { type: 'blob' })
+    return URL.createObjectURL(blob);
 }

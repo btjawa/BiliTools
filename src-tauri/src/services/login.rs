@@ -145,16 +145,54 @@ struct ConfirmRefreshResponse {
     ttl: isize,
 }
 
-fn hmac_sha256(key: &str, message: &str) -> String {
-    let key = hmac::Key::new(hmac::HMAC_SHA256, key.as_bytes());
-    let signature = hmac::sign(&key, message.as_bytes());
-    signature.as_ref().iter().map(|byte| format!("{:02x}", byte)).collect()
-}
-
 #[tauri::command]
 #[specta::specta]
 pub fn stop_login() {
     LOGIN_POLLING.store(false, Ordering::SeqCst);
+}
+
+async fn get_bili_ticket() -> Result<String> {
+    let client = init_client().await?;
+    let ts = get_ts(false);
+    let cookies = cookies::load().await?;
+    let bili_csrf = cookies.get("bili_jct").and_then(Value::as_str).unwrap_or("");
+    let hmac_sha256 = |key: &str, message: &str| -> String {
+        let key = hmac::Key::new(hmac::HMAC_SHA256, key.as_bytes());
+        let signature = hmac::sign(&key, message.as_bytes());
+        signature.as_ref().iter().map(|byte| format!("{:02x}", byte)).collect()
+    };
+    let hex_sign = hmac_sha256("XgwSnGZ1p", &format!("ts{}", ts));
+    let bili_ticket_resp = client
+        .post("https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket")
+        .query(&[
+            ("key_id", "ec02"),
+            ("hexsign", &hex_sign),
+            ("context[ts]", &ts.to_string()),
+            ("csrf", bili_csrf),
+        ]).send().await?;
+    if bili_ticket_resp.status() != StatusCode::OK {
+        return Err(anyhow!("({}) Error while fetching BiliTicket Cookie", bili_ticket_resp.status()));
+    }
+    let bili_ticket_body: BiliTicketResponse = bili_ticket_resp.json()
+        .await.context("Failed to decode BiliTicket response")?;
+    if bili_ticket_body.code != 0 || bili_ticket_body.data.is_none() {
+        return Err(anyhow!(TauriError::new(bili_ticket_body.message, Some(bili_ticket_body.code))).into());
+    }
+    Ok(bili_ticket_body.data.unwrap().ticket)
+}
+
+fn get_uuid() -> String {
+    const DIGIT_MAP: [&str; 16] = ["1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","10"];
+    let s = |length: usize| -> String {
+        let mut rng = rand::thread_rng();
+        (0..length)
+            .map(|_| DIGIT_MAP[rng.gen_range(0..DIGIT_MAP.len())])
+            .collect()
+    };
+    format!(
+        "{}-{}-{}-{}-{}{:05}infoc",
+        s(8), s(4), s(4), s(4), s(12), get_ts(true)
+    )
 }
 
 pub async fn get_extra_cookies() -> Result<()> {
@@ -193,44 +231,9 @@ pub async fn get_extra_cookies() -> Result<()> {
     }
     cookies::insert(format!("buvid4={}", buvid_body.data.b_4)).await?;
 
-    let ts = get_ts(false);
-    let hex_sign = hmac_sha256("XgwSnGZ1p", &format!("ts{}", ts));
-    let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").and_then(Value::as_str).unwrap_or("");
-    let bili_ticket_resp = client
-        .post("https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket")
-        .query(&[
-            ("key_id", "ec02"),
-            ("hexsign", &hex_sign),
-            ("context[ts]", &ts.to_string()),
-            ("csrf", bili_csrf),
-        ]).send().await?;
-    if bili_ticket_resp.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while fetching BiliTicket Cookie", bili_ticket_resp.status()));
-    }
-    let bili_ticket_body: BiliTicketResponse = bili_ticket_resp.json()
-        .await.context("Failed to decode BiliTicket response")?;
-    if bili_ticket_body.code != 0 || bili_ticket_body.data.is_none() {
-        return Err(anyhow!(TauriError::new(bili_ticket_body.message, Some(bili_ticket_body.code))).into());
-    }
-    cookies::insert(format!("bili_ticket={}", bili_ticket_body.data.unwrap().ticket)).await?;
-
-    fn a(e: usize) -> String {
-        let mut rng = rand::thread_rng();
-        (0..e)
-            .map(|_| format!("{:X}", rng.gen_range(0..16)))
-            .collect()
-    }
-    fn s(e: String, t: usize) -> String {
-        if e.len() < t {
-            "0".repeat(t - e.len()) + &e
-        } else { e }
-    }
-    let ts = get_ts(true);
-    cookies::insert(format!(
-        "_uuid={}-{}-{}-{}-{}{}infoc",
-        a(8), a(4), a(4), a(4), a(12), s((ts % 100000).to_string(), 5)
-    )).await?;
+    let bili_ticket = get_bili_ticket().await?;
+    cookies::insert(format!("bili_ticket={bili_ticket}")).await?;
+    cookies::insert(format!("_uuid={}", get_uuid())).await?;
     Ok(())
 }
 
@@ -310,18 +313,18 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
     let client = init_client().await?;
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login")
-        .query(&[
+        .form(&[
             ("username", username),
             ("password", encoded_pwd),
             ("token", token),
             ("challenge", challenge),
             ("validate", validate),
             ("seccode", seccode),
-            ("go_url", "https://www.bilibili.com".into()),
+            ("go_url", "https://www.bilibili.com/".into()),
             ("source", "main-fe-header".into()),
         ]).send().await?;
     if response.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while performing SMS login", response.status()).into());
+        return Err(anyhow!("({}) Error while performing Password login", response.status()).into());
     }
     let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())

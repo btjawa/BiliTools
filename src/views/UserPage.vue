@@ -5,7 +5,7 @@
         </div>
         <div class="profile__meta relative flex items-center mx-10">
             <div class="avatar -translate-y-2.5 w-[104px] h-[104px] rounded-full">
-                <img :src="user.avatar + '@100w_100h'" class="rounded-full" />
+                <img :src="user.avatar" class="rounded-full" />
                 <img v-if="user.vipLabel" class="w-[30px] absolute right-0 bottom-0" src="/src/assets/img/profile/big-vip.svg" />
             </div>
             <div class="details absolute top-[10px] ml-[120px]">
@@ -50,9 +50,7 @@
         <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
         <div class="flex relative h-[290px] w-[400px] flex-col items-center">
             <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
-                <!-- <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'"> -->
-                <h3 @click="ask($t('common.unstable'), { 'kind': 'warning' }).then(r => r ? othersPage = 0 : null)"
-                    :class="othersPage !== 0 || 'active'">
+                <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'">
                     {{ $t('user.others.pwd') }}
                 </h3>
                 <div class="split h-5 mx-[21px]"></div>
@@ -128,7 +126,6 @@ import { ApplicationError } from '@/services/utils';
 import { useRouter } from 'vue-router';
 import { commands } from '@/services/backend';
 import { open } from '@tauri-apps/plugin-shell';
-import { ask } from '@tauri-apps/plugin-dialog';
 import * as login from '@/services/login';
 import store from '@/store';
 
@@ -137,7 +134,7 @@ const pwd = ref(String());
 const captchaKey = ref(String());
 const scanCode = ref(0);
 const cid = ref(86);
-const othersPage = ref(1);
+const othersPage = ref(0);
 const countryList = ref<{
     id: number;
     cname: string;
@@ -157,6 +154,8 @@ const dark = computed(() => store.state.settings.theme === 'dark');
 const level = computed(() => {
     return new URL(`/src/assets/img/profile/level/level${user.value.level}.svg`, import.meta.url).href;
 });
+
+onDeactivated(commands.stopLogin);
 
 async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
     try {
@@ -210,8 +209,6 @@ onActivated(() => {
     tryLogin('scan');
     tryLogin('init');
 })
-
-onDeactivated(commands.stopLogin);
 </script>
 
 <style lang="scss" scoped>

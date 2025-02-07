@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use serde_json::{Value, json};
 use tauri::async_runtime;
 use tauri_specta::Event;
@@ -75,12 +75,12 @@ pub async fn init() -> Result<()> {
     Ok(())
 }
 
-pub async fn load() -> Result<HashMap<String, JsonValue>> {
+pub async fn load() -> Result<BTreeMap<String, JsonValue>> {
     let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
         .await.context("Failed to connect to the database")?;
     let configs = Entity::find().all(&db)
         .await.context("Failed to load Settings")?;
-    let mut result = HashMap::new();
+    let mut result = BTreeMap::new();
     for config in configs {
         result.insert(config.name, config.value);
     }
@@ -103,11 +103,11 @@ pub async fn insert(name: String, value: JsonValue) -> Result<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, secret: String) -> TauriResult<()> {
+pub async fn rw_config(action: &str, settings: Option<BTreeMap<String, Value>>, secret: String) -> TauriResult<()> {
     if secret != *SECRET.read().unwrap() {
         return Err(anyhow!("403 Forbidden").into());
     }
-    let update_config = |source: HashMap<String, Value>| {
+    let update_config = |source: BTreeMap<String, Value>| {
         let mut config = CONFIG.write().unwrap();
         let mut config_json = serde_json::to_value(&*config)?;
         if let Value::Object(ref mut config_obj) = config_json {
@@ -141,7 +141,7 @@ pub async fn rw_config(action: &str, settings: Option<HashMap<String, Value>>, s
     let config = CONFIG.read().unwrap().clone();
     if action != "read" {
         if let Value::Object(map) = serde_json::to_value(&config).unwrap() {
-            update_config(map.into_iter().collect::<HashMap<String, Value>>())?;
+            update_config(map.into_iter().collect::<BTreeMap<String, Value>>())?;
         }
         #[cfg(debug_assertions)]
         log::info!("{:?}", config);

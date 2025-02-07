@@ -30,9 +30,10 @@ pub use crate::{
 
 #[derive(Serialize, Type)]
 pub struct InitData {
-    downloads: Vec<Arc<aria2c::QueueInfo>>,
+    version: String,
     hash: String,
     resources_path: String,
+    downloads: Vec<Arc<aria2c::QueueInfo>>,
 }
 
 #[tauri::command(async)]
@@ -127,7 +128,7 @@ pub async fn ready() -> TauriResult<String> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn init(secret: String) -> TauriResult<InitData> {
+pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData> {
     if secret != *shared::SECRET.read().unwrap() {
         return Err(anyhow!("403 Forbidden").into())
     }
@@ -138,5 +139,6 @@ pub async fn init(secret: String) -> TauriResult<InitData> {
     let downloads = downloads::load().await?;
     let hash = env!("GIT_HASH").to_string();
     let resources_path = shared::RESOURCES_PATH.to_string_lossy().to_string();
-    Ok(InitData { downloads, hash, resources_path })
+    let version = app.package_info().version.to_string();
+    Ok(InitData { version, hash, resources_path, downloads })
 }

@@ -170,7 +170,7 @@ settings: "settings"
 export type CurrentSelect = { dms: number; ads: number; cdc: number; fmt: number }
 export type DownloadEvent = { status: "Started"; id: string; gid: string; media_type: MediaType } | { status: "Progress"; id: string; gid: string; content_length: number; chunk_length: number } | { status: "Finished"; id: string; gid: string } | { status: "Error"; code: number; message: string }
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { downloads: QueueInfo[]; hash: string; resources_path: string }
+export type InitData = { version: string; hash: string; resources_path: string; downloads: QueueInfo[] }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
 export type MediaInfoListItem = { title: string; cover: string; desc: string; id: number; cid: number; eid: number; duration?: number; ss_title: string; index: number }
 export type MediaType = "video" | "audio" | "merge" | "flac"

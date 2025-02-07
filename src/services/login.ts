@@ -1,7 +1,6 @@
-import { ApplicationError, tryFetch } from "@/services/utils";
+import { ApplicationError, tryFetch, getImageBlob } from "@/services/utils";
 import { Channel } from "@tauri-apps/api/core";
 import { commands } from "@/services/backend";
-import { getBinary } from "@/services/data";
 import store from "@/store";
 import qrcode from "qrcode-generator";
 import JSEncrypt from "jsencrypt";
@@ -15,21 +14,19 @@ const t = i18n.global.t;
 export async function fetchUser() {
     const mid = store.state.data.headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
     if (!mid) {
-        store.commit('updateState', { 'user.isLogin': false, 'data.inited': true });
-        return null;
+        store.state.user.isLogin = false;
+        return;
     }
     const userInfo = await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', {
         auth: 'wbi', params: { mid }
     }) as UserTypes.UserInfoResp;
     const userStat = await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as UserTypes.UserStatResp;
-    const topPhoto = await getBinary(userInfo.data.top_photo.replace('http:', 'https:'));
-    store.commit('updateState', { 'user': {
-        avatar: userInfo.data.face, name: userInfo.data.name, desc: userInfo.data.sign,
+    store.state.user = {
+        avatar: await getImageBlob(userInfo.data.face.replace('http:', 'https:') + '@100w_100h'),
+        name: userInfo.data.name, desc: userInfo.data.sign,
         mid: userInfo.data.mid, level: userInfo.data.level,
-        vipLabel: (userInfo.data?.vip?.label?.img_label_uri_hans_static).replace('http:', 'https:'),
-        topPhoto: 'data:image/jpeg;base64,' + btoa(
-            new Uint8Array(topPhoto).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        ),
+        vipLabel: await getImageBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static.replace('http:', 'https:')),
+        topPhoto: await getImageBlob(userInfo.data.top_photo.replace('http:', 'https:') + '@170h'),
         isLogin: true,
         stat: {
             coins: userInfo.data.coins,
@@ -37,11 +34,23 @@ export async function fetchUser() {
             follower: userStat.data.follower,
             dynamic: userStat.data.dynamic_count,
         }
-    }});
+    };
 }
 
+export async function activateCookies() {
+    const _uuid = store.state.data.headers.Cookie.match(/_uuid=([A-F0-9-]+infoc)(?=;|$)/i)?.[1];
+    if (!_uuid) return;
+    const payload = auth.getFingerPrint(_uuid);
+    console.log(payload)
+    await tryFetch('https://api.bilibili.com/x/internal/gaia-gateway/ExClimbWuzhi', {
+        post: { type: 'json', body: { payload: JSON.stringify(payload) } }
+    })
+};
+
 async function getCaptchaParams() {
-    const body = await tryFetch('https://passport.bilibili.com/x/passport-login/captcha?source=main-fe-header') as LoginTypes.GenCaptchaResp;
+    const body = await tryFetch('https://passport.bilibili.com/x/passport-login/captcha', {
+        params: { source: 'main-fe-header' }
+    }) as LoginTypes.GenCaptchaResp;
     const { token, geetest: { gt = '', challenge = '' } = {} } = body.data;
     return { token, gt, challenge };
 }
@@ -75,43 +84,15 @@ export async function smsLogin(cid: number, tel: string, code: string, captcha_k
 }
 
 export async function pwdLogin(username: string, pwd: string): Promise<number> {
+    const { token, gt, challenge } = await getCaptchaParams();
     const body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/key') as LoginTypes.GetPwdLoginKeyResp;
     const { hash, key } = body.data;
     const enc = new JSEncrypt();
-    enc.setPublicKey(key.replace(/\n/g, ''));
-    const encoded_pwd = enc.encrypt(hash + pwd);
-    const { token, gt, challenge } = await getCaptchaParams();
+    enc.setPublicKey(key);
+    const encoded_pwd = enc.encrypt(hash + pwd) || "";
     const captcha = await auth.captcha(gt, challenge);
-    const result = await commands.pwdLogin(username, encoded_pwd || "", token, captcha.challenge, captcha.validate, captcha.seccode);
+    const result = await commands.pwdLogin(username, encoded_pwd, token, captcha.challenge, captcha.validate, captcha.seccode);
     if (result.status === 'error') throw new ApplicationError(result.error);
-    return result.data;
-}
-
-export async function verifyTelSendSmsCode(tmp_code: string): Promise<string> {
-    const captcha_body = await tryFetch('https://passport.bilibili.com/x/safecenter/captcha/pre', {
-        post: { type: 'form' }
-    }) as LoginTypes.VerifyTelCaptchaResp;
-    const { recaptcha_token, gee_gt, gee_challenge } = captcha_body.data;
-    const { validate: gee_validate, seccode: gee_seccode } = await auth.captcha(gee_gt, gee_challenge);
-    const send_code_body = await tryFetch('https://passport.bilibili.com/x/safecenter/common/sms/send', {
-        post: { type: 'form' }, params: {
-            tmp_code, sms_type: "loginTelCheck",
-            recaptcha_token, gee_challenge, gee_validate, gee_seccode    
-        }
-    }) as LoginTypes.VerifyTelSendSmsCodeResp;
-    return send_code_body.data.captcha_key;
-}
-
-export async function verifyTel(tmp_code: string, captcha_key: string, code: string, request_id: string): Promise<number> {
-    const body = await tryFetch('https://passport.bilibili.com/x/safecenter/login/tel/verify', {
-        post: { type: 'form' }, params: {
-            tmp_code, sms_type: "loginTelCheck",
-            captcha_key, code, request_id, source: "risk"
-        }
-    }) as LoginTypes.VerifyTelResp;
-    const switch_code = body.data.code;
-    const result = await commands.switchCookie(switch_code);
-    if (result.status === 'error') throw new ApplicationError(result.status);
     return result.data;
 }
 

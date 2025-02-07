@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, path::PathBuf, sync::{Arc, RwLock}, time::{SystemTime, UNIX_EPOCH}};
+use std::{collections::BTreeMap, env, path::PathBuf, sync::{Arc, RwLock}, time::{SystemTime, UNIX_EPOCH}};
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, WebviewWindow, Wry};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distributions::Alphanumeric, Rng};
@@ -65,7 +65,7 @@ lazy_static! {
     };
 }
 
-// Copied from tauri::Theme because we need a Type and Event derive
+// Modified from tauri::Theme for Type and Event derive
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type, Event)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
@@ -95,17 +95,17 @@ pub struct Headers {
     #[serde(rename = "Origin")]
     origin: String,
     #[serde(flatten)]
-    extra: HashMap<String, String>,
+    extra: BTreeMap<String, String>,
 }
 
-pub async fn init_headers() -> Result<HashMap<String, String>> {
-    let mut map = HashMap::new();
+pub async fn init_headers() -> Result<BTreeMap<String, String>> {
+    let mut map = BTreeMap::new();
     let cookies = cookies::load().await?
         .iter().map(|(name, value)|
             format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
         ).collect::<Vec<_>>().join("; ");
     map.insert("Cookie".into(), cookies);
-    map.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36".into());
+    map.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36".into());
     map.insert("Referer".into(), "https://www.bilibili.com/".into());
     map.insert("Origin".into(), "https://www.bilibili.com".into());
     let headers_value: Value = serde_json::to_value(&map)?;
@@ -117,10 +117,11 @@ pub async fn init_headers() -> Result<HashMap<String, String>> {
 pub async fn init_client() -> Result<Client> {
     let mut headers = HeaderMap::new();
     for (key, value) in init_headers().await? {
-    headers.insert(
-        HeaderName::from_bytes(key.as_bytes())?,
-        HeaderValue::from_str(&value)?
-    ); }
+        headers.insert(
+            HeaderName::from_bytes(key.as_bytes())?,
+            HeaderValue::from_str(&value)?
+        );
+    }
     let config = CONFIG.read().unwrap();
     let client_builder = Client::builder()
         .default_headers(headers);

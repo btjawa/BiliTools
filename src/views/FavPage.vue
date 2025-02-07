@@ -75,6 +75,10 @@ watch(media_id, (newVal, oldVal) => {
 
 watch(page, (newVal) => getContent(media_id.value, newVal))
 
+onActivated(() => !favorateList.value.length && getList())
+
+const trySearch = inject<(input?: string) => void>('trySearch') || (() => {});
+
 async function getContent(media_id: number, pn: number) {
     try {
         const body = await getFavoriteContent(media_id, pn);
@@ -100,12 +104,6 @@ async function getList() {
         new ApplicationError(err as string).handleError();
     }
 }
-
-onActivated(() => {
-    if (!favorateList.value.length) getList()   
-})
-
-const trySearch = inject<(input?: string) => void>('trySearch') || (() => {});
 </script>
 <style lang="scss" scoped>
 $color: red;
