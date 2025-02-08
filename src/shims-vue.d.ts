@@ -9,14 +9,6 @@ import type {
 } from 'vue';
 
 declare module '@vue/runtime-core' {
-  interface ComponentCustomProperties {
-    $i18n: I18n['global'];
-    $t: (key: string, ...args: any[]) => string;
-    $store: Store<typeof store.state>
-  }
-}
-
-declare module '@vue/runtime-core' {
   interface ComponentCustomProperties extends _ComponentCustomProperties {}
   interface ComponentCustomOptions extends _ComponentCustomOptions {}
 }

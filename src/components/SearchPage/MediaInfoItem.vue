@@ -11,7 +11,7 @@
     <div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
     <div class="flex gap-2">
         <button v-for="(item) in options" @click="item.action(index)">
-            <i :class="[$store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light', item.icon]"></i>
+            <i :class="[settings.dynFa, item.icon]"></i>
             <span>{{ item.text }}</span>
         </button>
     </div>
@@ -19,6 +19,8 @@
 
 <script setup lang="ts">
 import { MediaInfo } from '@/types/data';
+import { useSettingsStore } from '@/store';
+const settings = useSettingsStore();
 const model = defineModel();
 
 defineProps<{

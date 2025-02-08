@@ -1,6 +1,6 @@
 <template><div class="flex-col pb-0">
     <h1 class="self-start">
-        <i :class="[fa_dyn, 'fa-bookmark mr-2']"></i>
+        <i :class="[settings.dynFa, 'fa-bookmark mr-2']"></i>
         {{ $t('favorites.title') }}
     </h1>
     <hr />
@@ -20,7 +20,7 @@
                     <span class="flex flex-1 ellipsis text">{{ item.title }}</span>
                     <div class="w-px h-full bg-[color:var(--split-color)] mx-4"></div>
                     <button @click="trySearch(item.bvid)">
-                        <i :class="[fa_dyn, 'fa-download']"></i>
+                        <i :class="[settings.dynFa, 'fa-download']"></i>
                         <span>{{ $t('downloads.label.download') }}</span>
                     </button>
                 </div>
@@ -34,7 +34,7 @@
                 <label class="w-[3px] rounded-md h-4 bg-[color:var(--primary-color)] invisible"></label>
             </button>
             <button class="self-end mt-2" @click="getList">
-                <i :class="[fa_dyn, 'fa-rotate-right']"></i>
+                <i :class="[settings.dynFa, 'fa-rotate-right']"></i>
                 <span>{{ $t('common.refresh') }}</span>
             </button>
         </div>
@@ -44,9 +44,9 @@
 import { inject, ref, computed, watch, nextTick, onActivated } from 'vue';
 import { getFavoriteContent, getFavoriteList } from '@/services/data';
 import { FavoriteList, FavoriteContent } from '@/types/data.d';
+import { useSettingsStore } from '@/store';
 import { ApplicationError } from '@/services/utils';
 import { Empty } from '@/components';
-import store from '@/store';
 
 const media_id = ref(Number());
 const page = ref(1);
@@ -57,7 +57,7 @@ const favorateContent = ref<{ [id: number]: FavoriteContent['data']['medias'] }>
 
 const subPage = ref<HTMLElement>();
 
-const fa_dyn = computed(() => store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light');
+const settings = useSettingsStore();
 const maxPage = computed(() => Math.ceil(medias.value / 20));
 
 watch(media_id, (newVal, oldVal) => {
@@ -106,10 +106,8 @@ async function getList() {
 }
 </script>
 <style lang="scss" scoped>
-$color: red;
 hr {
     @apply w-full my-4;
-    color: $color;
 }
 .page span.desc {
     @apply text-sm;

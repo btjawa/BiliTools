@@ -1,4 +1,5 @@
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
+import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
 import { version as osVersion } from "@tauri-apps/plugin-os";
 import { TauriError, events } from '@/services/backend';
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -7,7 +8,6 @@ import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
 import iziToast from "izitoast";
-import store from "@/store";
 import i18n from '@/i18n';
 
 const t = i18n.global.t;
@@ -72,11 +72,14 @@ function iziError(message: string) {
 }
 
 export function setEventHook() {
+    const app = useAppStore();
+    const queue = useQueueStore();
     events.headers.listen(e => {
-        store.state.data.headers = e.payload;
+        app.headers = e.payload;
     })
     events.settings.listen(async e => {
-        store.state.settings = e.payload;
+        const settings = useSettingsStore();
+        settings.$patch(e.payload);
         const version = osVersion().split('.');
         const window = getCurrentWindow();
         window.setTheme(e.payload.theme);
@@ -85,11 +88,11 @@ export function setEventHook() {
             document.body.classList.remove('override-light');
             document.body.classList.add('override-' + e.payload.theme);
         }
-        i18n.global.locale.value = store.state.settings.language;
+        i18n.global.locale.value = settings.language;
     });
     events.queueEvent.listen(e => {
-        const queue = e.payload.type.toLowerCase() as keyof typeof store.state.queue;
-        store.state.queue[queue] = e.payload.data;
+        const type = e.payload.type.toLowerCase() as keyof typeof queue.$state;
+        queue[type] = e.payload.data;
     })
     events.notification.listen(async e => {
         let permissionGranted = await isPermissionGranted();
@@ -143,11 +146,11 @@ export async function tryFetch(url: string | URL, options?: {
         } else if (options?.params) {
             params += new URLSearchParams(rawParams).toString();
         } else params = String();
+        const settings = useSettingsStore();
+        const app = useAppStore();
         const fetchOptions = {
-            headers: store.state.data.headers,
-            ...(store.state.settings.proxy.addr && {
-                proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-            }),
+            headers: app.headers,
+            ...(settings.proxyUrl && { proxy: { all: settings.proxyUrl }}),
             method: 'GET',
             body: undefined as string | undefined
         };
@@ -182,16 +185,14 @@ export async function tryFetch(url: string | URL, options?: {
         }
         if (body.code !== 0) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
-                const csrf = new Headers(store.state.data.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
+                const csrf = new Headers(app.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
                 const captchaParams = new URLSearchParams({
                     v_voucher: body.data.v_voucher, ...(csrf && { csrf })
                 }).toString();
                 const captchaResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/register?' + captchaParams, {
-                    headers: store.state.data.headers,
+                    headers: app.headers,
                     method: 'POST',
-                    ...(store.state.settings.proxy.addr && {
-                        proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-                    })
+                    ...(settings.proxyUrl && { proxy: { all: settings.proxyUrl }}),
                 });
                 const captchaBody = await captchaResp.json();
                 if (captchaBody.code !== 0) {
@@ -207,11 +208,9 @@ export async function tryFetch(url: string | URL, options?: {
                     token, ...captcha, ...(csrf && { csrf })
                 }).toString();
                 const validateResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/validate?' + validateParams, {
-                    headers: store.state.data.headers,
+                    headers: app.headers,
                     method: 'POST',
-                    ...(store.state.settings.proxy.addr && {
-                        proxy: { all: formatProxyUrl(store.state.settings.proxy) }
-                    })
+                    ...(settings.proxyUrl && { proxy: { all: settings.proxyUrl }}),
                 });
                 const validateBody = await validateResp.json();
                 if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
@@ -289,7 +288,7 @@ export function debounce(fn: Function, wait: number) {
 }
 
 export function stat(num: number | string): string {
-    const locale = store.state.settings.language;
+    const locale = useSettingsStore().language;
     if (typeof num == "string") return num;
     if (locale === 'zh-CN') {
         if (num >= 100000000) {
@@ -301,7 +300,6 @@ export function stat(num: number | string): string {
         }
     }
     if (locale === 'en-US') {
-        // 英文格式：使用K和M
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
         } else if (num >= 1000) {
@@ -346,7 +344,7 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
 }
 
 export function filename(options: { mediaType: string, aid: number, title: string }): string {
-    return store.state.settings.filename.replace(/{(\w+)}/g, (_, key) => {
+    return useSettingsStore().filename.replace(/{(\w+)}/g, (_, key) => {
         switch(key) {
             case 'date': return timestamp(Date.now(), { file: true });
             case 'timestamp': return Date.now().toString();
@@ -364,13 +362,6 @@ export function formatBytes(bytes: number): string {
     } else {
         return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
     }
-}
-
-export function formatProxyUrl(proxy: { addr: string, username?: string, password?: string }): string {
-    const url = new URL(proxy.addr);
-    url.username = proxy.username || '';
-    url.password = proxy.password || '';
-    return url.toString();
 }
 
 export function getFileExtension(options: { dms: number, ads: number, cdc: number, fmt: number }) {

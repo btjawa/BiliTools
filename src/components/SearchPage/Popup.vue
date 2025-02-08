@@ -10,11 +10,11 @@
                 v-for="btn in item.content"
                 @click="getOthers(btn.id, { date })"
             >
-                <i :class="[fa_dyn, btn.icon]"></i>
+                <i :class="[settings.dynFa, btn.icon]"></i>
                 <span>{{ $t('home.label.' + btn.id) }}</span>
             </button>
             <VueDatePicker v-if="item.content.find(c => c.id === 'historyDanmaku')"
-                v-model="date" :dark
+                v-model="date" :dark="settings.isDark"
                 model-type="format" format="yyyy-MM-dd"
                 id="historyDanmakuDate"
             />
@@ -29,10 +29,10 @@
         ></i></h3>
         <div class="flex gap-1 mt-2">
             <button v-for="id in item.content"
-                :class="{ 'selected': currentSelect[item.id] === id }"
-                @click="currentSelect[item.id] = id"
+                :class="{ 'selected': (app.currentSelect as any)[item.id] === id }"
+                @click="(app.currentSelect as any)[item.id] = id"
             >
-                <i :class="[fa_dyn, item.icon]"></i>
+                <i :class="[settings.dynFa, item.icon]"></i>
                 <span>{{ $t(`common.default.${item.id}.data.${id}`) }}</span>
             </button>
         </div>
@@ -42,7 +42,7 @@
             v-if="popupType === 'audioVisual' ? index === general.length - 1
             : (item.id === 'cdc' || item.id === 'ads')"
         >
-            <i :class="[fa_dyn, 'fa-right']"></i>
+            <i :class="[settings.dynFa, 'fa-right']"></i>
             <span>{{ $t('common.confirm') }}</span>
         </button>
     </div>
@@ -51,8 +51,11 @@
 
 <script setup lang="ts">
 import { DashInfo, MediaType } from '@/types/data.d';
+import { useAppStore, useInfoStore, useSettingsStore } from "@/store";
 import { computed, ref } from 'vue';
-import store from '@/store';
+
+const app = useAppStore();
+const settings = useSettingsStore();
 
 interface OthersReqs {
     aiSummary: number,
@@ -74,26 +77,15 @@ const noFmt = ref(false);
 const active = ref(false);
 const date = ref(new Intl.DateTimeFormat('en-CA').format(new Date()));
 
-const currentSelect = computed({
-    get: () => store.state.data.currentSelect as any,
-    set: (v: any) => store.state.data.currentSelect = v
-});
-const playUrlInfo = computed({
-    get: () => store.state.data.playUrlInfo,
-    set: (v: any) => store.state.data.playUrlInfo = v
-});
-const mediaMap = computed(() => store.state.data.mediaMap);
-const fa_dyn = computed(() => dark.value ? 'fa-solid' : 'fa-light');
-const dark = computed(() => store.state.settings.theme === 'dark');
 const general = computed(() => {
-    const info = playUrlInfo.value as DashInfo;
+    const info = app.playUrlInfo as DashInfo;
     return mediaType.value !== MediaType.Manga ? [
         ...(info.video ? [{
             content: [...new Set(info.video.map(item => item.id))],
             id: 'dms', icon: 'fa-file-video'
         }] : []),
         ...(info.video ? [{
-            content: info.video.filter(item => item.id === currentSelect.value.dms).map(item => item.codecid),
+            content: info.video.filter(item => item.id === app.currentSelect.dms).map(item => item.codecid),
             id: 'cdc', icon: 'fa-file-code'
         }] : []),
         ...(info.audio ? [{
@@ -101,7 +93,7 @@ const general = computed(() => {
             id: 'ads', icon: 'fa-file-audio'
         }] : []),
         ...(popupType.value !== 'others' && mediaType.value === MediaType.Video && !noFmt.value ? [{
-            content: mediaMap.value.fmt.map(item => item.id),
+            content: useInfoStore().mediaMap.fmt.map(item => item.id),
             id: 'fmt', icon: 'fa-file-code'
         }] : []),
     ] : [];

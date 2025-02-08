@@ -1,12 +1,12 @@
 import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
 import { getM1AndKey } from "@/services/auth";
 import { join as pathJoin } from "@tauri-apps/api/path";
+import { useAppStore, useInfoStore, useSettingsStore } from "@/store";
 import { transformImage } from "@tauri-apps/api/image";
 import { checkRefresh } from "@/services/login";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
 import * as dm_v1 from "@/proto/dm_v1";
-import store from "@/store";
 import pako from 'pako';
 
 export async function getMediaInfo(id: string, type: Types.MediaType): Promise<Types.MediaInfo> {
@@ -351,10 +351,9 @@ export async function getPlayUrl(
             url += '/pugv/player/web/playurl';
             break;
         case Types.MediaType.Music:
-            url += '/audio/music-service-c/url';
+            url += '/audio/music-service-c/web/url';
             params = {
-                songid: info.id, quality: options?.qn, privilege: 2,
-                mid: store.state.user.mid, platform: 'web'
+                sid: info.id, quality: options?.qn, privilege: 2
             }
             break;
     }
@@ -412,7 +411,7 @@ export async function pushBackQueue( params: {
     output?: string, media_type: string
 }) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
-    const _currentSelect = store.state.data.currentSelect;
+    const _currentSelect = useAppStore().currentSelect;
     const currentSelect: Backend.CurrentSelect = {
         dms: params.video ? _currentSelect.dms : -1,
         cdc: params.video ? _currentSelect.cdc : -1,
@@ -481,7 +480,7 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
 }
 
 export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
-    if (store.state.settings.advanced.prefer_pb_danmaku) {
+    if (useSettingsStore().advanced.prefer_pb_danmaku) {
         let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
         for (let i = 0; i < Math.ceil((info.duration || 0) / 360); i++) {
             const params = {
@@ -521,7 +520,7 @@ export async function getSteinInfo(id: number, graph_version: number, edge_id?: 
 
 export async function getFavoriteList() {
     const result = await checkRefresh();
-    const up_mid = store.state.data.headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
+    const up_mid = useAppStore().headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
     if (result !== 0 || !up_mid) return;
     const response = await tryFetch('https://api.bilibili.com/x/v3/fav/folder/created/list-all', { params: { up_mid } });
     const body = response as Types.FavoriteList;
@@ -545,7 +544,7 @@ export async function getMangaImages(epid: number, parent: string, name: string)
         const url = await getMangaToken(image);
         const path = await pathJoin(parent, name, index + 1 + '.jpg');
         const result = await Backend.commands.writeBinary(
-            store.state.data.constant.secret,
+            useInfoStore().secret,
             path,
             transformImage(await getBinary(url)),
         )

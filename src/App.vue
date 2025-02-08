@@ -19,20 +19,22 @@ import { onMounted, provide, ref } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { ApplicationError, setEventHook } from "@/services/utils";
 import { fetchUser, activateCookies, checkRefresh } from "@/services/login";
+import { useQueueStore, useInfoStore, useAppStore } from "@/store";
 import { commands } from "@/services/backend";
 import { SearchPage } from "@/views";
 import { useRouter } from "vue-router";
-import store from "@/store";
 
 const page = ref<InstanceType<typeof SearchPage>>();
 const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
 const router = useRouter();
+const queuePage = ref(0)
 
 const showMenu = (e: MouseEvent) => contextMenu.value?.showMenu(e);
 
 onMounted(async () => {
 	router.push("/");
 	setEventHook();
+	provide('queuePage', queuePage);
 	provide('trySearch', async (input?: string) => {
 		router.push('/');
 		const start = Date.now();
@@ -52,10 +54,10 @@ onMounted(async () => {
 		if (init.status === 'error') throw new ApplicationError(init.error);
 		const data = init.data;
 		const { downloads, ...initData } = init.data;
-		store.state.queue.complete = data.downloads;
-		store.state.data.constant = {
+		useQueueStore().complete = data.downloads;
+		useInfoStore().$patch({
 			secret, ...initData
-		};
+		});
 		await checkRefresh();
 		await fetchUser();
 	} catch(err) {
@@ -67,7 +69,7 @@ onMounted(async () => {
 		} catch(err) {
 			new ApplicationError(err as string).handleError();
 		}
-		store.state.data.inited = true;
+		useAppStore().inited = true;
 	}
 })
 </script>

@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import viteCompression from "vite-plugin-compression";
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -17,6 +19,12 @@ export default defineConfig(async () => ({
 
   resolve: {
     alias: { '@': '/src' }
+  },
+
+  css: {
+    postcss: {
+      plugins: [tailwindcss(), autoprefixer()]
+    }
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

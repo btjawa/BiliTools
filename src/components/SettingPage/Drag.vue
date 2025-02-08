@@ -25,8 +25,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
-import store from '@/store';
+import { useSettingsStore } from "@/store";
 
+const settings = useSettingsStore();
 const sources = ref<{ id: string | number, name: string | number }[]>([]);
 const target = ref<{ id: string | number, name: string | number }[]>([]);
 
@@ -39,7 +40,7 @@ const props = defineProps<{
 
 onMounted(() => {
     onSourceAdd();
-    target.value = store.state.settings.filename.split('_').map((id) => {
+    target.value = settings.filename.split('_').map((id) => {
         return { id, name: props.placeholders.find(item => item.id === id)?.name || id };
     });
 })

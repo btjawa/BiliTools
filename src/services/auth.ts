@@ -1,9 +1,9 @@
 import { ApplicationError, tryFetch } from "@/services/utils";
 import { GeetestOptions, initGeetest } from '@/lib/geetest';
+import { useAppStore, useSettingsStore } from "@/store";
 import { Go } from "@/lib/wasm_exec";
 import * as login from "@/types/login";
 import * as user from "@/types/user";
-import store from "@/store";
 import md5 from "md5";
 
 declare global {
@@ -106,7 +106,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
 }
 
 export async function captcha(gt: string, challenge: string): Promise<login.Captcha> {
-    const lang = store.state.settings.language;
+    const lang = useSettingsStore().language;
     return new Promise(async (resolve, reject) => {
         initGeetest({
             gt,
@@ -160,7 +160,8 @@ export async function getM1AndKey() {
 }
 
 export async function genReqSign(query: string | URLSearchParams, params: { [key: string]: string | number | object }): Promise<string> {
-    if (!store.state.data.goInstance) {
+    const app = useAppStore();
+    if (!app.goInstance) {
         const go = new Go();
         const url = new URL('@/lib/manga.wasm', import.meta.url).href;
         const wasm = await window.fetch(url);
@@ -168,7 +169,7 @@ export async function genReqSign(query: string | URLSearchParams, params: { [key
         const result = await WebAssembly.compile(buffer);
         const instance = await WebAssembly.instantiate(result, go.importObject);    
         go.run(instance);
-        store.state.data.goInstance = instance;
+        app.goInstance = instance;
     }
     if (!window.genReqSign) {
         throw new ApplicationError("Failed to load WASM module");

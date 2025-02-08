@@ -18,7 +18,7 @@
     "category": "Utility",
     "copyright": "Copyright © 2024 btjawa",
     "targets": "all",
-    "shortDescription": "BiliTools - A Bilibili toolbox",
+    "shortDescription": "A cross-platform bilibili toolbox",
     "createUpdaterArtifacts": "v1Compatible",
     "license": "GPL-3.0-or-later",
     "icon": [

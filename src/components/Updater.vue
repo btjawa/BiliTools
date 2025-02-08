@@ -31,12 +31,12 @@
 </template>
 
 <script setup lang="ts">
-import { ApplicationError, formatBytes, formatProxyUrl } from '@/services/utils';
+import { ApplicationError, formatBytes } from '@/services/utils';
 import { markRaw, reactive, ref, watch } from 'vue';
+import { useSettingsStore } from "@/store";
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { marked } from 'marked';
-import store from '@/store';
 import i18n from '@/i18n';
 
 const updateData = ref<Update | null>(null);
@@ -53,7 +53,9 @@ const updateProgress = reactive({
   completed: false,
 });
 
-watch(() => store.state.settings.auto_check_update,
+const settings = useSettingsStore();
+
+watch(() => settings.auto_check_update,
     async (v, _) => {
         if (!v) return null;
         try {
@@ -66,9 +68,7 @@ watch(() => store.state.settings.auto_check_update,
 
 async function checkUpdate() {
     const update = await check({
-        ...(store.state.settings.proxy.addr && {
-            proxy: formatProxyUrl(store.state.settings.proxy)
-        })
+        ...(settings.proxyUrl && { proxy: settings.proxyUrl})
     });
     console.log('Update:', update);
     if (update?.available) {

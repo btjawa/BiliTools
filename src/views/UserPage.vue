@@ -29,8 +29,8 @@
         <div class="h-[350px]">
             <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
             <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-[color:var(--solid-block-color)]">
-                <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" :class="{ 'invert': dark }" />
-                <canvas ref="loginQrcode" :class="{ 'invert': dark }" class="relative z-1"></canvas>
+                <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" :class="{ 'invert': settings.isDark }" />
+                <canvas ref="loginQrcode" :class="{ 'invert': settings.isDark }" class="relative z-1"></canvas>
                 <div v-if="scanCode === 86038 || scanCode === 86090" @click="tryLogin('scan')"
                     class="absolute flex w-[172px] h-[172px] z-2 bg-opacity-50 bg-black -top-px -left-px
                     flex-col gap-2.5 justify-center items-center cursor-pointer rounded-md text-sm"
@@ -123,11 +123,11 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { ApplicationError } from '@/services/utils';
+import { useSettingsStore, useUserStore } from '@/store';
 import { useRouter } from 'vue-router';
 import { commands } from '@/services/backend';
 import { open } from '@tauri-apps/plugin-shell';
 import * as login from '@/services/login';
-import store from '@/store';
 
 const tel = ref(String());
 const pwd = ref(String());
@@ -149,12 +149,13 @@ watch(othersPage, () => {
     pwd.value = String();
 })
 
-const user = computed(() => store.state.user);
-const dark = computed(() => store.state.settings.theme === 'dark');
+const user = useUserStore();
+const settings = useSettingsStore();
 const level = computed(() => {
-    return new URL(`/src/assets/img/profile/level/level${user.value.level}.svg`, import.meta.url).href;
+    return new URL(`/src/assets/img/profile/level/level${user.level}.svg`, import.meta.url).href;
 });
 
+onActivated(() => !user.isLogin && tryLogin('init'));
 onDeactivated(commands.stopLogin);
 
 async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
@@ -189,6 +190,7 @@ async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'ini
                 break;
             }
             case 'init': {
+                tryLogin('scan');
                 cid.value = await login.getZoneCode();
                 countryList.value = await login.getCountryList();
                 break;
@@ -203,12 +205,6 @@ async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'ini
         return error.handleError();
     }
 }
-
-onActivated(() => {
-    if (store.state.user.isLogin) return;
-    tryLogin('scan');
-    tryLogin('init');
-})
 </script>
 
 <style lang="scss" scoped>

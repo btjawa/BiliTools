@@ -1,7 +1,7 @@
 import { ApplicationError, tryFetch, getImageBlob } from "@/services/utils";
+import { useAppStore, useUserStore } from "@/store";
 import { Channel } from "@tauri-apps/api/core";
 import { commands } from "@/services/backend";
-import store from "@/store";
 import qrcode from "qrcode-generator";
 import JSEncrypt from "jsencrypt";
 import i18n from "@/i18n";
@@ -9,39 +9,36 @@ import * as LoginTypes from "@/types/login";
 import * as UserTypes from "@/types/user";
 import * as auth from "@/services/auth";
 
-const t = i18n.global.t;
-
 export async function fetchUser() {
-    const mid = store.state.data.headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
+    const user = useUserStore();
+    const mid = useAppStore().headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
     if (!mid) {
-        store.state.user.isLogin = false;
+        user.$reset();
         return;
     }
     const userInfo = await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', {
         auth: 'wbi', params: { mid }
     }) as UserTypes.UserInfoResp;
     const userStat = await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as UserTypes.UserStatResp;
-    store.state.user = {
+    user.$patch({
         avatar: await getImageBlob(userInfo.data.face.replace('http:', 'https:') + '@100w_100h'),
         name: userInfo.data.name, desc: userInfo.data.sign,
         mid: userInfo.data.mid, level: userInfo.data.level,
         vipLabel: await getImageBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static.replace('http:', 'https:')),
         topPhoto: await getImageBlob(userInfo.data.top_photo.replace('http:', 'https:') + '@170h'),
-        isLogin: true,
         stat: {
             coins: userInfo.data.coins,
             following: userStat.data.following,
             follower: userStat.data.follower,
             dynamic: userStat.data.dynamic_count,
         }
-    };
+    });
 }
 
 export async function activateCookies() {
-    const _uuid = store.state.data.headers.Cookie.match(/_uuid=([A-F0-9-]+infoc)(?=;|$)/i)?.[1];
+    const _uuid = useAppStore().headers.Cookie.match(/_uuid=([A-F0-9-]+infoc)(?=;|$)/i)?.[1];
     if (!_uuid) return;
     const payload = auth.getFingerPrint(_uuid);
-    console.log(payload)
     await tryFetch('https://api.bilibili.com/x/internal/gaia-gateway/ExClimbWuzhi', {
         post: { type: 'json', body: { payload: JSON.stringify(payload) } }
     })
@@ -147,7 +144,7 @@ export async function checkRefresh(): Promise<number> {
     console.log('Refresh status', cookie_info_body)
     if (cookie_info_body?.code !== 0) {
         throw new ApplicationError(
-            cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / ' + t('error.loginExpired') : ''),
+            cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / ' + i18n.global.t('error.loginExpired') : ''),
             { code: cookie_info_body?.code });
     }
     if (!cookie_info_body.data.refresh) return 0;

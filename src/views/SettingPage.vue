@@ -1,6 +1,6 @@
 <template><div class="flex-col">
     <h1 class="self-start">
-        <i class="fa-gear mr-2" :class="fa_dyn"></i>
+        <i class="fa-gear mr-2" :class="settings.dynFa"></i>
         {{ $t('settings.title') }}
         <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"
             class="question fa-light fa-circle-question text-xl"
@@ -9,10 +9,10 @@
     <hr />
     <div class="setting-page__sub flex w-full h-full">
         <div class="flex flex-col flex-1 mr-6" ref="$subPage">
-            <Empty :exp="settings.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
-            <section v-for="(item, index) in settings.find(item => item.id == subPage)?.content">
+            <Empty :exp="settingsTree.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
+            <section v-for="(item, index) in settingsTree.find(item => item.id == subPage)?.content">
                 <h3 v-if="item.name" class="font-semibold">
-                    <i class="mr-1" :class="[fa_dyn, item.icon]"></i>
+                    <i class="mr-1" :class="[settings.dynFa, item.icon]"></i>
                     {{ item.name }}
                 </h3>
                 <span v-if="'desc' in item" class="desc">{{ item.desc }}</span>
@@ -39,27 +39,27 @@
                         autocorrect="off" spellcheck="false" autocapitalize="off"
                     />
                     <button v-if="unit.type === 'switch'"
-                        @click="updateNest(unit.data, !getNestedValue(store.state.settings, unit.data))"
-                        :class="{ 'active': getNestedValue(store.state.settings, unit.data) }"
+                        @click="updateNest(unit.data, !getNestedValue(settings.$state, unit.data))"
+                        :class="{ 'active': getNestedValue(settings.$state, unit.data) }"
                         class="inline-block w-11 h-[22px] relative delay-100 p-[3px] rounded-xl"
                     >
                         <div class="circle h-4 w-4 rounded-lg bg-[color:var(--desc-color)] absolute left-[3px] top-[3px]"></div>
                     </button>
                     <button v-if="unit.type === 'button'" @click="unit.data()">
                         <span>{{ unit.name }}</span>
-                        <i :class="[fa_dyn, unit.icon]"></i>
+                        <i :class="[settings.dynFa, unit.icon]"></i>
                     </button>
                     <div v-if="unit.type === 'about'">
                         <div class="mb-4">
                             <img class="h-16 mr-6 w-auto inline" src="@/assets/img/icon.svg" draggable="false" />
                             <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
-                        {{ $t('common.version') }}: <span @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/v' + constant.version })"
+                        {{ $t('common.version') }}: <span @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/v' + infoStore.version })"
                             class="mx-2 text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
-                        >{{ constant.version }}</span>
+                        >{{ infoStore.version }}</span>
                         <span class="text desc ml-2">
-                            <i :class="fa_dyn" class="fa-code-commit"></i>
-                            {{ constant.hash.slice(0, 7) }}
+                            <i :class="settings.dynFa" class="fa-code-commit"></i>
+                            {{ infoStore.hash.slice(0, 7) }}
                         </span>
                     </div>
                     <div v-if="unit.type === 'reference'" class="desc">
@@ -68,11 +68,11 @@
                         {{ $t('settings.about.thanks') }}
                     </div>
                 </div>
-                <hr v-if="index < (settings.find(item => item.id == subPage)?.content.length! - 1)" />
+                <hr v-if="index < (settingsTree.find(item => item.id == subPage)?.content.length! - 1)" />
             </section>
         </div>
         <div class="setting-page__sub-tab flex flex-col items-start gap-1">
-            <button v-for="item in settings" @click="subPage = item.id" :class="subPage !== item.id || 'active'"
+            <button v-for="item in settingsTree" @click="subPage = item.id" :class="subPage !== item.id || 'active'"
                 class="p-[8px_0] w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[color:var(--button-color)]"
             >
                 <span class="text-base">{{ item.name }}</span>
@@ -88,22 +88,22 @@ import { ApplicationError, iziInfo, tryFetch } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
+import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
 import { Empty } from '@/components';
 import { commands } from '@/services/backend';
 import locales from '@/locales/index.json';
-import store from '@/store';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import * as shell from '@tauri-apps/plugin-shell';
 import i18n from '@/i18n';
 
-type PathAlias = keyof typeof store.state.data.cache;
+type PathAlias = keyof typeof app.cache;
 
 type UnitType =
-| { name: string; type: 'path'; data: keyof typeof store.state.settings; }
-| { name: string; type: 'switch'; data: keyof typeof store.state.settings; }
+| { name: string; type: 'path'; data: keyof typeof settings.$state; }
+| { name: string; type: 'switch'; data: keyof typeof settings.$state; }
 | { name: string; type: 'cache'; data: PathAlias; }
-| { name: string; type: 'dropdown'; data: keyof typeof store.state.settings; drop: keyof typeof store.state.data.mediaMap; }
+| { name: string; type: 'dropdown'; data: keyof typeof settings.$state; drop: keyof typeof infoStore.mediaMap; }
 | { name: string; type: 'button'; data: Function; icon: string; }
 | { name: string; type: 'input'; data: string; placeholder: string; }
 | { name: string; type: 'drag'; data: string; shorten: string; placeholders: Array<{ id: number | string, name: string | number }>; }
@@ -112,10 +112,11 @@ type UnitType =
 
 const subPage = ref("storage");
 const $subPage = ref<HTMLElement>();
-const constant = computed(() => store.state.data.constant);
+const settings = useSettingsStore();
+const infoStore = useInfoStore();
+const app = useAppStore();
 
-const fa_dyn = computed(() => store.state.settings.theme === 'light' ? 'fa-light' : 'fa-solid');
-const settings = computed(() => {
+const settingsTree = computed(() => {
     const t = i18n.global.t;
     return [
         { id: "storage", name: t('settings.storage.name'), icon: "fa-database", content: [
@@ -205,10 +206,10 @@ watch(subPage, (oldPage, newPage) => {
     }
 })
 
-onActivated(() => Object.keys(store.state.data.cache).forEach(key => getSize(key as PathAlias)));
+onActivated(() => Object.keys(app.cache).forEach(key => getSize(key as PathAlias)));
 
 function checkUpdate() {
-    const status = store.state.settings.auto_check_update;
+    const status = settings.auto_check_update;
     updateSettings('auto_check_update', !status);
     updateSettings('auto_check_update', status);
 }
@@ -216,7 +217,7 @@ function checkUpdate() {
 function updatePath(type: string) {
     dialog.open({
         directory: true,
-        defaultPath: (store.state.settings as any)[type]
+        defaultPath: (settings.$state as any)[type]
     }).then(path => {
         if (!path) return null;
         updateSettings(type, path);
@@ -226,15 +227,15 @@ function updatePath(type: string) {
 }
 
 function updateNest(key: string, data: any) {
-    const parent = key.split('.')[0] as keyof typeof store.state.settings;
-    let value = getNestedValue(store.state.settings, key);
+    const parent = key.split('.')[0] as keyof typeof settings.$state;
+    let value = getNestedValue(settings.$state, key);
     if (data === value) return null;
-    (store.state.settings as any)[key] = data;
-    updateSettings(parent, store.state.settings[parent]);
+    (settings.$state as any)[key] = data;
+    updateSettings(parent, settings.$state[parent]);
 }
 
 async function updateSettings(key: string, item: any) {
-    const result = await commands.rwConfig('write', { [key]: item }, constant.value.secret);
+    const result = await commands.rwConfig('write', { [key]: item }, infoStore.secret);
     if (result.status === 'error') throw new ApplicationError(result.error);
 }
 
@@ -251,8 +252,8 @@ async function getPath(type: PathAlias | "danmaku" | "aria2c") {
             }
         })()
         case 'database': return path.join(await path.appDataDir(), 'Storage');
-        case 'danmaku': return path.join(constant.value.resources_path, 'DanmakuFactoryConfig.json');
-        case 'aria2c': return path.join(constant.value.resources_path, 'aria2.conf');
+        case 'danmaku': return path.join(infoStore.resources_path, 'DanmakuFactoryConfig.json');
+        case 'aria2c': return path.join(infoStore.resources_path, 'aria2.conf');
     }
 }
 
@@ -280,10 +281,10 @@ async function openPath(options: { path?: string, getPath?: boolean, pathName?: 
     return shell.open(options.path);
 }
 async function getSize(pathName: PathAlias) {
-    (store.state.data.cache as any)[pathName] = 0;
+    (app.cache as any)[pathName] = 0;
     const event = new Channel<number>();
     event.onmessage = (bytes) => {
-        (store.state.data.cache as any)[pathName] = bytes;
+        (app.cache as any)[pathName] = bytes;
     }
     const result = await commands.getSize(await getPath(pathName), event);
     if (result.status === 'error') throw new ApplicationError(result.error);

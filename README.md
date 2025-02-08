@@ -16,41 +16,23 @@
 
 ## 介绍
 
-基于 [Tauri v2](https://v2.tauri.app) 实现的哔哩哔哩工具箱
-
-支持 `视频、番剧、课程、音乐、漫画` 等等资源下载与解析， 自动刷新登录信息等等
-
-未来还会陆续支持更多功能，尽情期待~
-
-将会优先适配 `Windows`, 次为 `macOS`, 暂不支持 `Apple Silicon`
+当前支持下载解析各类资源，未来还会陆续支持更多功能（请看 [#TODO](#todo-列表)），尽情期待~
 
 关于应用使用说明，可以查看[博客](https://www.btjawa.top/bilitools)，其中也包含各种问题的解决方法
 
-由于应用有涉及到登录等等敏感信息，请确保只在该项目的 `Release` 下载（或自行构建），不保证其他来源的安全性
+请确保只在该项目的 `Release` 页下载应用（或自行构建），不保证其他来源的安全性
+
+**大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**
 
 ## 功能
-
-### 登录相关
-
-| 功能             | 状态       |
-|------------------|------------|
-| 扫码登录          | ✅ 已完成  |
-| 密码登录          | ✅ 已完成  |
-| 短信登录          | ✅ 已完成  |
-| 自动刷新登录状态   | ✅ 已完成  |
-| Wbi 签名          | ✅ 已完成  |
-| buvid 参数验证     | ✅ 已完成  |
-| v_voucher 风控验证 | ✅ 已完成  |
-| 客户端指纹验证      | ✅ 已完成  |
 
 ### 资源解析
 
 | 功能    | 状态    | 备注                      |
 |---------|---------|---------------------------|
-| 视频    | ✅ 已完成 | 全分辨率 + HDR + 杜比    |
-| 音频    | ✅ 已完成 | 全比特率 + 杜比 + Hi-Res |
-| 音乐    | ✅ 已完成 | 全比特率 + 无损 FLAC     |
-| 互动视频 | ✅ 已完成 |                        |
+| 视频    | ✅ 已完成 | 8K + HDR + 杜比；多P、合集、番剧、课程、互动视频 |
+| 音频    | ✅ 已完成 | 杜比 + Hi-Res |
+| 音乐    | ✅ 已完成 | 无损 FLAC     |
 | 封面    | ✅ 已完成 |                         |
 | AI总结  | ✅ 已完成 | MD Markdown格式         |
 | 历史弹幕 | ✅ 已完成 | ASS 字幕格式            |
@@ -66,6 +48,19 @@
  - [SocialSisterYi/bilibili-API-collect#1168](https://github.com/SocialSisterYi/bilibili-API-collect/issues/1168)
  - [Nemo2011/bilibili-api#875](https://github.com/Nemo2011/bilibili-api/issues/875)
 
+### 登录相关
+
+| 功能             | 状态       |
+|------------------|------------|
+| 扫码登录          | ✅ 已完成  |
+| 密码登录          | ✅ 已完成  |
+| 短信登录          | ✅ 已完成  |
+| 自动刷新登录状态   | ✅ 已完成  |
+| Wbi 签名          | ✅ 已完成  |
+| buvid 参数验证     | ✅ 已完成  |
+| v_voucher 风控验证 | ✅ 已完成  |
+| 客户端指纹验证      | ✅ 已完成  |
+
 ### 国际化 I18N
 
 | 语言代码       | 状态       |
@@ -80,35 +75,44 @@
  - [x] 自定义文件名格式
  - [ ] 元信息快照
  - [ ] SOCKS 代理
- - [ ] 完善密码登录
+ - [x] 完善密码登录
  - [ ] 完善漫画解析
+ - [ ] AV 与 BV 互转
  - 可以在 Issue 中提出想要的新功能
 
 ## 本地开发 / 构建
 
+### 克隆项目和安装依赖
+
+```shell
+git clone https://github.com/btjawa/BiliTools.git
+cd BiliTools
+npm install // pnpm, yarn, etc.
+// Rust, Node.js is required
+npm run tauri dev
+```
+
 ### 开发
 
 ```shell
-// Require Rust stable, edition 2021
-git clone https://github.com/btjawa/BiliTools.git
-cd BiliTools
-npm install // You can use pnpm, yarn as replacement
 npm run tauri dev
 ```
 
 ### 构建
 
 ```shell
-// Require Rust stable, edition 2021
-git clone https://github.com/btjawa/BiliTools.git
-cd BiliTools
-npm install // You can use pnpm, yarn as replacement
 npm run tauri build
 ```
 
 ## 声明
 
 本项目仅作学习用途，作者不承担因使用本项目而导致的一切后果，若有侵权，可随时联系删除
+
+数据仅存储于用户本地，使用 `SQLite` 格式明文存储于该路径：
+
+- Windows: `%AppData%\com.btjawa.bilitools\Storage`
+- macOS: `$HOME/Library/Application Support/com.btjawa.bilitools/Storage`
+- Linux: `$HOME/.local/share/com.btjawa.bilitools/Storage`
 
 该项目根据 `GPL-3.0-or-later` 许可证进行授权，请参考 [LICENSE](/LICENSE) 文件
 

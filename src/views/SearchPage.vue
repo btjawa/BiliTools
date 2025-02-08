@@ -10,7 +10,7 @@
 			v-model="s.searchInput" class="w-full mr-2.5 !rounded-2xl"
 		/>
         <button @click="search()"
-			:class="[fa_dyn, 'fa-search rounded-[50%]']"
+			:class="[settings.dynFa, 'fa-search rounded-[50%]']"
 		></button>
     </div>
 	<div :style="{ 'opacity': s.mediaRootActive ? 1 : 0, 'pointerEvents': s.mediaRootActive ? 'all' : 'none' }"
@@ -23,7 +23,7 @@
 			<button class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
 				@click="updateStein(story.edge_id)"
 			>
-				<i :class="[fa_dyn, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
+				<i :class="[settings.dynFa, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
 			</button>
 			</template>
 		</div>
@@ -55,17 +55,17 @@
 					? [] : Array.from({ length: s.mediaInfo.list.length }, (_, i) => i)
 				"
 			>
-				<i :class="[fa_dyn, 'fa-check-double']"></i>
+				<i :class="[settings.dynFa, 'fa-check-double']"></i>
 				<span>{{ $t('home.label.selectAll') }}</span>
 			</button>
 			<button v-if="s.mediaInfo.type !== 'manga'" @click="s.checkbox = !s.checkbox" :class="{ 'active': s.checkbox }">
-				<i :class="[fa_dyn, 'fa-square-check']"></i>
+				<i :class="[settings.dynFa, 'fa-square-check']"></i>
 				<span>{{ $t('home.label.multiSelect') }}</span>
 			</button>
 		</div>
 		<div class="fixed bottom-6 right-4 flex flex-col gap-3" v-if="s.checkbox">
 			<button v-for="(item, _index) in options" @click="options[_index].multi" class="primary-color">
-				<i :class="[fa_dyn, item.icon]"></i>
+				<i :class="[settings.dynFa, item.icon]"></i>
 				<span>{{ options[_index].text }}</span>
 			</button>
 		</div>
@@ -80,14 +80,14 @@ import { commands, CurrentSelect } from '@/services/backend';
 import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
 import { transformImage } from '@tauri-apps/api/image';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, inject, reactive, Ref, ref, watch } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
+import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
 import { useRouter } from 'vue-router';
 import { Empty } from '@/components';
 import { open } from '@tauri-apps/plugin-shell';
 import * as data from '@/services/data';
 import * as dialog from '@tauri-apps/plugin-dialog';
-import store from '@/store';
 import i18n from '@/i18n';
 
 const s = reactive({
@@ -99,10 +99,13 @@ const s = reactive({
 	index: ref(0),
 	target: ref(0),
 	multiSelect: ref<number[]>([]),
-	currentSelect: computed(() => store.state.data.currentSelect),
+	currentSelect: computed({
+		get: () => app.currentSelect,
+		set: (v: any) => app.currentSelect = v
+	}),
 	playUrlInfo: computed({
-		get: () => store.state.data.playUrlInfo,
-		set: (v: any) => store.state.data.playUrlInfo = v
+		get: () => app.playUrlInfo,
+		set: (v: any) => app.playUrlInfo = v
 	}),
 });
 
@@ -122,7 +125,8 @@ const othersMap = {
 	'manga': { suffix: 'jpg', desc: 'JPG Image' },
 }
 
-const fa_dyn = computed(() => store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light');
+const app = useAppStore();
+const settings = useSettingsStore();
 const options = computed(() => [
 	...((s.mediaInfo.type !== MediaType.Music && s.mediaInfo.type !== MediaType.Manga) ? [{
 		icon: 'fa-file-arrow-down',
@@ -139,6 +143,7 @@ const options = computed(() => [
 ]);
 const popup = ref<InstanceType<typeof Popup>>();
 const router = useRouter();
+const queuePage = inject<Ref<number>>('queuePage') as Ref<number>;
 
 watch(() => s.currentSelect.fmt, (newFmt, oldFmt) => {
 	if (oldFmt === -1) return;
@@ -192,8 +197,8 @@ async function search(input?: string) {
 }
 function updateDefault(ids: number[], df: "df_dms" | "df_ads" | "df_cdc", opt: keyof CurrentSelect, cs?: CurrentSelect) {
 	s.currentSelect[opt] = ids.includes(
-		cs ? cs[opt] : store.state.settings[df]
-	) ?(cs ? cs[opt] : store.state.settings[df]) : ids.sort((a, b) => b - a)[0];
+		cs ? cs[opt] : settings.$state[df]
+	) ?(cs ? cs[opt] : settings.$state[df]) : ids.sort((a, b) => b - a)[0];
 }
 async function updateStream(i: number, fmt: number, options?: { init?: boolean, cs?: CurrentSelect }) {
 	try {
@@ -298,10 +303,10 @@ async function getOthers(type: keyof typeof othersMap, options?: { date?: string
 					name: othersMap[type].desc,
 					extensions: [othersMap[type].suffix]
 				}],
-				defaultPath: `${await pathJoin(store.state.settings.down_dir, name)}.${suffix}`
+				defaultPath: `${await pathJoin(settings.down_dir, name)}.${suffix}`
 			});
 		if (!path) return;
-		const secret = store.state.data.constant.secret;
+		const secret = useInfoStore().secret;
 		const result = await (async () => {
 			switch (type) {
 				case 'cover': return await commands.writeBinary(secret, path, transformImage(_data as ArrayBuffer));
@@ -360,7 +365,7 @@ async function pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output
 			info.audio ? info.audio.find(item => item.id === s.currentSelect.ads) : null;
 		if (options?.init) {
 			router.push('/down-page');
-			store.state.status.queuePage = 0;
+			queuePage.value = 0;
 		}
 		return await data.pushBackQueue({
 			info: s.mediaInfo.list[options?.i || s.index],
@@ -387,7 +392,7 @@ async function pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof othe
 				for (const key in cs) (s.currentSelect as any)[key] = (cs as any)[key];
 				await updateStream(i, s.currentSelect.fmt, { cs });
 				const result = await pushBackQueue(type as any, { ...(output && { output }), init: _ === 0, i });
-				output = await pathDirname(result?.output || store.state.settings.down_dir);
+				output = await pathDirname(result?.output || settings.down_dir);
 			}
 		} catch(err) {
 			err instanceof ApplicationError ? err.handleError() :

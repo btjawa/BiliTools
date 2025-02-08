@@ -4,15 +4,15 @@
         update(value.data, value.id);
     }">
         <template v-if="typeof drop === 'string'">
-            <option v-for="option in store.state.data.mediaMap[drop]"
+            <option v-for="option in infoStore.mediaMap[drop]"
                 :value="JSON.stringify({ id: option.id, data })"
-                :selected="option.id === store.state.settings[data]"
+                :selected="option.id === settings[data]"
             >{{ $t(`common.default.${drop}.data.${option.id}`) }}</option>
         </template>
         <template v-else>
             <option v-for="option in drop"
                 :value="JSON.stringify({ id: option.id, data: data })"
-                :selected="option.id === store.state.settings[data]"
+                :selected="option.id === settings[data]"
             >{{ option.name }}</option>
         </template>
     </select>
@@ -22,11 +22,13 @@
 </div></template>
 
 <script setup lang="ts">
-import store from '@/store';
+import { useInfoStore, useSettingsStore } from "@/store";
+const infoStore = useInfoStore();
+const settings = useSettingsStore();
 
 defineProps<{
-    data: keyof typeof store.state.settings,
-    drop: keyof typeof store.state.data.mediaMap | { id: number, name: string }[],
+    data: keyof typeof settings,
+    drop: keyof typeof infoStore.mediaMap | { id: number, name: string }[],
     update: (key: string, item: any) => void
 }>();
 </script>

@@ -8,7 +8,7 @@
     </div>
     <hr class="w-full my-4 flex-shrink-0" />
     <div class="queue__page flex flex-col w-[calc(100%-269px)] mt-[13px] h-full gap-0.5 overflow-auto" ref="$queuePage">
-        <div v-for="item in Object.values(store.state.queue)[queuePage]"
+        <div v-for="item in Object.values(queue.$state)[queuePage]"
             class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
         >
             <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
@@ -33,35 +33,35 @@
                 }} %</span>
                 <div class="flex gap-2">
                     <button @click="togglePause(item.id)">
-                        <i :class="[fa_dyn, 'fa-play-pause']"></i>
+                        <i :class="[settings.dynFa, 'fa-play-pause']"></i>
                     </button>
                     <button @click="openPath(item.output, { parent: true })">
-                        <i :class="[fa_dyn, 'fa-folder-open']"></i>
+                        <i :class="[settings.dynFa, 'fa-folder-open']"></i>
                     </button>
-                    <button @click="removeTask(item.id, Object.keys(store.state.queue)[queuePage])">
-                        <i :class="[fa_dyn, 'fa-trash']"></i>
+                    <button @click="removeTask(item.id, Object.keys(queue)[queuePage])">
+                        <i :class="[settings.dynFa, 'fa-trash']"></i>
                     </button>
                 </div>
             </div>
         </div>
-        <button v-if="queuePage === 0 && store.state.queue.waiting.length > 0" @click="processQueue()"
+        <button v-if="queuePage === 0 && queue.waiting.length > 0" @click="processQueue()"
             class="absolute right-6 bottom-6"
         >
-            <i :class="[fa_dyn, 'fa-download']"></i><span>{{ $t('downloads.label.download') }}</span>
+            <i :class="[settings.dynFa, 'fa-download']"></i><span>{{ $t('downloads.label.download') }}</span>
         </button>
-        <Empty :exp="Object.values(store.state.queue)[queuePage].length === 0" text="downloads.empty" />
+        <Empty :exp="Object.values(queue.$state)[queuePage].length === 0" text="downloads.empty" />
     </div>
 </div></template>
 
 <script setup lang="ts">
-import { ApplicationError } from '@/services/utils';
+import { inject, nextTick, ref, watch, Ref } from 'vue';
 import { commands, DownloadEvent } from '@/services/backend';
+import { useSettingsStore, useQueueStore } from '@/store';
+import { ApplicationError } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
 import { Empty } from '@/components';
 import * as shell from '@tauri-apps/plugin-shell';
-import { computed, nextTick, ref, watch } from 'vue';
-import store from '@/store';
 import i18n from '@/i18n';
 
 const statusList = ref<{ [id: string]: {
@@ -73,11 +73,9 @@ const statusList = ref<{ [id: string]: {
 } }>({});
 
 const $queuePage = ref<HTMLElement>();
-const queuePage = computed({
-    get: () => store.state.status.queuePage,
-    set: (v: number) => store.state.status.queuePage = v,
-})
-const fa_dyn = computed(() => store.state.settings.theme === 'dark' ? 'fa-solid' : 'fa-light');
+const queuePage = inject<Ref<number>>('queuePage') as Ref<number>;
+const settings = useSettingsStore();
+const queue = useQueueStore();
 
 watch(queuePage, (oldPage, newPage) => {
     if (oldPage !== newPage) {
@@ -104,7 +102,7 @@ async function togglePause(id: string) {
         new ApplicationError(err as string).handleError();
     }
 }
-async function removeTask(id: string, queue: string) {
+async function removeTask(id: string, type: string) {
     try {
         const status = statusList.value[id];
         if (status) {
@@ -118,8 +116,7 @@ async function removeTask(id: string, queue: string) {
             if (result.status === 'error') throw new ApplicationError(result.error);
             return result.data;
         }
-        const queueType = queue as keyof typeof store.state.queue;
-        const result = await commands.removeTask(id, queueType, null);
+        const result = await commands.removeTask(id, type as keyof typeof queue.$state, null);
         if (result.status === 'error') throw new ApplicationError(result.error);
     } catch (err) {
         err instanceof ApplicationError ? err.handleError() :

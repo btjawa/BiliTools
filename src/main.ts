@@ -1,10 +1,10 @@
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
 import VueVirtualScroller from 'vue-virtual-scroller'
 import VueDatePicker from '@vuepic/vue-datepicker';
 import App from './App.vue';
 import router from '@/router';
-import store from '@/store';
 import i18n from '@/i18n';
 import '@/assets/css/style.css';
 import '@/assets/css/iziToast.min.css';
@@ -27,7 +27,7 @@ const url = new URL('/node_modules/source-map-support/browser-source-map-support
 const app = createApp(App);
 app.config.globalProperties.$eventBus = app;
 
-app.use(store).use(router).use(i18n).use(VueVirtualScroller).component('VueDatePicker', VueDatePicker).mount('#app');
+app.use(createPinia()).use(router).use(i18n).use(VueVirtualScroller).component('VueDatePicker', VueDatePicker).mount('#app');
 
 const version = await getAppVersion();
 console.log('\n' + ' %c BiliTools v' + version + ' %c https://btjawa.top/bilitools ' + '\n', 'color: rgb(233,233,233) ; background: rgb(212,78,125); padding:5px 0;', 'background: #fadfa3; padding:5px 0;');
