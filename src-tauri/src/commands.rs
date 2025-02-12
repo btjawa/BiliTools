@@ -17,7 +17,8 @@ pub use crate::{
         aria2c::{
             self, push_back_queue, process_queue, toggle_pause, remove_task
         },
-        ffmpeg
+        ffmpeg,
+        browser,
     },
     storage::{
         config::{self, rw_config},

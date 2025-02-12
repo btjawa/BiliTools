@@ -252,7 +252,7 @@ async function checkOthers(index: number, options?: { init?: boolean }) {
 			othersReqs.danmaku = false;
 		} else if (s.mediaInfo.type === MediaType.Manga) {
 			othersReqs.danmaku = false;
-			// this.othersReqs.manga = true;
+			othersReqs.manga = true;
 		} else {
 			othersReqs.aiSummary = await data.getAISummary(info, s.mediaInfo.upper.mid || 0, { check: true }) as number;
 			othersReqs.danmaku = true;
@@ -287,7 +287,7 @@ async function getOthers(type: keyof typeof othersMap, options?: { date?: string
 			if (!parent) return;
 			const result = await dialog.ask(i18n.global.t('common.unstable'), { 'kind': 'warning' });
 			if (!result) return;
-			return await data.getMangaImages(info.id, parent, name);
+			return await data.getMangaImages(s.mediaInfo.id, info.id, parent, name);
 		}
 		const _data = await (async () => { switch (type) {
 			case 'cover': return await data.getBinary(info.cover);

@@ -1,7 +1,7 @@
-use std::{collections::BTreeMap, env, path::PathBuf, sync::{Arc, RwLock}, time::{SystemTime, UNIX_EPOCH}};
+use std::{collections::BTreeMap, env, path::PathBuf, sync::{Arc, RwLock}};
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, WebviewWindow, Wry};
 use tauri_plugin_http::reqwest::{Client, Proxy};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
 use anyhow::{anyhow, Result};
@@ -10,6 +10,7 @@ use tauri_specta::Event;
 use serde_json::Value;
 use specta::Type;
 use regex::Regex;
+use chrono::Utc;
 
 use crate::{
     storage::config::{
@@ -151,12 +152,13 @@ pub fn filename(filename: String) -> String {
     re.replace_all(&filename, "_").to_string()
 }
 
-pub fn get_ts(mills: bool) -> u128 {
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    if mills { ts.as_millis() } else { ts.as_secs().into() }
+pub fn get_ts(mills: bool) -> i64 {
+    let now = Utc::now();
+    if mills { now.timestamp_millis() }
+    else { now.timestamp() }
 }
 
 pub fn random_string(len: usize) -> String {
-    rand::thread_rng().sample_iter(&Alphanumeric)
+    rand::rng().sample_iter(&Alphanumeric)
         .take(len).map(char::from).collect()
 }

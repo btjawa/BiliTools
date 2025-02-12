@@ -155,7 +155,7 @@ async fn get_bili_ticket() -> Result<String> {
     let client = init_client().await?;
     let ts = get_ts(false);
     let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").and_then(Value::as_str).unwrap_or("");
+    let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
     let hmac_sha256 = |key: &str, message: &str| -> String {
         let key = hmac::Key::new(hmac::HMAC_SHA256, key.as_bytes());
         let signature = hmac::sign(&key, message.as_bytes());
@@ -168,7 +168,7 @@ async fn get_bili_ticket() -> Result<String> {
             ("key_id", "ec02"),
             ("hexsign", &hex_sign),
             ("context[ts]", &ts.to_string()),
-            ("csrf", bili_csrf),
+            ("csrf", &bili_csrf),
         ]).send().await?;
     if bili_ticket_resp.status() != StatusCode::OK {
         return Err(anyhow!("({}) Error while fetching BiliTicket Cookie", bili_ticket_resp.status()));
@@ -184,9 +184,9 @@ async fn get_bili_ticket() -> Result<String> {
 fn get_uuid() -> String {
     const DIGIT_MAP: [&str; 16] = ["1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","10"];
     let s = |length: usize| -> String {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         (0..length)
-            .map(|_| DIGIT_MAP[rng.gen_range(0..DIGIT_MAP.len())])
+            .map(|_| DIGIT_MAP[rng.random_range(0..DIGIT_MAP.len())])
             .collect()
     };
     format!(
@@ -242,7 +242,7 @@ pub async fn get_extra_cookies() -> Result<()> {
 pub async fn exit() -> TauriResult<isize> {
     let client = init_client().await?;
     let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").and_then(Value::as_str).unwrap_or("");
+    let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
     let response = client
         .post("https://passport.bilibili.com/login/exit/v2")
         .query(&[
@@ -440,12 +440,12 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
 pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
     let client = init_client().await?;
     let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").and_then(Value::as_str).unwrap_or("");
-    let refresh_token = cookies.get("refresh_token").and_then(Value::as_str).unwrap_or("");
+    let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
+    let refresh_token = cookies.get("refresh_token").map(String::as_str).unwrap_or("");
     let refresh_token_resp = client
         .post("https://passport.bilibili.com/x/passport-login/web/cookie/refresh")
         .query(&[
-            ("csrf", &*bili_csrf),
+            ("csrf", bili_csrf),
             ("refresh_csrf", &refresh_csrf),
             ("refresh_token", refresh_token),
             ("source", "main_web".into()),

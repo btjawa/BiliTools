@@ -143,6 +143,14 @@ async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async crawler(secret: string, downDir: string, id: number, ep: number) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("crawler", { secret, downDir, id, ep }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

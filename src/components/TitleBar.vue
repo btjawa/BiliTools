@@ -34,7 +34,6 @@ const icons = {
 }
 
 onMounted(() => {
-    console.log(icons)
     appWindow.onResized(debounce(async () => {
         maxed.value = await appWindow.isMaximized();
     }, 250));

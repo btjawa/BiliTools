@@ -1,3 +1,4 @@
+pub mod browser;
 pub mod aria2c;
 pub mod ffmpeg;
 pub mod login;

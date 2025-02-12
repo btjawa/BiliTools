@@ -37,16 +37,19 @@
 | AI总结  | ✅ 已完成 | MD Markdown格式         |
 | 历史弹幕 | ✅ 已完成 | ASS 字幕格式            |
 | 实时弹幕 | ✅ 已完成 | ASS 字幕格式            |
-| 漫画    | ❌ 暂时不可用 | 见下                 |
+| 漫画    | ⚠️ 不稳定 | 见下                 |
 
 ### 关于漫画
 
-目前已可解析到漫画的详情界面，但由于近期官方的一次更新导致所有图像被加密，因此暂时关闭下载入口，等待进一步的开发工作
+点击 `漫画` 并选择路径后，等待若干秒初始化，随后下载文件夹中就会开始出现图像文件
 
-*若想自行开发相关功能，可在 `src/views/SearchPage.vue` 中手动取消注释*
+使用前请确保系统已安装 `Chrome / Chromium` 或 `Edge`
 
- - [SocialSisterYi/bilibili-API-collect#1168](https://github.com/SocialSisterYi/bilibili-API-collect/issues/1168)
- - [Nemo2011/bilibili-api#875](https://github.com/Nemo2011/bilibili-api/issues/875)
+默认在未登录模式下载图片
+
+若需要登录使用或自定义浏览器路径，请自行修改源文件，并参考 [本地开发 / 构建](#本地开发--构建)
+
+*关于封号问题请自行斟酌（因此默认不登录）*
 
 ### 登录相关
 

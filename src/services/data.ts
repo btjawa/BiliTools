@@ -1,8 +1,6 @@
 import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
-import { getM1AndKey } from "@/services/auth";
 import { join as pathJoin } from "@tauri-apps/api/path";
 import { useAppStore, useInfoStore, useSettingsStore } from "@/store";
-import { transformImage } from "@tauri-apps/api/image";
 import { checkRefresh } from "@/services/login";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
@@ -533,34 +531,11 @@ export async function getFavoriteContent(media_id: number, pn: number) {
     return body.data;
 }
 
-export async function getMangaImages(epid: number, parent: string, name: string) {
-    const body = await tryFetch('https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex', {
-        params: { device: "pc", platform: "web", nov: 25 },
-        post: { type: 'json', body: { ep_id: epid } },
-        auth: 'ultra_sign',
-    }) as Types.MangaImageIndex;
-    let images = body.data.images.map(i => i.path);
-    for (let [index, image] of images.entries()) {
-        const url = await getMangaToken(image);
-        const path = await pathJoin(parent, name, index + 1 + '.jpg');
-        const result = await Backend.commands.writeBinary(
-            useInfoStore().secret,
-            path,
-            transformImage(await getBinary(url)),
-        )
-        if (result.status === 'error') throw new ApplicationError(result.error);
-        await new Promise(resolve => setTimeout(resolve, getRandomInRange(250, 1000)));
-    }
-}
-
-async function getMangaToken(path: string) {
-    const body = await tryFetch('https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken', {
-        params: { device: "pc", platform: "web", nov: 25 },
-        post: { type: 'json', body: {
-            urls: `[\"${path}\"]`,
-            m1: (await getM1AndKey()).key,    
-        } },
-        auth: 'ultra_sign',
-    }) as Types.MangaImageToken;
-    return body.data[0].complete_url;
+export async function getMangaImages(id: number, epid: number, parent: string, name: string) {
+    const loadingBox = document.querySelector('.loading');
+    const path = await pathJoin(parent, name);
+    if (loadingBox) loadingBox.classList.add('active');
+    const result = await Backend.commands.crawler(useInfoStore().secret, path, id, epid);
+    if (loadingBox) loadingBox.classList.remove('active');
+    if (result?.status === 'error') throw new ApplicationError(result.error);
 }

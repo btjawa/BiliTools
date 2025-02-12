@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 
 use sea_orm::{
-    Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement,
+    Database, DbBackend, IntoActiveModel, Schema, Statement,
     entity::prelude::*,
     sea_query::{
         TableCreateStatement,
@@ -20,8 +20,12 @@ use crate::shared::STORAGE_PATH;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub name: String,
-    pub value: JsonValue,
-    pub expires: String,
+    pub value: String,
+    pub path: Option<String>,
+    pub domain: Option<String>,
+    pub expires: Option<i64>,
+    pub httponly: bool,
+    pub secure: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -42,40 +46,52 @@ pub async fn init() -> Result<()> {
 }
 
 fn parse_cookie_header(cookie: String) -> Result<Model> {
-    let re_name_value = Regex::new(r"^([^=]+)=([^;]+);?")?;
-    let re_attribute = Regex::new(r"([^=]+)=([^;]+);?")?;
-
-    let captures = re_name_value.captures(&cookie).ok_or_else(|| anyhow!("Invalid Cookie"))?;
-    let name = captures.get(1).unwrap().as_str().trim().to_string();
-    let value: JsonValue = captures.get(2).unwrap().as_str().trim().into();
-
-    let mut attributes: BTreeMap<String, String> = BTreeMap::new();
-
-    for cap in re_attribute.captures_iter(&cookie) {
-        let key = cap.get(1).unwrap().as_str().trim().to_string();
-        let value = cap.get(2).unwrap().as_str().trim().to_string();
-        attributes.insert(key, value);
-    }
-
-    let expires = attributes.get("Expires").cloned().unwrap_or_else(|| String::new());
-
-    Ok(Model {
+    let re_name_value = Regex::new(r"^([^=]+)=([^;]+)")?;
+    let re_attribute = Regex::new(r"(?i)\b(path|domain|expires|httponly|secure)\b(?:=([^;]*))?")?;
+    let captures = re_name_value.captures(&cookie).context(anyhow!("Invalid Cookie"))?;
+    let name = captures.get(1).unwrap().as_str().trim().into();
+    let value = captures.get(2).unwrap().as_str().trim().into();
+    let mut model = Model {
         name,
         value,
-        expires,
-    })
+        path: None,
+        domain: None,
+        expires: None,
+        httponly: false,
+        secure: false
+    };
+    for cap in re_attribute.captures_iter(&cookie) {
+        let key = cap.get(1).map_or("", |m| m.as_str().trim()).to_lowercase();
+        let value = cap.get(2).map_or("", |m| m.as_str().trim()).to_string();
+        match key.as_str() {
+            "path" => model.path = Some(value),
+            "domain" => model.domain = Some(value),
+            "expires" => {
+                let timestamp = chrono::NaiveDateTime::parse_from_str(
+                    &value, "%a, %d %b %Y %H:%M:%S GMT"
+                )?.and_utc().timestamp();
+                model.expires = Some(timestamp);
+            },
+            "httponly" => model.httponly = true,
+            "secure" => model.secure = true,
+            _ => continue
+        }
+    }
+    Ok(model)
 }
 
-pub async fn load() -> Result<BTreeMap<String, JsonValue>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
-        .await.context("Failed to connect to the database")?;
-    let cookies = Entity::find().all(&db)
-        .await.context("Failed to load Cookies")?;
+pub async fn load() -> Result<BTreeMap<String, String>> {
     let mut result = BTreeMap::new();
-    for cookie in cookies {
+    for cookie in load_raw().await? {
         result.insert(cookie.name, cookie.value);
     }
     Ok(result)
+}
+
+pub async fn load_raw() -> Result<Vec<Model>> {
+    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+        .await.context("Failed to connect to the database")?;
+    Ok(Entity::find().all(&db).await.context("Failed to load Cookies")?)
 }
 
 pub async fn insert(cookie: String) -> Result<()> {
