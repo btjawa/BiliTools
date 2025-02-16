@@ -73,7 +73,7 @@
         </div>
         <div class="setting-page__sub-tab flex flex-col items-start gap-1">
             <button v-for="item in settingsTree" @click="subPage = item.id" :class="subPage !== item.id || 'active'"
-                class="p-[8px_0] w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[color:var(--button-color)]"
+                class="pr-0 w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[color:var(--button-color)]"
             >
                 <span class="text-base">{{ item.name }}</span>
                 <i :class="['fa-light', 'min-w-4', item.icon]"></i>
@@ -173,6 +173,9 @@ const settingsTree = computed(() => {
             { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
                 { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
             ] },
+            { name: t('settings.advanced.inspect_manga.name'), icon: "fa-image", desc: t('settings.advanced.inspect_manga.desc'), data: [
+                { name: t('settings.label.enable'), type: "switch", data: "advanced.inspect_manga" },
+            ] },
             { name: t('settings.advanced.config.name'), icon: "fa-wrench", desc: t('settings.advanced.config.desc'), data: [
                 { name: t('home.label.danmaku'), type: "button", data: () => openPath({ getPath: true, pathName: "danmaku" }), icon: "fa-file-circle-info" },
                 { name: "Aria2c", type: "button", data: () => openPath({ getPath: true, pathName: "aria2c" }), icon: "fa-file-circle-info" },
@@ -230,7 +233,7 @@ function updateNest(key: string, data: any) {
     const parent = key.split('.')[0] as keyof typeof settings.$state;
     let value = getNestedValue(settings.$state, key);
     if (data === value) return null;
-    (settings.$state as any)[key] = data;
+    settings.updateNest(key, data);
     updateSettings(parent, settings.$state[parent]);
 }
 

@@ -48,6 +48,10 @@
             "name": "Prefer downloading danmaku using ProtoBuf",
             "desc": "this method can obtain almost all danmaku, but processing time will be longer."
         },
+        "inspect_manga": {
+            "name": "Attempt to obtain original-quality manga images",
+            "desc": "When downloading manga, try to obtain the original-quality images instead of compressed ones"
+        },
         "config": {
             "name": "Custom Configuration",
             "desc": "Please make sure you know what you are doing before modifying the following configuration"

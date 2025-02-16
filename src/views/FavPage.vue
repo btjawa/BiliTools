@@ -5,13 +5,11 @@
     </h1>
     <hr />
     <Empty :exp="favorateList.length === 0" text="home.empty" class="absolute"/>
-    <div class="setting-page__sub flex w-full h-[calc(100%-74px)]" :class="{ 'active': favorateActive }">
-        <div class="flex flex-col flex-1 mr-6" ref="subPage">
+    <div class="setting-page__sub flex w-full h-[calc(100%-66px)]" :class="{ 'active': favorateActive }">
+        <div class="flex flex-col flex-1 mr-6 w-[calc(100%-264px)]" ref="subPage">
             <div class="mb-4">
                 <span>{{ $t('favorites.label.page') }}</span>
-                <input type="number" v-model="page" class="ml-4"
-                    @input="page<1?page=1:page>maxPage?page=maxPage:page"
-                />
+                <input type="number" v-model="page" class="ml-4" />
             </div>
             <div v-if="favorateContent[media_id]" class="flex flex-col overflow-auto gap-0.5">
                 <div v-for="(item, index) in favorateContent[media_id]" class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
@@ -28,9 +26,9 @@
         </div>
         <div class="setting-page__sub-tab flex flex-col items-start gap-1">
             <button v-for="item in favorateList" @click="media_id = item.id" :class="media_id !== item.id || 'active'"
-                class="p-[8px_0] w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[color:var(--button-color)]"
+                class="pr-0 w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[color:var(--button-color)]"
             >
-                <span class="text-base">{{ item.title }}</span>
+                <span class="text-base ellipsis">{{ item.title }}</span>
                 <label class="w-[3px] rounded-md h-4 bg-[color:var(--primary-color)] invisible"></label>
             </button>
             <button class="self-end mt-2" @click="getList">
@@ -41,7 +39,7 @@
     </div>
 </div></template>
 <script setup lang="ts">
-import { inject, ref, computed, watch, nextTick, onActivated } from 'vue';
+import { inject, ref, watch, nextTick, onActivated } from 'vue';
 import { getFavoriteContent, getFavoriteList } from '@/services/data';
 import { FavoriteList, FavoriteContent } from '@/types/data.d';
 import { useSettingsStore } from '@/store';
@@ -56,9 +54,7 @@ const favorateActive = ref(false);
 const favorateContent = ref<{ [id: number]: FavoriteContent['data']['medias'] }>({});
 
 const subPage = ref<HTMLElement>();
-
 const settings = useSettingsStore();
-const maxPage = computed(() => Math.ceil(medias.value / 20));
 
 watch(media_id, (newVal, oldVal) => {
     if (oldVal !== newVal && newVal && subPage.value) {
@@ -73,7 +69,13 @@ watch(media_id, (newVal, oldVal) => {
     }
 })
 
-watch(page, (newVal) => getContent(media_id.value, newVal))
+watch(page, (newValue, oldValue) => {
+    if (newValue < 1) return page.value = 1;
+    const maxPage = Math.ceil(medias.value / 20);
+    if (newValue > maxPage) return page.value = maxPage;
+    if (oldValue < 1 || oldValue > maxPage) return;
+    getContent(media_id.value, newValue);
+})
 
 onActivated(() => !favorateList.value.length && getList())
 

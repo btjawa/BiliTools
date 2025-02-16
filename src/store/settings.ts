@@ -21,6 +21,7 @@ export const useSettingsStore = defineStore('settings', {
         advanced: {
             auto_convert_flac: true,
             prefer_pb_danmaku: true,
+            inspect_manga: false,
         }
     }),
     getters: {
@@ -35,5 +36,15 @@ export const useSettingsStore = defineStore('settings', {
             url.password = s.proxy.password || '';
             return url.toString();
         }
+    },
+    actions: {
+        updateNest(key: string, value: string | number | Object) {
+            const keys = key.split('.');
+            let current = this.$state as any;
+            for (let i = 0; i < keys.length - 1; i++) {
+                current = current[keys[i]];
+            }
+            current[keys[keys.length - 1]] = value;
+        },
     }
 });

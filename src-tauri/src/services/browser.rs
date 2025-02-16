@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, path::PathBuf, sync::{Arc, RwLock}, thread, time::Duration};
+use std::{ffi::OsStr, fs, path::PathBuf, sync::{Arc, RwLock}, thread, mem, time::Duration};
 use headless_chrome::{
     browser::{
         tab::RequestPausedDecision,
@@ -105,18 +105,17 @@ async fn auto_refresh(tab: &Arc<Tab>, index_list: &Arc<RwLock<Vec<Index>>>) -> T
         max_len = { let lock = index_list.read().unwrap(); lock.len() };
         sleep(Duration::from_millis(100)).await;
     }
+    let mut scroll_count = 0;
+    let x = rand::rng().random_range(800..1000);
+    let y = rand::rng().random_range(400..600);
     loop {
         let count = get_length(index_list);
         log::info!("Progress: {count} / {max_len}");
         if count >= max_len { break; }
-        let timeout = rand::rng().random_range(400..800);
-        let step = rand::rng().random_range(200..500);
-        let x = rand::rng().random_range(800..1000);
-        let y = rand::rng().random_range(400..600);
         tab.call_method(Input::DispatchMouseEvent {
             Type: Input::DispatchMouseEventTypeOption::MouseWheel,
             x: x as f64, y: y as f64,
-            delta_x: Some(0.0), delta_y: Some(step as f64),
+            delta_x: Some(0.0), delta_y: Some(100.0),
             modifiers: None, timestamp: None,
             button: None, buttons: None,
             click_count: None, force: None,
@@ -124,12 +123,12 @@ async fn auto_refresh(tab: &Arc<Tab>, index_list: &Arc<RwLock<Vec<Index>>>) -> T
             tilt_x: None, tilt_y: None,
             twist: None, pointer_Type: None,
         })?;
-        sleep(Duration::from_millis(timeout)).await;
-    }
-    loop {
-        let max_len = index_list.read().unwrap().len();
-        if get_length(index_list) >= max_len { break };
-        sleep(Duration::from_millis(50)).await;
+        scroll_count += 1;
+        loop {
+            let count = get_length(index_list);
+            if count > (2 * scroll_count) { break; }
+            sleep(Duration::from_millis(100)).await;
+        }
     }
     Ok(())
 }
@@ -142,6 +141,7 @@ pub async fn crawler(secret: String, down_dir: String, id: usize, ep: usize) -> 
     }
     let down_dir = PathBuf::from(down_dir);
     let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
+    let inspect_manga = { CONFIG.read().unwrap().advanced.inspect_manga };
     fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
     fs::create_dir_all(&down_dir).context("Failed to create crawler output dir")?;
     let browser = Browser::new(
@@ -161,7 +161,7 @@ pub async fn crawler(secret: String, down_dir: String, id: usize, ep: usize) -> 
     tab.enable_request_interception(Arc::new(
         move |_transport: Arc<Transport>, _session_id: SessionId, event: RequestPausedEvent| {
             let url = &event.params.request.url;
-            if url.contains("ImageToken") && event.params.request.method == "POST" {
+            if url.contains("ImageToken") && event.params.request.method == "POST" && inspect_manga {
                 let request = &event.params.request;
                 // println!("ImageToken: {url}");
                 let post_data = &request.post_data.as_deref().unwrap_or("");
@@ -197,11 +197,11 @@ pub async fn crawler(secret: String, down_dir: String, id: usize, ep: usize) -> 
             };
             let body: ImageIndexResponse = serde_json::from_str(&body_raw).unwrap();
             if body.code != 0 { log::error!("GetImageIndex is not ok: {}", body.msg); return; }
+            let mut index_list = Vec::<Index>::new();
             for (index, item) in body.data.images.iter().enumerate() {
                 let id = get_url_id(&item.path);
                 if let Some(id) = id {
-                    let mut lock = index_list_clone.write().unwrap();
-                    lock.push(Index {
+                    index_list.push(Index {
                         id,
                         buffer_length: 0,
                         index: index + 1,
@@ -209,6 +209,8 @@ pub async fn crawler(secret: String, down_dir: String, id: usize, ep: usize) -> 
                     });
                 } else { log::error!("Failed to parse id from GetImageIndex Path: {}", item.path) }
             }
+            let mut lock = index_list_clone.write().unwrap();
+            mem::swap(&mut *lock, &mut index_list);
         }
     }))?;
     let index_list_clone = index_list.clone();
@@ -256,13 +258,11 @@ pub async fn crawler(secret: String, down_dir: String, id: usize, ep: usize) -> 
             } else { log::error!("No index for {url} found") }
         }
     }))?;
-    if false {
-        let raw_cookies = cookies::load_raw().await?;
-        let cookies = raw_cookies.into_iter().map(
-            |model| CookieParam::from_with(&model, Some(".bilibili.com"))
-        ).collect::<Vec<CookieParam>>();
-        tab.set_cookies(cookies)?;
-    }
+    let raw_cookies = cookies::load_raw().await?;
+    let cookies = raw_cookies.into_iter().map(
+        |model| CookieParam::from_with(&model, Some(".bilibili.com"))
+    ).collect::<Vec<CookieParam>>();
+    tab.set_cookies(cookies)?;
     tab.navigate_to(&format!("https://manga.bilibili.com/mc{id}/{ep}"))?;
     auto_refresh(&tab, &index_list).await?;
     Ok(())

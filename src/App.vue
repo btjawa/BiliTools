@@ -95,7 +95,7 @@ onMounted(async () => {
 	@apply flex absolute justify-center items-center w-full h-full;
 	@apply text-[color:var(--content-color)] p-6 overflow-hidden;
 	h1 {
-		@apply text-2xl mb-2;
+		@apply text-2xl;
 	}
 }
 .fade-enter-active {
