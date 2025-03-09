@@ -39,7 +39,7 @@
         <hr v-if="index < general.length - 1" />
         <button @click="confirm(item.id)" class="absolute right-4 primary-color"
             :class="[index === general.length - 1 ? 'bottom-0' : 'bottom-4']"
-            v-if="popupType === 'audioVisual' ? index === general.length - 1
+            v-if="popupType === 'audioVideo' ? index === general.length - 1
             : (item.id === 'cdc' || item.id === 'ads')"
         >
             <i :class="[settings.dynFa, 'fa-right']"></i>
@@ -71,7 +71,7 @@ const props = defineProps<{
 }>();
 
 const othersReqs = ref<OthersReqs>({} as any);
-const popupType = ref<'audioVisual' | 'others'>(String() as any);
+const popupType = ref<'audioVideo' | 'others'>(String() as any);
 const mediaType = ref(MediaType.Video);
 const noFmt = ref(false);
 const active = ref(false);
@@ -133,7 +133,7 @@ const others = computed(() => {
 
 defineExpose({ init });
 
-function init(type: 'audioVisual' | 'others', media_type: MediaType, options: { req: OthersReqs, noFmt?: boolean }) {
+function init(type: 'audioVideo' | 'others', media_type: MediaType, options: { req: OthersReqs, noFmt?: boolean }) {
     popupType.value = type;
     othersReqs.value = options.req;
     mediaType.value = media_type;
@@ -151,7 +151,7 @@ function confirm(id: string) {
         if (id === 'cdc') type = 'video';
         if (id === 'ads') type = 'audio';
         if (type) props.pushBack(type, { init: true });
-    } else if (popupType.value === 'audioVisual') {
+    } else if (popupType.value === 'audioVideo') {
         props.pushBack('all', { init: true });
     }
     close();

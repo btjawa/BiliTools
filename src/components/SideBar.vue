@@ -36,7 +36,7 @@
 import { onMounted, computed, ref } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { ApplicationError } from '@/services/utils';
-import { useUserStore, useInfoStore, useSettingsStore } from "@/store";
+import { useUserStore, useSettingsStore, useInfoStore } from "@/store";
 import { commands } from '@/services/backend';
 import { useRoute } from 'vue-router';
 
@@ -50,8 +50,9 @@ const isActive = computed(() => {
 onMounted(() => osType() === 'macos' && $el.value && ($el.value.style.paddingTop = '30px'))
 
 async function setTheme() {
-    const newTheme = useSettingsStore().isDark ? 'light' : 'dark';
-    const result = await commands.rwConfig('write', { theme: newTheme }, useInfoStore().secret);
+    const newTheme = await commands.setTheme(useSettingsStore().theme, true);
+    if (newTheme.status === 'error') throw new ApplicationError(newTheme.error);
+    const result = await commands.rwConfig('write', { theme: newTheme.data }, useInfoStore().secret);
     if (result.status === 'error') throw new ApplicationError(result.error);
 }
 </script>

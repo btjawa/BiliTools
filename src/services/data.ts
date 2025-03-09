@@ -1,6 +1,5 @@
 import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
-import { join as pathJoin } from "@tauri-apps/api/path";
-import { useAppStore, useInfoStore, useSettingsStore } from "@/store";
+import { useAppStore, useSettingsStore } from "@/store";
 import { checkRefresh } from "@/services/login";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
@@ -75,7 +74,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     share: data.stat.share,
                 },
                 upper: {
-                    avatar: data.owner.face,
+                    avatar: data.owner.face.replace("http:", "https:"),
                     name: data.owner.name,
                     mid: data.owner.mid,
                 },
@@ -140,7 +139,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     share: data.stat.share,
                 },
                 upper: {
-                    avatar: data?.up_info?.avatar,
+                    avatar: data?.up_info?.avatar.replace("http:", "https:"),
                     name: data?.up_info?.uname,
                     mid: data?.up_info?.mid,
                 },
@@ -179,7 +178,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     share: null,
                 },
                 upper: {
-                    avatar: data.up_info.avatar,
+                    avatar: data.up_info.avatar.replace("http:", "https:"),
                     name: data.up_info.uname,
                     mid: data.up_info.mid,
                 },
@@ -529,13 +528,4 @@ export async function getFavoriteContent(media_id: number, pn: number) {
     const response = await tryFetch('https://api.bilibili.com/x/v3/fav/resource/list', { params: { media_id, ps: 20, pn } });
     const body = response as Types.FavoriteContent;
     return body.data;
-}
-
-export async function getMangaImages(id: number, epid: number, parent: string, name: string) {
-    const loadingBox = document.querySelector('.loading');
-    const path = await pathJoin(parent, name);
-    if (loadingBox) loadingBox.classList.add('active');
-    const result = await Backend.commands.crawler(useInfoStore().secret, path, id, epid);
-    if (loadingBox) loadingBox.classList.remove('active');
-    if (result?.status === 'error') throw new ApplicationError(result.error);
 }

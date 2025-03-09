@@ -2,8 +2,6 @@
   "app": {
     "windows": [
       {
-        "fullscreen": false,
-        "resizable": true,
         "minWidth": 1150,
         "minHeight": 800,
         "title": "BiliTools",
@@ -12,13 +10,9 @@
         "height": 800,
         "transparent": true,
         "decorations": false,
-        "backgroundColor": "#000000",
-        "windowEffects": {
-          "effects": ["mica"]
-        },
+        "backgroundColor": "#00000000",
         "dragDropEnabled": false
       }
-    ],
-    "macOSPrivateApi": true
+    ]
   }
 }

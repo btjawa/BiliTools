@@ -84,8 +84,9 @@
 </div></template>
 <script setup lang="ts">
 import { computed, nextTick, onActivated, ref, watch } from 'vue';
-import { ApplicationError, iziInfo, tryFetch } from '@/services/utils';
+import { ApplicationError, AppLog, tryFetch } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
+import { TYPE } from 'vue-toastification';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
 import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
@@ -262,11 +263,9 @@ async function getPath(type: PathAlias | "danmaku" | "aria2c") {
 
 async function checkProxy() {
     try {
-        const body = await tryFetch('https://api.bilibili.com/x/click-interface/click/now');
-        const timestamp = JSON.stringify(body?.data);
-        if (timestamp) {
-            iziInfo(i18n.global.t('common.iziToast.success') + ': ' + timestamp);
-            return timestamp;
+        const body = await tryFetch('https://api.bilibili.com/x/report/click/now');
+        if (body?.data?.now) {
+            return AppLog(`/x/report/click/now: ${body.data.now}`, TYPE.SUCCESS);
         } else {
             throw new ApplicationError(body?.message, { code: body?.code });
         }

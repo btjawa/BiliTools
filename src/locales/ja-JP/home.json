@@ -1,7 +1,7 @@
 {
     "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU番号...",
     "downloadOptions": {
-        "audioVisual": "音声と映像",
+        "audioVideo": "音声と映像",
         "audio": "音声",
         "others": "その他"
     },

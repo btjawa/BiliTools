@@ -14,11 +14,6 @@
     "wip": "此处施工中",
     "refresh": "刷新",
     "unstable": "此功能尚不稳定，请谨慎使用",
-    "iziToast": {
-        "info": "提示",
-        "success": "成功",
-        "error": "警告 / 错误"
-    },
     "default": {
         "dms": {
             "name": "分辨率/画质",

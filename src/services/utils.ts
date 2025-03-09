@@ -1,26 +1,14 @@
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
-import { version as osVersion } from "@tauri-apps/plugin-os";
-import { TauriError, events } from '@/services/backend';
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { TauriError, commands, events } from '@/services/backend';
+import { TYPE, useToast } from "vue-toastification";
 import { MediaType } from '@/types/data.d';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
-import iziToast from "izitoast";
 import i18n from '@/i18n';
 
 const t = i18n.global.t;
-
-iziToast.settings({
-    transitionIn: 'fadeInLeft',
-    transitionOut: 'fadeOutRight',
-    backgroundColor: 'var(--solid-block-color)',
-    titleColor: 'var(--content-color)',
-    messageColor: 'var(--content-color)',
-    iconColor: 'var(--content-color)',
-    position: "topRight",
-});
 
 export class ApplicationError extends Error {
     code?: number | string;
@@ -47,28 +35,35 @@ export class ApplicationError extends Error {
     }
     handleError() {
         const msg = this.noStack ? this.message : `${this.message} ${this.code ? `(${this.code})` : ''}\n${this.stack}`;
-        log.error(msg);
-        iziError(msg);
+        AppLog(msg, TYPE.ERROR);
         return msg;
     }
 }
 
-export function iziInfo(message: string) {
-    console.log(message)
-    iziToast.info({
-        icon: 'fa-solid fa-circle-info',
-        layout: 2, timeout: 10000,
-        title: t('common.iziToast.info'), message
-    });
-}
-
-function iziError(message: string) {
-    console.error(message);
-    iziToast.error({
-        icon: 'fa-regular fa-circle-exclamation',
-        layout: 2, timeout: 10000,
-        title: t('common.iziToast.error'), message
-    });
+export function AppLog(message: string, type?: TYPE) {
+    switch(type) {
+        case TYPE.ERROR: {
+            log.error(message);
+            console.error(message);
+            break;
+        }
+        case TYPE.WARNING: {
+            log.warn(message);
+            console.warn(message);
+            break;
+        }
+        default:
+        case TYPE.INFO:
+        case TYPE.SUCCESS:
+        case TYPE.DEFAULT: {
+            log.info(message);
+            console.log(message);
+            break;
+        }
+    }
+    (useToast())(message, {
+        type, timeout: 10000,
+    })
 }
 
 export function setEventHook() {
@@ -80,14 +75,7 @@ export function setEventHook() {
     events.settings.listen(async e => {
         const settings = useSettingsStore();
         settings.$patch(e.payload);
-        const version = osVersion().split('.');
-        const window = getCurrentWindow();
-        window.setTheme(e.payload.theme);
-        if (version[0] === '10' && (Number(version[2]) <= 22000 )) {
-            document.body.classList.remove('override-dark');
-            document.body.classList.remove('override-light');
-            document.body.classList.add('override-' + e.payload.theme);
-        }
+		await commands.setTheme(e.payload.theme, false);
         i18n.global.locale.value = settings.language;
     });
     events.queueEvent.listen(e => {
@@ -202,7 +190,7 @@ export async function tryFetch(url: string | URL, options?: {
                 if (!token || !gt || !challenge) {
                     throw new ApplicationError(body.message || body.msg, { code: body.code });
                 }
-                iziInfo(t('error.risk'));
+                AppLog(t('error.risk'));
                 const captcha = await auth.captcha(gt, challenge);
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })

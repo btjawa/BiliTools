@@ -1,7 +1,7 @@
 {
     "inputPlaceholder": "{0}連結/AV/BV/SS/EP/AU號...",
     "downloadOptions": {
-        "audioVisual": "下載音視頻",
+        "audioVideo": "下載音視頻",
         "audio": "音頻",
         "others": "下載其他"
     },

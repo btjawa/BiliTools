@@ -6,18 +6,14 @@
         "resizable": true,
         "minWidth": 1150,
         "minHeight": 800,
-        "title": "",
+        "title": "BiliTools",
         "label": "main",
         "width": 1150,
         "height": 800,
-        "transparent": true,
         "titleBarStyle": "Overlay",
-        "windowEffects": {
-          "effects": ["hudWindow"]
-        },
+        "transparent": true,
         "dragDropEnabled": false
       }
-    ],
-    "macOSPrivateApi": true
+    ]
   }
 }

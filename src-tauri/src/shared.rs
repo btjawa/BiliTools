@@ -44,7 +44,7 @@ lazy_static! {
             }).unwrap_or_else(|| "en-US".into()),
         filename: "{mediaType}_{title}_{date}".into(),
         auto_check_update: true,
-        theme: Theme::Dark,
+        theme: Theme::Auto,
         proxy: SettingsProxy {
             addr: String::new(),
             username: String::new(),
@@ -75,6 +75,8 @@ pub enum Theme {
     Light,
     /// Dark theme.
     Dark,
+    /// Auto theme.
+    Auto,
 }
 
 impl From<Theme> for tauri::Theme {
@@ -82,6 +84,14 @@ impl From<Theme> for tauri::Theme {
         match theme {
             Theme::Light => tauri::Theme::Light,
             Theme::Dark => tauri::Theme::Dark,
+            Theme::Auto => {
+                match dark_light::detect() {
+                    Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
+                    Ok(dark_light::Mode::Light) => tauri::Theme::Light,
+                    Ok(dark_light::Mode::Unspecified) => tauri::Theme::Light,
+                    Err(_) => tauri::Theme::Light,
+                }
+            },
         }
     }
 }
@@ -162,4 +172,60 @@ pub fn get_ts(mills: bool) -> i64 {
 pub fn random_string(len: usize) -> String {
     rand::rng().sample_iter(&Alphanumeric)
         .take(len).map(char::from).collect()
+}
+
+pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {
+    use tauri::utils::{config::WindowEffectsConfig, WindowEffect};
+    use tauri_plugin_os::Version;
+    #[cfg(debug_assertions)]
+    window.open_devtools();
+    #[cfg(all(target_os = "windows", not(debug_assertions)))]
+    window.with_webview(|webview| unsafe {
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings4;
+        use windows::core::Interface;
+        let core = webview.controller().CoreWebView2().unwrap();
+        let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings4>().unwrap();
+        settings.SetAreBrowserAcceleratorKeysEnabled(false).unwrap();
+        settings.SetIsGeneralAutofillEnabled(false).unwrap();
+        settings.SetIsPasswordAutosaveEnabled(false).unwrap();
+    })?;
+    let set_default = || {
+        let mut c = 0;
+        let theme: tauri::Theme = if let Some(theme) = theme { theme }
+        else { Theme::Auto.into() };
+        match theme {
+            tauri::Theme::Dark => c = 32,
+            tauri::Theme::Light => c = 249,
+            _ => ()
+        }
+        window.set_background_color(Some(tauri::window::Color(c, c, c, 255)))?;
+        Ok::<(), anyhow::Error>(())
+    };
+    match tauri_plugin_os::platform() {
+        "windows" => if let Version::Semantic(major, minor, patch) = tauri_plugin_os::version() {
+            if major < 6 || (major == 6 && minor < 2) {
+                return Err(anyhow::anyhow!("Unsupported Windows Version"));
+            } else if major >= 10 {
+                if patch >= 22000 {
+                    window.set_effects(WindowEffectsConfig {
+                        effects: vec![WindowEffect::Mica],
+                        ..Default::default()
+                    })?
+                } else if patch < 18362 || patch > 22000 {
+                    window.set_effects(WindowEffectsConfig {
+                        effects: vec![WindowEffect::Acrylic],
+                        ..Default::default()
+                    })?
+                } else if patch < 22621 {
+                    set_default()?
+                }
+            }
+        } else { set_default()? },
+        "macos" => window.set_effects(WindowEffectsConfig {
+            effects: vec![WindowEffect::Sidebar],
+            ..Default::default()
+        })?,
+        _ => set_default()?
+    }
+    Ok(())
 }

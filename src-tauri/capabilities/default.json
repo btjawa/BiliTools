@@ -9,6 +9,11 @@
   "permissions": [
     "core:path:default",
     "core:event:default",
+    "core:app:default",
+    "core:image:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
@@ -18,14 +23,7 @@
     "core:window:allow-is-focused",
     "core:window:allow-unminimize",
     "core:window:allow-start-dragging",
-    "core:window:allow-set-theme",
-    "core:app:default",
-    "core:image:default",
-    "core:resources:default",
-    "core:menu:default",
-    "core:tray:default",
     "shell:allow-open",
-    "core:webview:allow-internal-toggle-devtools",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask",
@@ -43,15 +41,9 @@
     {
       "identifier": "http:default",
       "allow": [
-        {
-          "url": "https://*.bilibili.com/*"
-        },
-        {
-          "url": "https://*.hdslb.com/*"
-        },
-        {
-          "url": "*://b23.tv/*"
-        }
+        { "url": "https://*.bilibili.com/*" },
+        { "url": "https://*.hdslb.com/*" },
+        { "url": "*://b23.tv/*" }
       ]
     },
     "updater:allow-check",

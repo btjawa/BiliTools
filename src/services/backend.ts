@@ -112,6 +112,14 @@ async rwConfig(action: string, settings: { [key in string]: JsonValue } | null, 
     else return { status: "error", error: e  as any };
 }
 },
+async setTheme(theme: Theme, modify: boolean) : Promise<Result<Theme, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_theme", { theme, modify }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async pushBackQueue(info: MediaInfoListItem, currentSelect: CurrentSelect, tasks: Task[], ts: Timestamp, ext: string, output: string | null, ssTitle: string) : Promise<Result<QueueInfo, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("push_back_queue", { info, currentSelect, tasks, ts, ext, output, ssTitle }) };
@@ -139,14 +147,6 @@ async togglePause(pause: boolean, gid: string) : Promise<Result<null, TauriError
 async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("remove_task", { id, queueType, gid }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async crawler(secret: string, downDir: string, id: number, ep: number) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("crawler", { secret, downDir, id, ep }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -199,7 +199,11 @@ export type Theme =
 /**
  * Dark theme.
  */
-"dark"
+"dark" | 
+/**
+ * Auto theme.
+ */
+"auto"
 export type Timestamp = { millis: number; string: string }
 
 /** tauri-specta globals **/

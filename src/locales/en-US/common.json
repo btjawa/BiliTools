@@ -14,11 +14,6 @@
     "wip": "Working in progress",
     "refresh": "Refresh",
     "unstable": "This feature is still unstable. Please use with caution.",
-    "iziToast": {
-        "info": "Info",
-        "success": "Success",
-        "error": "Alert / Error"
-    },
     "default": {
         "dms": {
             "name": "Video Quality",

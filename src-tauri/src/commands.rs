@@ -18,7 +18,6 @@ pub use crate::{
             self, push_back_queue, process_queue, toggle_pause, remove_task
         },
         ffmpeg,
-        browser,
     },
     storage::{
         config::{self, rw_config},
@@ -114,6 +113,30 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, fil
     log::info!("{:?}", String::from_utf8_lossy(&output.stdout));
     fs::remove_file(input).await?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_theme(window: tauri::WebviewWindow, theme: shared::Theme, modify: bool) -> TauriResult<shared::Theme> {
+    use shared::Theme;
+    let new_theme = if modify {
+        match theme {
+            Theme::Auto => {
+                let theme: tauri::Theme = theme.into();
+                if theme == tauri::Theme::Dark {
+                    Theme::Light
+                } else {
+                    Theme::Dark
+                }
+            },
+            Theme::Dark => Theme::Light,
+            Theme::Light => Theme::Dark,
+        }
+    } else { theme };
+    let tauri_theme = new_theme.clone().into();
+    window.set_theme(Some(tauri_theme))?;
+    shared::set_window(window, Some(tauri_theme))?;
+    Ok(new_theme)
 }
 
 #[tauri::command(async)]

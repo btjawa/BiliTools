@@ -130,9 +130,9 @@ const settings = useSettingsStore();
 const options = computed(() => [
 	...((s.mediaInfo.type !== MediaType.Music && s.mediaInfo.type !== MediaType.Manga) ? [{
 		icon: 'fa-file-arrow-down',
-		text: i18n.global.t('home.downloadOptions.audioVisual'),
+		text: i18n.global.t('home.downloadOptions.audioVideo'),
 		action: (index: number) => updateStream(index, 0, { init: true }),
-		multi: () => initMulti('audioVisual')
+		multi: () => initMulti('audioVideo')
 	}] : []),
 	{
 		icon: 'fa-file-export',
@@ -231,7 +231,7 @@ async function updateStream(i: number, fmt: number, options?: { init?: boolean, 
 			updateCodec(options?.cs);
 		}
 		if (options?.init && popup.value) {
-			popup.value.init("audioVisual", s.mediaInfo.type, { req: othersReqs });
+			popup.value.init("audioVideo", s.mediaInfo.type, { req: othersReqs });
 		}
 	} catch(err) {
 		err instanceof ApplicationError ? err.handleError() :
@@ -282,13 +282,7 @@ async function getOthers(type: keyof typeof othersMap, options?: { date?: string
 			mediaType: i18n.global.t(`home.label.${type}`),
 			aid: info.id,
 		});
-		if (type === 'manga') {
-			const parent = await getFolder();
-			if (!parent) return;
-			const result = await dialog.ask(i18n.global.t('common.unstable'), { 'kind': 'warning' });
-			if (!result) return;
-			return await data.getMangaImages(s.mediaInfo.id, info.id, parent, name);
-		}
+		if (type === 'manga') return await open("https://btjawa.top/bilitools#关于漫画");
 		const _data = await (async () => { switch (type) {
 			case 'cover': return await data.getBinary(info.cover);
 			case 'aiSummary': return await data.getAISummary(info, s.mediaInfo.upper.mid || 0);
@@ -346,7 +340,7 @@ async function updateStein(edge_id: number) {
 		index: 0,
 	}];
 }
-async function initMulti(type: 'audioVisual' | 'others') {
+async function initMulti(type: 'audioVideo' | 'others') {
 	if (!s.checkbox || !popup.value) return;
 	s.currentSelect.fmt = 0;
 	await updateStream(s.multiSelect[0], 0);
