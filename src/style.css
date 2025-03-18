@@ -1,3 +1,6 @@
+@import url('@/assets/fonts/font-awesome/font.min.css');
+@import url('@/assets/fonts/bcc-iconfont/font.min.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,22 +37,16 @@
 }
 
 :root {
-    /* --primary-color: rgb(212,78,125); */
-    /* --block-color: #333; */
-    /* --button-color: #323232; */
+    --content-color: #1a1a1a;
+    --desc-color: #a2a7ae;
+    --split-color: #ebebeb;
+    --block-color: #ffffff;
+    --solid-block-color: #ffffff;
+    --button-color: #00000009;
     --primary-color: rgb(0, 161, 214);
     --dark-button-color: rgb(233,233,233);
 }
-
 @media (prefers-color-scheme: light) {
-    :root {
-        --content-color: #1a1a1a;
-        --desc-color: #a2a7ae;
-        --split-color: #ebebeb;
-        --block-color: #ffffff;
-        --solid-block-color: #ffffff;
-        --button-color: #00000009;
-    }
     button, select, input {
         @apply hover:!brightness-110;
     }
@@ -62,7 +59,6 @@
         --split-color: #c4c4c433;
         --block-color: #ffffff0d;
         --solid-block-color: #2b2b2b;
-        /* --button-color: #ffffff15; */
         --button-color: #a2a7ae18;
     }
 }
@@ -82,20 +78,13 @@ body {
 }
 
  * {
-    font-family: -apple-system, "HarmonyOS_Sans_SC_Regular";
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     text-rendering: optimizeLegibility;
     user-select: none;
 }
-
-@media (-webkit-max-device-pixel-ratio: 1) {
-    * {
-        font-family: -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif, Helvetica, "Apple Color Emoji", Arial, "Segoe UI Emoji", "Segoe UI Symbol";
-    }
-}
-
 input {
     background: none;
     outline: none;

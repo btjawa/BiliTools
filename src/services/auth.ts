@@ -1,23 +1,9 @@
 import { ApplicationError, tryFetch } from "@/services/utils";
 import { GeetestOptions, initGeetest } from '@/lib/geetest';
-import { useAppStore, useSettingsStore } from "@/store";
-import { Go } from "@/lib/wasm_exec";
+import { useSettingsStore } from "@/store";
 import * as login from "@/types/login";
 import * as user from "@/types/user";
 import md5 from "md5";
-
-declare global {
-    interface Navigator {
-        deviceMemory?: number,
-        cpuClass?: number,
-    }
-    interface Window {
-        genReqSign: (query: string, params: string, timestamp: number) => {
-            error?: string;
-            sign: string
-        };
-    }
-}
 
 // Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/933#issue-2073916390
 export function getFingerPrint(_uuid: string) {
@@ -146,57 +132,4 @@ export async function correspondPath(timestamp: number) {
     const data = new TextEncoder().encode(`refresh_${timestamp}`);
     const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, publicKey, data))
     return encrypted.reduce((str, c) => str + c.toString(16).padStart(2, "0"), "")
-}
-
-export async function getM1AndKey() {
-    const keyPair = await crypto.subtle.generateKey({
-        name: 'ECDH',
-        namedCurve: 'P-256'
-    }, true, ['deriveKey', 'deriveBits']);
-    const raw = await crypto.subtle.exportKey('raw', keyPair.publicKey);
-    const jwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
-    const jwkString = JSON.stringify(jwk);
-    return { m1: btoa(jwkString), key: btoa(String.fromCharCode.apply(null, new Uint8Array(raw) as any)) };
-}
-
-export async function genReqSign(query: string | URLSearchParams, params: { [key: string]: string | number | object }): Promise<string> {
-    const app = useAppStore();
-    if (!app.goInstance) {
-        const go = new Go();
-        const url = new URL('@/lib/manga.wasm', import.meta.url).href;
-        const wasm = await window.fetch(url);
-        const buffer = await wasm.arrayBuffer();
-        const result = await WebAssembly.compile(buffer);
-        const instance = await WebAssembly.instantiate(result, go.importObject);    
-        go.run(instance);
-        app.goInstance = instance;
-    }
-    if (!window.genReqSign) {
-        throw new ApplicationError("Failed to load WASM module");
-    }
-    const result = window.genReqSign(
-        query.toString(),
-        JSON.stringify(params),
-        Date.now()
-    );
-    if (result.error) {
-        throw new ApplicationError(result.error);
-    }
-    return result.sign;
-}
-
-export function getDecryptedDataIndex(binary: Uint8Array, epid: number, mcid: number) {
-    const BILICOMIC = [...'BILICOMIC'].map(char => char.charCodeAt(0));
-    if (binary.subarray(0, 9).every((v, i) => v === BILICOMIC[i])) {
-        const data = binary.subarray(9);
-        const key = new Uint8Array([
-            ...new Uint8Array(new Uint32Array([epid]).buffer),
-            ...new Uint8Array(new Uint32Array([mcid]).buffer)
-        ]);
-        const decrypted = data.map((byte, i) => byte ^ key[i % 8]);
-        if (decrypted[0] === 0x50 && decrypted[1] === 0x4B) {
-            return decrypted.buffer;
-        }
-    }
-    throw new ApplicationError("Invalid data index file");
 }

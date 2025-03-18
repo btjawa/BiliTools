@@ -4,5 +4,6 @@
     "invalidInput": "無法解析輸入",
     "loginExpired": "登錄狀態已過期",
     "countryListFailed": "獲取國際區號失敗",
-    "tryManualUpdate": "請在 GitHub 手動下載最新更新"
+    "tryManualUpdate": "請在 GitHub 手動下載最新更新",
+    "errorProvider": "來自 {0} 的錯誤"
 }

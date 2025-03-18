@@ -172,6 +172,7 @@ async function search(input?: string) {
 		s.mediaInfo = {} as MediaInfoType;
 		s.searchActive = true;
 		const { id, type } = await parseId(s.searchInput);
+		if (type === MediaType.Manga) return await open("https://btjawa.top/bilitools#关于漫画");
 		const info = await data.getMediaInfo(id, type);
 		s.target = info.list.findIndex(item => item.id === info.id);
 		info.cover = await getImageBlob(info.cover + '@128h');
@@ -252,7 +253,8 @@ async function checkOthers(index: number, options?: { init?: boolean }) {
 			othersReqs.danmaku = false;
 		} else if (s.mediaInfo.type === MediaType.Manga) {
 			othersReqs.danmaku = false;
-			othersReqs.manga = true;
+			// othersReqs.manga = true;
+			othersReqs.manga = false;
 		} else {
 			othersReqs.aiSummary = await data.getAISummary(info, s.mediaInfo.upper.mid || 0, { check: true }) as number;
 			othersReqs.danmaku = true;
@@ -282,7 +284,7 @@ async function getOthers(type: keyof typeof othersMap, options?: { date?: string
 			mediaType: i18n.global.t(`home.label.${type}`),
 			aid: info.id,
 		});
-		if (type === 'manga') return await open("https://btjawa.top/bilitools#关于漫画");
+		if (type === 'manga') return;
 		const _data = await (async () => { switch (type) {
 			case 'cover': return await data.getBinary(info.cover);
 			case 'aiSummary': return await data.getAISummary(info, s.mediaInfo.upper.mid || 0);

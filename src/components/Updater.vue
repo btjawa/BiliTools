@@ -67,8 +67,9 @@ watch(() => settings.auto_check_update,
 );
 
 async function checkUpdate() {
+    const proxyUrl = settings.proxyUrl();
     const update = await check({
-        ...(settings.proxyUrl && { proxy: settings.proxyUrl})
+        ...(proxyUrl && { proxy: proxyUrl})
     });
     console.log('Update:', update);
     if (update?.available) {

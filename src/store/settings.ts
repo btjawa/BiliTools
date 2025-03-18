@@ -29,7 +29,7 @@ export const useSettingsStore = defineStore('settings', {
         dynFa(): string {
             return this.isDark ? 'fa-solid' : 'fa-light';
         },
-        proxyUrl: (s) => {
+        proxyUrl: (s) => () => {
             if (!s.proxy.addr.length) return null;
             const url = new URL(s.proxy.addr);
             url.username = s.proxy.username || '';

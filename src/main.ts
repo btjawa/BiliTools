@@ -7,11 +7,30 @@ import App from './App.vue';
 import router from '@/router';
 import i18n from '@/i18n';
 import Toast, { PluginOptions, POSITION } from "vue-toastification";
-import '@/assets/css/style.css';
+import '@/style.css';
 import "vue-toastification/dist/index.css";
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import '@vuepic/vue-datepicker/dist/main.css'
 import '@wcj/markdown-style';
+
+declare global {
+    interface Navigator {
+        deviceMemory?: number,
+        cpuClass?: number,
+    }
+    interface ErrorConstructor {
+        captureStackTrace(targetObject: Object, constructorOpt?: Function): void;
+        prepareStackTrace(err: Error, stackTraces: CallSite[]): any;
+    }
+    interface CallSite {
+        getTypeName(): string | null;
+        getFunctionName(): string | null;
+        getMethodName(): string | null;
+        getFileName(): string | undefined;
+        getLineNumber(): number | null;
+        getColumnNumber(): number | null;
+    }
+}
 
 const url = new URL('/node_modules/source-map-support/browser-source-map-support.js', import.meta.url).href;
 const script = document.createElement('script');
@@ -30,6 +49,7 @@ const ToastOptions: PluginOptions = {
     pauseOnFocusLoss: true,
     pauseOnHover: true,
     closeButton: "button",
+    closeOnClick: false,
     icon: true,
 }
 

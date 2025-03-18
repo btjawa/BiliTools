@@ -11,12 +11,11 @@ edition = "2021"
 incremental = true # Compile your binary in smaller steps.
 
 [profile.release]
-incremental = true # Compile your binary in smaller steps.
-# codegen-units = 1 # Allows LLVM to perform better optimization.
-# lto = true # Enables link-time-optimizations.
-# opt-level = "s" # Prioritizes small binary size. Use `3` if you prefer speed.
-# # panic = "abort" # Higher performance by disabling panic handlers.
-# strip = true # Ensures debug symbols are removed.
+codegen-units = 1 # Allows LLVM to perform better optimization.
+lto = true # Enables link-time-optimizations.
+opt-level = "s" # Prioritizes small binary size. Use `3` if you prefer speed.
+# panic = "abort" # Higher performance by disabling panic handlers.
+strip = true # Ensures debug symbols are removed.
 
 [profile.release.package.wry]
 # debug = true
@@ -61,7 +60,7 @@ tauri-plugin-shell = "2.2.0"
 tauri-specta = { version = "2.0.0-rc", features = ["derive", "typescript"] }
 tokio = { version = "1.43", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
 walkdir = "2.5.0"
-cacao = "0.3.2"
+process_alive = "0.1.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58.0", features = ["Win32_Foundation", "Win32_System_Com"] }

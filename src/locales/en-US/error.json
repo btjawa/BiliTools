@@ -4,5 +4,6 @@
     "invalidInput": "Unable to parse input",
     "loginExpired": "Login session has expired",
     "countryListFailed": "Failed to retrieve the international dialing code",
-    "tryManualUpdate": "Try to manually download updates from GitHub"
+    "tryManualUpdate": "Try to manually download updates from GitHub",
+    "errorProvider": "Error from {0}"
 }

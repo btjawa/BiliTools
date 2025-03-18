@@ -161,12 +161,14 @@ export const events = __makeEvents__<{
 headers: Headers,
 notification: Notification,
 queueEvent: QueueEvent,
-settings: Settings
+settings: Settings,
+sidecarError: SidecarError
 }>({
 headers: "headers",
 notification: "notification",
 queueEvent: "queue-event",
-settings: "settings"
+settings: "settings",
+sidecarError: "sidecar-error"
 })
 
 /** user-defined constants **/
@@ -176,7 +178,7 @@ settings: "settings"
 /** user-defined types **/
 
 export type CurrentSelect = { dms: number; ads: number; cdc: number; fmt: number }
-export type DownloadEvent = { status: "Started"; id: string; gid: string; media_type: MediaType } | { status: "Progress"; id: string; gid: string; content_length: number; chunk_length: number } | { status: "Finished"; id: string; gid: string } | { status: "Error"; code: number; message: string }
+export type DownloadEvent = { status: "Started"; id: string; gid: string; media_type: MediaType } | { status: "Progress"; id: string; gid: string; content_length: number; chunk_length: number } | { status: "Finished"; id: string; gid: string }
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { version: string; hash: string; resources_path: string; downloads: QueueInfo[] }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
@@ -189,6 +191,7 @@ export type QueueType = "waiting" | "doing" | "complete"
 export type Settings = { max_conc: number; temp_dir: string; down_dir: string; df_dms: number; df_ads: number; df_cdc: number; auto_check_update: boolean; filename: string; proxy: SettingsProxy; advanced: SettingsAdvanced; theme: Theme; language: string }
 export type SettingsAdvanced = { auto_convert_flac: boolean; prefer_pb_danmaku: boolean; inspect_manga: boolean }
 export type SettingsProxy = { addr: string; username: string; password: string }
+export type SidecarError = { name: string; error: string }
 export type Task = { urls: string[]; gid: string | null; media_type: MediaType; path: string | null }
 export type TauriError = { code: number | null; message: string }
 export type Theme = 

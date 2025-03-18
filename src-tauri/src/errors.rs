@@ -62,7 +62,7 @@ impl AnyhowErrorToStringChain for anyhow::Error {
                 if i == 0 {
                     format!("{e}")
                 } else {
-                    format!("{i}: {e}")
+                    format!("    {i}: {e}")
                 }
             })
             .collect::<Vec<_>>()

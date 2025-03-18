@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{Arc, RwLock as StdRwLock}, time::Duration};
-use tauri_plugin_shell::{process::CommandChild, ShellExt};
+use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
+use tauri::{async_runtime::{self, Receiver}, ipc::Channel, Manager};
 use tokio::{sync::{mpsc, RwLock}, time::sleep};
-use tauri::{async_runtime, ipc::Channel};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use sea_orm::FromJsonQueryResult;
@@ -17,16 +17,18 @@ use crate::{
         get_app_handle,
         init_client,
         random_string,
+        process_err,
         RESOURCES_PATH,
         CONFIG,
         SECRET,
+        READY,
+        SidecarError,
     }, TauriError
 };
 
 lazy_static! {
     pub static ref QUEUE_MANAGER: QueueManager = QueueManager::new();
     static ref ARIA2C_PORT: Arc<StdRwLock<u16>> = Arc::new(StdRwLock::new(0));
-    static ref ARIA2C_CHILD: Arc<StdRwLock<Option<CommandChild>>> = Arc::new(StdRwLock::new(None));
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
@@ -121,10 +123,6 @@ pub enum DownloadEvent {
     Finished {
         id: Arc<String>,
         gid: Arc<String>,
-    },
-    Error {
-        code: isize,
-        message: String
     }
 }
 
@@ -377,60 +375,91 @@ impl DownloadManager {
     }
 }
 
-pub fn init() -> Result<()> {
-    let start_port = 6800;
-    let end_port = 65535;
-    let port = (start_port..end_port)
-        .find_map(|port| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).ok())
-        .ok_or(anyhow!("No free port found"))?.local_addr()?.port();
-    *ARIA2C_PORT.write().unwrap() = port;
+async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEvent>) {
+    use process_alive::{State, Pid};
     let app = get_app_handle();
-    // let log_path = app.path().app_log_dir()?
-    //     .join("aria2.log");
-    let (_, child) = app.shell().sidecar("aria2c")?
-        .current_dir(&*RESOURCES_PATH)
-        .args([
-            format!("--conf-path={}", RESOURCES_PATH.join("aria2.conf").to_string_lossy()),
-            // format!("--log={}", log_path.to_string_lossy()),
-            format!("--rpc-listen-port={}", port),
-            format!("--rpc-secret={}", &SECRET.read().unwrap()),
-        ]).spawn().context("Failed to spawn aria2c process")?;
-
+    let pid = child.pid();
     #[cfg(target_os = "windows")]
-    app.shell().sidecar("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")?
-        .args([
-            "-Command",
-            &format!(
-                "while ((Get-Process -Id {} -ErrorAction SilentlyContinue) -ne $null) \
-                {{ Start-Sleep -Milliseconds 500 }}; Stop-Process -Id {} -Force",
-                std::process::id(),
-                child.pid()
-            )
-        ]).spawn().context("Failed to spawn aria2c daemon")?;
-
+    let cmd = ("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", [
+        "-Command",
+        &format!(
+            "while ((Get-Process -Id {} -ErrorAction SilentlyContinue) -ne $null) \
+            {{ Start-Sleep -Milliseconds 500 }}; Stop-Process -Id {} -Force",
+            std::process::id(), pid
+        )
+    ]);
     #[cfg(any(target_os = "macos", target_os = "linux"))]
-    app.shell().sidecar("/bin/bash")?
-    .args([
+    let cmd = ("/bin/bash", [
         "-c",
         &format!(
             "while kill -0 {} 2>/dev/null; do sleep 0.5; done; kill {}",
-            std::process::id(),
-            child.pid()
+            std::process::id(), pid
         )
-        ]).spawn().context("Failed to spawn aria2c daemon")?;
-    
-    *ARIA2C_CHILD.write().unwrap() = Some(child);
-    Ok(())
-}
-
-pub fn kill() -> Result<()> {
-    if let Some(sc) = ARIA2C_CHILD.write().unwrap().take() {
-        sc.kill().context("Failed to kill aria2c process")?;
+    ]);
+    let _ = app.shell().command(cmd.0).args(cmd.1).spawn();
+    let stderr = Arc::new(tokio::sync::RwLock::new(String::new()));
+    let stderr_clone = stderr.clone();
+    async_runtime::spawn(async move {
+        loop {
+            if *READY.read().unwrap() {
+                sleep(Duration::from_secs(3)).await;
+            } else {
+                while !*READY.read().unwrap() {
+                    sleep(Duration::from_millis(250)).await;
+                }
+            }
+            let mut lock = stderr_clone.write().await;
+            if lock.len() > 0 {
+                SidecarError {
+                    name: name.clone(), error: lock.to_string()
+                }.emit(&app).unwrap();
+                lock.clear();
+            }
+            let pid = Pid::from(pid);
+            if process_alive::state(pid) != State::Alive {
+                break SidecarError {
+                    name: name.clone(), error: format!("Process {name} ({pid}) is dead")
+                }.emit(&app).unwrap();
+            }
+            if let Err(e) = post_aria2c("getGlobalStat", vec![]).await {
+                SidecarError {
+                    name: name.clone(), error: e.message
+                }.emit(&app).unwrap();
+            }
+        }
+    });
+    while let Some(event) = rx.recv().await {
+        if let CommandEvent::Stderr(line) = event {
+            let line = String::from_utf8_lossy(&line);
+            if !line.trim().is_empty() {
+                let mut lock = stderr.write().await;
+                lock.push_str(&line.to_string());
+            }
+        }
     }
+}
+
+pub fn init() -> Result<()> {
+    let port = (6800..65535)
+        .find_map(|p| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], p))).ok())
+        .ok_or(anyhow!("No free port found"))?.local_addr()?.port();
+    *ARIA2C_PORT.write().unwrap() = port;
+    let app = get_app_handle();
+    let (mut rx, child) = app.shell().sidecar("aria2c").map_err(|e| process_err(e, "aria2c"))?
+    .current_dir(&*RESOURCES_PATH).args([
+        format!("--conf-path={}", RESOURCES_PATH.join("aria2.conf").to_string_lossy()),
+        format!("--log={}", app.path().app_log_dir()?.join("aria2.log").to_string_lossy()),
+        format!("--rpc-listen-port={}", port),
+        format!("--rpc-secret={}", &SECRET.read().unwrap()),
+        "--log-level=info".into(),
+    ]).spawn().map_err(|e| process_err(e, "aria2c"))?;
+    async_runtime::spawn(async move {
+        daemon("aria2c".into(), &child, &mut rx).await;
+    });
     Ok(())
 }
 
-pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value> {
+pub async fn post_aria2c(action: &str, params: Vec<Value>) -> TauriResult<Value> {
     let client = init_client().await?;
     let mut params_vec = vec![Value::String(format!("token:{}", *SECRET.read().unwrap()))];
     for param in params {
@@ -451,7 +480,8 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> Result<Value> {
         "params": params_vec
     });
     let response = client
-        .post(format!("http://localhost:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
+        .post(format!("http://127.0.0.1:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
+        .timeout(Duration::from_millis(3000))
         .json(&payload).send().await?;
 
     let body: Value = response.json().await
@@ -534,9 +564,9 @@ pub async fn push_back_queue(
             json!(task.urls),
             json!({ "dir": dir, "out": name, "pause": "true" })
         ];
-        let body_raw = post_aria2c("addUri", params).await?;
-        let body: Aria2General = serde_json::from_value(body_raw)
-            .context("Failed to decode aria2c addUri response")?;
+        let body: Aria2General = serde_json::from_value(
+            post_aria2c("addUri", params).await?
+        ).context("Failed to decode aria2c addUri response")?;
         if let Some(error) = body.error {
             return Err(TauriError::new(error.message, Some(error.code)));
         }
@@ -563,19 +593,13 @@ pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
         tokio::select! {
             Some(result) = result_rx.recv() => {
                 match result {
-                    Err(e) => {
-                        manager.event.send(DownloadEvent::Error {
-                            code: e.code.unwrap_or(-1), message: e.message.clone()
-                        }).unwrap();
-                    },
-                    Ok(r) => {
-                        if QUEUE_MANAGER.get_len(QueueType::Doing).await == 0 {
-                            Notification {
-                                id: r.id.clone(),
-                                info: r.info.clone(),
-                            }.emit(&get_app_handle()).unwrap();
-                            break;
-                        }
+                    Err(e) => { process_err(e, "ffmpeg"); },
+                    Ok(r) => if QUEUE_MANAGER.get_len(QueueType::Doing).await == 0 {
+                        Notification {
+                            id: r.id.clone(),
+                            info: r.info.clone(),
+                        }.emit(&get_app_handle()).unwrap();
+                        break;
                     }
                 }
             }

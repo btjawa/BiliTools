@@ -1,5 +1,5 @@
+use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry};
 use std::{collections::BTreeMap, env, path::PathBuf, sync::{Arc, RwLock}};
-use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, WebviewWindow, Wry};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -97,6 +97,12 @@ impl From<Theme> for tauri::Theme {
 }
 
 #[derive(Clone, Serialize, Deserialize, Type, Event)]
+pub struct SidecarError {
+    pub name: String,
+    pub error: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Type, Event)]
 pub struct Headers {
     #[serde(rename = "Cookie")]
     cookie: String,
@@ -154,10 +160,6 @@ pub fn get_app_handle() -> AppHandle<Wry> {
     APP_HANDLE.get().unwrap().clone()
 }
 
-pub fn get_window() -> WebviewWindow {
-    get_app_handle().get_webview_window("main").unwrap()
-}
-
 pub fn filename(filename: String) -> String {
     let re = Regex::new(r##"[\\/:*?\"<>|]"##).unwrap();
     re.replace_all(&filename, "_").to_string()
@@ -172,6 +174,16 @@ pub fn get_ts(mills: bool) -> i64 {
 pub fn random_string(len: usize) -> String {
     rand::rng().sample_iter(&Alphanumeric)
         .take(len).map(char::from).collect()
+}
+
+pub fn process_err<T: ToString>(e: T, name: &str) -> T {
+    let app = get_app_handle();
+    while !*READY.read().unwrap() {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+    SidecarError {
+        name: name.into(), error: e.to_string(),
+    }.emit(&app).unwrap(); e
 }
 
 pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {

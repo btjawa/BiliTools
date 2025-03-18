@@ -24,7 +24,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
         ])
         .events(collect_events![
-            config::Settings, shared::Headers, services::aria2c::QueueEvent, services::aria2c::Notification
+            config::Settings, shared::Headers, shared::SidecarError, services::aria2c::QueueEvent, services::aria2c::Notification
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -68,8 +68,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             shared::APP_HANDLE.set(app.app_handle().clone()).unwrap();
             shared::set_window(app.get_webview_window("main").unwrap(), None)?;
             async_runtime::spawn(async move {
-                storage::init().await.map_err(|e| e.to_string())?;
-                services::init().await.map_err(|e| e.to_string())?;
+                use shared::process_err as err;
+                storage::init().await.map_err(|e| err(e, "storage").to_string())?;
+                services::init().await.map_err(|e| err(e, "services").to_string())?;
                 Ok::<(), String>(())
             });
             Ok(())

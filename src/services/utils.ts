@@ -12,31 +12,37 @@ const t = i18n.global.t;
 
 export class ApplicationError extends Error {
     code?: number | string;
-    noStack?: boolean;
-    constructor(message: string | TauriError, options?: { code?: number | string | undefined, noStack?: boolean }) {
-        if (typeof (message as TauriError).message === 'string') {
+    constructor(message: string | TauriError, options?: { code?: number | string, name?: string }) {
+        if (typeof message === 'string') {
+            super(message);
+            this.code = options?.code;
+        } else {
             const error = message as TauriError;
             super(error.message);
-            this.code = error.code ?? undefined;
-        } else {
-            super(message as any)
-            this.code = options?.code;
+            if (error.code) this.code = error.code;
         }
-        this.noStack = options?.noStack;
-        (Error as any).captureStackTrace(this, this.constructor);
-        this.stack = this.cleanStack(this.stack);
+        if (options?.name) this.name = options.name;
+        Error.prepareStackTrace = this.prepareStackTrace;
+        Error.captureStackTrace(this, this.constructor);
     }
-    private cleanStack(stack?: string): string {
-        return stack ? stack
-            .split('\n')
-            .map(line => line.replace(/(https?:\/\/[^\s]+?)(\/[^)]+)(:\d+:\d+)/g, '$2$3'))
-            .filter(line => line.includes('src/') && !line.includes('node_modules'))
-            .join('\n') : "Unkown stack trace";
+    private prepareStackTrace(err: Error, stackTraces: CallSite[]) {
+        return err.name + ": " + err.message + stackTraces.map(site => {
+            const f = site.getFileName();
+            const filename = f ? new URL(f!).pathname : null;
+            if (filename?.includes('node_modules')) return null;
+            const type = site.getTypeName();
+            const method = site.getMethodName();
+            const funcName = site.getFunctionName();
+            let msg = `\n    at `;
+            if (type) msg += `${type}.`;
+            if (funcName) msg += `${funcName} `;
+            if (method) msg += `[as ${method}] `;
+            msg += `(${filename ?? '<anonymous>'}:${site.getLineNumber()}:${site.getColumnNumber()})`;
+            return msg;
+        }).filter(Boolean).join('');
     }
     handleError() {
-        const msg = this.noStack ? this.message : `${this.message} ${this.code ? `(${this.code})` : ''}\n${this.stack}`;
-        AppLog(msg, TYPE.ERROR);
-        return msg;
+        return AppLog(this.stack!, TYPE.ERROR);
     }
 }
 
@@ -100,6 +106,10 @@ export function setEventHook() {
             });
         }
     });
+    events.sidecarError.listen(e => {
+        const err = e.payload;
+        new ApplicationError(t('error.errorProvider', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handleError();
+    });
 }
 
 export async function tryFetch(url: string | URL, options?: {
@@ -123,22 +133,15 @@ export async function tryFetch(url: string | URL, options?: {
         let params = '?';
         if (options?.auth === 'wbi' && options.params) {
             params += await auth.wbi(rawParams);
-        } else if (options?.auth === 'ultra_sign' && options.params && options.post?.body) {
-            const _params = new URLSearchParams(options.params as any);
-            const ultra_sign = await auth.genReqSign(
-                _params,
-                options.post.body
-            );
-            _params.set('ultra_sign', ultra_sign);
-            params += _params.toString();
         } else if (options?.params) {
             params += new URLSearchParams(rawParams).toString();
         } else params = String();
         const settings = useSettingsStore();
         const app = useAppStore();
+        const proxyUrl = settings.proxyUrl();
         const fetchOptions = {
             headers: app.headers,
-            ...(settings.proxyUrl && { proxy: { all: settings.proxyUrl }}),
+            ...(proxyUrl && { proxy: { all: proxyUrl }}),
             method: 'GET',
             body: undefined as string | undefined
         };
@@ -173,6 +176,7 @@ export async function tryFetch(url: string | URL, options?: {
         }
         if (body.code !== 0) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
+                const proxyUrl = settings.proxyUrl();
                 const csrf = new Headers(app.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
                 const captchaParams = new URLSearchParams({
                     v_voucher: body.data.v_voucher, ...(csrf && { csrf })
@@ -180,7 +184,7 @@ export async function tryFetch(url: string | URL, options?: {
                 const captchaResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/register?' + captchaParams, {
                     headers: app.headers,
                     method: 'POST',
-                    ...(settings.proxyUrl && { proxy: { all: settings.proxyUrl }}),
+                    ...(proxyUrl && { proxy: { all: proxyUrl }}),
                 });
                 const captchaBody = await captchaResp.json();
                 if (captchaBody.code !== 0) {
@@ -195,10 +199,11 @@ export async function tryFetch(url: string | URL, options?: {
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })
                 }).toString();
+                const _proxyUrl = settings.proxyUrl();
                 const validateResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/validate?' + validateParams, {
                     headers: app.headers,
                     method: 'POST',
-                    ...(settings.proxyUrl && { proxy: { all: settings.proxyUrl }}),
+                    ...(_proxyUrl && { proxy: { all: _proxyUrl }}),
                 });
                 const validateBody = await validateResp.json();
                 if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
@@ -245,10 +250,10 @@ export async function parseId(input: string) {
                 }
             }
         }
-        throw new ApplicationError(t('error.invalidInput'), { noStack: true });
+        throw new ApplicationError(t('error.invalidInput'));
     } catch(_) { // NOT URL
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)|mc\d+$/i.test(input)) {
-            throw new ApplicationError(t('error.invalidInput'), { noStack: true });
+            throw new ApplicationError(t('error.invalidInput'));
         }
         const map = {
             'av': MediaType.Video,

@@ -38,7 +38,7 @@
                     <button @click="openPath(item.output, { parent: true })">
                         <i :class="[settings.dynFa, 'fa-folder-open']"></i>
                     </button>
-                    <button @click="removeTask(item.id, Object.keys(queue)[queuePage])">
+                    <button @click="removeTask(item.id, Object.keys(queue.$state)[queuePage])">
                         <i :class="[settings.dynFa, 'fa-trash']"></i>
                     </button>
                 </div>
@@ -110,7 +110,6 @@ async function removeTask(id: string, type: string) {
                 case 'Started': return 'doing';
                 case 'Progress': return 'doing';
                 case 'Finished': return 'complete';
-                case 'Error': return 'doing';
             }})();
             const result = await commands.removeTask(id, queueType, status.gid);
             if (result.status === 'error') throw new ApplicationError(result.error);
@@ -167,10 +166,6 @@ async function processQueue() {
                     _status.progress = 100.0;
                     _status.status = message.status;
                 }
-                break;
-
-            case 'Error':
-                new ApplicationError(message.message, { code: message.code }).handleError();
                 break;
             }
         }

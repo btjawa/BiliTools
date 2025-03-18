@@ -1,11 +1,10 @@
-use std::{io::SeekFrom, path::PathBuf, sync::{Arc, RwLock}, time::Duration};
 use tokio::{fs, io::{self, AsyncBufReadExt, AsyncSeekExt}, time::sleep};
-use tauri_plugin_shell::{process::CommandChild, ShellExt};
+use std::{io::SeekFrom, path::PathBuf, sync::Arc, time::Duration};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use tauri::{ipc::Channel, Manager};
-use lazy_static::lazy_static;
+use tauri_plugin_shell::ShellExt;
 use regex::Regex;
 
 use super::aria2c::{
@@ -16,10 +15,6 @@ use super::aria2c::{
 };
 
 use crate::{shared::get_app_handle, TauriError, TauriResult};
-
-lazy_static! {
-    static ref FFMPEG_CHILD: Arc<RwLock<Option<CommandChild>>> = Arc::new(RwLock::new(None));
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct FFmpegLog {
@@ -56,6 +51,7 @@ async fn get_frames(input: PathBuf) -> Result<u64> {
 }
 
 pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> TauriResult<()> {
+    use crate::shared::process_err;
     if info.tasks.len() < 2 {
         return Err(anyhow!("Insufficient number of input paths, {}", info.tasks.len()).into());
     }
@@ -79,7 +75,8 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
     let progress_path_clone = progress_path.clone();
     fs::create_dir_all(progress_path.parent().unwrap()).await
         .context("Failed to create FFmpeg progress Folder")?;
-    let frames = get_frames(video_path.unwrap()).await.map_err(|e| anyhow!(e)).unwrap_or(0);
+    let frames = get_frames(video_path.unwrap()).await.context("Failed to get frames")
+    .map_err(|e| process_err(TauriError::from(e), "ffmpeg")).unwrap_or(0);
     let ffmpeg = async {
         let status = app.shell().sidecar("ffmpeg")?
             .args([
@@ -91,23 +88,21 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
                 &output.to_str().unwrap(), "-progress",
                 progress_path_clone.to_str().unwrap(), "-y"
             ])
-            .status().await.context("Failed to spawn aria2c process")?;
+            .status().await?;
     
         if status.success() {
-            Ok::<(), TauriError>(())
+            Ok::<(), anyhow::Error>(())
         } else {
-            Err::<(), TauriError>(
-                anyhow!("FFmpeg exited with status: {}", status.code().unwrap_or(-1)).into()
-            )
+            Err(anyhow!("FFmpeg exited with status: {}", status.code().unwrap_or(-1)))
         }
     };
     let monitor = async {
         let task = info.tasks.iter().find(|task| task.media_type == MediaType::Video).unwrap();
         monitor(info.id.clone(), task, progress_path, frames, event).await?;
-        Ok::<(), TauriError>(())
+        Ok::<(), anyhow::Error>(())
     };
     let result = tokio::try_join!(ffmpeg, monitor);
-    result?;
+    result.context("Failed to merge")?;
     Ok(())
 }
 
@@ -201,11 +196,4 @@ async fn monitor(id: String, task: &Task, progress_path: PathBuf, frames: u64, e
         }
         sleep(Duration::from_millis(200)).await;
     }
-}
-
-pub fn kill() -> Result<()> {
-    if let Some(sc) = FFMPEG_CHILD.write().unwrap().take() {
-        sc.kill().context("Failed to kill ffmpeg process")?;
-    }
-    Ok(())
 }

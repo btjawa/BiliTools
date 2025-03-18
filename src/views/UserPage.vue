@@ -201,8 +201,8 @@ async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'ini
             await login.fetchUser();
         }
     } catch (err) {
-        const error = err instanceof ApplicationError ? err : new ApplicationError(err as string);
-        return error.handleError();
+        err instanceof ApplicationError ? err.handleError() :
+        new ApplicationError(err as string).handleError();
     }
 }
 </script>
