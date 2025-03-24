@@ -6,43 +6,36 @@ import { MediaType } from '@/types/data.d';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
+import StackTrace from "stacktrace-js";
 import i18n from '@/i18n';
 
-const t = i18n.global.t;
-
 export class ApplicationError extends Error {
-    code?: number | string;
-    constructor(message: string | TauriError, options?: { code?: number | string, name?: string }) {
-        if (typeof message === 'string') {
-            super(message);
-            this.code = options?.code;
+    stackFrames?: StackTrace.StackFrame[];
+    constructor(input: unknown, options?: { code?: number | string, name?: string }) {
+        super();
+        if (input instanceof ApplicationError) return input;
+        else if (input instanceof Error) {
+            this.message = input.message;
+            this.name = input.name;
+            this.stack = input.stack;
+        } else if (typeof input === 'string') {
+            this.message = input + (options?.code ? ` (${options.code})` : '');
         } else {
-            const error = message as TauriError;
-            super(error.message);
-            if (error.code) this.code = error.code;
+            const err = input as TauriError;
+            if (!err.message) return;
+            this.message = err.message + (err.code ? ` (${err.code})` : '');
         }
         if (options?.name) this.name = options.name;
-        Error.prepareStackTrace = this.prepareStackTrace;
-        Error.captureStackTrace(this, this.constructor);
+        this.stackFrames = StackTrace.getSync();
     }
-    private prepareStackTrace(err: Error, stackTraces: CallSite[]) {
-        return err.name + ": " + err.message + stackTraces.map(site => {
-            const f = site.getFileName();
-            const filename = f ? new URL(f!).pathname : null;
-            if (filename?.includes('node_modules')) return null;
-            const type = site.getTypeName();
-            const method = site.getMethodName();
-            const funcName = site.getFunctionName();
-            let msg = `\n    at `;
-            if (type) msg += `${type}.`;
-            if (funcName) msg += `${funcName} `;
-            if (method) msg += `[as ${method}] `;
-            msg += `(${filename ?? '<anonymous>'}:${site.getLineNumber()}:${site.getColumnNumber()})`;
-            return msg;
-        }).filter(Boolean).join('');
-    }
-    handleError() {
-        return AppLog(this.stack!, TYPE.ERROR);
+    async handleError() {
+        const stack = this.stackFrames?.map(f => {
+            const funcName = f.functionName ?? '<anonymous>';
+            const filename = f.fileName?.match(/https?:\/\/[^/]+(\/[^\s?#]*)/)?.[1] ?? '<anonymous>';
+            if (filename.startsWith('/node_modules')) return false;
+            return `    at ${funcName} (${filename}:${f.lineNumber}:${f.columnNumber})`;
+        }).filter(Boolean).join('\n');
+        AppLog(`${this.name}: ${this.message}\n` + stack, TYPE.ERROR);
     }
 }
 
@@ -108,7 +101,7 @@ export function setEventHook() {
     });
     events.sidecarError.listen(e => {
         const err = e.payload;
-        new ApplicationError(t('error.errorProvider', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handleError();
+        new ApplicationError(i18n.global.t('error.errorProvider', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handleError();
     });
 }
 
@@ -174,7 +167,7 @@ export async function tryFetch(url: string | URL, options?: {
         } catch(_) {
             throw new ApplicationError(response.statusText, { code: response.status });
         }
-        if (body.code !== 0) {
+        if (body.code !== 0 && body.code) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
                 const proxyUrl = settings.proxyUrl();
                 const csrf = new Headers(app.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
@@ -194,7 +187,7 @@ export async function tryFetch(url: string | URL, options?: {
                 if (!token || !gt || !challenge) {
                     throw new ApplicationError(body.message || body.msg, { code: body.code });
                 }
-                AppLog(t('error.risk'));
+                AppLog(i18n.global.t('error.risk'));
                 const captcha = await auth.captcha(gt, challenge);
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })
@@ -225,6 +218,7 @@ export async function tryFetch(url: string | URL, options?: {
 }
 
 export async function parseId(input: string) {
+    const err = i18n.global.t('error.invalidInput');
     try {
         const url = new URL(input);
         if (url.pathname) {
@@ -246,14 +240,14 @@ export async function parseId(input: string) {
                         return await parseId(response.url);
                     }
                 } catch(err) {
-                    throw new ApplicationError(err as string).handleError();
+                    throw new ApplicationError(err).handleError();
                 }
             }
         }
-        throw new ApplicationError(t('error.invalidInput'));
+        throw new ApplicationError(err);
     } catch(_) { // NOT URL
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)|mc\d+$/i.test(input)) {
-            throw new ApplicationError(t('error.invalidInput'));
+            throw new ApplicationError(err);
         }
         const map = {
             'av': MediaType.Video,

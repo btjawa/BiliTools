@@ -5,7 +5,7 @@
         <div v-if="info.upper && info.upper.avatar" @click="open('https://space.bilibili.com/' + info.upper.mid)"
             class="user absolute flex flex-col items-center top-4 right-4 cursor-pointer"
         >
-            <img :src="info.upper?.avatar" draggable="false" class="w-9 rounded-[50%]" />
+            <img :src="info.upper?.avatar" draggable="false" class="w-9 rounded-full" />
             <span class="text-xs ellipsis max-w-16 mt-1">{{ info.upper.name }}</span>
         </div>
         <div class="text-xs flex gap-3 mt-1.5 text-[var(--desc-color)]">

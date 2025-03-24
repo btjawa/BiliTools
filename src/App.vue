@@ -61,13 +61,12 @@ onMounted(async () => {
 		await checkRefresh();
 		await fetchUser();
 	} catch(err) {
-		err instanceof ApplicationError ? err.handleError() :
-		new ApplicationError(err as string).handleError();
+		new ApplicationError(err).handleError();
 	} finally {
 		try {
 			await activateCookies();
 		} catch(err) {
-			new ApplicationError(err as string).handleError();
+			new ApplicationError(err).handleError();
 		}
 		useAppStore().inited = true;
 	}

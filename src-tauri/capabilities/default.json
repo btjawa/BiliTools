@@ -43,6 +43,7 @@
       "allow": [
         { "url": "https://*.bilibili.com/*" },
         { "url": "https://*.hdslb.com/*" },
+        { "url": "https://archive.biliimg.com/*" },
         { "url": "*://b23.tv/*" }
       ]
     },

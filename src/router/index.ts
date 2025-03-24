@@ -17,7 +17,7 @@ const router = createRouter({
 
 router.beforeEach((to, __, next) => {
   if (to.path !== '/' && to.path !== '/setting-page' && !useAppStore().inited) {
-    new ApplicationError(i18n.global.t('error.waitInit'), { noStack: true }).handleError();
+    new ApplicationError(i18n.global.t('error.waitInit')).handleError();
     next(false);
   } else next()
 })

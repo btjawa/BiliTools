@@ -5,6 +5,13 @@ import * as login from "@/types/login";
 import * as user from "@/types/user";
 import md5 from "md5";
 
+declare global {
+    interface Navigator {
+        deviceMemory?: number,
+        cpuClass?: number,
+    }
+}
+
 // Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/933#issue-2073916390
 export function getFingerPrint(_uuid: string) {
   return {

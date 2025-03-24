@@ -270,8 +270,7 @@ async function checkProxy() {
             throw new ApplicationError(body?.message, { code: body?.code });
         }
     } catch(err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 async function openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias | "danmaku" | "aria2c" }) {

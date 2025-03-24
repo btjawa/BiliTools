@@ -8,7 +8,7 @@
         <div class="flex gap-1 mt-2 items-center">
             <button
                 v-for="btn in item.content"
-                @click="getOthers(btn.id, { date })"
+                @click="getOthers(btn.id, { date, subtitle })"
             >
                 <i :class="[settings.dynFa, btn.icon]"></i>
                 <span>{{ $t('home.label.' + btn.id) }}</span>
@@ -18,6 +18,13 @@
                 model-type="format" format="yyyy-MM-dd"
                 id="historyDanmakuDate"
             />
+            <div v-if="item.content.find(c => c.id === 'subtitles')">
+                <select @change="($event) => subtitle = JSON.parse(($event.target as HTMLSelectElement).value)">
+                    <option v-for="option in othersReqs.subtitles" :value="JSON.stringify(option)"
+                    >{{ option.lan_doc + `(${option.lan})` }}</option>
+                </select>
+                <i class="fa-solid fa-triangle -translate-x-6 rotate-180 text-[10px]"></i>
+            </div>
         </div>
         <hr v-if="index < others.length - 1" />
     </div>
@@ -50,7 +57,7 @@
 </div></template>
 
 <script setup lang="ts">
-import { DashInfo, MediaType } from '@/types/data.d';
+import { DashInfo, MediaType, SubtitleList } from '@/types/data.d';
 import { useAppStore, useInfoStore, useSettingsStore } from "@/store";
 import { computed, ref } from 'vue';
 
@@ -62,6 +69,7 @@ interface OthersReqs {
     danmaku: boolean,
     cover: boolean,
     manga: boolean,
+	subtitles: SubtitleList[],
 }
 
 const props = defineProps<{
@@ -75,6 +83,7 @@ const popupType = ref<'audioVideo' | 'others'>(String() as any);
 const mediaType = ref(MediaType.Video);
 const noFmt = ref(false);
 const active = ref(false);
+const subtitle = ref<SubtitleList>();
 const date = ref(new Intl.DateTimeFormat('en-CA').format(new Date()));
 
 const general = computed(() => {
@@ -124,7 +133,11 @@ const others = computed(() => {
             ...(othersReqs.value.manga ? [{
                 id: 'manga',
                 icon: 'fa-book'
-            }] : [])
+            }] : []),
+            ...(othersReqs.value.subtitles.length ? [{
+                id: 'subtitles',
+                icon: 'fa-closed-captioning'
+            }] : []),
             ],
             id: 'home.downloadOptions.others'
         }] : []),
@@ -137,6 +150,7 @@ function init(type: 'audioVideo' | 'others', media_type: MediaType, options: { r
     popupType.value = type;
     othersReqs.value = options.req;
     mediaType.value = media_type;
+    if (othersReqs.value.subtitles.length) subtitle.value = othersReqs.value.subtitles[0];
     if (options.noFmt) noFmt.value = options.noFmt;
     active.value = true;
 }

@@ -476,12 +476,12 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
     return text;
 }
 
-export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
+export async function getLiveDanmaku(id: number, cid: number, duration: number) {
     if (useSettingsStore().advanced.prefer_pb_danmaku) {
         let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
-        for (let i = 0; i < Math.ceil((info.duration || 0) / 360); i++) {
+        for (let i = 0; i < Math.ceil(duration / 360); i++) {
             const params = {
-                type: 1, oid: info.cid, pid: info.id, segment_index: i + 1,
+                type: 1, oid: cid, pid: id, segment_index: i + 1,
             }
             const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', auth: 'wbi', params });
             dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
@@ -489,7 +489,7 @@ export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
         }
         return new TextEncoder().encode(new XMLSerializer().serializeToString(xmlDoc));
     } else {
-        const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid: info.cid } });
+        const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid: cid } });
         return pako.inflateRaw(buffer);
     }
 }
@@ -528,4 +528,18 @@ export async function getFavoriteContent(media_id: number, pn: number) {
     const response = await tryFetch('https://api.bilibili.com/x/v3/fav/resource/list', { params: { media_id, ps: 20, pn } });
     const body = response as Types.FavoriteContent;
     return body.data;
+}
+
+export async function getSubtitles(id: number, cid: number): Promise<Types.SubtitleList[]> {
+    const playerInfo = await getPlayerInfo(id, cid);
+    return playerInfo.subtitle.subtitles;
+}
+
+export async function getSubtitle(input: string) {
+    const url = input.startsWith('//') ? 'https:' + input : input;
+    const subtitles = await tryFetch(url) as Types.SubtitleInfo;
+    const getTime = (s: number) => { // Only works for input < 24 hour
+        return new Date(s * 1000).toISOString().slice(11, 23).replace('.', ',');
+    };
+    return subtitles.body.map((l, i) => `${i + 1}\n${getTime(l.from)} --> ${getTime(l.to)}\n${l.content}`).join('\n\n');
 }

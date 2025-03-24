@@ -10,7 +10,7 @@
 			v-model="s.searchInput" class="w-full mr-2.5 !rounded-2xl"
 		/>
         <button @click="search()"
-			:class="[settings.dynFa, 'fa-search rounded-[50%]']"
+			:class="[settings.dynFa, 'fa-search rounded-full']"
 		></button>
     </div>
 	<div :style="{ 'opacity': s.mediaRootActive ? 1 : 0, 'pointerEvents': s.mediaRootActive ? 'all' : 'none' }"
@@ -74,8 +74,8 @@
 </div></template>
 
 <script setup lang="ts">
+import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo, SubtitleList } from '@/types/data.d';
 import { ApplicationError, parseId, filename, getRandomInRange, getImageBlob } from '@/services/utils';
-import { DashInfo, DurlInfo, StreamCodecType, MediaInfo as MediaInfoType, MediaType, MusicUrlInfo } from '@/types/data.d';
 import { commands, CurrentSelect } from '@/services/backend';
 import { join as pathJoin, dirname as pathDirname } from '@tauri-apps/api/path';
 import { transformImage } from '@tauri-apps/api/image';
@@ -114,6 +114,7 @@ const othersReqs = reactive({
 	danmaku: false,
 	cover: false,
 	manga: false,
+	subtitles: ref<SubtitleList[]>([]),
 });
 
 const othersMap = {
@@ -123,6 +124,7 @@ const othersMap = {
 	'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
 	'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
 	'manga': { suffix: 'jpg', desc: 'JPG Image' },
+	'subtitles': { suffix: 'srt', desc: 'SRT Subtitle File' },
 }
 
 const app = useAppStore();
@@ -190,8 +192,7 @@ async function search(input?: string) {
 			});
 		}
 	} catch(err) {
-		err instanceof ApplicationError ? err.handleError() :
-		new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
 		s.mediaRootActive = false;
 		s.searchActive = false;
 	}
@@ -235,8 +236,7 @@ async function updateStream(i: number, fmt: number, options?: { init?: boolean, 
 			popup.value.init("audioVideo", s.mediaInfo.type, { req: othersReqs });
 		}
 	} catch(err) {
-		err instanceof ApplicationError ? err.handleError() :
-		new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
 	}
 }
 function updateCodec(cs?: CurrentSelect) {
@@ -249,24 +249,22 @@ async function checkOthers(index: number, options?: { init?: boolean }) {
 	try {
 		s.index = index;
 		const info = s.mediaInfo.list[s.index];
-		if (s.mediaInfo.type === MediaType.Music) {
+		othersReqs.cover = true;
+		if (s.mediaInfo.type === MediaType.Music || s.mediaInfo.type === MediaType.Manga) {
 			othersReqs.danmaku = false;
-		} else if (s.mediaInfo.type === MediaType.Manga) {
-			othersReqs.danmaku = false;
-			// othersReqs.manga = true;
-			othersReqs.manga = false;
 		} else {
 			othersReqs.aiSummary = await data.getAISummary(info, s.mediaInfo.upper.mid || 0, { check: true }) as number;
 			othersReqs.danmaku = true;
 		}
-		othersReqs.cover = true;
+		if (s.mediaInfo.type === MediaType.Video) {
+			othersReqs.subtitles = await data.getSubtitles(info.id, info.cid);
+		}
 		if (options?.init && popup.value) {
 			if (s.mediaInfo.type !== MediaType.Manga) await updateStream(index, 0);
 			popup.value.init("others", s.mediaInfo.type, { req: othersReqs });
 		}
 	} catch(err) {
-		err instanceof ApplicationError ? err.handleError() :
-		new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
 	}
 }
 async function getFolder() {
@@ -276,20 +274,19 @@ async function getFolder() {
 	});
 	return parent;
 }
-async function getOthers(type: keyof typeof othersMap, options?: { date?: string, parent?: string }) {
+async function getOthers(type: keyof typeof othersMap, options?: { date?: string, parent?: string, subtitle?: SubtitleList }) {
 	try {
 		const info = s.mediaInfo.list[s.index];
-		const name = filename({
-			title: info.title + (type === 'historyDanmaku' && options?.date ? `_${options.date}` : ''),
-			mediaType: i18n.global.t(`home.label.${type}`),
-			aid: info.id,
-		});
-		if (type === 'manga') return;
-		const _data = await (async () => { switch (type) {
+		let title = info.title;
+		if (type === 'historyDanmaku' && options?.date) title += `_${options.date}`;
+		if (type === 'subtitles') title += `_${options?.subtitle?.lan_doc}`;
+		const name = filename({ title, mediaType: i18n.global.t(`home.label.${type}`), aid: info.id });
+		const output = await (async () => { switch (type) {
 			case 'cover': return await data.getBinary(info.cover);
 			case 'aiSummary': return await data.getAISummary(info, s.mediaInfo.upper.mid || 0);
-			case 'liveDanmaku': return await data.getLiveDanmaku(info);
-			case 'historyDanmaku': return await data.getHistoryDanmaku(info.cid, options?.date || "");
+			case 'liveDanmaku': return await data.getLiveDanmaku(info.id, info.cid, info.duration || 0);
+			case 'historyDanmaku': return await data.getHistoryDanmaku(info.cid, options?.date!);
+			case 'subtitles': return await data.getSubtitle(options?.subtitle?.subtitle_url!);
 		}})();
 		const suffix = othersMap[type].suffix;
 		const path =
@@ -305,15 +302,14 @@ async function getOthers(type: keyof typeof othersMap, options?: { date?: string
 		const secret = useInfoStore().secret;
 		const result = await (async () => {
 			switch (type) {
-				case 'cover': return await commands.writeBinary(secret, path, transformImage(_data as ArrayBuffer));
-				case 'aiSummary': return await commands.writeBinary(secret, path, new TextEncoder().encode(_data as string) as any);
-				case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(secret, path, name, _data as any);
+				case 'cover': return await commands.writeBinary(secret, path, transformImage(output as ArrayBuffer));
+				case 'aiSummary': case 'subtitles': return await commands.writeBinary(secret, path, new TextEncoder().encode(output as string) as any);
+				case 'liveDanmaku': case 'historyDanmaku': return await commands.xmlToAss(secret, path, name, output as any);
 			}
 		})();
 		if (result?.status === 'error') throw new ApplicationError(result.error);
 	} catch(err) {
-		err instanceof ApplicationError ? err.handleError() :
-		new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
 	}
 }
 async function updateStein(edge_id: number) {
@@ -371,8 +367,7 @@ async function pushBackQueue(type: 'video' | 'audio' | 'all', options?: { output
 			media_type: i18n.global.t('downloads.media_type.' + s.mediaInfo.type)
 		});
 	} catch(err) {
-		err instanceof ApplicationError ? err.handleError() :
-		new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
 	}
 }
 async function pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof othersMap, options?: { date?: string }) {
@@ -391,8 +386,7 @@ async function pushBackMulti(type: 'video' | 'audio' | 'all' | keyof typeof othe
 				output = await pathDirname(result?.output || settings.down_dir);
 			}
 		} catch(err) {
-			err instanceof ApplicationError ? err.handleError() :
-			new ApplicationError(err as string).handleError();
+			new ApplicationError(err).handleError();
 		}
 		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 300)));
 	}

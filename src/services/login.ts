@@ -36,7 +36,7 @@ export async function fetchUser() {
 }
 
 export async function activateCookies() {
-    const _uuid = useAppStore().headers.Cookie.match(/_uuid=([A-F0-9-]+infoc)(?=;|$)/i)?.[1];
+    const _uuid = useAppStore().headers.Cookie?.match(/_uuid=([A-F0-9-]+infoc)(?=;|$)/i)?.[1];
     if (!_uuid) return;
     const payload = auth.getFingerPrint(_uuid);
     await tryFetch('https://api.bilibili.com/x/internal/gaia-gateway/ExClimbWuzhi', {

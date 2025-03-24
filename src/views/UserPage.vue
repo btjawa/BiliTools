@@ -28,15 +28,15 @@
     <div v-else class="login flex relative border border-solid border-[var(--split-color)] rounded-lg">
         <div class="h-[350px]">
             <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
-            <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-[color:var(--solid-block-color)]">
-                <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" :class="{ 'invert': settings.isDark }" />
-                <canvas ref="loginQrcode" :class="{ 'invert': settings.isDark }" class="relative z-1"></canvas>
+            <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-white">
+                <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" />
+                <canvas ref="loginQrcode" class="relative z-1"></canvas>
                 <div v-if="scanCode === 86038 || scanCode === 86090" @click="tryLogin('scan')"
                     class="absolute flex w-[172px] h-[172px] z-2 bg-opacity-50 bg-black -top-px -left-px
                     flex-col gap-2.5 justify-center items-center cursor-pointer rounded-md text-sm"
                 >
                     <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scanCode === 86038, 'fa-check': scanCode === 86090}"
-                        class="w-14 h-14 p-4 text-[24px] bg-[var(--solid-block-color)] text-[var(--primary-color)] rounded-[50%]"
+                        class="w-14 h-14 p-4 text-[24px] bg-white text-[var(--primary-color)] rounded-full"
                     ></i>
                     <span class="whitespace-pre-wrap text-center text-[color:var(--dark-button-color)]">{{ $t('user.scan.' + scanCode) }}</span>
                 </div>
@@ -123,10 +123,10 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { ApplicationError } from '@/services/utils';
-import { useSettingsStore, useUserStore } from '@/store';
-import { useRouter } from 'vue-router';
-import { commands } from '@/services/backend';
 import { open } from '@tauri-apps/plugin-shell';
+import { commands } from '@/services/backend';
+import { useUserStore } from '@/store';
+import { useRouter } from 'vue-router';
 import * as login from '@/services/login';
 
 const tel = ref(String());
@@ -150,7 +150,6 @@ watch(othersPage, () => {
 })
 
 const user = useUserStore();
-const settings = useSettingsStore();
 const level = computed(() => {
     return new URL(`/src/assets/img/profile/level/level${user.level}.svg`, import.meta.url).href;
 });
@@ -201,8 +200,7 @@ async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'ini
             await login.fetchUser();
         }
     } catch (err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 </script>

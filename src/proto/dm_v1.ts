@@ -7,24 +7,24 @@
 export function DmSegMobileReplyToXML(binary: Uint8Array, options?: { inputXml?: Document }) {
   const decoded = decodeDmSegMobileReply(binary);
   if (decoded?.elems) {
-      const xmlDoc = options?.inputXml || new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
-      const iElement = xmlDoc.querySelector("i");
-      decoded.elems.forEach(elem => {
-          const dElement = xmlDoc.createElement("d");
-          dElement.setAttribute("p", [
-              (elem.progress || 0) / 1000,
-              elem.mode,
-              elem.fontsize,
-              elem.color,
-              elem.ctime?.low,
-              elem.pool || 0,
-              elem.midHash,
-              elem.idStr,
-          ].join(','));
-          dElement.textContent = elem.content || '';
-          iElement?.appendChild(dElement);
-      });
-      return new XMLSerializer().serializeToString(xmlDoc);
+    const xmlDoc = options?.inputXml || new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
+    const iElement = xmlDoc.querySelector("i");
+    decoded.elems.forEach(elem => {
+      const dElement = xmlDoc.createElement("d");
+      dElement.setAttribute("p", [
+        (elem.progress || 0) / 1000,
+        elem.mode,
+        elem.fontsize,
+        elem.color,
+        elem.ctime?.low,
+        elem.pool || 0,
+        elem.midHash,
+        elem.idStr,
+      ].join(','));
+      dElement.textContent = elem.content || '';
+      iElement?.appendChild(dElement);
+    });
+    return new XMLSerializer().serializeToString(xmlDoc);
   }
 }
 

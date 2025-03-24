@@ -39,7 +39,7 @@
 :root {
     --content-color: #1a1a1a;
     --desc-color: #a2a7ae;
-    --split-color: #ebebeb;
+    --split-color: #e5e5e5;
     --block-color: #ffffff;
     --solid-block-color: #ffffff;
     --button-color: #00000009;
@@ -185,6 +185,7 @@ select {
         font-size: 14px;
         line-height: 18px;
         white-space: pre-wrap;
+        user-select: text;
     }
     .Vue-Toastification__close-button {
         font-size: 18px;

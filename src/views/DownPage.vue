@@ -98,8 +98,7 @@ async function togglePause(id: string) {
         if (result.status === 'error') throw new ApplicationError(result.error);
         status.paused = !status.paused;
     } catch (err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 async function removeTask(id: string, type: string) {
@@ -118,8 +117,7 @@ async function removeTask(id: string, type: string) {
         const result = await commands.removeTask(id, type as keyof typeof queue.$state, null);
         if (result.status === 'error') throw new ApplicationError(result.error);
     } catch (err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 async function processQueue() {
@@ -172,15 +170,14 @@ async function processQueue() {
         const result = await commands.processQueue(event);
         if (result.status === 'error') throw new ApplicationError(result.error);
     } catch (err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 async function openPath(path: string, options?: { parent: boolean }) {
     try {
         await shell.open(options?.parent ? await dirname(path) : path);
     } catch(err) {
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 </script>

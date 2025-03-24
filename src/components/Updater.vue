@@ -61,7 +61,7 @@ watch(() => settings.auto_check_update,
         try {
             await checkUpdate();
         } catch(err) {
-            new ApplicationError(err as string + '\n' + i18n.global.t('error.tryManualUpdate')).handleError();
+            new ApplicationError(err + '\n' + i18n.global.t('error.tryManualUpdate')).handleError();
         }
     }, { deep: true }
 );
@@ -114,7 +114,7 @@ async function doUpdate() {
         });
         await relaunch();
     } catch(err) {
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 

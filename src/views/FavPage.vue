@@ -87,8 +87,7 @@ async function getContent(media_id: number, pn: number) {
         favorateContent.value[media_id] = body.medias;
         medias.value = body.info.media_count;
     } catch(err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 
@@ -102,8 +101,7 @@ async function getList() {
         favorateActive.value = true;
         page.value = 1;
     } catch(err) {
-        err instanceof ApplicationError ? err.handleError() :
-        new ApplicationError(err as string).handleError();
+        new ApplicationError(err).handleError();
     }
 }
 </script>

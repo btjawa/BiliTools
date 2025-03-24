@@ -42,9 +42,10 @@
     "pinia": "^2.3.1",
     "qrcode-generator": "^1.4.4",
     "source-map-support": "^0.5.21",
+    "stacktrace-js": "^2.0.2",
     "vue": "3.5.13",
     "vue-draggable-plus": "^0.6.0",
-    "vue-i18n": "11.1.0",
+    "vue-i18n": "^11.1.2",
     "vue-router": "4.5.0",
     "vue-toastification": "^2.0.0-rc.5",
     "vue-virtual-scroller": "^2.0.0-beta.8"

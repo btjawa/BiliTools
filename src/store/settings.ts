@@ -25,7 +25,7 @@ export const useSettingsStore = defineStore('settings', {
         }
     }),
     getters: {
-        isDark: (s) => s.theme === 'dark',
+        isDark: () => window.matchMedia('(prefers-color-scheme: dark)').matches,
         dynFa(): string {
             return this.isDark ? 'fa-solid' : 'fa-light';
         },

@@ -3,7 +3,7 @@
         "title": "Scan QR Code to Log In",
         "desc": "Please use the {link}to scan the QR code",
         "client": "Bilibili App",
-        "86038": "QR code has expired\nPlease click to refresh",
+        "86038": "QR code has expired\nClick here to refresh",
         "86090": "Scan successful\nPlease confirm on your phone"
     },
     "others": {

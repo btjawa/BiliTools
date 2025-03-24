@@ -1725,6 +1725,27 @@ export interface AISummaryInfo {
   };
 }
 
+export interface SubtitleList {
+  id: number;
+  lan: string;
+  lan_doc: string;
+  subtitle_url: string;
+}
+
+export interface SubtitleInfo {
+  font_size: number;
+  font_color: string;
+  background_alpha: number;
+  background_color: string;
+  Stroke: string;
+  body: {
+    from: number;
+    to: number;
+    location: number;
+    content: string;
+  }[];
+}
+
 export interface PlayerInfo {
   code: number;
   message: string;
@@ -1803,7 +1824,18 @@ export interface PlayerInfo {
       allow_submit: boolean;
       lan: string;
       lan_doc: string;
-      subtitles: unknown[];
+      subtitles: {
+        id: number;
+        lan: string;
+        lan_doc: string;
+        is_lock: boolean;
+        subtitle_url: string;
+        subtitle_url_v2: string;
+        type: number;
+        id_str: string;
+        ai_type: number;
+        ai_status: number;
+      }[];
     };
     view_points: unknown[];
     preview_toast: string;

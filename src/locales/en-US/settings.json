@@ -45,12 +45,12 @@
             "desc": "Use FFmpeg to convert raw FLAC to standard FLAC format."
         },
         "prefer_pb_danmaku": {
-            "name": "Prefer downloading danmaku using ProtoBuf",
-            "desc": "this method can obtain almost all danmaku, but processing time will be longer."
+            "name": "Prefer downloading danmaku via ProtoBuf",
+            "desc": "the ProtoBuf method can get almost all danmaku, but processing time will be longer."
         },
         "inspect_manga": {
-            "name": "Attempt to obtain original-quality manga images",
-            "desc": "When downloading manga, try to obtain the original-quality images instead of compressed ones"
+            "name": "Try to get original-quality manga images",
+            "desc": "When downloading manga, try to get the original-quality images instead of compressed ones"
         },
         "config": {
             "name": "Custom Configuration",
