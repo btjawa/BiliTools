@@ -16,16 +16,31 @@
 
 ## 介绍
 
-支持下载解析各类资源，未来还会陆续支持更多功能（请看 [#TODO 列表](#todo-列表)
+### 请查看下方下拉栏
+<details open>
+<summary>前言</summary>
+没想到在几天时间里 Star 翻了这么多倍，一个小项目居然能有这么热门
 
-请确保只在该项目的 `Release` 页下载应用（或自行构建），不保证其他来源的安全性
+看了一下Traffic，发现很多人是从52pojie来的，感谢大佬们对项目的支持
+
+也希望大家遵循开源精神，不要把项目用作商业用途，我不想这个项目成为下一个 bilidown
+
+既然热度起来了，接下来几周我会加快速度更新（我是学生，基本只能维持一周一个提交）
+
+在 `v1.3.3` 中会新添加 `aria2c` 与 `ffmpeg` 的完整守护逻辑，以及更加稳定的解析逻辑（或与可以解决 `v1.3.2` 中一些奇奇怪怪的问题）
+</details>
+<hr /><br />
+
+基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，未来还会陆续支持更多功能（请看 [Project](https://github.com/users/btjawa/projects/4)）
+
+请确保只在该项目的 `Release` 页下载应用（或自行构建），**不保证其他来源的安全性**
 
 **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**
 
 **本项目仅供学习用途，请勿将本项目用于商业用途**
 
 - 文档：[博客](https://www.btjawa.top/bilitools) 
-- 反馈：[Issues](https://github.com/btjawa/BiliTools/issues/new/choose)
+- 反馈 / 新功能：[在提交 Issue 时务必按照提示提供足够充足的信息](https://github.com/btjawa/BiliTools/issues/new/choose)
 
 ## 功能
 
@@ -39,6 +54,7 @@
 | 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
 | 封面    | ✅ 已完成 |                         |
+| 字幕    | ⚠️ WIP   | <ul><li>支持 SRT 格式</li></ul> |
 | AI总结  | ✅ 已完成 | MD Markdown格式         |
 | 漫画    | ❌ TODO | 暂时停止该功能的更新 \| 原因：[博客](https://btjawa.top/bilitools#关于漫画) |
 
@@ -55,9 +71,11 @@
 | v_voucher 风控验证 | ✅ 已完成  |
 | 客户端指纹验证      | ✅ 已完成  |
 
-### I18N 国际化
+### I18N Translations
 
-I do translations mainly to improve my writing skills. If you find anything that could be improved, feel free to open an issue!
+I work on translations mainly to improve my English. If you find anything unnatural or incorrect, feel free to open an issue!
+
+日本語の表現力を高めるために翻訳をしています。もし不自然な表現や誤用などがありましたら、Issue を立てていただけると助かります。
 
 | Code           | Status      |
 |----------------|-------------|
@@ -65,23 +83,6 @@ I do translations mainly to improve my writing skills. If you find anything that
 | zh-HK          | ✅ Complete |
 | ja-JP          | ✅ Complete |
 | en-US          | ✅ Complete |
-
-## TODO 列表
-
-可以通过 [Issues](https://github.com/btjawa/BiliTools/issues/new/choose) 提出新改进、功能
-
-后续此栏可能会迁移至 `Roadmap`
-
-*顺序即为优先级*
-
- - [ ] 字幕下载
- - [ ] AV 与 BV 互转
- - [ ] 元信息快照
- - [ ] 视频播放
- - [ ] SOCKS 代理
- - [ ] 完善漫画解析
- - [x] 自定义文件名格式
- - [x] 完善密码登录
 
 ## 开发 / 构建
 
