@@ -76,7 +76,7 @@ export async function sendSmsCode(cid: number, tel: string): Promise<string> {
 
 export async function smsLogin(cid: number, tel: string, code: string, captcha_key: string): Promise<number> {
     const result = await commands.smsLogin(cid, tel, code, captcha_key);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
     return result.data;
 }
 
@@ -89,7 +89,7 @@ export async function pwdLogin(username: string, pwd: string): Promise<number> {
     const encoded_pwd = enc.encrypt(hash + pwd) || "";
     const captcha = await auth.captcha(gt, challenge);
     const result = await commands.pwdLogin(username, encoded_pwd, token, captcha.challenge, captcha.validate, captcha.seccode);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
     return result.data;
 }
 
@@ -127,13 +127,13 @@ export async function scanLogin(qrcode_key: string, onEvent: (event: { code: num
         onEvent({ code });
     }
     const result = await commands.scanLogin(qrcode_key, event);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
     return result.data;
 }
 
 export async function exitLogin(): Promise<number> {
     const result = await commands.exit();
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
     return result.data;
 }
 
@@ -158,6 +158,6 @@ export async function checkRefresh(): Promise<number> {
     }
     console.log('Got refresh_csrf', refresh_csrf?.slice(0, 7))
     const result = await commands.refreshCookie(refresh_csrf);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
     return result.data;
 }

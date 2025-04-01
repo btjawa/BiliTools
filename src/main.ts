@@ -1,16 +1,16 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
-import VueVirtualScroller from 'vue-virtual-scroller'
-import VueDatePicker from '@vuepic/vue-datepicker';
 import App from './App.vue';
 import router from '@/router';
 import i18n from '@/i18n';
 import Toast, { PluginOptions, POSITION } from "vue-toastification";
+import VueVirtualScroller from 'vue-virtual-scroller'
+import VueDatePicker from '@vuepic/vue-datepicker';
 import '@/style.css';
 import "vue-toastification/dist/index.css";
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
-import '@vuepic/vue-datepicker/dist/main.css'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+import '@vuepic/vue-datepicker/dist/main.css';
 import '@wcj/markdown-style';
 
 const url = new URL('/node_modules/source-map-support/browser-source-map-support.js', import.meta.url).href;
@@ -35,8 +35,8 @@ const ToastOptions: PluginOptions = {
 }
 
 const app = createApp(App);
-app.use(createPinia()).use(router).use(i18n).use(Toast, ToastOptions);
-app.use(VueVirtualScroller).component('VueDatePicker', VueDatePicker);
+app.use(createPinia()).use(router).use(i18n).use(Toast, ToastOptions).use(VueVirtualScroller);
+app.component('VueDatePicker', VueDatePicker);
 app.mount('#app');
 
 const version = await getAppVersion();

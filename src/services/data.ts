@@ -1,5 +1,5 @@
 import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
-import { useAppStore, useSettingsStore } from "@/store";
+import { useAppStore, useSettingsStore, useUserStore } from "@/store";
 import { checkRefresh } from "@/services/login";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
@@ -12,7 +12,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
     const _id = Number(id.match(/\d+/)?.[0]);
     switch(type) {
         case Types.MediaType.Video:
-            url += '/x/web-interface/view/detail';
+            url += '/x/web-interface/view';
             params = id.toLowerCase().startsWith('bv') ? { bvid: id } : { aid: _id };
             break;
         case Types.MediaType.Bangumi:
@@ -24,7 +24,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             params = id.toLowerCase().startsWith('ss') ? { season_id: _id } : { ep_id: _id };
             break;
         case Types.MediaType.Music:
-            url = "https://www.bilibili.com/audio/music-service-c/web/song/info";
+            url += "/audio/music-service-c/song/info";
             params = { sid: _id };
             break;
         case Types.MediaType.Manga:
@@ -45,14 +45,15 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             if (info.code !== 0) {
                 throw new ApplicationError(info.message, { code: info.code });
             }
-            const data = info.data.View;
+            const data = info.data;
             return {
                 id: data.aid,
                 title: data.title,
                 cover: data.pic.replace("http:", "https:"),
+                covers: [{ id: 'ugc_cover', url: data?.ugc_season?.cover }]
+                .filter(v => v.url?.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
                 desc: data.desc,
                 type,
-                tags: info.data.Tags.map(item => item.tag_name),
                 stein_gate: data.rights.is_stein_gate ? await (async () => {
                     const playerInfo = await getPlayerInfo(data.aid, data.cid);
                     const steinInfo = await getSteinInfo(data.aid, playerInfo.interaction.graph_version);
@@ -116,19 +117,24 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
         case Types.MediaType.Bangumi: {
             const info = body as Types.BangumiInfo;
             if (info.code !== 0) {
-                if (info.code === -404) { // TRY LESSON
+                if (info.code === -404) {
                     return await getMediaInfo(id, Types.MediaType.Lesson);
                 }
                 throw new ApplicationError(info.message, { code: info.code });
             }
             const data = info.result;
+            const season = data.seasons.find(v => v.season_id === data.season_id);
             return {
                 id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
+                covers: [
+                    { id: 'horizontal_cover_169', url: season!.horizontal_cover_169 },
+                    { id: 'horizontal_cover_1610', url: season!.horizontal_cover_1610 },
+                    { id: 'square_cover', url: data.square_cover }
+                ].filter(v => v.url?.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
                 desc: data.evaluate,
                 type,
-                tags: data.styles,
                 stat: {
                     play: data.stat.views,
                     danmaku: data.stat.danmakus,
@@ -166,16 +172,11 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                 id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
-                desc: `${data.subtitle || ''}\n${data.faq.title || ''}\n${data.faq.content || ''}`,
+                covers: data.brief.img.map((v, i) => ({ id: 'brief_' + i, url: v.url.replace('http:', 'https:') })),
+                desc: `${data.subtitle}\n${data.faq.title}\n${data.faq.content}`,
                 type,
-                tags: [],
                 stat: {
                     play: data.stat.play,
-                    reply: null,
-                    like: null,
-                    coin: null,
-                    favorite: null,
-                    share: null,
                 },
                 upper: {
                     avatar: data.up_info.avatar.replace("http:", "https:"),
@@ -205,14 +206,12 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                 id: data.aid,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
+                covers: [],
                 desc: data.intro,
                 type,
-                tags: [],
                 stat: {
                     play: data.statistic.play,
                     reply: data.statistic.comment,
-                    like: null,
-                    coin: null,
                     favorite: data.statistic.collect,
                     share: data.statistic.share,
                 },
@@ -244,16 +243,18 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                 id: data.id,
                 title: data.title,
                 cover: data.vertical_cover.replace("http:", "https:"),
+                covers: [
+                    { id: 'horizontal_cover', url: data.horizontal_cover },
+                    { id: 'square_cover', url: data.square_cover },
+                    { id: 'vertical_cover', url: data.vertical_cover },
+                    ...data.horizontal_covers.map((url, i) => ({ id: 'horizontal_cover_' + i, url }))
+                ].filter(v => v.url.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
                 desc: data.evaluate,
                 type,
-                tags: data.tags.map(tag => tag.name),
                 stat: {
-                    play: null,
-                    reply: data.ep_list.length ? data.ep_list.map(episode => episode.comments).reduce((a, b) => a + b) : null,
-                    like: data.ep_list.length ? data.ep_list.map(episode => episode.like_count).reduce((a, b) => a + b) : null,
-                    coin: null,
-                    favorite: null,
-                    share: null,
+                    reply: data?.ep_list.map(episode => episode.comments).reduce((a, b) => a + b),
+                    like: data?.ep_list.map(episode => episode.like_count).reduce((a, b) => a + b),
+                    favorite: data.data_info.fav_count,
                 },
                 upper: {
                     avatar: data.authors[0].avatar.replace("http:", "https:"),
@@ -277,176 +278,154 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
     }
 }
 
-async function getDashDurl(
-    data: Types.VideoPlayUrlInfo["data"] | Types.BangumiPlayUrlInfo["result"] | Types.LessonPlayUrlInfo["data"],
-    info: Types.MediaInfo["list"][0],
-    type: Types.MediaType,
-    options?: { codec?: Types.StreamCodecType, qn?: number }
-) : Promise<Types.DashInfo | Types.DurlInfo | Types.CommonDurlData> { 
-    if ('dash' in data && data.dash) {
-        return {
-            type: 'dash',
-            video: data.dash.video,
-            audio: [
-                ...data.dash.audio, 
-                ...(data.dash.dolby?.audio?.length ? [data.dash.dolby.audio[0]] : []),
-                ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
-            ],
-        }
-    } else if ('durl' in data && data.durl.length) {
-        const result = {
-            codecid: 7,
-            size: data.durl[0].size,
-            base_url: data.durl[0].url,
-            backup_url: data.durl[0].backup_url
-        };
-        if (options?.qn) {
-            return { ...result, id: options.qn };
-        }
-        return {
-            type: data.format === 'mp4' ? 'mp4' : 'flv',
-            video: await Promise.all(
-                data.accept_quality.map(id => {
-                    if (id === data.quality) {
-                        return { ...result, id }
-                    }
-                    return getPlayUrl(info, type, { codec: options?.codec, qn: id })
-                })
-            ) as Types.CommonDurlData[]
-        }
-    } else throw 'No such codec: ' + options?.codec;
-}
-
 export async function getPlayUrl(
     info: Types.MediaInfo["list"][0],
     type: Types.MediaType,
-    options?: { codec?: Types.StreamCodecType, qn?: number }
-) : Promise<Types.DashInfo | Types.DurlInfo | Types.MusicUrlInfo | Types.MusicUrlData | Types.CommonDurlData> {
+    codec: Types.StreamCodecType,
+) : Promise<Types.PlayUrlProvider> {
     let url = "https://api.bilibili.com";
-    let fnval;
-    switch (options?.codec) {
-        case Types.StreamCodecType.Dash:
-        case Types.StreamCodecType.Flv:
-            fnval = 4048;
-            break;
-        case Types.StreamCodecType.Mp4:
-            fnval = 1;
-            break;
+    const user = useUserStore();
+    let params = { qn: user.isLogin ? 127 : 64, fnver: 0, fnval: 16, fourk: 1 } as {
+        qn: number, fnver: number, fnval: number, fourk: number,
+        avid?: number, cid?: number, ep_id?: number, quality?: number
+    };
+    switch (codec) {
+        case Types.StreamCodecType.Flv: params.fnval = 0; break;
+        case Types.StreamCodecType.Mp4: params.fnval = 1; break;
+        case Types.StreamCodecType.Dash: params.fnval = user.isLogin ? 4048 : 16; break;
     }
-    let params = {
-        fnval, fnver: 0, fourk: 1, qn: options?.qn || 127,
-        avid: info.id, cid: info.cid, ep_id: info.eid,
-    } as any;
     switch(type) {
         case Types.MediaType.Video:
             url += '/x/player/wbi/playurl';
+            params.avid = info.id;
+            params.cid = info.cid;
             break;
         case Types.MediaType.Bangumi:
-            url += '/pgc/player/web/playurl';
+            url += '/pgc/player/web/v2/playurl';
+            params.ep_id = info.eid;
             break;
         case Types.MediaType.Lesson:
             url += '/pugv/player/web/playurl';
+            params.avid = info.id;
+            params.cid = info.cid;
+            params.ep_id = info.eid;
             break;
         case Types.MediaType.Music:
-            url += '/audio/music-service-c/web/url';
-            params = {
-                sid: info.id, quality: options?.qn, privilege: 2
-            }
+            url += '/audio/music-service-c/url';
+            params = { songid: info.id, privilege: 2, quality: 0, mid: user.mid, platform: 'android' } as any;
             break;
     }
     const body = await tryFetch(url, {
-        ...(type === Types.MediaType.Video && {
-            auth: 'wbi'
-        }),
+        ...(type === Types.MediaType.Video && { auth: 'wbi' }),
         params
     });
-    switch(type) {
-        case Types.MediaType.Video: {
-            const data = (body as Types.VideoPlayUrlInfo).data;
-            return await getDashDurl(data, info, type, options);
-        }
-        case Types.MediaType.Bangumi: {
-            const data = (body as Types.BangumiPlayUrlInfo).result;
-            return await getDashDurl(data, info, type, options);
-        }
-        case Types.MediaType.Lesson: {
-            const data = (body as Types.LessonPlayUrlInfo).data;
-            return await getDashDurl(data, info, type, options);
-        }
-        case Types.MediaType.Music: {
-            const data = (body as Types.MusicPlayUrlInfo).data;
-            const id = (() => {switch (options?.qn) {
-                case 0: return 30228;
-                case 1: return 30280;
-                case 2: return 30380;
-                case 3: return 30252;
-                default: throw 'No qn named ' + options?.qn
-            }})();
-            const result = {
-                id,
-                size: data.size,
-                base_url: data.cdns[0],
-                backup_url: data.cdns
-            };
-            if (options?.qn !== 0) return result;
+    if (type === Types.MediaType.Music) {
+        const info = body as Types.MusicPlayUrlInfo;
+        const data = info.data;
+        const audio: Types.PlayUrlResult[] = await Promise.all(data.qualities.map(async item => {
+            params.quality = item.type;
+            const result = item.type === 0 ? info : await tryFetch(url, { params }) as Types.MusicPlayUrlInfo;
+            const data = result.data;
             return {
-                type: 'music',
-                audio: await Promise.all(data.qualities.map(async (quality) => {
-                    if (quality.type === options.qn) return result;
-                    return getPlayUrl(info, type, { qn: quality.type });
-                })) as Types.MusicUrlData[]
+                id: { 0: 30228, 1: 30280, 2: 30380, 3: 30252 }[data.type] ?? -1,
+                baseUrl: data.cdns[0],
+                backupUrl: data.cdns,
             };
-        }
-        default: throw 'No type named ' + type;
+        }));
+        const codec = Types.StreamCodecType.Dash;
+        const codecid = Types.ReverseStreamCodecMap[codec];
+        return { audio, audioQualities: audio.map(v => v.id), codec, codecid }
+    } else {
+        const data = (body.result?.video_info ?? body?.result ?? body?.data) as Types.VideoPlayUrlInfo['data'];
+        if (data.durls?.length) {
+            const video = data.durls.map(v => ({
+                id: v.quality,
+                baseUrl: v.durl[0].url,
+                backupUrl: v.durl[0].backup_url,
+                size: v.durl[0].size
+            }));
+            const codec = Types.StreamCodecType.Mp4;
+            const codecid = Types.ReverseStreamCodecMap[codec];
+            return { video, videoQualities: video.map(v => v.id), codec, codecid };
+        } else if (data.durl?.length) {
+            const video = (await Promise.all(data.accept_quality.map(async qn => {
+                params.qn = qn;
+                const info = qn === data.quality ? body : await tryFetch(url, { params }) as Types.VideoPlayUrlInfo;
+                const result = info.result?.video_info ?? info?.result ?? info?.data;
+                const durl = result.durl?.[0];
+                if (durl) return {
+                    id: result.quality,
+                    baseUrl: durl.url,
+                    backupUrl: durl.backup_url,
+                    size: durl.size
+                };
+            }))).filter(Boolean) as Types.PlayUrlResult[];
+            const codec = data.accept_format.includes('flv') ? Types.StreamCodecType.Flv : Types.StreamCodecType.Mp4;
+            const codecid = Types.ReverseStreamCodecMap[codec];
+            return { video, videoQualities: data.accept_quality, codec, codecid }
+        } else if (data.dash) {
+            const audio = [
+                ...data.dash.audio,
+                ...(data.dash.dolby?.audio?.length ? [data.dash.dolby.audio[0]] : []),
+                ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
+            ];
+            const codec = Types.StreamCodecType.Dash;
+            const codecid = Types.ReverseStreamCodecMap[codec];    
+            return {
+                video: data.dash.video, audio,
+                videoQualities: [...new Set(data.dash.video.map(v => v.id))], audioQualities: audio.map(v => v.id), codec, codecid
+            }
+        } else throw new ApplicationError(body.message, { code: body.code });
     }
 }
 
-export async function pushBackQueue( params: {
-    info: Backend.MediaInfoListItem,
-    video?: Types.CommonDashData | Types.CommonDurlData,
-    audio?: Types.CommonDashData | Types.MusicUrlData,
-    output?: string, media_type: string
+export async function pushBackQueue(params: {
+    info: Types.MediaInfo['list'][0],
+    video?: Types.PlayUrlResult,
+    audio?: Types.PlayUrlResult,
+    select: Backend.CurrentSelect,
+    mediaType: string,
+    output?: string,
 }) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
-    const _currentSelect = useAppStore().currentSelect;
-    const currentSelect: Backend.CurrentSelect = {
-        dms: params.video ? _currentSelect.dms : -1,
-        cdc: params.video ? _currentSelect.cdc : -1,
-        ads: params.audio ? _currentSelect.ads : -1,
-        fmt: _currentSelect.fmt,
+    const select = params.select;
+    const ext = getFileExtension(select);
+    const info = params.info;
+    const archiveInfo = {
+        title: info.title,
+        cover: info.cover,
+        id: info.id,
+        cid: info.cid,
+        ts: {
+            millis: Date.now(),
+            string: timestamp(Date.now(), { file: true })
+        },
+        output_dir: filename({
+            mediaType: params.mediaType, aid: info.id, title: info.ss_title
+        }),
+        output_filename: info.title + '.' + ext,
     };
-    const ext = getFileExtension(currentSelect);
+    const newSelect = { dms: select.dms ?? -1, cdc: select.cdc ?? -1, ads: select.ads ?? -1, fmt: select.fmt ?? -1 };
     const tasks = [
-        ...(params.video ? [{
-            urls: [params.video.base_url, ...params.video.backup_url],
-            media_type: "video",
-        } as Backend.Task] : []),
-        ...(params.audio ? [{
-            urls: [params.audio.base_url, ...params.audio.backup_url],
-            media_type: "audio",
-        } as Backend.Task] : []),
-        ...(params.video && params.audio ? [{
-            urls: [""],
-            media_type: "merge"
-        } as Backend.Task] : []),
-        ...(ext === "flac" ? [{
-            urls: [""],
-            media_type: "flac"
-        } as Backend.Task] : [])
-    ];
-    const ts: Backend.Timestamp = {
-        millis: Date.now(),
-        string: timestamp(Date.now(), { file: true })
-    }
-    const ss_title = filename({
-        mediaType: params.media_type, aid: params.info.id, title: params.info.ss_title
-    });
+        params.video && {
+            urls: [params.video.baseUrl, ...params.video.backupUrl],
+            taskType: 'video'
+        },
+        params.audio && {
+            urls: [params.audio.baseUrl, ...params.audio.backupUrl],
+            taskType: 'audio'
+        },
+        (params.video && params.audio) && {
+            taskType: 'merge'
+        },
+        ext === 'flac' && {
+            taskType: 'flac'
+        }
+    ].filter(Boolean);
     const result = await Backend.commands.pushBackQueue(
-        params.info, currentSelect,
-        tasks, ts, ext,
-        params.output ?? null, ss_title
+        archiveInfo, newSelect, tasks as any, params.output ?? null,
     );
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
     return result.data;
 }
 
@@ -460,13 +439,14 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
     };
     const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { auth: 'wbi', params });
     const body = response as Types.AISummaryInfo;
-    if (options?.check) return body.data.code;
-    if (!body.data.model_result.result_type) {
+    const model_result = body.data.model_result;
+    if (options?.check) return model_result.result_type;
+    if (!model_result.result_type) {
         throw new ApplicationError('No summary', { code: body.code });
     }
-    let text = `# ${info.title} - av${info.id}\n\n${body.data.model_result.summary}\n\n`;
-    if (body.data.model_result.result_type === 2) {
-        body.data.model_result.outline.forEach(section => {
+    let text = `# ${info.title} - av${info.id}\n\n${model_result.summary}\n\n`;
+    if (model_result.result_type === 2) {
+        model_result.outline.forEach(section => {
             text += `## ${section.title} - [${duration(section.timestamp, 'video')}](https://www.bilibili.com/video/av${info.id}?t=${section.timestamp})\n\n`;
             section.part_outline.forEach(part => {
                 text += `- ${part.content} - [${duration(part.timestamp, 'video')}](https://www.bilibili.com/video/av${info.id}?t=${part.timestamp})\n\n`;

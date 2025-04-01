@@ -59,13 +59,9 @@ lazy_static! {
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
     pub static ref STORAGE_PATH: PathBuf = WORKING_PATH.join("Storage");
-    pub static ref RESOURCES_PATH: PathBuf = {
-        let current = env::current_exe().unwrap().parent().unwrap().to_path_buf();
-        if cfg!(target_os = "macos") && cfg!(not(debug_assertions)){
-            current.parent().unwrap().join("Resources").join("resources")
-        } else { current.join("resources") }
-    };
 }
+
+pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";
 
 // Modified from tauri::Theme for Type and Event derive
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type, Event)]
@@ -123,7 +119,7 @@ pub async fn init_headers() -> Result<BTreeMap<String, String>> {
             format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
         ).collect::<Vec<_>>().join("; ");
     map.insert("Cookie".into(), cookies);
-    map.insert("User-Agent".into(), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36".into());
+    map.insert("User-Agent".into(), USER_AGENT.into());
     map.insert("Referer".into(), "https://www.bilibili.com/".into());
     map.insert("Origin".into(), "https://www.bilibili.com".into());
     let headers_value: Value = serde_json::to_value(&map)?;

@@ -32,7 +32,6 @@ pub use crate::{
 pub struct InitData {
     version: String,
     hash: String,
-    resources_path: String,
     downloads: Vec<Arc<aria2c::QueueInfo>>,
 }
 
@@ -100,17 +99,18 @@ pub async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Ta
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, filename: String, contents: Vec<u8>) -> TauriResult<()> {
-    let input = {
-        let config = shared::CONFIG.read().unwrap();
-        config.temp_dir.join("com.btjawa.bilitools").join(format!("{filename}_{}.xml", shared::get_ts(true)))
-    };
+pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, contents: Vec<u8>) -> TauriResult<()> {
+    let ts = shared::get_ts(true);
+    let temp_dir = shared::CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools");
+    let input = temp_dir.join(format!("{ts}.xml"));
+    let output = temp_dir.join(format!("{ts}.ass"));
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
-    let output = app.shell().sidecar("DanmakuFactory")?
-        .args(["-i", input.to_str().unwrap(), "-o", &path])
+    let result = app.shell().sidecar("DanmakuFactory")?
+        .args(["-i", input.to_str().unwrap(), "-o", output.to_str().unwrap()])
         .output().await?;
 
-    log::info!("{:?}", String::from_utf8_lossy(&output.stdout));
+    log::info!("{:?}", String::from_utf8_lossy(&result.stdout));
+    fs::rename(output, path).await?;
     fs::remove_file(input).await?;
     Ok(())
 }
@@ -162,7 +162,6 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     shared::init_headers().await?;
     let downloads = downloads::load().await?;
     let hash = env!("GIT_HASH").to_string();
-    let resources_path = shared::RESOURCES_PATH.to_string_lossy().to_string();
     let version = app.package_info().version.to_string();
-    Ok(InitData { version, hash, resources_path, downloads })
+    Ok(InitData { version, hash, downloads })
 }

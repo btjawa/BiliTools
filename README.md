@@ -15,32 +15,32 @@
 </div>
 
 ## 介绍
-
-### 请查看下方下拉栏
-<details open>
-<summary>前言</summary>
-没想到在几天时间里 Star 翻了这么多倍，一个小项目居然能有这么热门
-
-看了一下Traffic，发现很多人是从52pojie来的，感谢大佬们对项目的支持
-
-也希望大家遵循开源精神，不要把项目用作商业用途，我不想这个项目成为下一个 bilidown
-
-既然热度起来了，接下来几周我会加快速度更新（我是学生，基本只能维持一周一个提交）
-
-在 `v1.3.3` 中会新添加 `aria2c` 与 `ffmpeg` 的完整守护逻辑，以及更加稳定的解析逻辑（或与可以解决 `v1.3.2` 中一些奇奇怪怪的问题）
-</details>
-<hr /><br />
-
 基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，未来还会陆续支持更多功能（请看 [Project](https://github.com/users/btjawa/projects/4)）
 
 请确保只在该项目的 `Release` 页下载应用（或自行构建），**不保证其他来源的安全性**
 
-**大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**
+文档 / 其他信息发布页：[https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) 
 
-**本项目仅供学习用途，请勿将本项目用于商业用途**
+> [!WARNING]  
+> **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
+> **本项目仅供学习用途，请勿将本项目用于商业用途**<br>
+> **添加下载项目后，须在 下载->等待中 右下角点击开始下载，不写成立即下载是为了方便添加后续项目**
 
-- 文档：[博客](https://www.btjawa.top/bilitools) 
-- 反馈 / 新功能：[在提交 Issue 时务必按照提示提供足够充足的信息](https://github.com/btjawa/BiliTools/issues/new/choose)
+## 参与贡献
+
+该项目由我一人维护，开发难度较大；**我本人是学生，要准备中考，时间并不多**
+
+如果想要提出新功能，或是发现有任何 `BUG`，欢迎提交 [Issue](https://github.com/btjawa/BiliTools/issues/new/choose)
+
+提交 `Issue` 请注意以下几点：
+
+- 门当户对，不要在已有的与问题无关的Issue下跟楼，按照对应需求选择Issue模板创建新Issue
+- 尽量把问题或需求描述清楚，若是 `BUG`，提交足够的日志或错误页面截图
+- **说话客气点，这是开源 & 免费项目**
+
+不符合以上条件的 `Issue` 我 **也许** 不会处理
+
+在其他渠道提交的问题我 **也许** 不会处理
 
 ## 功能
 
@@ -53,23 +53,23 @@
 | 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC 与 320Kbps 音乐(AU)</li></ul> |
 | 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
-| 封面    | ✅ 已完成 |                         |
-| 字幕    | ⚠️ WIP   | <ul><li>支持 SRT 格式</li></ul> |
-| AI总结  | ✅ 已完成 | MD Markdown格式         |
+| 封面    | ✅ 已完成 ||
+| 字幕    | ⚠️ WIP   | 支持 SRT 格式 |
+| AI总结  | ✅ 已完成 | MD Markdown格式 |
 | 漫画    | ❌ TODO | 暂时停止该功能的更新 \| 原因：[博客](https://btjawa.top/bilitools#关于漫画) |
 
 ### 登录相关
 
 | 功能             | 状态       |
 |------------------|------------|
-| 扫码登录          | ✅ 已完成  |
-| 密码登录          | ✅ 已完成  |
-| 短信登录          | ✅ 已完成  |
-| 自动刷新登录状态   | ✅ 已完成  |
-| Wbi 签名          | ✅ 已完成  |
-| buvid 参数验证     | ✅ 已完成  |
-| v_voucher 风控验证 | ✅ 已完成  |
-| 客户端指纹验证      | ✅ 已完成  |
+| 扫码登录          | ✅ 已完成 |
+| 密码登录          | ✅ 已完成 |
+| 短信登录          | ✅ 已完成 |
+| 自动刷新登录状态   | ✅ 已完成 |
+| Wbi 签名          | ✅ 已完成 |
+| buvid 参数验证     | ✅ 已完成 |
+| v_voucher 风控验证 | ✅ 已完成 |
+| 客户端指纹验证      | ✅ 已完成 |
 
 ### I18N Translations
 
@@ -86,26 +86,14 @@ I work on translations mainly to improve my English. If you find anything unnatu
 
 ## 开发 / 构建
 
-需要 Rust 2021+ Edition 与 Node.js 20+
+- 需要 Rust 2021+ Edition 与 Node.js 20+
 
-### 克隆项目与安装依赖
-```bash
-git clone https://github.com/btjawa/BiliTools.git
-cd BiliTools
-npm install // pnpm, yarn, etc.
-```
+1. 克隆项目 `git clone https://github.com/btjawa/BiliTools.git`
+2. 进入目录 `cd BiliTools`
+3. 安装依赖 `npm install`
 
-### 开发
-
-```shell
-npm run tauri dev
-```
-
-### 构建
-
-```shell
-npm run tauri build
-```
+- 开发 `npm run tauri dev`
+- 构建 `npm run tauri build`
 
 ## 声明
 
@@ -119,11 +107,9 @@ npm run tauri build
 
 该项目根据 `GPL-3.0-or-later` 许可证进行授权，请参考 [LICENSE](/LICENSE) 文件
 
-本项目参考了 [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 项目的内容，由 [SocialSisterYi](https://github.com/SocialSisterYi) 根据 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.en) 协议发布，并仅限于非商业用途。
+参考、使用的其他开源项目：
 
-### 使用、参考的其他开源项目
-
- - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 部分接口请求参考
+- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 部分接口请求规范参考
 
  - [aria2](https://github.com/aria2/aria2) 用于多线程高效下载数据
 
@@ -132,3 +118,7 @@ npm run tauri build
  - [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 用于将 XML 转换为 ASS 字幕
 
  - 其余可查看 `package.json` 与 `src-tauri/Cargo.toml`
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=btjawa/BiliTools&type=Date)](https://www.star-history.com/#btjawa/BiliTools&Date)

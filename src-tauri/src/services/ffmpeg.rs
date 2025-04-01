@@ -9,12 +9,12 @@ use regex::Regex;
 
 use super::aria2c::{
     Task,
-    MediaType,
+    TaskType,
     QueueInfo,
     DownloadEvent,
 };
 
-use crate::{shared::get_app_handle, TauriError, TauriResult};
+use crate::{shared::{get_app_handle, process_err, get_ts}, TauriError, TauriResult};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct FFmpegLog {
@@ -51,7 +51,6 @@ async fn get_frames(input: PathBuf) -> Result<u64> {
 }
 
 pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> TauriResult<()> {
-    use crate::shared::process_err;
     if info.tasks.len() < 2 {
         return Err(anyhow!("Insufficient number of input paths, {}", info.tasks.len()).into());
     }
@@ -60,17 +59,13 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
         Arc::new(_paths)
     };
     let output = info.output.clone();
-    let output_filename = &output.file_name()
-        .ok_or(anyhow!("Failed to extract filename"))?
-        .to_string_lossy().into_owned();
-
     let video_path = info.tasks.iter()
-        .find(|task| task.media_type == MediaType::Video)
+        .find(|task| task.task_type == TaskType::Video)
         .map(|task| task.path.clone()).unwrap();
 
     let app = get_app_handle();
     let progress_path = app.path().app_log_dir()?
-        .join("ffmpeg").join(format!("{}_{}.log", output_filename, info.ts.millis));
+        .join("ffmpeg").join(format!("{}_{}.log", info.id, get_ts(true)));
 
     let progress_path_clone = progress_path.clone();
     fs::create_dir_all(progress_path.parent().unwrap()).await
@@ -97,7 +92,7 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
         }
     };
     let monitor = async {
-        let task = info.tasks.iter().find(|task| task.media_type == MediaType::Video).unwrap();
+        let task = info.tasks.iter().find(|task| task.task_type == TaskType::Video).unwrap();
         monitor(info.id.clone(), task, progress_path, frames, event).await?;
         Ok::<(), anyhow::Error>(())
     };
@@ -109,7 +104,7 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
 pub async fn raw_flac(info: Arc<QueueInfo>) -> Result<()> {
     let output = info.output.clone();
     let input_path = info.tasks.iter()
-        .find(|task| task.media_type == MediaType::Audio)
+        .find(|task| task.task_type == TaskType::Audio)
         .map(|task| task.path.clone()).unwrap();
 
     let app = get_app_handle();
@@ -134,7 +129,7 @@ async fn monitor(id: String, task: &Task, progress_path: PathBuf, frames: u64, e
     }
     let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
     let id = Arc::new(id);
-    event.send(DownloadEvent::Started { id: id.clone(), gid, media_type: MediaType::Merge })?;
+    event.send(DownloadEvent::Started { id: id.clone(), gid, task_type: TaskType::Merge })?;
     let mut last_size = 0u64;
     let mut map = Map::new();
     let mut keys = Vec::new();

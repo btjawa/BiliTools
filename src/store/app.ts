@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
-import { CurrentSelect, Headers } from "@/services/backend";
-import { DashInfo, DurlInfo, MusicUrlInfo } from '@/types/data.d';
+import { Headers } from "@/services/backend";
 
 interface State {
     inited: boolean,
@@ -12,8 +11,6 @@ interface State {
         webview: number,
         database: number,
     },
-    playUrlInfo: DashInfo | DurlInfo | MusicUrlInfo,
-    currentSelect: CurrentSelect,
 }
 
 export const useAppStore = defineStore('app', {
@@ -27,12 +24,5 @@ export const useAppStore = defineStore('app', {
             webview: Number(),
             database: Number(),
         },
-        playUrlInfo: {} as DashInfo,
-        currentSelect: {
-            dms: -1,
-            ads: -1,
-            cdc: -1,
-            fmt: -1,
-        }
     })
 });

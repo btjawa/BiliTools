@@ -17,7 +17,8 @@
         "audio": "音頻",
         "merge": "合併",
         "complete": "完成",
-        "download": "下載"
+        "download": "下載",
+        "startDownload": "開始下載"
     },
     "empty": "此隊列為空～"
 }

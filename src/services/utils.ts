@@ -95,7 +95,7 @@ export function setEventHook() {
             const info = e.payload.info;
             sendNotification({
                 title: 'BiliTools',
-                body: `${info.ss_title}\nDownload Complete.`
+                body: `${info.output_dir}\nDownload Complete.`
             });
         }
     });

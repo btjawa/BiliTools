@@ -14,7 +14,7 @@
     </router-link>
 	<router-link to="/down-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/down-page') }" @click="navigate">
-            <i :class="`fa-${isActive('/down-page') ? 'solid' : 'light'}`" class="fa-bars-progress"></i>
+            <i :class="`fa-${isActive('/down-page') ? 'solid' : 'light'}`" class="fa-download"></i>
         </li>
     </router-link>
     <router-link to="/fav-page" custom v-slot="{ navigate }">
@@ -50,10 +50,14 @@ const isActive = computed(() => {
 onMounted(() => osType() === 'macos' && $el.value && ($el.value.style.paddingTop = '30px'))
 
 async function setTheme() {
-    const newTheme = await commands.setTheme(useSettingsStore().theme, true);
-    if (newTheme.status === 'error') throw new ApplicationError(newTheme.error);
-    const result = await commands.rwConfig('write', { theme: newTheme.data }, useInfoStore().secret);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    try {
+        const newTheme = await commands.setTheme(useSettingsStore().theme, true);
+        if (newTheme.status === 'error') throw newTheme.error;
+        const result = await commands.rwConfig('write', { theme: newTheme.data }, useInfoStore().secret);
+        if (result.status === 'error') throw result.error;
+    } catch(err) {
+        new ApplicationError(err).handleError();
+    }
 }
 </script>
 

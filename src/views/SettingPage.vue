@@ -9,7 +9,7 @@
     <hr />
     <div class="setting-page__sub flex w-full h-full">
         <div class="flex flex-col flex-1 mr-6" ref="$subPage">
-            <Empty :exp="settingsTree.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
+            <Empty v-if="settingsTree.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
             <section v-for="(item, index) in settingsTree.find(item => item.id == subPage)?.content">
                 <h3 v-if="item.name" class="font-semibold">
                     <i class="mr-1" :class="[settings.dynFa, item.icon]"></i>
@@ -177,10 +177,6 @@ const settingsTree = computed(() => {
             { name: t('settings.advanced.inspect_manga.name'), icon: "fa-image", desc: t('settings.advanced.inspect_manga.desc'), data: [
                 { name: t('settings.label.enable'), type: "switch", data: "advanced.inspect_manga" },
             ] },
-            { name: t('settings.advanced.config.name'), icon: "fa-wrench", desc: t('settings.advanced.config.desc'), data: [
-                { name: t('home.label.danmaku'), type: "button", data: () => openPath({ getPath: true, pathName: "danmaku" }), icon: "fa-file-circle-info" },
-                { name: "Aria2c", type: "button", data: () => openPath({ getPath: true, pathName: "aria2c" }), icon: "fa-file-circle-info" },
-            ] },
         ] },
         { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
             { data: [{ type: "about" }] },
@@ -240,10 +236,10 @@ function updateNest(key: string, data: any) {
 
 async function updateSettings(key: string, item: any) {
     const result = await commands.rwConfig('write', { [key]: item }, infoStore.secret);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
 }
 
-async function getPath(type: PathAlias | "danmaku" | "aria2c") {
+async function getPath(type: PathAlias) {
     switch (type) {
         case 'log': return await path.appLogDir();
         case 'temp': return path.join(await path.tempDir(), 'com.btjawa.bilitools');
@@ -256,8 +252,6 @@ async function getPath(type: PathAlias | "danmaku" | "aria2c") {
             }
         })()
         case 'database': return path.join(await path.appDataDir(), 'Storage');
-        case 'danmaku': return path.join(infoStore.resources_path, 'DanmakuFactoryConfig.json');
-        case 'aria2c': return path.join(infoStore.resources_path, 'aria2.conf');
     }
 }
 
@@ -273,7 +267,7 @@ async function checkProxy() {
         new ApplicationError(err).handleError();
     }
 }
-async function openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias | "danmaku" | "aria2c" }) {
+async function openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias }) {
     if (!options.path) {
         if (!options?.getPath || !options.pathName) return;
         const path = await getPath(options.pathName);
@@ -288,7 +282,7 @@ async function getSize(pathName: PathAlias) {
         (app.cache as any)[pathName] = bytes;
     }
     const result = await commands.getSize(await getPath(pathName), event);
-    if (result.status === 'error') throw new ApplicationError(result.error);
+    if (result.status === 'error') throw result.error;
 }
 async function cleanCache(pathName: PathAlias) {
     const result = await dialog.ask(i18n.global.t('settings.askDelete'), { 'kind': 'warning' });

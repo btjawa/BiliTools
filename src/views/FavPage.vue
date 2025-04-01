@@ -4,7 +4,7 @@
         {{ $t('favorites.title') }}
     </h1>
     <hr />
-    <Empty :exp="favorateList.length === 0" text="home.empty" class="absolute"/>
+    <Empty v-if="favorateList.length === 0" text="home.empty" class="absolute"/>
     <div class="setting-page__sub flex w-full h-[calc(100%-66px)]" :class="{ 'active': favorateActive }">
         <div class="flex flex-col flex-1 mr-6 w-[calc(100%-264px)]" ref="subPage">
             <div class="mb-4">
@@ -41,7 +41,7 @@
 <script setup lang="ts">
 import { inject, ref, watch, nextTick, onActivated } from 'vue';
 import { getFavoriteContent, getFavoriteList } from '@/services/data';
-import { FavoriteList, FavoriteContent } from '@/types/data.d';
+import { FavoriteList, FavoriteContent } from '@/types/data';
 import { useSettingsStore } from '@/store';
 import { ApplicationError } from '@/services/utils';
 import { Empty } from '@/components';

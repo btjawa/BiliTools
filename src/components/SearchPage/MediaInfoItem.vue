@@ -1,6 +1,4 @@
-<template><div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full"
-    :class="{ 'border-2 border-solid border-[var(--primary-color)]': index === target }"
->
+<template><div class="flex items-center rounded-lg h-12 text-sm p-4 bg-[color:var(--block-color)] w-full">
     <div class="checkbox" v-if="checkbox">
         <input type="checkbox" :value="index" v-model="model"/>
         <i class="fa-solid fa-check"></i>
@@ -25,14 +23,12 @@ const model = defineModel();
 
 defineProps<{
     index: number,
-    target: number,
     item: MediaInfo["list"][0],
     checkbox: boolean,
     options: {
         icon: string;
         text: string;
-        action: (index: number) => Promise<void>;
-        multi: () => Promise<void>;
+        action: (index: number, multi?: boolean ) => any;
     }[],
 }>();
 </script>

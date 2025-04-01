@@ -18,11 +18,12 @@ use crate::{
         init_client,
         random_string,
         process_err,
-        RESOURCES_PATH,
+        WORKING_PATH,
         CONFIG,
         SECRET,
         READY,
         SidecarError,
+        USER_AGENT
     }, TauriError
 };
 
@@ -34,18 +35,16 @@ lazy_static! {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
 pub struct QueueInfo {
     pub id: String,
-    pub ts: Arc<Timestamp>,
     pub tasks: Vec<Task>,
     pub output: PathBuf,
-    pub info: Arc<MediaInfoListItem>,
-    #[serde(rename = "currentSelect")]
-    pub current_select: CurrentSelect,
+    pub info: Arc<ArchiveInfo>,
+    pub select: CurrentSelect,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type, Event)]
 pub struct Notification {
     pub id: String,
-    pub info: Arc<MediaInfoListItem>
+    pub info: Arc<ArchiveInfo>
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -56,24 +55,22 @@ pub struct Timestamp {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct Task {
-    pub urls: Vec<String>,
+    pub urls: Option<Vec<String>>,
     pub gid: Option<String>,
-    pub media_type: MediaType,
+    #[serde(rename = "taskType")]
+    pub task_type: TaskType,
     pub path: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct MediaInfoListItem {
-    title: String,
-    cover: String,
-    desc: String,
-    id: usize,
-    cid: usize,
-    eid: usize,
-    #[serde(default)]
-    duration: usize,
-    ss_title: String,
-    index: usize
+pub struct ArchiveInfo {
+    pub title: String,
+    pub cover: String,
+    pub id: usize,
+    pub cid: usize,
+    pub ts: Timestamp,
+    pub output_dir: String,
+    pub output_filename: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -112,12 +109,15 @@ pub enum DownloadEvent {
     Started {
         id: Arc<String>,
         gid: Arc<String>,
-        media_type: MediaType,
+        #[serde(rename = "taskType")]
+        task_type: TaskType,
     },
     Progress {
         id: Arc<String>,
         gid: Arc<String>,
+        #[serde(rename = "contentLength")]
         content_length: u64,
+        #[serde(rename = "chunkLength")]
         chunk_length: u64,
     },
     Finished {
@@ -128,7 +128,7 @@ pub enum DownloadEvent {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "lowercase")]
-pub enum MediaType {
+pub enum TaskType {
     Video,
     Audio,
     Merge,
@@ -308,11 +308,11 @@ impl DownloadManager {
         fs::create_dir_all(info.output.parent().unwrap())?;
         let id = Arc::new(info.id.clone());
         for task in info.tasks.iter() {
-            if task.media_type == MediaType::Merge {
+            if task.task_type == TaskType::Merge {
                 ffmpeg::merge(info.clone(), &self.event).await?;
                 continue;
             }
-            if task.media_type == MediaType::Flac {
+            if task.task_type == TaskType::Flac {
                 ffmpeg::raw_flac(info.clone()).await?;
                 continue;
             }
@@ -325,7 +325,7 @@ impl DownloadManager {
                 return Err(TauriError::new(err.message, Some(err.code)));
             }
             self.event.send(DownloadEvent::Started {
-                id: id.clone(), gid: gid.clone(), media_type: task.media_type.clone()
+                id: id.clone(), gid: gid.clone(), task_type: task.task_type.clone()
             })?;
             let mut success = false;
             loop {
@@ -445,13 +445,24 @@ pub fn init() -> Result<()> {
         .ok_or(anyhow!("No free port found"))?.local_addr()?.port();
     *ARIA2C_PORT.write().unwrap() = port;
     let app = get_app_handle();
+    let session_file = WORKING_PATH.join("aria2.session");
+    if !session_file.exists() { fs::write(&session_file, [])?; }
+    let session_file = session_file.to_string_lossy();
+    let log_file = app.path().app_log_dir()?.join("aria2.log");
+    let log_file = log_file.to_string_lossy();
     let (mut rx, child) = app.shell().sidecar("aria2c").map_err(|e| process_err(e, "aria2c"))?
-    .current_dir(&*RESOURCES_PATH).args([
-        format!("--conf-path={}", RESOURCES_PATH.join("aria2.conf").to_string_lossy()),
-        format!("--log={}", app.path().app_log_dir()?.join("aria2.log").to_string_lossy()),
-        format!("--rpc-listen-port={}", port),
-        format!("--rpc-secret={}", &SECRET.read().unwrap()),
+    .args([
+        "--enable-rpc".into(),
         "--log-level=info".into(),
+        "--rpc-allow-origin-all=true".into(),
+        "--referer=https://www.bilibili.com/".into(),
+        "--header=Origin: https://www.bilibili.com".into(),
+        format!("--input-file={session_file}"),
+        format!("--save-session={session_file}"),
+        format!("--user-agent={USER_AGENT}"),
+        format!("--rpc-listen-port={port}"),
+        format!("--rpc-secret={}", &SECRET.read().unwrap()),
+        format!("--log={log_file}"),
     ]).spawn().map_err(|e| process_err(e, "aria2c"))?;
     async_runtime::spawn(async move {
         daemon("aria2c".into(), &child, &mut rx).await;
@@ -516,18 +527,15 @@ fn check_breakpoint(
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn push_back_queue(
-    info: Arc<MediaInfoListItem>,
-    current_select: CurrentSelect,
+    info: Arc<ArchiveInfo>,
+    select: CurrentSelect,
     tasks: Vec<Task>,
-    ts: Arc<Timestamp>,
-    ext: String,
-    output: Option<String>,
-    ss_title: String
-) -> TauriResult<Arc<QueueInfo>> {
-    let mut parent = if let Some(output) = &output {
-        PathBuf::from(output)
+    output_dir: Option<String>,
+) -> TauriResult<PathBuf> {
+    let mut parent = if let Some(output_dir) = &output_dir {
+        PathBuf::from(output_dir)
     } else {
-        CONFIG.read().unwrap().down_dir.join(ss_title)
+        CONFIG.read().unwrap().down_dir.join(info.output_dir.clone())
     };
     if parent.exists() {
         let mut count = 1;
@@ -540,30 +548,27 @@ pub async fn push_back_queue(
             count += 1;
         }
     }
-    let mut video_info = QueueInfo {
+    let mut queue_info = QueueInfo {
         id: random_string(16),
-        ts: ts.clone(),
         tasks,
-        output: parent.join(format!("{}.{}", filename(info.title.clone()), ext)),
+        output: parent.join(filename(info.output_filename.clone())),
         info: info.clone(),
-        current_select,
+        select,
     };
-    for task in &mut video_info.tasks {
-        if task.media_type == MediaType::Merge || task.media_type == MediaType::Flac { // FFmpeg task
+    for task in &mut queue_info.tasks {
+        if task.task_type == TaskType::Merge || task.task_type == TaskType::Flac || task.urls.is_none() { // Non-download task
             task.gid = Some(random_string(16));
             continue;
         }
-        let parsed_url = reqwest::Url::parse(&task.urls[0])?;
+        let urls = task.urls.clone().unwrap();
+        let parsed_url = reqwest::Url::parse(&urls[0])?;
         let name = parsed_url.path_segments().unwrap().last().unwrap();
         let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
         fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
         let dir = check_breakpoint(
             &temp_dir, format!("{}_{}", info.id, info.cid)
-        )?.unwrap_or(temp_dir.join(format!("{}_{}_{}", info.id, info.cid, ts.millis)));
-        let params = vec![
-            json!(task.urls),
-            json!({ "dir": dir, "out": name, "pause": "true" })
-        ];
+        )?.unwrap_or(temp_dir.join(format!("{}_{}_{}", info.id, info.cid, info.ts.millis)));
+        let params = vec![json!(urls), json!({ "dir": dir, "out": name, "pause": "true" })];
         let body: Aria2General = serde_json::from_value(
             post_aria2c("addUri", params).await?
         ).context("Failed to decode aria2c addUri response")?;
@@ -574,10 +579,9 @@ pub async fn push_back_queue(
         task.gid = Some(gid);
         task.path = Some(dir.join(name));
     }
-    let info = Arc::new(video_info);
-    QUEUE_MANAGER.push_back(info.clone(), QueueType::Waiting).await?;
+    QUEUE_MANAGER.push_back(Arc::new(queue_info), QueueType::Waiting).await?;
     QUEUE_MANAGER.update(QueueType::Waiting).await;
-Ok(info)
+    Ok(parent)
 }
 
 #[tauri::command(async)]

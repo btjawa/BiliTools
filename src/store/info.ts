@@ -4,7 +4,6 @@ interface State {
     version: string,
     hash: string,
     secret: string,
-    resources_path: string,
     mediaMap: {
         dms: { id: number }[],
         ads: { id: number }[],
@@ -18,7 +17,6 @@ export const useInfoStore = defineStore('info', {
         version: String(),
         hash: String(),
         secret: String(),
-        resources_path: String(),
         mediaMap: {
             dms: [
                 { id: 6 }, { id: 16 }, { id: 32 }, { id: 64 },
