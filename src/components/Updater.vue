@@ -38,6 +38,7 @@ import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { marked } from 'marked';
 import i18n from '@/i18n';
+import { info } from '@tauri-apps/plugin-log';
 
 const updateData = ref<Update | null>(null);
 const body = ref(String());
@@ -72,6 +73,7 @@ async function checkUpdate() {
         ...(proxyUrl && { proxy: proxyUrl})
     });
     console.log('Update:', update);
+    info('Update: ' + JSON.stringify(update));
     if (update?.available) {
         updateData.value = markRaw(update);
         body.value = await marked.parse(update.body || '');
@@ -101,14 +103,17 @@ async function doUpdate() {
             case 'Started':
                 updateProgress.length = event.data?.contentLength || 0;
                 console.log(`started downloading ${event.data.contentLength} bytes`);
+                info(`started downloading ${event.data.contentLength} bytes`);
                 break;
             case 'Progress':
                 updateProgress.bytes += event.data.chunkLength;
                 console.log(`downloaded ${updateProgress.bytes} from ${updateProgress.length}`);
+                info(`downloaded ${updateProgress.bytes} from ${updateProgress.length}`);
                 break;
             case 'Finished':
                 updateProgress.completed = true;
                 console.log('download finished');
+                info('download finished');
                 break;
             }
         });

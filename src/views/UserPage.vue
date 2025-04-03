@@ -63,23 +63,18 @@
                     <div class="form_item border-b-[color:var(--split-color)] border-b border-solid">
                         <span v-if="!othersPage">{{ $t('common.account') }}</span>
                         <template v-else>
-                        <div class="w-[42px] relative">
+                        <div class="w-[42px] relative cursor-pointer" @click="dropdownActive = !dropdownActive" ref="dropdownButton">
                             +{{ cid }}
-                            <svg class="absolute left-[42px] top-2 w-[12px] p-0 hover:cursor-pointer" viewBox="0 0 13.4 8.1">
-                                <path d="M6.8 8.1L0 1.75 1.36.3l5.38 5L11.97 0l1.42 1.4-6.6 6.7z" fill="var(--primary-color)"></path>
-                            </svg>
+                            <i class="fa-solid fa-triangle text-[10px] absolute -right-3 top-1.5 rotate-180"></i>
                         </div>
-                        <select class="absolute opacity-0 h-[22px] p-0 hover:cursor-pointer z-10"
-                            @change="($event) => cid = Number(($event.target as HTMLSelectElement).value)"
-                        >
-                            <option v-for="country in countryList" :value="country.country_id">
-                                {{ country.cname }} +{{ country.country_id }}
-                            </option>
-                        </select>
+                        <Dropdown class="absolute z-20 pointer-events-none translate-y-6"
+                            :drop="getCountryList()" :emit="(v) => cid = v" :name="cid"
+                            :use-active="{ active: dropdownActive, close: () => dropdownActive = false, target: dropdownButton }"
+                        ></Dropdown>
                         </template>
                         <input v-model="tel"
                             @input="tel=tel.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
-                            autocomplete="new-password" class="z-20" spellcheck="false"
+                            autocomplete="new-password" class="z-10" spellcheck="false"
                             :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'account' : 'telephone'}`)])"
                         />
                         <template v-if="othersPage">
@@ -128,6 +123,7 @@ import { commands } from '@/services/backend';
 import { useUserStore } from '@/store';
 import { useRouter } from 'vue-router';
 import * as login from '@/services/login';
+import Dropdown from '@/components/Dropdown.vue';
 
 const tel = ref(String());
 const pwd = ref(String());
@@ -141,7 +137,9 @@ const countryList = ref<{
     country_id: string;
 }[]>([]);
 
+const dropdownActive = ref(false);
 const loginQrcode = ref<HTMLCanvasElement>();
+const dropdownButton = ref<HTMLElement>();
 const router = useRouter();
 
 watch(othersPage, () => {
@@ -202,6 +200,12 @@ async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'ini
     } catch (err) {
         new ApplicationError(err).handleError();
     }
+}
+
+function getCountryList() {
+    return countryList.value.map(v => ({
+        id: v.country_id, name: v.cname + ' +' + v.country_id
+    }))
 }
 </script>
 

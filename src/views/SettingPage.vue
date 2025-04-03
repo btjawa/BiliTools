@@ -26,7 +26,8 @@
                         :data="unit.data" :update="cleanCache" :open="openPath"
                     />
                     <Dropdown v-if="unit.type === 'dropdown'"
-                        :data="unit.data" :drop="unit.drop" :update="updateSettings"
+                        :drop="getDropdown(unit.drop)" :emit="(v) => updateSettings(unit.data, v)"
+                        :name="getDropdown(unit.drop).find(v => v.id === settings[unit.data])?.name"
                     />
                     <Drag v-if="unit.type === 'drag'"
                         :data="unit.data" :placeholders="unit.placeholders"
@@ -88,14 +89,15 @@ import { ApplicationError, AppLog, tryFetch } from '@/services/utils';
 import { Channel } from '@tauri-apps/api/core';
 import { TYPE } from 'vue-toastification';
 import { type as osType } from '@tauri-apps/plugin-os';
-import { Path, Cache, Dropdown, Drag } from '@/components/SettingPage';
+import { Path, Cache, Drag } from '@/components/SettingPage';
 import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
 import { Empty } from '@/components';
 import { commands } from '@/services/backend';
-import locales from '@/locales/index.json';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import * as shell from '@tauri-apps/plugin-shell';
+import Dropdown from '@/components/Dropdown.vue';
+import locales from '@/locales/index.json';
 import i18n from '@/i18n';
 
 type PathAlias = keyof typeof app.cache;
@@ -104,7 +106,7 @@ type UnitType =
 | { name: string; type: 'path'; data: keyof typeof settings.$state; }
 | { name: string; type: 'switch'; data: keyof typeof settings.$state; }
 | { name: string; type: 'cache'; data: PathAlias; }
-| { name: string; type: 'dropdown'; data: keyof typeof settings.$state; drop: keyof typeof infoStore.mediaMap; }
+| { name: string; type: 'dropdown'; data: keyof typeof settings.$state; drop: keyof typeof infoStore.mediaMap | { id: number, name: string }[]; }
 | { name: string; type: 'button'; data: Function; icon: string; }
 | { name: string; type: 'input'; data: string; placeholder: string; }
 | { name: string; type: 'drag'; data: string; shorten: string; placeholders: Array<{ id: number | string, name: string | number }>; }
@@ -173,10 +175,7 @@ const settingsTree = computed(() => {
             ] },
             { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
                 { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
-            ] },
-            { name: t('settings.advanced.inspect_manga.name'), icon: "fa-image", desc: t('settings.advanced.inspect_manga.desc'), data: [
-                { name: t('settings.label.enable'), type: "switch", data: "advanced.inspect_manga" },
-            ] },
+            ] }
         ] },
         { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
             { data: [{ type: "about" }] },
@@ -237,6 +236,11 @@ function updateNest(key: string, data: any) {
 async function updateSettings(key: string, item: any) {
     const result = await commands.rwConfig('write', { [key]: item }, infoStore.secret);
     if (result.status === 'error') throw result.error;
+}
+
+function getDropdown(drop: keyof typeof infoStore.mediaMap | { id: number, name: string }[]) {
+    if (Array.isArray(drop)) return drop;
+    else return infoStore.mediaMap[drop].map(v => ({ id: v.id, name: i18n.global.t(`common.default.${drop}.data.${v.id}`) }))
 }
 
 async function getPath(type: PathAlias) {

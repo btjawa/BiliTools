@@ -25,7 +25,7 @@ export function DmSegMobileReplyToXML(binary: Uint8Array, options?: { inputXml?:
       iElement?.appendChild(dElement);
     });
     return new XMLSerializer().serializeToString(xmlDoc);
-  }
+  } else throw new Error('No danmaku elems found');
 }
 
 export const enum DmColorfulType {

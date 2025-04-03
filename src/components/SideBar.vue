@@ -19,7 +19,7 @@
     </router-link>
     <router-link to="/fav-page" custom v-slot="{ navigate }">
         <li :class="{ 'active': isActive('/fav-page') }" @click="navigate">
-            <i :class="`fa-${isActive('/fav-page') ? 'solid' : 'light'}`" class="fa-bookmark"></i>
+            <i :class="`fa-${isActive('/fav-page') ? 'solid' : 'light'}`" class="fa-star"></i>
         </li>
     </router-link>
     <li class="sidebar-item !mt-auto" @click="setTheme">

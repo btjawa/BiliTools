@@ -296,7 +296,7 @@ export async function getPlayUrl(
     }
     switch(type) {
         case Types.MediaType.Video:
-            url += '/x/player/wbi/playurl';
+            url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
             params.avid = info.id;
             params.cid = info.cid;
             break;
@@ -316,7 +316,7 @@ export async function getPlayUrl(
             break;
     }
     const body = await tryFetch(url, {
-        ...(type === Types.MediaType.Video && { auth: 'wbi' }),
+        ...(type === Types.MediaType.Video && user.isLogin && { auth: 'wbi' }),
         params
     });
     if (type === Types.MediaType.Music) {

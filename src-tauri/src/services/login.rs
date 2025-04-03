@@ -171,7 +171,7 @@ async fn get_bili_ticket() -> Result<String> {
             ("csrf", &bili_csrf),
         ]).send().await?;
     if bili_ticket_resp.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while fetching BiliTicket Cookie", bili_ticket_resp.status()));
+        return Err(anyhow!("Error while fetching BiliTicket Cookie ({})", bili_ticket_resp.status()));
     }
     let bili_ticket_body: BiliTicketResponse = bili_ticket_resp.json()
         .await.context("Failed to decode BiliTicket response")?;
@@ -201,7 +201,7 @@ pub async fn get_extra_cookies() -> Result<()> {
         .get("https://www.bilibili.com")
         .send().await?;
     if html_resp.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while fetching initial Cookies", html_resp.status()));
+        return Err(anyhow!("Error while fetching initial Cookies ({})", html_resp.status()));
     }
     let cookies: Vec<String> = html_resp.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -219,7 +219,7 @@ pub async fn get_extra_cookies() -> Result<()> {
         .get("https://api.bilibili.com/x/frontend/finger/spi")
         .send().await?;
     if buvid_resp.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while fetching Buvid Cookies", buvid_resp.status()));
+        return Err(anyhow!("Error while fetching Buvid Cookies ({})", buvid_resp.status()));
     }
     let buvid_body: BuvidResponse = buvid_resp.json()
         .await.context("Failed to decode Buvid response")?;
@@ -249,7 +249,7 @@ pub async fn exit() -> TauriResult<isize> {
             ("biliCSRF", bili_csrf),
         ]).send().await?;
     if response.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while performing Exit login", response.status()).into());
+        return Err(anyhow!("Error while performing Exit login ({})", response.status()).into());
     }
     let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -282,7 +282,7 @@ pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String)
             ("keep", "true".into())
         ]).send().await?;
     if response.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while performing SMS login", response.status()).into());
+        return Err(anyhow!("Error while performing SMS login ({})", response.status()).into());
     }
     let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -324,7 +324,7 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
             ("source", "main-fe-header".into()),
         ]).send().await?;
     if response.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while performing Password login", response.status()).into());
+        return Err(anyhow!("Error while performing Password login ({})", response.status()).into());
     }
     let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -368,7 +368,7 @@ pub async fn switch_cookie(switch_code: String) -> TauriResult<isize> {
             ("source", "risk".into()),
         ]).send().await?;
     if response.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while switching cookie", response.status()).into());
+        return Err(anyhow!("Error while switching cookie ({})", response.status()).into());
     }
     let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -400,7 +400,7 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
                 qrcode_key
             )).send().await?;
         if response.status() != StatusCode::OK {
-            return Err(anyhow!("({}) Error while polling QR code login", response.status()).into());
+            return Err(anyhow!("Error while polling QR code login ({})", response.status()).into());
         }
         let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
             .iter().flat_map(|h| h.to_str().ok())
@@ -451,7 +451,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
             ("source", "main_web".into()),
         ]).send().await?;
     if refresh_token_resp.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while refreshing cookie", refresh_token_resp.status()).into());
+        return Err(anyhow!("Error while refreshing cookie ({})", refresh_token_resp.status()).into());
     }
     let cookies: Vec<String> = refresh_token_resp.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -473,7 +473,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
             ("refresh_token", refresh_token.into()),
         ]).send().await?;
     if confirm_refresh_resp.status() != StatusCode::OK {
-        return Err(anyhow!("({}) Error while confirming refresh", confirm_refresh_resp.status()).into());
+        return Err(anyhow!("Error while confirming refresh ({})", confirm_refresh_resp.status()).into());
     }
     let confirm_refresh_body: ConfirmRefreshResponse = confirm_refresh_resp.json().await?;
     if confirm_refresh_body.code != 0 {

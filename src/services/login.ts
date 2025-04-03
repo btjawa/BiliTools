@@ -8,6 +8,7 @@ import i18n from "@/i18n";
 import * as LoginTypes from "@/types/login";
 import * as UserTypes from "@/types/user";
 import * as auth from "@/services/auth";
+import { info } from "@tauri-apps/plugin-log";
 
 export async function fetchUser() {
     const user = useUserStore();
@@ -141,7 +142,8 @@ export async function checkRefresh(): Promise<number> {
     const cookie_info_body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/cookie/info', {
         handleError: false
     }) as LoginTypes.CookieInfoResp;
-    console.log('Refresh status', cookie_info_body)
+    console.log('Refresh status', cookie_info_body);
+    info('Refresh status ' + JSON.stringify(cookie_info_body))
     if (cookie_info_body?.code !== 0) {
         throw new ApplicationError(
             cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / ' + i18n.global.t('error.loginExpired') : ''),
@@ -157,6 +159,7 @@ export async function checkRefresh(): Promise<number> {
         throw "Failed to get refresh_csrf";
     }
     console.log('Got refresh_csrf', refresh_csrf?.slice(0, 7))
+    info('Got refresh_csrf ' + refresh_csrf?.slice(0, 7))
     const result = await commands.refreshCookie(refresh_csrf);
     if (result.status === 'error') throw result.error;
     return result.data;

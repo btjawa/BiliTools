@@ -42,13 +42,13 @@
     --split-color: #e5e5e5;
     --block-color: #ffffff;
     --solid-block-color: #ffffff;
-    --button-color: #00000009;
+    --button-color: #E4E5E6;
     --primary-color: rgb(0, 161, 214);
     --dark-button-color: rgb(233,233,233);
 }
 @media (prefers-color-scheme: light) {
-    button, select, input {
-        @apply hover:!brightness-110;
+    button, input {
+        @apply hover:!brightness-90;
     }
 }
 
@@ -99,7 +99,7 @@ hr {
     margin: 8px 0;
 }
 
-button, select, input[type='text'], input[type='password'], input[type='number'] {
+button, input[type='text'], input[type='password'], input[type='number'] {
     @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
     @apply bg-[color:var(--button-color)] text-[color:var(--content-color)];
     @apply hover:brightness-150 !select-none transition-[filter];
@@ -134,11 +134,6 @@ i.question {
 
 button i + span, button span + i {
     margin-left: 8px;
-}
-
-select {
-    @apply hover:cursor-pointer;
-    min-width: 152px;
 }
 
 .bcc-iconfont {

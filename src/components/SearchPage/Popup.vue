@@ -18,14 +18,10 @@
               v-model="date" :dark="settings.isDark"
               model-type="format" format="yyyy-MM-dd"
               id="historyDanmakuDate" />
-            <div v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')">
-              <select @change="(e) => subtitle = Number((e.target as HTMLSelectElement).value)">
-                <option v-for="opt in othersProvider.subtitles" :key="opt.id" :value="opt.id">
-                  {{ opt.lan_doc + `(${opt.lan})` }}
-                </option>
-              </select>
-              <i class="fa-solid fa-triangle -translate-x-6 rotate-180 text-[10px]"></i>
-            </div>
+            <Dropdown v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')"
+              :drop="getDropdown()" :emit="(v) => subtitle = v"
+              :name="getDropdown().find(v => v.id === subtitle)?.name"
+            ></Dropdown>
           </div>
           <button class="absolute right-4 primary-color"
             :class="[key === 'fmt' ? 'bottom-0' : 'bottom-4']"
@@ -46,6 +42,7 @@ import { ref, computed } from 'vue';
 import { useSettingsStore, useInfoStore } from '@/store';
 import { MediaType, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap } from '@/types/data.d';
 import { CurrentSelect } from '@/services/backend';
+import Dropdown from '../Dropdown.vue';
 
 const props = defineProps<{
   handleClose: (select: CurrentSelect, options?: { others?: { key: string, data: any }, multi?: boolean }) => void,
@@ -160,6 +157,12 @@ function handleClick(key: string, id: any) {
     optionsProvider.value['cdc'].data = cdc;
     select.value.cdc = getDefault(cdc, 'df_cdc');
   }
+}
+
+function getDropdown() {
+  return othersProvider.value.subtitles.map(v => ({
+    id: v.id, name: v.lan_doc + `(${v.lan})`
+  })).sort((a, b) => b.id - a.id);
 }
 
 function confirm(key: string) {

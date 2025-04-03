@@ -2,15 +2,15 @@
 <div v-show="active" @contextmenu.prevent @transitionend.prevent
     class="context-menu" :style="{ opacity: Number(active), top: pos.y + 'px', left: pos.x + 'px' }" ref="$el"
 >
-    <button @click="handleAction('cut')" class="context-menu__item">
+    <button @click="handleAction('cut')">
         <i class="fa-light fa-cut"></i>
         <span>{{ $t('common.context_menu.cut') }}<a>Ctrl+X</a></span>
     </button>
-    <button @click="handleAction('copy')" class="context-menu__item ">
+    <button @click="handleAction('copy')">
         <i class="fa-light fa-copy"></i>
         <span>{{ $t('common.context_menu.copy') }}<a>Ctrl+C</a></span>
     </button>
-    <button @click="handleAction('paste')" class="context-menu__item">
+    <button @click="handleAction('paste')">
         <i class="fa-light fa-paste"></i>
         <span>{{ $t('common.context_menu.paste') }}<a>Ctrl+V</a></span>
     </button>
@@ -90,7 +90,7 @@ defineExpose({ showMenu });
     @apply bg-[color:var(--solid-block-color)] border border-solid border-[var(--split-color)];
     @apply animate-[rightmenu-in_.2s_cubic-bezier(.23,0,0,1.32)];
 }
-.context-menu__item {
+.context-menu > button {
     @apply flex items-center w-full p-2.5 h-[35px] rounded-none;
     a {
         @apply absolute right-2.5 text-xs text-[var(--desc-color)];

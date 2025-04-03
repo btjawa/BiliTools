@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{Arc, RwLock as StdRwLock}, time::Duration};
+use tauri::{async_runtime::{self, Receiver}, http::StatusCode, ipc::Channel, Manager};
 use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
-use tauri::{async_runtime::{self, Receiver}, ipc::Channel, Manager};
 use tokio::{sync::{mpsc, RwLock}, time::sleep};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -453,7 +453,7 @@ pub fn init() -> Result<()> {
     let (mut rx, child) = app.shell().sidecar("aria2c").map_err(|e| process_err(e, "aria2c"))?
     .args([
         "--enable-rpc".into(),
-        "--log-level=info".into(),
+        "--log-level=warn".into(),
         "--rpc-allow-origin-all=true".into(),
         "--referer=https://www.bilibili.com/".into(),
         "--header=Origin: https://www.bilibili.com".into(),
@@ -494,7 +494,9 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> TauriResult<Value>
         .post(format!("http://127.0.0.1:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
         .timeout(Duration::from_millis(3000))
         .json(&payload).send().await?;
-
+    if response.status() != StatusCode::OK {
+        return Err(anyhow!("Error while fetching aria2c JsonRPC Response ({})", response.status()).into());
+    }
     let body: Value = response.json().await
         .context("Failed to decode aria2c JsonRPC response")?;
 

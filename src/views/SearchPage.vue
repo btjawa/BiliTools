@@ -64,20 +64,20 @@
 
 <script setup lang="ts">
 import { ApplicationError, filename, getImageBlob, parseId } from '@/services/utils';
-import { save as dialogSave } from '@tauri-apps/plugin-dialog';
-import { dirname, join as pathJoin } from '@tauri-apps/api/path';
+import { useInfoStore, useSettingsStore, useUserStore } from '@/store';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
+import { dirname, join as pathJoin } from '@tauri-apps/api/path';
 import { getMediaInfo, getPlayUrl } from '@/services/data';
 import { reactive, ref, computed } from 'vue';
-import { useInfoStore, useSettingsStore } from '@/store';
 import { commands, CurrentSelect } from '@/services/backend';
+import { save as dialogSave } from '@tauri-apps/plugin-dialog';
+import { transformImage } from '@tauri-apps/api/image';
 import { Empty } from '@/components';
 import { open } from '@tauri-apps/plugin-shell';
 import * as data from '@/services/data';
 import * as Types from '@/types/data.d';
 import i18n from '@/i18n';
 import router from '@/router';
-import { transformImage } from '@tauri-apps/api/image';
 
 const settings = useSettingsStore();
 const v = reactive({
@@ -126,7 +126,8 @@ async function search(overrideInput?: string) {
 		v.useCheckbox = false;
 		v.checkboxs = [];
 	};
-	const input = v.searchInput ?? overrideInput;
+	const input = overrideInput ?? v.searchInput;
+	v.searchInput = input;
 	if (!input.trim().length) return;
 	reset();
 	v.searchActive = true;
@@ -167,7 +168,7 @@ async function initPopup(index: number, options?: { codec?: Types.StreamCodecTyp
 			if (v.mediaInfo.type !== Types.MediaType.Music) {
 				othersProvider.danmaku = true;
 			}
-			if (v.mediaInfo.type === Types.MediaType.Video) {
+			if (v.mediaInfo.type === Types.MediaType.Video && useUserStore().isLogin) {
 				const status = await data.getAISummary(info, v.mediaInfo.upper.mid ?? 0, { check: true });
 				othersProvider.aiSummary = Boolean(status);
 				const subtitles = await data.getSubtitles(info.id, info.cid);

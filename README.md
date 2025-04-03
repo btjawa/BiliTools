@@ -24,7 +24,8 @@
 > [!WARNING]  
 > **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
 > **本项目仅供学习用途，请勿将本项目用于商业用途**<br>
-> **添加下载项目后，须在 下载->等待中 右下角点击开始下载，不写成立即下载是为了方便添加后续项目**
+> **添加下载项目后，须在 下载->等待中 右下角点击开始下载，不写成立即下载是为了方便添加后续项目**<br>
+> **`bcryptprimitives.dll` 是 `Windows 7` 相关问题，由于该操作系统太老，未来不会兼容**
 
 ## 参与贡献
 
@@ -55,7 +56,7 @@
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
 | 封面    | ✅ 已完成 ||
 | 字幕    | ⚠️ WIP   | 支持 SRT 格式 |
-| AI总结  | ✅ 已完成 | MD Markdown格式 |
+| AI总结  | ✅ 已完成 | MD Markdown格式，来自于哔哩哔哩 |
 | 漫画    | ❌ TODO | 暂时停止该功能的更新 \| 原因：[博客](https://btjawa.top/bilitools#关于漫画) |
 
 ### 登录相关
@@ -97,15 +98,17 @@ I work on translations mainly to improve my English. If you find anything unnatu
 
 ## 声明
 
-本项目仅作学习用途，作者不承担因使用本项目而导致的一切后果，若有侵权，可随时联系删除
+该项目根据 `GPL-3.0-or-later` 许可证进行授权，请参考 [LICENSE](/LICENSE) 文件
 
-数据仅存储于用户本地，使用 `SQLite` 格式明文存储于以下路径：
+本项目仅作学习、技术研究用途，作者不不当使用本项目所导致的任何后果负责，若有疑似侵权、违规内容，可随时联系处理
+
+所有请求行为仅基于用户已获访问权限的在线资源，不包含任何形式的服务端破解、绕过付费会员、绕过安全校验等等行为
+
+应用数据仅存储于用户本地，使用 `SQLite` 格式明文存储于以下路径：
 
 - Windows: `%AppData%\com.btjawa.bilitools\Storage`
 - macOS: `$HOME/Library/Application Support/com.btjawa.bilitools/Storage`
 - Linux: `$HOME/.local/share/com.btjawa.bilitools/Storage`
-
-该项目根据 `GPL-3.0-or-later` 许可证进行授权，请参考 [LICENSE](/LICENSE) 文件
 
 参考、使用的其他开源项目：
 
