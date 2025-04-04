@@ -1,4 +1,3 @@
-import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
 import { TauriError, commands, events } from '@/services/backend';
 import { TYPE, useToast } from "vue-toastification";
@@ -81,24 +80,6 @@ export function setEventHook() {
         const type = e.payload.type.toLowerCase() as keyof typeof queue.$state;
         queue[type] = e.payload.data;
     })
-    events.notification.listen(async e => {
-        let permissionGranted = await isPermissionGranted();
-
-        // If not we need to request it
-        if (!permissionGranted) {
-            const permission = await requestPermission();
-            permissionGranted = permission === 'granted';
-        }
-
-        // Once permission has been granted we can send the notification
-        if (permissionGranted) {
-            const info = e.payload.info;
-            sendNotification({
-                title: 'BiliTools',
-                body: `${info.output_dir}\nDownload Complete.`
-            });
-        }
-    });
     events.sidecarError.listen(e => {
         const err = e.payload;
         new ApplicationError(i18n.global.t('error.errorProvider', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handleError();

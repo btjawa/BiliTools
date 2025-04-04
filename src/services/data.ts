@@ -124,15 +124,16 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             }
             const data = info.result;
             const season = data.seasons.find(v => v.season_id === data.season_id);
+            const covers = [{ id: 'square_cover', url: data.square_cover }];
+            if (season) {
+                covers.push({ id: 'horizontal_cover_169', url: season.horizontal_cover_169 });
+                covers.push({ id: 'horizontal_cover_1610', url: season.horizontal_cover_1610 });
+            }
             return {
                 id: data.season_id,
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
-                covers: [
-                    { id: 'horizontal_cover_169', url: season!.horizontal_cover_169 },
-                    { id: 'horizontal_cover_1610', url: season!.horizontal_cover_1610 },
-                    { id: 'square_cover', url: data.square_cover }
-                ].filter(v => v.url?.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
+                covers: covers.filter(v => v.url.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
                 desc: data.evaluate,
                 type,
                 stat: {
@@ -150,7 +151,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                     mid: data?.up_info?.mid,
                 },
                 list: data.episodes.map((episode, index) => ({
-                    title: episode.share_copy,
+                    title: episode?.show_title ?? episode.share_copy,
                     cover: episode.cover.replace("http:", "https:"),
                     desc: data.evaluate,
                     id: episode.aid,

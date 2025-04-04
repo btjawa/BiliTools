@@ -159,13 +159,11 @@ async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise
 
 export const events = __makeEvents__<{
 headers: Headers,
-notification: Notification,
 queueEvent: QueueEvent,
 settings: Settings,
 sidecarError: SidecarError
 }>({
 headers: "headers",
-notification: "notification",
 queueEvent: "queue-event",
 settings: "settings",
 sidecarError: "sidecar-error"
@@ -183,7 +181,6 @@ export type DownloadEvent = { status: "Started"; id: string; gid: string; taskTy
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { version: string; hash: string; downloads: QueueInfo[] }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
-export type Notification = { id: string; info: ArchiveInfo }
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; tasks: Task[]; output: string; info: ArchiveInfo; select: CurrentSelect }
 export type QueueType = "waiting" | "doing" | "complete"

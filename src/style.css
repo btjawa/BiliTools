@@ -38,7 +38,7 @@
 
 :root {
     --content-color: #1a1a1a;
-    --desc-color: #a2a7ae;
+    --desc-color: #888888;
     --split-color: #e5e5e5;
     --block-color: #ffffff;
     --solid-block-color: #ffffff;
@@ -48,7 +48,7 @@
 }
 @media (prefers-color-scheme: light) {
     button, input {
-        @apply hover:!brightness-90;
+        @apply hover:!brightness-95;
     }
 }
 

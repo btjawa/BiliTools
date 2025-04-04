@@ -55,7 +55,7 @@
 | 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
 | 封面    | ✅ 已完成 ||
-| 字幕    | ⚠️ WIP   | 支持 SRT 格式 |
+| 字幕    | ✅ 已完成 | 支持 SRT 格式 |
 | AI总结  | ✅ 已完成 | MD Markdown格式，来自于哔哩哔哩 |
 | 漫画    | ❌ TODO | 暂时停止该功能的更新 \| 原因：[博客](https://btjawa.top/bilitools#关于漫画) |
 

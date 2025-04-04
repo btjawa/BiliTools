@@ -41,12 +41,6 @@ pub struct QueueInfo {
     pub select: CurrentSelect,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Type, Event)]
-pub struct Notification {
-    pub id: String,
-    pub info: Arc<ArchiveInfo>
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct Timestamp {
     pub millis: u64,
@@ -601,11 +595,7 @@ pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
                 match result {
                     Err(e) => { process_err(e, "ffmpeg"); },
                     Ok(r) => if QUEUE_MANAGER.get_len(QueueType::Doing).await == 0 {
-                        Notification {
-                            id: r.id.clone(),
-                            info: r.info.clone(),
-                        }.emit(&get_app_handle()).unwrap();
-                        break;
+                        break notifica::notify("BiliTools", &format!("{}\nDownload Complete.", r.info.output_dir))?;
                     }
                 }
             }

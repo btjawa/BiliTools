@@ -13,6 +13,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::panic::set_hook(Box::new(|e| {
         log::error!("Panicked: {}", e);
         println!("Panicked: {}", e);
+        let backtrace = backtrace::Backtrace::new();
+        log::error!("Backtrace:\n{:?}", backtrace);
+        println!("Backtrace:\n{:?}", backtrace);
     }));
     *shared::SECRET.write().unwrap() = shared::random_string(10);
 
@@ -24,7 +27,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
         ])
         .events(collect_events![
-            config::Settings, shared::Headers, shared::SidecarError, services::aria2c::QueueEvent, services::aria2c::Notification
+            config::Settings, shared::Headers, shared::SidecarError, services::aria2c::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -53,7 +56,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             let windows = app.webview_windows();

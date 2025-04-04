@@ -200,6 +200,7 @@ interface EpisodeInfo {
   long_title: string;
   season_id: number;
   season_title: string;
+  show_title: string;
   pub_time: number;
   share_copy: string;
   short_link: string;
