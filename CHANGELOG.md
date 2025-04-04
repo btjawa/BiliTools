@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.3] - 2025-04-04
+
+项目的开源协议从 `MIT` 迁移至 `GPL-3.0-or-later`
+
+由于更新了数据结构，因此启动应用时会遇到数据库相关报错<br>
+在 `设置页 -> 缓存` 中删除 `用户数据库` 后，重启应用即可正常使用
+
+该项目将暂时不再更新漫画下载，见 [博客](https://btjawa.top/bilitools#关于漫画)
+
+### 更新
+
+- [`eed34a3`](https://github.com/btjawa/BiliTools/commit/eed34a311f4f7e1f3c9def09eecb9db5bc098352) 支持下载字幕
+- [`47319e4`](https://github.com/btjawa/BiliTools/commit/47319e4efd9f6b6014ac5473921e65580248e28a) 重构下载链接解析、下载选择界面、多选下载推送逻辑
+- [`e23a9ee`](https://github.com/btjawa/BiliTools/commit/e23a9ee9bc6b2a58feda2f17b64cee3041199aa9) 完善 Sidecar 轮询守护逻辑
+- [`27fb5fe`](https://github.com/btjawa/BiliTools/commit/27fb5fe7286f24a0b532f08ad6849f6300618996) 由 `iziToast` 迁移至 `vue-notification`
+- [`9963992`](https://github.com/btjawa/BiliTools/commit/99639922cecc9723df925ec908812b234ce16923) 由 `Vuex` 迁移至 `Pinia`
+- [`e3c6680`](https://github.com/btjawa/BiliTools/commit/e3c668075eb62f7ca58914d2d16917d31fe0844f) [`7358534`](https://github.com/btjawa/BiliTools/commit/7358534e2b32dbdb2f2586fb75de26d04ea5362d) 由 `Options API` 迁移至 `Composition API`
+
+### 修复
+
+- [`9278ce2`](https://github.com/btjawa/BiliTools/commit/9278ce23d3c4c32d0ed230e65c9aa8cb3d3a4561) 完善 `密码登录` 的风控对应逻辑
+- [`17f7579`](https://github.com/btjawa/BiliTools/commit/17f7579c49ad948084afdaac0d444d75cba5c540) 修复 `下载其他` 中内容显示问题
+- [`dae071a`](https://github.com/btjawa/BiliTools/commit/dae071abcc2aaa7bdc3d7796381f0ecf72408fd0) 使用自定义下拉菜单 ([#21](https://github.com/btjawa/BiliTools/issues/21) by [@BabaBoyGegeBoy](https://github.com/BabaBoyGegeBoy))
+
 ## [1.3.2] - 2025-02-02
 
 ### 更新

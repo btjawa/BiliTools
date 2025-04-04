@@ -59,7 +59,7 @@ async function updater() {
   const setAsset = async (asset, reg, platforms) => {
     let sig = '';
     if (/.sig$/.test(asset.name)) {
-      sig = await getSignature(`https://ghp.ci/${asset.browser_download_url}`);
+      sig = await getSignature(`https://ghproxy.net/${asset.browser_download_url}`);
     }
     platforms.forEach((platform) => {
       if (reg.test(asset.name)) {
@@ -69,7 +69,7 @@ async function updater() {
           return;
         }
         // 设置下载链接
-        updateData.platforms[platform].url = `https://ghp.ci/${asset.browser_download_url}`;
+        updateData.platforms[platform].url = `https://ghproxy.net/${asset.browser_download_url}`;
       }
     });
   };
