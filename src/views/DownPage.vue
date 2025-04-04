@@ -35,7 +35,7 @@
                     <button @click="togglePause(item.id)">
                         <i :class="[settings.dynFa, 'fa-play-pause']"></i>
                     </button>
-                    <button @click="openPath(item.output, { parent: true })">
+                    <button @click="dirname(item.output).then(v => openPath(v))">
                         <i :class="[settings.dynFa, 'fa-folder-open']"></i>
                     </button>
                     <button @click="removeTask(item.id, Object.keys(queue.$state)[queuePage])">
@@ -58,11 +58,11 @@ import { inject, nextTick, ref, watch, Ref, computed } from 'vue';
 import { commands, DownloadEvent } from '@/services/backend';
 import { useSettingsStore, useQueueStore } from '@/store';
 import { ApplicationError } from '@/services/utils';
+import { openPath } from '@tauri-apps/plugin-opener';
 import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
 import { info } from '@tauri-apps/plugin-log';
 import { Empty } from '@/components';
-import * as shell from '@tauri-apps/plugin-shell';
 import i18n from '@/i18n';
 
 const statusList = ref<{ [id: string]: {
@@ -163,13 +163,6 @@ async function processQueue() {
         const result = await commands.processQueue(event);
         if (result.status === 'error') throw result.error;
     } catch (err) {
-        new ApplicationError(err).handleError();
-    }
-}
-async function openPath(path: string, options?: { parent: boolean }) {
-    try {
-        await shell.open(options?.parent ? await dirname(path) : path);
-    } catch(err) {
         new ApplicationError(err).handleError();
     }
 }

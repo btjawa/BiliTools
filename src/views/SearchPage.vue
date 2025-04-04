@@ -12,7 +12,7 @@
 	<div :style="{ 'opacity': v.listActive ? 1 : 0, 'pointerEvents': v.listActive ? 'all' : 'none' }"
 		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
-		<MediaInfo class="media_info mb-[13px]" :info="v.mediaInfo" :open />
+		<MediaInfo class="media_info mb-[13px]" :info="v.mediaInfo" :open="openUrl" />
         <Empty v-if="v.mediaInfo.list.length === 0" text="home.empty" />
 		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="v.mediaInfo?.stein_gate">
 			<button v-for="story in v.mediaInfo.stein_gate.story_list"
@@ -72,8 +72,8 @@ import { reactive, ref, computed } from 'vue';
 import { commands, CurrentSelect } from '@/services/backend';
 import { save as dialogSave } from '@tauri-apps/plugin-dialog';
 import { transformImage } from '@tauri-apps/api/image';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { Empty } from '@/components';
-import { open } from '@tauri-apps/plugin-shell';
 import * as data from '@/services/data';
 import * as Types from '@/types/data.d';
 import i18n from '@/i18n';
@@ -134,7 +134,7 @@ async function search(overrideInput?: string) {
 	try {
 		const { id, type } = await parseId(input);
 		if (type === Types.MediaType.Manga) {
-			return await open('https://btjawa.top/bilitools#关于漫画')
+			return await openUrl('https://btjawa.top/bilitools#关于漫画')
 		}
 		const info = await getMediaInfo(id, type);
 		v.searchTarget = info.list.findIndex(v => v.id === info.id);

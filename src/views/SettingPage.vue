@@ -2,7 +2,7 @@
     <h1 class="self-start">
         <i class="fa-gear mr-2" :class="settings.dynFa"></i>
         {{ $t('settings.title') }}
-        <i @click="openPath({ path: 'https://www.btjawa.top/bilitools#设置' })"
+        <i @click="openUrl('https://www.btjawa.top/bilitools#设置')"
             class="question fa-light fa-circle-question text-xl"
         ></i>
     </h1>
@@ -23,7 +23,7 @@
                         :data="unit.data" :update="updatePath" :open="openPath"
                     />
                     <Cache v-if="unit.type === 'cache'"
-                        :data="unit.data" :update="cleanCache" :open="openPath"
+                        :data="unit.data" :update="cleanCache" :open="(v) => getPath(v).then(v => openPath(v))"
                     />
                     <Dropdown v-if="unit.type === 'dropdown'"
                         :drop="getDropdown(unit.drop)" :emit="(v) => updateSettings(unit.data, v)"
@@ -55,7 +55,7 @@
                             <img class="h-16 mr-6 w-auto inline" src="@/assets/img/icon.svg" draggable="false" />
                             <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
-                        {{ $t('common.version') }}: <span @click="openPath({ path: 'https://github.com/btjawa/BiliTools/releases/tag/v' + infoStore.version })"
+                        {{ $t('common.version') }}: <span @click="openUrl('https://github.com/btjawa/BiliTools/releases/tag/v' + infoStore.version)"
                             class="mx-2 text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
                         >{{ infoStore.version }}</span>
                         <span class="text desc ml-2">
@@ -91,11 +91,11 @@ import { TYPE } from 'vue-toastification';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { Path, Cache, Drag } from '@/components/SettingPage';
 import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
+import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 import { Empty } from '@/components';
 import { commands } from '@/services/backend';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
-import * as shell from '@tauri-apps/plugin-shell';
 import Dropdown from '@/components/Dropdown.vue';
 import locales from '@/locales/index.json';
 import i18n from '@/i18n';
@@ -184,8 +184,8 @@ const settingsTree = computed(() => {
                 { name: t('settings.label.checkUpdate'), type: "button", data: checkUpdate.bind(this), icon: "fa-wrench" },
             ] },
             { name: t('settings.about.links.name'), icon: "fa-link", data: [
-                { name: t('settings.label.documentation'), type: "button", data: () => openPath({ path: "https://btjawa.top/bilitools" }), icon: "fa-book" },
-                { name: t('settings.label.feedback'), type: "button", data: () => openPath({ path: "https://github.com/btjawa/BiliTools/issues/new/choose" }), icon: "fa-comment-exclamation" }
+                { name: t('settings.label.documentation'), type: "button", data: () => openUrl("https://btjawa.top/bilitools"), icon: "fa-book" },
+                { name: t('settings.label.feedback'), type: "button", data: () => openUrl("https://github.com/btjawa/BiliTools/issues/new/choose"), icon: "fa-comment-exclamation" }
             ] },
             { data: [{ type: "reference" }] }
         ] }
@@ -270,14 +270,6 @@ async function checkProxy() {
     } catch(err) {
         new ApplicationError(err).handleError();
     }
-}
-async function openPath(options: { path?: string, getPath?: boolean, pathName?: PathAlias }) {
-    if (!options.path) {
-        if (!options?.getPath || !options.pathName) return;
-        const path = await getPath(options.pathName);
-        return shell.open(path);
-    }
-    return shell.open(options.path);
 }
 async function getSize(pathName: PathAlias) {
     (app.cache as any)[pathName] = 0;

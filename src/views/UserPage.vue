@@ -43,7 +43,7 @@
             </div>
             <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]">
             <template v-slot:link>
-                <a @click="open('https://app.bilibili.com')">{{ $t('user.scan.client') }}</a><br>
+                <a @click="openUrl('https://app.bilibili.com')">{{ $t('user.scan.client') }}</a><br>
             </template>
             </i18n-t>
         </div>
@@ -101,13 +101,13 @@
                 <span class="desc">{{ $t('user.others.exempt') }}</span>
                 <i18n-t keypath="user.others.agree" tag="span" class="desc">
                 <template v-slot:bilibili>
-                    <a @click="open('https://www.bilibili.com')">{{ $t('common.bilibili') }}</a>
+                    <a @click="openUrl('https://www.bilibili.com')">{{ $t('common.bilibili') }}</a>
                 </template>
                 <template v-slot:licence>
-                    <a @click="open('https://www.bilibili.com/protocal/licence.html')">{{ $t('user.others.licence') }}</a>
+                    <a @click="openUrl('https://www.bilibili.com/protocal/licence.html')">{{ $t('user.others.licence') }}</a>
                 </template>
                 <template v-slot:privacy>
-                    <a @click="open('https://www.bilibili.com/blackboard/privacy-pc.html')">{{ $t('user.others.privacy') }}</a>
+                    <a @click="openUrl('https://www.bilibili.com/blackboard/privacy-pc.html')">{{ $t('user.others.privacy') }}</a>
                 </template>
                 </i18n-t>
             </div>
@@ -118,10 +118,10 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
 import { ApplicationError } from '@/services/utils';
-import { open } from '@tauri-apps/plugin-shell';
-import { commands } from '@/services/backend';
 import { useUserStore } from '@/store';
 import { useRouter } from 'vue-router';
+import { commands } from '@/services/backend';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import * as login from '@/services/login';
 import Dropdown from '@/components/Dropdown.vue';
 

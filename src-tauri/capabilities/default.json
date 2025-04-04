@@ -23,7 +23,12 @@
     "core:window:allow-is-focused",
     "core:window:allow-unminimize",
     "core:window:allow-start-dragging",
-    "shell:allow-open",
+    "opener:allow-open-path",
+    "opener:allow-open-url",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "/**" }]
+    },
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask",
@@ -40,7 +45,7 @@
       "allow": [
         { "url": "https://*.bilibili.com/*" },
         { "url": "https://*.hdslb.com/*" },
-        { "url": "https://archive.biliimg.com/*" },
+        { "url": "https://*.biliimg.com/*" },
         { "url": "*://b23.tv/*" }
       ]
     },
