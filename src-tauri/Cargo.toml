@@ -1,6 +1,6 @@
 [package]
 name = "bilitools"
-version = "1.3.3"
+version = "1.3.4-1"
 description = "A cross-platform bilibili toolbox"
 authors = ["btjawa"]
 edition = "2021"

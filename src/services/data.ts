@@ -390,7 +390,8 @@ export async function pushBackQueue(params: {
 }) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
     const select = params.select;
-    const ext = getFileExtension(select);
+    const newSelect = { dms: select.dms ?? -1, cdc: select.cdc ?? -1, ads: select.ads ?? -1, fmt: select.fmt ?? -1 };
+    const ext = getFileExtension(newSelect);
     const info = params.info;
     const archiveInfo = {
         title: info.title,
@@ -406,7 +407,6 @@ export async function pushBackQueue(params: {
         }),
         output_filename: info.title + '.' + ext,
     };
-    const newSelect = { dms: select.dms ?? -1, cdc: select.cdc ?? -1, ads: select.ads ?? -1, fmt: select.fmt ?? -1 };
     const tasks = [
         params.video && {
             urls: [params.video.baseUrl, ...params.video.backupUrl],

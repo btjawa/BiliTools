@@ -59,6 +59,7 @@ lazy_static! {
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
     pub static ref STORAGE_PATH: PathBuf = WORKING_PATH.join("Storage");
+    pub static ref DATABASE_URL: String = format!("sqlite://{}", STORAGE_PATH.to_string_lossy());
 }
 
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";

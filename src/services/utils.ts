@@ -1,5 +1,5 @@
+import { CurrentSelect, TauriError, commands, events } from '@/services/backend';
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
-import { TauriError, commands, events } from '@/services/backend';
 import { TYPE, useToast } from "vue-toastification";
 import { MediaType } from '@/types/data.d';
 import { fetch } from '@tauri-apps/plugin-http';
@@ -332,7 +332,7 @@ export function formatBytes(bytes: number): string {
     }
 }
 
-export function getFileExtension(options: { dms: number, ads: number, cdc: number, fmt: number }) {
+export function getFileExtension(options: CurrentSelect) {
     let videoExt = 'mp4';
     let audioExt = 'aac';
     if (options.dms > 120 || options.cdc > 7) {

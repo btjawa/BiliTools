@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.4-1] - 2025-04-06
+
+### 更新
+
+- [`c56a319`](https://github.com/btjawa/BiliTools/commit/c56a319572bb1f660ffd558e4f8e3036f7549f6d) 自动处理旧版本数据库，应用更新后不再需要像 `v1.3.3` 手动处理
+
+### 修复
+
+- [`b28cb29`](https://github.com/btjawa/BiliTools/commit/b28cb299bffb732af389425e7d74e46f57463f7c) 修复更新界面文字显示问题
+
 ## [1.3.3] - 2025-04-04
 
 项目的开源协议从 `MIT` 迁移至 `GPL-3.0-or-later`

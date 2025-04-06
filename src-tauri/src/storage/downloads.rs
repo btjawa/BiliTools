@@ -15,7 +15,7 @@ use crate::{
     aria2c::{
         QueueInfo, QueueType, QUEUE_MANAGER
     },
-    shared::STORAGE_PATH
+    shared::DATABASE_URL
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn init() -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
@@ -44,7 +44,7 @@ pub async fn init() -> Result<()> {
 }
 
 pub async fn load() -> Result<Vec<Arc<QueueInfo>>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let downloads = Entity::find().all(&db)
         .await.context("Failed to load QueueInfo")?;
@@ -60,7 +60,7 @@ pub async fn load() -> Result<Vec<Arc<QueueInfo>>> {
 }
 
 pub async fn insert(info: Arc<QueueInfo>) -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let name = &info.clone().id;
     let db_info = ActiveModel {
@@ -73,7 +73,7 @@ pub async fn insert(info: Arc<QueueInfo>) -> Result<()> {
 }
 
 pub async fn delete(id: String) -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     Entity::delete_many()
         .filter(Column::Name.eq(&id))

@@ -18,7 +18,7 @@ use sea_orm::{
 };
 
 use crate::{shared::{
-    get_app_handle, Theme, CONFIG, SECRET, STORAGE_PATH
+    get_app_handle, Theme, CONFIG, DATABASE_URL, SECRET
 }, TauriResult};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
@@ -65,7 +65,7 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn init() -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
@@ -77,7 +77,7 @@ pub async fn init() -> Result<()> {
 }
 
 pub async fn load() -> Result<BTreeMap<String, JsonValue>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let configs = Entity::find().all(&db)
         .await.context("Failed to load Settings")?;
@@ -89,7 +89,7 @@ pub async fn load() -> Result<BTreeMap<String, JsonValue>> {
 }
 
 pub async fn insert(name: String, value: JsonValue) -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     Entity::insert(Model { name: name.clone(), value }.into_active_model())
         .on_conflict(
