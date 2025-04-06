@@ -13,7 +13,7 @@ use sea_orm::{
     },
 };
 
-use crate::shared::STORAGE_PATH;
+use crate::shared::DATABASE_URL;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "cookies")]
@@ -34,7 +34,7 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 pub async fn init() -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let schema = Schema::new(DbBackend::Sqlite);
     let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
@@ -89,13 +89,13 @@ pub async fn load() -> Result<BTreeMap<String, String>> {
 }
 
 pub async fn load_raw() -> Result<Vec<Model>> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     Ok(Entity::find().all(&db).await.context("Failed to load Cookies")?)
 }
 
 pub async fn insert(cookie: String) -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     let parsed_cookie = parse_cookie_header(cookie)?.into_active_model();
     let name = parsed_cookie.name.clone();
@@ -111,7 +111,7 @@ pub async fn insert(cookie: String) -> Result<()> {
 }
 
 pub async fn delete(name: String) -> Result<()> {
-    let db = Database::connect(format!("sqlite://{}", STORAGE_PATH.display()))
+    let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
     Entity::delete_many()
         .filter(Column::Name.eq(&name))

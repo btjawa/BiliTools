@@ -137,11 +137,11 @@ async fn monitor(id: String, task: &Task, progress_path: PathBuf, frames: u64, e
         let gid = Arc::new(task.gid.as_ref().unwrap_or(&String::new()).clone());
         let metadata = fs::metadata(&progress_path)
             .await.with_context(||
-                format!("Failed to get FFmpeg progress metadata: {}", &progress_path.display())
+                format!("Failed to get FFmpeg progress metadata: {}", &progress_path.to_string_lossy())
             )?;
         let mut file = fs::File::open(&progress_path)
             .await.with_context(||
-                format!("Failed to open FFmpeg progress: {}", &progress_path.display())
+                format!("Failed to open FFmpeg progress: {}", &progress_path.to_string_lossy())
             )?;
         let _ = file.seek(SeekFrom::Start(last_size)).await;
         let mut reader = io::BufReader::new(file);
