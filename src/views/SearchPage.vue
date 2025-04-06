@@ -252,7 +252,7 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 				function getDefault(ids: number[], name: 'df_dms' | 'df_cdc' | 'df_ads') {
 					return ids.includes(settings[name]) ? settings[name] : ids.sort((a, b) => b - a)[0];
 				}
-				const newSelect: CurrentSelect = {
+				const newSelect = {
 					dms: getDefault(playurl.videoQualities ?? [], 'df_dms'),
 					ads: getDefault(playurl.audioQualities ?? [], 'df_ads'),
 					cdc: -1,
@@ -275,7 +275,7 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 	try {
 		const info = v.mediaInfo.list[v.index];
 		if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
-			await handleGeneral(select, info, v.playUrlProvider);
+			await handleGeneral(select, info, v.playUrlProvider, { others });
 			return router.push('/down-page');
 		}
 		await handleOthers(others, info);

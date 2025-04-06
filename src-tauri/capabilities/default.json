@@ -23,6 +23,7 @@
     "core:window:allow-is-focused",
     "core:window:allow-unminimize",
     "core:window:allow-start-dragging",
+    "shell:allow-open",
     "opener:allow-open-path",
     "opener:allow-open-url",
     {

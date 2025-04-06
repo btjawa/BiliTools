@@ -1,6 +1,6 @@
 <template>
-<div class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9" :class="{ active }">
-    <h1 class="text-3xl"><i class="fa-solid fa-wrench mr-3"></i>{{ $t('updater.title') }}<span class="desc ml-3">{{ $t('updater.current', [updateData?.currentVersion]) }}</span></h1>
+<div class="updater text z-[99] opacity-0 w-screen flex-col transition-opacity duration-[0.3s] pointer-events-none pt-[18px] pb-12 px-9 text-[var(--content-color)]" :class="{ active }">
+    <h1 class="text-3xl"><i class="fa-wrench mr-3" :class="settings.dynFa"></i>{{ $t('updater.title') }}<span class="desc ml-3">{{ $t('updater.current', [updateData?.currentVersion]) }}</span></h1>
     <h3 class="text-lg">BiliTools v{{ updateData?.version }}<span class="desc ml-3">{{ updateData?.date }}</span></h3>
     <span class="desc">{{ $t('updater.disableUpdate') }}</span>
     <markdown-style v-html="body"
