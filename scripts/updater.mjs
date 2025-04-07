@@ -125,6 +125,8 @@ async function updater() {
   // 将数据写入文件
   fs.writeFileSync('./install.json', data);
   console.log('Generate install.json');
+  execSync('git checkout master');
+  execSync('git pull origin master');
   execSync('git config user.name github-actions');
   execSync('git config user.email github-actions@github.com');
   execSync('git add -A');
