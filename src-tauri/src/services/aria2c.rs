@@ -448,7 +448,6 @@ pub fn init() -> Result<()> {
     .args([
         "--enable-rpc".into(),
         "--log-level=warn".into(),
-        "--rpc-allow-origin-all=true".into(),
         "--referer=https://www.bilibili.com/".into(),
         "--header=Origin: https://www.bilibili.com".into(),
         format!("--input-file={session_file}"),
@@ -593,7 +592,7 @@ pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
         tokio::select! {
             Some(result) = result_rx.recv() => {
                 match result {
-                    Err(e) => { process_err(e, "ffmpeg"); },
+                    Err(e) => { process_err(e, "aria2c"); },
                     Ok(r) => if QUEUE_MANAGER.get_len(QueueType::Doing).await == 0 {
                         break notifica::notify("BiliTools", &format!("{}\nDownload Complete.", r.info.output_dir))?;
                     }
