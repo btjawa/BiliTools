@@ -24,7 +24,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             params = id.toLowerCase().startsWith('ss') ? { season_id: _id } : { ep_id: _id };
             break;
         case Types.MediaType.Music:
-            url += "/audio/music-service-c/song/info";
+            url = "https://www.bilibili.com/audio/music-service-c/web/song/info";
             params = { sid: _id };
             break;
         case Types.MediaType.Manga:

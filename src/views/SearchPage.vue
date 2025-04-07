@@ -65,10 +65,10 @@
 <script setup lang="ts">
 import { ApplicationError, filename, getImageBlob, parseId } from '@/services/utils';
 import { useInfoStore, useSettingsStore, useUserStore } from '@/store';
+import { reactive, ref, computed, nextTick, inject } from 'vue';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
 import { getMediaInfo, getPlayUrl } from '@/services/data';
-import { reactive, ref, computed } from 'vue';
 import { commands, CurrentSelect } from '@/services/backend';
 import { save as dialogSave } from '@tauri-apps/plugin-dialog';
 import { transformImage } from '@tauri-apps/api/image';
@@ -117,6 +117,7 @@ const downloadOptions = computed(() => [
 }]);
 
 const popup = ref<InstanceType<typeof Popup>>();
+const queuePage = inject('queuePage', ref(0));
 
 defineExpose({ search });
 async function search(overrideInput?: string) {
@@ -143,7 +144,7 @@ async function search(overrideInput?: string) {
 		v.mediaInfo = info;
 		v.listActive = true;
 		const scrollList = document.querySelector('.scrollList') as HTMLElement;
-		scrollList.scrollTo({ top: v.searchTarget * 50, behavior: 'smooth' });
+		nextTick(() => scrollList.scrollTo({ top: v.searchTarget * 50, behavior: 'smooth' }));
 	} catch(err) {
 		new ApplicationError(err).handleError();
 		reset();
@@ -242,6 +243,7 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 			if (index === 0) {
 				if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
 					output = await handleGeneral(select, info, v.playUrlProvider, { others });
+					queuePage.value = 0;
 					router.push('/down-page');
 				} else {
 					output = await handleOthers(others, info);
@@ -276,6 +278,7 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 		const info = v.mediaInfo.list[v.index];
 		if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
 			await handleGeneral(select, info, v.playUrlProvider, { others });
+			queuePage.value = 0;
 			return router.push('/down-page');
 		}
 		await handleOthers(others, info);
