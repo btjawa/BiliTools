@@ -50,7 +50,7 @@
 |---------|---------|---------------------------|
 | 视频    | ✅ 已完成 | <ul><li>支持视频 / 互动视频(AV/BV)、番剧 / 课程 / 电影(EP/SS)</li><li>支持 DASH、MP4、FLV</li><li>支持 4K、8K、HDR、杜比视界</li></ul> |
 | 音频    | ✅ 已完成 | <ul><li>支持 AVC、HEVC、AV1</li><li>支持 杜比、Hi-Res</li></ul> |
-| 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC 与 320Kbps 音乐(AU)</li></ul> |
+| 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC、320Kbps 音乐(AU) 与 歌单(AM)</li></ul> |
 | 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
 | 封面    | ✅ 已完成 ||

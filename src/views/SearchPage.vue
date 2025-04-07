@@ -237,19 +237,22 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 	const others = options?.others;
 	if (options?.multi) {
 		let output = '' as any;
-		await Promise.all(v.checkboxs.map(async (item, index) => {
+		try {
+			const info = v.mediaInfo.list[v.checkboxs[0]];
+			if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
+				output = await handleGeneral(select, info, v.playUrlProvider, { others });
+				queuePage.value = 0;
+				router.push('/down-page');
+			} else {
+				output = await handleOthers(others, info);
+				if (!output) return;
+			}
+		} catch(err) {
+			new ApplicationError(err).handleError();
+		}
+		await Promise.all(v.checkboxs.map(async item => {
 			const info = v.mediaInfo.list[item];
 			try {
-			if (index === 0) {
-				if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
-					output = await handleGeneral(select, info, v.playUrlProvider, { others });
-					queuePage.value = 0;
-					router.push('/down-page');
-				} else {
-					output = await handleOthers(others, info);
-					if (!output) return;
-				}
-			} else {
 				const playurl = await getPlayUrl(info, v.mediaInfo.type, v.playUrlProvider.codec);
 				function getDefault(ids: number[], name: 'df_dms' | 'df_cdc' | 'df_ads') {
 					return ids.includes(settings[name]) ? settings[name] : ids.sort((a, b) => b - a)[0];
@@ -267,7 +270,6 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 				if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
 					await handleGeneral(newSelect, info, playurl, { output, others });
 				} else await handleOthers(others, v.mediaInfo.list[item], { output });
-			}
 			} catch(err) {
 				new ApplicationError(err).handleError();
 			}

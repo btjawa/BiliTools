@@ -16,6 +16,7 @@ export enum MediaType {
   Video = "video",
   Bangumi = "bangumi",
   Music = "music",
+  MusicList = "musicList",
   Lesson = "lesson",
   Manga = "manga",
 }
@@ -317,24 +318,51 @@ export interface LessonInfo {
   message: string;
 }
 
+interface MusicInfoData {
+  id: number;
+  uid: number;
+  uname: string;
+  author: string;
+  title: string;
+  cover: string;
+  intro: string;
+  lyric: string;
+  duration: number;
+  passtime: number;
+  curtime: number;
+  aid: number;
+  bvid: string;
+  cid: number;
+  statistic: {
+    sid: number;
+    play: number;
+    collect: number;
+    comment: number;
+    share: number;
+  };
+  collectIds: unknown[];
+  coin_num: number;
+};
+
+
 export interface MusicInfo {
   code: number;
   msg: string;
+  data: MusicInfoData;
+}
+
+export interface MusicListInfo {
+  code: number;
+  msg: string;
   data: {
-    id: number;
+    menuId: number;
     uid: number;
     uname: string;
-    author: string;
     title: string;
     cover: string;
     intro: string;
-    lyric: string;
-    duration: number;
-    passtime: number;
+    ctime: number;
     curtime: number;
-    aid: number;
-    bvid: string;
-    cid: number;
     statistic: {
       sid: number;
       play: number;
@@ -342,8 +370,18 @@ export interface MusicInfo {
       comment: number;
       share: number;
     };
-    collectIds: unknown[];
-    coin_num: number;
+  };
+}
+
+export interface MusicListDetailInfo {
+  code: number;
+  msg: string;
+  data: {
+    curPage: number;
+    pageCount: number;
+    totalSize: number;
+    pageSize: number;
+    data: MusicInfoData[];
   };
 }
 
