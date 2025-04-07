@@ -1,13 +1,54 @@
-// scripts/updater.mjs
+// https://github.com/lencx/tauri-tutorial/blob/main/scripts/updater.mjs
 
-import fetch from 'node-fetch';
-import { getOctokit, context } from '@actions/github';
-import { execSync } from 'child_process';
 import fs from 'fs';
-
-import updatelog from './updatelog.mjs';
+import path from 'path';
+import fetch from 'node-fetch';
+import { execSync } from 'child_process';
+import { getOctokit, context } from '@actions/github';
 
 const token = process.env.GITHUB_TOKEN;
+const CHANGELOG = 'CHANGELOG.md';
+
+// Modified from https://github.com/lencx/tauri-tutorial/blob/main/scripts/updatelog.mjs
+function updatelog(tag, type = 'updater') {
+  const reTag = /\[.*?\] - \d+-\d+-\d+/; // e.g. [0.0.0] - 2020-01-01
+
+  const file = path.join(process.cwd(), CHANGELOG);
+
+  if (!fs.existsSync(file)) {
+    console.log('Could not found CHANGELOG.md');
+    process.exit(1);
+  }
+
+  let _tag;
+  const tagMap = {};
+  const content = fs.readFileSync(file, { encoding: 'utf8' }).split('\n');
+
+  content.forEach((line, index) => {
+    if (reTag.test(line)) {
+      _tag = line.match(reTag)[0].split(']')[0].slice(1).trim();
+      if (!tagMap[_tag]) {
+        tagMap[_tag] = [];
+        return;
+      }
+    }
+    if (_tag) {
+      tagMap[_tag].push(line);
+    }
+    if (reTag.test(content[index + 1])) {
+      _tag = null;
+    }
+  });
+  
+  if (!tagMap?.[tag]) {
+    console.log(
+      `${type === 'release' ? '[CHANGELOG.md] ' : ''}Tag ${tag} does not exist`
+    );
+    process.exit(1);
+  }
+
+  return tagMap[tag].join('\n').trim() || '';
+}
 
 async function updater() {
   if (!token) {
@@ -45,60 +86,44 @@ async function updater() {
     notes: updatelog(tag.name.slice(1)),
     pub_date: new Date().toISOString(),
     platforms: {
-      win64: { signature: '', url: '' }, // compatible with older formats
-      // linux: { signature: '', url: '' }, // compatible with older formats
-      darwin: { signature: '', url: '' }, // compatible with older formats
-    //   'darwin-aarch64': { signature: '', url: '' },
-      'darwin-x86_64': { signature: '', url: '' },
-      // 'linux-x86_64': { signature: '', url: '' },
       'windows-x86_64': { signature: '', url: '' },
-      // 'windows-i686': { signature: '', url: '' }, // no supported
+      'darwin-x86_64': { signature: '', url: '' },
+      'darwin-aarch64': { signature: '', url: '' },
+      // 'linux-x86_64': { signature: '', url: '' },
     },
   };
 
-  const setAsset = async (asset, reg, platforms) => {
+  const setAsset = async (asset, reg, platform) => {
     let sig = '';
     if (/.sig$/.test(asset.name)) {
       sig = await getSignature(`https://ghproxy.net/${asset.browser_download_url}`);
     }
-    platforms.forEach((platform) => {
-      if (reg.test(asset.name)) {
-        // 设置平台签名，检测应用更新需要验证签名
-        if (sig) {
-          updateData.platforms[platform].signature = sig;
-          return;
-        }
-        // 设置下载链接
-        updateData.platforms[platform].url = `https://ghproxy.net/${asset.browser_download_url}`;
+    if (reg.test(asset.name)) {
+      // 设置平台签名，检测应用更新需要验证签名
+      if (sig) {
+        updateData.platforms[platform].signature = sig;
+        return;
       }
-    });
+      // 设置下载链接
+      updateData.platforms[platform].url = `https://ghproxy.net/${asset.browser_download_url}`;
+    }
   };
 
   const promises = latestRelease.assets.map(async (asset) => {
-    // windows
-    await setAsset(asset, /.nsis.zip/, ['win64', 'windows-x86_64']);
-
-    // darwin
-    await setAsset(asset, /.app.tar.gz/, [
-      'darwin',
-      'darwin-x86_64',
-    //   'darwin-aarch64',
-    ]);
-
-    // linux
-    // await setAsset(asset, /.AppImage.tar.gz/, ['linux', 'linux-x86_64']);
+    await setAsset(asset, /.nsis.zip/, 'windows-x86_64');
+    await setAsset(asset, /x64.app.tar.gz/, 'darwin-x86_64');
+    await setAsset(asset, /aarch64.app.tar.gz/, 'darwin-aarch64');
+    // await setAsset(asset, /.AppImage.tar.gz/, 'linux-x86_64');
   });
   await Promise.allSettled(promises);
 
   if (!fs.existsSync('updater')) {
     fs.mkdirSync('updater');
   }
-
+  const data = JSON.stringify(updateData, null, 2);
+  console.log(data);
   // 将数据写入文件
-  fs.writeFileSync(
-    './install.json',
-    JSON.stringify(updateData, null, 2)
-  );
+  fs.writeFileSync('./install.json', data);
   console.log('Generate install.json');
   execSync('git config user.name github-actions');
   execSync('git config user.email github-actions@github.com');
