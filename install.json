@@ -1,23 +1,23 @@
 {
-  "version": "v1.3.3",
-  "notes": "项目的开源协议从 `MIT` 迁移至 `GPL-3.0-or-later`\n\n由于更新了数据结构，因此启动应用时会遇到数据库相关报错<br>\n在 `设置页 -> 缓存` 中删除 `用户数据库` 后，重启应用即可正常使用\n\n该项目将暂时不再更新漫画下载，见 [博客](https://btjawa.top/bilitools#关于漫画)\n\n### 更新\n\n- [`eed34a3`](https://github.com/btjawa/BiliTools/commit/eed34a311f4f7e1f3c9def09eecb9db5bc098352) 支持下载字幕\n- [`47319e4`](https://github.com/btjawa/BiliTools/commit/47319e4efd9f6b6014ac5473921e65580248e28a) 重构下载链接解析、下载选择界面、多选下载推送逻辑\n- [`e23a9ee`](https://github.com/btjawa/BiliTools/commit/e23a9ee9bc6b2a58feda2f17b64cee3041199aa9) 完善 Sidecar 轮询守护逻辑\n- [`27fb5fe`](https://github.com/btjawa/BiliTools/commit/27fb5fe7286f24a0b532f08ad6849f6300618996) 由 `iziToast` 迁移至 `vue-notification`\n- [`9963992`](https://github.com/btjawa/BiliTools/commit/99639922cecc9723df925ec908812b234ce16923) 由 `Vuex` 迁移至 `Pinia`\n- [`e3c6680`](https://github.com/btjawa/BiliTools/commit/e3c668075eb62f7ca58914d2d16917d31fe0844f) [`7358534`](https://github.com/btjawa/BiliTools/commit/7358534e2b32dbdb2f2586fb75de26d04ea5362d) 由 `Options API` 迁移至 `Composition API`\n\n### 修复\n\n- [`9278ce2`](https://github.com/btjawa/BiliTools/commit/9278ce23d3c4c32d0ed230e65c9aa8cb3d3a4561) 完善 `密码登录` 的风控对应逻辑\n- [`17f7579`](https://github.com/btjawa/BiliTools/commit/17f7579c49ad948084afdaac0d444d75cba5c540) 修复 `下载其他` 中内容显示问题\n- [`dae071a`](https://github.com/btjawa/BiliTools/commit/dae071abcc2aaa7bdc3d7796381f0ecf72408fd0) 使用自定义下拉菜单 ([#21](https://github.com/btjawa/BiliTools/issues/21) by [@BabaBoyGegeBoy](https://github.com/BabaBoyGegeBoy))",
-  "pub_date": "2025-04-04T13:32:08.270Z",
+  "version": "v1.3.4-1",
+  "notes": "### 更新\n\n- [`c56a319`](https://github.com/btjawa/BiliTools/commit/c56a319572bb1f660ffd558e4f8e3036f7549f6d) 自动处理旧版本数据库，应用更新后不再需要像 `v1.3.3` 手动处理\n\n### 修复\n\n- [`b28cb29`](https://github.com/btjawa/BiliTools/commit/b28cb299bffb732af389425e7d74e46f57463f7c) 修复更新界面文字显示问题",
+  "pub_date": "2025-04-06T11:27:08.051Z",
   "platforms": {
     "win64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3JGVEdOaDl6a05LWHROUXNlajRLaE9yb2d6Y0xmRmZIR0Z0UzA4QUlTdXFkQ3h4bTV5cHFvYXNDeVBNRDNJUnM2ZGF5L0dsVlpvZnNmeVpQNDd1N2dJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzNzczNDg1CWZpbGU6QmlsaVRvb2xzXzEuMy4zX3g2NC1zZXR1cC5uc2lzLnppcApnZG9FR0JXSCtQUEhEckRpeG9MLytYdGw1OU45RnM1QVl2Z1ZEOFNISkFyZXJoeGNhZlVWOVVDY0hjSVJTMFd6L3ZxR3JNRmZ1UTRFQ0RmclNhQmFDUT09Cg==",
-      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.3/BiliTools_1.3.3_x64-setup.nsis.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2tBSHNjbFljSEk2U0oySWlYVmhCVnd0S1BPU1dZWFM4QnF2OG9lQ2xsRXY3ZlRGL3I2UDhxeU95Z1owd2Zpd1N1TlFvRndyWHhPcitGcFhWcFVZZWdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzOTM4NzgyCWZpbGU6QmlsaVRvb2xzXzEuMy40LTFfeDY0LXNldHVwLm5zaXMuemlwCktzVXpyM2V5bk5LaHh2cE8zenhXQkhDRndERTN6NENpczRSbDVEUjMxRXJ5Vzh5ZDI2ZW9LcHhuc1ZDVDFXeU9tL01RRmtEYUZXQXUwejY3aUduRERRPT0K",
+      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.4-1/BiliTools_1.3.4-1_x64-setup.nsis.zip"
     },
     "darwin": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2lYdnhYdzlTdW1xcnlxTUxvbGk4Z3Bxc0dlc3RoREc5TUs1eklCZlI0NjJvQzNPOFpVbVdTa21zODQxenJlbFl4SEFTUUhMdi90QmlROGt6QS9pclFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzNzczMzI1CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKVVZwU1FFVStjVkk3aTUzVGg2ZFZRY2ZkbkdYVWFXQ1loZWJQYVhiclR0eXFkWVNCRUhudGpWU1RsUnpQVUJBaXIxQSs1U0IvYlNOMkVmc3ZNdWVkRFE9PQo=",
-      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.3/BiliTools_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ZLUXJtd2dyR2VtSG0yUVNNa083YklqcUhKM0ZMTEY5RXJ1SVpRdU1Jdld4K0RkZHJHS2tZYXVpbEY3dWJNYlp6M01KYy9iMTRjMUNTSGhlbkx0QXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzOTM4MzQ0CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKYWpkcHlBaUIvMHYzOXNyM1JuK2JzMWZjUHM2RkRCUzhFMVJHMVE0UEF6aFozS3d6blNHNEhNM29BMzI2ZVorcFJJeEV4WG13QmhDSlVXK1EvUHZCQmc9PQo=",
+      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.4-1/BiliTools_x64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2lYdnhYdzlTdW1xcnlxTUxvbGk4Z3Bxc0dlc3RoREc5TUs1eklCZlI0NjJvQzNPOFpVbVdTa21zODQxenJlbFl4SEFTUUhMdi90QmlROGt6QS9pclFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzNzczMzI1CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKVVZwU1FFVStjVkk3aTUzVGg2ZFZRY2ZkbkdYVWFXQ1loZWJQYVhiclR0eXFkWVNCRUhudGpWU1RsUnpQVUJBaXIxQSs1U0IvYlNOMkVmc3ZNdWVkRFE9PQo=",
-      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.3/BiliTools_x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3ZLUXJtd2dyR2VtSG0yUVNNa083YklqcUhKM0ZMTEY5RXJ1SVpRdU1Jdld4K0RkZHJHS2tZYXVpbEY3dWJNYlp6M01KYy9iMTRjMUNTSGhlbkx0QXdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzOTM4MzQ0CWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKYWpkcHlBaUIvMHYzOXNyM1JuK2JzMWZjUHM2RkRCUzhFMVJHMVE0UEF6aFozS3d6blNHNEhNM29BMzI2ZVorcFJJeEV4WG13QmhDSlVXK1EvUHZCQmc9PQo=",
+      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.4-1/BiliTools_x64.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3JGVEdOaDl6a05LWHROUXNlajRLaE9yb2d6Y0xmRmZIR0Z0UzA4QUlTdXFkQ3h4bTV5cHFvYXNDeVBNRDNJUnM2ZGF5L0dsVlpvZnNmeVpQNDd1N2dJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzNzczNDg1CWZpbGU6QmlsaVRvb2xzXzEuMy4zX3g2NC1zZXR1cC5uc2lzLnppcApnZG9FR0JXSCtQUEhEckRpeG9MLytYdGw1OU45RnM1QVl2Z1ZEOFNISkFyZXJoeGNhZlVWOVVDY0hjSVJTMFd6L3ZxR3JNRmZ1UTRFQ0RmclNhQmFDUT09Cg==",
-      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.3/BiliTools_1.3.3_x64-setup.nsis.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2tBSHNjbFljSEk2U0oySWlYVmhCVnd0S1BPU1dZWFM4QnF2OG9lQ2xsRXY3ZlRGL3I2UDhxeU95Z1owd2Zpd1N1TlFvRndyWHhPcitGcFhWcFVZZWdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQzOTM4NzgyCWZpbGU6QmlsaVRvb2xzXzEuMy40LTFfeDY0LXNldHVwLm5zaXMuemlwCktzVXpyM2V5bk5LaHh2cE8zenhXQkhDRndERTN6NENpczRSbDVEUjMxRXJ5Vzh5ZDI2ZW9LcHhuc1ZDVDFXeU9tL01RRmtEYUZXQXUwejY3aUduRERRPT0K",
+      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.4-1/BiliTools_1.3.4-1_x64-setup.nsis.zip"
     }
   }
 }
