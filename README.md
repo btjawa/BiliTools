@@ -23,7 +23,7 @@
 
 > [!WARNING]  
 > **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
-> **本项目优先适配 Windows，macOS 仅支持 `x86`，`Silicon / M-series` 正适配工作中**<br>
+> **本项目优先适配 Windows，macOS 随后**<br>
 > **`bcryptprimitives.dll` 是 `Windows 7` 相关问题，由于该操作系统太老，未来不会兼容**
 
 ## 参与贡献
