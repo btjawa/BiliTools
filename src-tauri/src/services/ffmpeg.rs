@@ -32,22 +32,35 @@ struct FFmpegLog {
     progress: String,
 }
 
-async fn get_frames(input: PathBuf) -> Result<u64> {
+pub async fn get_stream_info(video: PathBuf, audio: PathBuf) -> Result<(u64, String)> {
     let app = get_app_handle();
     let meta_output = app.shell().sidecar("ffmpeg")?
         .args([
-            "-i", input.to_str().unwrap(),
+            "-i", video.to_str().unwrap(),
+            "-i", audio.to_str().unwrap(),
             "-map", "0:v:0",
+            "-map", "1:a:0",
             "-c", "copy",
-            "-f", "null", "-"
+            "-f", "null", "-",
         ])
-        .output().await?;
+        .output()
+        .await?;
 
     let stderr = String::from_utf8_lossy(&meta_output.stderr);
-    // log::info!("{:?}", &stderr);
-    return Regex::new(r"frame=\s*(\d+)")?.captures_iter(&stderr)
+    log::info!("FFmpeg stderr:\n{}", &stderr);
+
+    let video_frames = Regex::new(r"frame=\s*(\d+)")?
+        .captures_iter(&stderr)
         .filter_map(|caps| caps.get(1)?.as_str().trim().parse::<u64>().ok())
-        .max().ok_or(anyhow!("Failed to parse frame count"));
+        .max().ok_or(anyhow!("Failed to parse video frame count"))?;
+
+    let audio_codec = Regex::new(r"Audio:\s*([^,]+)")?
+        .captures_iter(&stderr)
+        .filter_map(|caps| caps.get(1))
+        .map(|m| m.as_str().trim().to_string())
+        .next().ok_or(anyhow!("Failed to parse audio codec"))?;
+
+    Ok((video_frames, audio_codec))
 }
 
 pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> TauriResult<()> {
@@ -55,13 +68,17 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
         return Err(anyhow!("Insufficient number of input paths, {}", info.tasks.len()).into());
     }
     let paths = {
-        let _paths: Vec<_> = info.tasks.iter().map(|task| task.path.clone()).collect();
+        let _paths: Vec<_> = info.tasks.iter().map(|v| v.path.clone()).collect();
         Arc::new(_paths)
     };
     let output = info.output.clone();
     let video_path = info.tasks.iter()
-        .find(|task| task.task_type == TaskType::Video)
-        .map(|task| task.path.clone()).unwrap();
+        .find(|v| v.task_type == TaskType::Video)
+        .map(|v| v.path.clone()).unwrap().unwrap();
+
+    let audio_path = info.tasks.iter()
+        .find(|v| v.task_type == TaskType::Audio)
+        .map(|v| v.path.clone()).unwrap().unwrap();
 
     let app = get_app_handle();
     let progress_path = app.path().app_log_dir()?
@@ -70,15 +87,29 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
     let progress_path_clone = progress_path.clone();
     fs::create_dir_all(progress_path.parent().unwrap()).await
         .context("Failed to create FFmpeg progress Folder")?;
-    let frames = get_frames(video_path.unwrap()).await.context("Failed to get frames")
-    .map_err(|e| process_err(TauriError::from(e), "ffmpeg")).unwrap_or(0);
+
+    let stream_info = get_stream_info(video_path, audio_path).await
+        .context("Failed to get stream info")
+        .map_err(|e| process_err(TauriError::from(e), "ffmpeg"))?;
+
+    let ext = output.extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
+
+    let codec = match ext {
+        "mp4" | "flv" => match stream_info.1.as_str() {
+            "aac" | "mp3" => "copy",
+            _ => "aac",
+        },
+        _ => "copy",
+    };
     let ffmpeg = async {
         let status = app.shell().sidecar("ffmpeg")?
             .args([
                 "-i", paths[0].clone().unwrap().to_str().unwrap(),
                 "-i", paths[1].clone().unwrap().to_str().unwrap(),
                 "-c:v", "copy",
-                "-c:a", "aac",
+                "-c:a", codec,
                 "-shortest",
                 &output.to_str().unwrap(), "-progress",
                 progress_path_clone.to_str().unwrap(), "-y"
@@ -92,8 +123,8 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
         }
     };
     let monitor = async {
-        let task = info.tasks.iter().find(|task| task.task_type == TaskType::Video).unwrap();
-        monitor(info.id.clone(), task, progress_path, frames, event).await?;
+        let task = info.tasks.iter().find(|v| v.task_type == TaskType::Video).unwrap();
+        monitor(info.id.clone(), task, progress_path, stream_info.0, event).await?;
         Ok::<(), anyhow::Error>(())
     };
     let result = tokio::try_join!(ffmpeg, monitor);
