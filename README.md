@@ -23,7 +23,7 @@
 
 > [!WARNING]  
 > **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
-> **本项目优先适配 Windows，macOS 仅支持 `x86`，`Silicon / M-series` 正适配工作中**<br>
+> **本项目优先适配 Windows，macOS 随后**<br>
 > **`bcryptprimitives.dll` 是 `Windows 7` 相关问题，由于该操作系统太老，未来不会兼容**
 
 ## 参与贡献
@@ -50,7 +50,7 @@
 |---------|---------|---------------------------|
 | 视频    | ✅ 已完成 | <ul><li>支持视频 / 互动视频(AV/BV)、番剧 / 课程 / 电影(EP/SS)</li><li>支持 DASH、MP4、FLV</li><li>支持 4K、8K、HDR、杜比视界</li></ul> |
 | 音频    | ✅ 已完成 | <ul><li>支持 AVC、HEVC、AV1</li><li>支持 杜比、Hi-Res</li></ul> |
-| 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC 与 320Kbps 音乐(AU)</li></ul> |
+| 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC、320Kbps 音乐(AU) 与 歌单(AM)</li></ul> |
 | 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
 | 封面    | ✅ 已完成 ||

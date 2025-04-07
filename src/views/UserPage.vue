@@ -11,12 +11,12 @@
             <div class="details absolute top-[10px] ml-[120px]">
                 <div class="mb-[6px] flex items-center gap-2">
                     <h2>{{ user.name }}</h2>
-                    <img class="h-[14px]" :src="level" />
-                    <img class="h-5" v-if="user.vipLabel" :src="user.vipLabel" />
+                    <img draggable="false" class="h-[14px]" :src="level" />
+                    <img draggable="false" class="h-5" v-if="user.vipLabel" :src="user.vipLabel" />
                 </div>
-                <span class="text-[var(--desc-color)] text-sm w-[530px]">{{ user.desc }}</span>
+                <span class="text-[var(--desc-color)] text-sm w-[530px] text">{{ user.desc }}</span>
             </div>
-            <div class="stat ml-auto mr-6">
+            <div class="stat ml-auto mr-6 text">
                 <div class="stat__item" v-for="item in Object.keys(user.stat)">
                     <span>{{ $t('user.stat.' + item) }}</span>
                     <span>{{ (user.stat as any)[item] }}</span>

@@ -24,7 +24,11 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             params = id.toLowerCase().startsWith('ss') ? { season_id: _id } : { ep_id: _id };
             break;
         case Types.MediaType.Music:
-            url = "https://www.bilibili.com/audio/music-service-c/web/song/info";
+            url += "/audio/music-service-c/song/info";
+            params = { sid: _id };
+            break;
+        case Types.MediaType.MusicList:
+            url = "https://www.bilibili.com/audio/music-service-c/web/menu/info";
             params = { sid: _id };
             break;
         case Types.MediaType.Manga:
@@ -234,6 +238,44 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
                 }]
             };
         }
+        case Types.MediaType.MusicList: {
+            const info = body as Types.MusicListInfo;
+            if (info.code !== 0) {
+                throw new ApplicationError(info.msg, { code: info.code });
+            }
+            const data = info.data;
+            const listInfo = await tryFetch('https://www.bilibili.com/audio/music-service-c/web/song/of-menu?pn=1&ps=100&sid=' + _id) as Types.MusicListDetailInfo;
+            return {
+                id: data.menuId,
+                title: data.title,
+                cover: data.cover.replace("http:", "https:"),
+                covers: [],
+                desc: data.intro,
+                type: Types.MediaType.Music,
+                stat: {
+                    play: data.statistic.play,
+                    reply: data.statistic.comment,
+                    favorite: data.statistic.collect,
+                    share: data.statistic.share,
+                },
+                upper: {
+                    avatar: null,
+                    name: data.uname,
+                    mid: data.uid,
+                },
+                list: listInfo.data.data.map((item, index) => ({
+                    title: item.title,
+                    cover: item.cover.replace("http:", "https:"),
+                    desc: data.intro,
+                    id: item.id,
+                    cid: item.cid,
+                    eid: item.id,
+                    duration: item.duration,
+                    ss_title: data.title,
+                    index
+                }))
+            };
+        }
         case Types.MediaType.Manga: {
             const info = body as Types.MangaInfo;
             if (info.code !== 0) {
@@ -312,8 +354,8 @@ export async function getPlayUrl(
             params.ep_id = info.eid;
             break;
         case Types.MediaType.Music:
-            url += '/audio/music-service-c/url';
-            params = { songid: info.id, privilege: 2, quality: 0, mid: user.mid, platform: 'android' } as any;
+            url = 'https://www.bilibili.com/audio/music-service-c/web/url';
+            params = { sid: info.id, privilege: 2, quality: 0 } as any;
             break;
     }
     const body = await tryFetch(url, {
@@ -323,16 +365,11 @@ export async function getPlayUrl(
     if (type === Types.MediaType.Music) {
         const info = body as Types.MusicPlayUrlInfo;
         const data = info.data;
-        const audio: Types.PlayUrlResult[] = await Promise.all(data.qualities.map(async item => {
-            params.quality = item.type;
-            const result = item.type === 0 ? info : await tryFetch(url, { params }) as Types.MusicPlayUrlInfo;
-            const data = result.data;
-            return {
-                id: { 0: 30228, 1: 30280, 2: 30380, 3: 30252 }[data.type] ?? -1,
-                baseUrl: data.cdns[0],
-                backupUrl: data.cdns,
-            };
-        }));
+        const audio = [{
+            id: { 0: 30228, 1: 30280, 2: 30380, 3: 30252 }[data.type] ?? -1,
+            baseUrl: data.cdns[0],
+            backupUrl: data.cdns
+        }];
         const codec = Types.StreamCodecType.Dash;
         const codecid = Types.ReverseStreamCodecMap[codec];
         return { audio, audioQualities: audio.map(v => v.id), codec, codecid }
