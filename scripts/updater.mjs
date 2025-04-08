@@ -111,8 +111,8 @@ async function updater() {
 
   const promises = latestRelease.assets.map(async (asset) => {
     await setAsset(asset, /.nsis.zip/, 'windows-x86_64');
-    await setAsset(asset, /x64.app.tar.gz/, 'darwin-x86_64');
-    await setAsset(asset, /aarch64.app.tar.gz/, 'darwin-aarch64');
+    await setAsset(asset, /universal.app.tar.gz/, 'darwin-x86_64');
+    await setAsset(asset, /universal.app.tar.gz/, 'darwin-aarch64');
     // await setAsset(asset, /.AppImage.tar.gz/, 'linux-x86_64');
   });
   await Promise.allSettled(promises);
@@ -125,8 +125,6 @@ async function updater() {
   // 将数据写入文件
   fs.writeFileSync('./install.json', data);
   console.log('Generate install.json');
-  execSync('git checkout master');
-  execSync('git pull origin master');
   execSync('git config user.name github-actions');
   execSync('git config user.email github-actions@github.com');
   execSync('git add -A');
