@@ -28,7 +28,9 @@ body:
       options:
         - Windows 10
         - Windows 11
-        - macOS
+        - macOS M 芯片
+        - macOS Intel 芯片
+        - Linux
     validations:
       required: true
 
@@ -38,8 +40,11 @@ body:
       label: 日志
       description: |
         请粘贴日志，或是上传日志文件
+
         Windows 日志文件路径：`C:\Users\用户名\AppData\Local\com.btjawa.bilitools\logs\BiliTools.log`
+
         macOS 日志文件路径：`/Users/用户名/Library/Logs/com.btjawa.bilitools/BiliTools.log`
+        
         也可在应用内的 设置 -> 存储 -> 缓存 下找到日志，点击左侧按钮可打开日志文件夹
 
     validations:
