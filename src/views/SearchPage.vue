@@ -63,9 +63,9 @@
 </div></template>
 
 <script setup lang="ts">
-import { ApplicationError, filename, getImageBlob, parseId } from '@/services/utils';
+import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId } from '@/services/utils';
 import { useInfoStore, useSettingsStore, useUserStore } from '@/store';
-import { reactive, ref, computed, nextTick, inject } from 'vue';
+import { reactive, ref, computed, nextTick, inject, watch } from 'vue';
 import { MediaInfo, MediaInfoItem, Popup } from '@/components/SearchPage';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
 import { getMediaInfo, getPlayUrl } from '@/services/data';
@@ -78,6 +78,7 @@ import * as data from '@/services/data';
 import * as Types from '@/types/data.d';
 import i18n from '@/i18n';
 import router from '@/router';
+import { TYPE } from 'vue-toastification';
 
 const settings = useSettingsStore();
 const v = reactive({
@@ -119,6 +120,11 @@ const downloadOptions = computed(() => [
 const popup = ref<InstanceType<typeof Popup>>();
 const queuePage = inject('queuePage', ref(0));
 
+watch(() => v.checkboxs, (v, old) => {
+	if (v.length > old.length && v.length > 30)
+	return AppLog(i18n.global.t('error.multiSelectLimit'), TYPE.WARNING);
+});
+
 defineExpose({ search });
 async function search(overrideInput?: string) {
 	function reset() {
@@ -139,6 +145,7 @@ async function search(overrideInput?: string) {
 		}
 		const info = await getMediaInfo(id, type);
 		v.searchTarget = info.list.findIndex(v => v.id === info.id);
+		v.checkboxs = [v.searchTarget];
 		info.cover = await getImageBlob(info.cover);
 		info.upper.avatar = info.upper.avatar ? await getImageBlob(info.upper.avatar + '@128h') : null;
 		v.mediaInfo = info;
@@ -203,18 +210,26 @@ async function handleGeneral(select: CurrentSelect, info: Types.MediaInfo['list'
 
 async function handleOthers(others: { key: string, data: any }, info: Types.MediaInfo['list'][0], options?: { output?: string }) {
 	let othersData;
-	const subtitle = others.key === 'subtitles' ? (await data.getSubtitles(info.id, info.cid)).find(v => v.id === others.data) : undefined;
+	let title = info.title;
 	switch (others.key) {
 		case 'liveDanmaku': othersData = await data.getLiveDanmaku(info.id, info.cid, info.duration ?? 0); break;
-		case 'historyDanmaku': othersData = await data.getHistoryDanmaku(info.cid, others.data); break;
+		case 'historyDanmaku':
+			othersData = await data.getHistoryDanmaku(info.cid, others.data);
+			title += ('_' + others.data);
+			break;
 		case 'aiSummary': othersData = await data.getAISummary(info, v.mediaInfo.upper.mid ?? 0); break;
-		case 'subtitles': othersData = await data.getSubtitle(subtitle?.subtitle_url!); break;
-		case 'covers': othersData = await data.getBinary(v.mediaInfo.covers.find(v => v.id === others.data)?.url ?? info.cover);
+		case 'subtitles':
+			const subtitles = await data.getSubtitles(info.id, info.cid);
+			const subtitle = subtitles.find(v => v.lan === others.data);
+			if (!subtitle) throw 'subtitle url not found';
+			title += ('_' + subtitle.lan_doc);
+			othersData = await data.getSubtitle(subtitle.subtitle_url);
+			break;
+		case 'covers':
+			othersData = await data.getBinary(v.mediaInfo.covers.find(v => v.id === others.data)?.url ?? info.cover);
+			title += ('_' +( v.mediaInfo.covers.find(v => v.id === others.data)?.id ?? 'cover'));
+			break;
 	}
-	let title = info.title;
-	if (others.key === 'subtitles') title += ('_' + (others.data as Types.SubtitleList).lan_doc);
-	if (others.key === 'historyDanmaku') title += ('_' + others.data);
-	if (others.key === 'covers') title += ('_' +( v.mediaInfo.covers.find(v => v.id === others.data)?.id ?? 'cover'));
 	const name = filename({ title, mediaType: i18n.global.t('home.label.' + others.key), aid: info.id  });
 	const map = othersMap[others.key as keyof typeof othersMap];
 	const path = options?.output ? await pathJoin(await dirname(options?.output), name) + '.' + map.suffix : await dialogSave({
@@ -235,28 +250,47 @@ async function handleOthers(others: { key: string, data: any }, info: Types.Medi
 
 async function handlePopupClose(select: CurrentSelect, options?: { others?: { key: string, data: any }, multi?: boolean }) {
 	const others = options?.others;
-	if (options?.multi) {
-		let output = '' as any;
+	if (!options?.multi) {
 		try {
-			const info = v.mediaInfo.list[v.checkboxs[0]];
+			const info = v.mediaInfo.list[v.index];
 			if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
-				output = await handleGeneral(select, info, v.playUrlProvider, { others });
+				await handleGeneral(select, info, v.playUrlProvider, { others });
 				queuePage.value = 0;
 				router.push('/down-page');
-			} else {
-				output = await handleOthers(others, info);
-				if (!output) return;
-			}
+			} else await handleOthers(others, info);
 		} catch(err) {
 			new ApplicationError(err).handleError();
 		}
-		await Promise.all(v.checkboxs.map(async item => {
+		return;
+	}
+	const conc = settings.max_conc;
+	const chunks = [];
+	for (let i = 0; i < v.checkboxs.length; i += conc) {
+		chunks.push(v.checkboxs.slice(i, i + conc));
+	}
+	let output = '' as any;
+	try {
+		const info = v.mediaInfo.list[chunks[0][0]];
+		if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
+			output = await handleGeneral(select, info, v.playUrlProvider, { others });
+			queuePage.value = 0;
+			router.push('/down-page');
+		} else {
+			output = await handleOthers(others, info);
+			if (!output) return;
+		}
+	} catch(err) {
+		new ApplicationError(err).handleError();
+	}
+	chunks[0].shift();
+	for (const chunk of chunks) {
+		await Promise.all(chunk.map(async item => {
 			const info = v.mediaInfo.list[item];
+			function getDefault(ids: number[], name: 'df_dms' | 'df_cdc' | 'df_ads') {
+				return ids.includes(settings[name]) ? settings[name] : ids.sort((a, b) => b - a)[0];
+			}
 			try {
 				const playurl = await getPlayUrl(info, v.mediaInfo.type, v.playUrlProvider.codec);
-				function getDefault(ids: number[], name: 'df_dms' | 'df_cdc' | 'df_ads') {
-					return ids.includes(settings[name]) ? settings[name] : ids.sort((a, b) => b - a)[0];
-				}
 				const newSelect = {
 					dms: getDefault(playurl.videoQualities ?? [], 'df_dms'),
 					ads: getDefault(playurl.audioQualities ?? [], 'df_ads'),
@@ -274,18 +308,7 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 				new ApplicationError(err).handleError();
 			}
 		}));
-		return;
-	}
-	try {
-		const info = v.mediaInfo.list[v.index];
-		if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
-			await handleGeneral(select, info, v.playUrlProvider, { others });
-			queuePage.value = 0;
-			return router.push('/down-page');
-		}
-		await handleOthers(others, info);
-	} catch(err) {
-		new ApplicationError(err).handleError();
+		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
 	}
 }
 

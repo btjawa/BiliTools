@@ -18,7 +18,8 @@
         "merge": "合併",
         "complete": "完成",
         "download": "下載",
-        "startDownload": "開始下載"
+        "startDownload": "點擊以開始下載"
     },
+    "nextStep": "下一步",
     "empty": "此隊列為空～"
 }

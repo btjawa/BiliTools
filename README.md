@@ -17,14 +17,23 @@
 ## 介绍
 基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，未来还会陆续支持更多功能（请看 [Project](https://github.com/users/btjawa/projects/4)）
 
-请确保只在该项目的 `Release` 页下载应用（或自行构建），**不保证其他来源的安全性**
+请确保只在该项目的 [Release](https://github.com/btjawa/BiliTools/releases/latest) 页下载应用（或自行构建），**不保证其他来源的安全性**
 
 文档 / 其他信息发布页：[https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) 
 
 > [!WARNING]  
 > **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
-> **本项目优先适配 Windows，macOS 随后**<br>
-> **`bcryptprimitives.dll` 是 `Windows 7` 相关问题，由于该操作系统太老，未来不会兼容**
+> **添加下载项目后，须在 下载->等待中 右上角点击开始下载，不写成立即下载是为了方便添加后续项目**<br>
+
+## 安装使用
+
+`bcryptprimitives.dll` 是 `Windows 7` 中系统组件缺失问题，由于该系统版本太旧，未来不会计划兼容
+
+要求 Windows 版本 >= **8.1**，macOS 版本 >= **11.0 (BigSur)**
+
+Windows 下载 [Release](https://github.com/btjawa/BiliTools/releases/latest) 中的 `BiliTools_xxx_x64-setup.exe` 进行安装，若卡在安装 `WebView2` 的过程，可前往 [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2) 手动安装
+
+macOS 下载 [Release](https://github.com/btjawa/BiliTools/releases/latest) 中的 `BiliTools_xxx_universal.dmg` 进行安装，不建议单独下载对应架构（例如 `aarch64.dmg`），容易出现 [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137) 中的 "已损坏" 问题
 
 ## 参与贡献
 

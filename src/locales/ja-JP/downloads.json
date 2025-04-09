@@ -18,7 +18,8 @@
         "merge": "マージ",
         "complete": "完了",
         "download": "ダウンロード",
-        "startDownload": "ダウンロードを開始"
+        "startDownload": "クリックしてダウンロードを開始"
     },
+    "nextStep": "次のステップ",
     "empty": "このキューは空です～"
 }

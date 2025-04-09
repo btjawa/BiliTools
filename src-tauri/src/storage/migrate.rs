@@ -1,4 +1,4 @@
-use crate::shared::{get_app_handle, DATABASE_URL, STORAGE_PATH, WORKING_PATH};
+use crate::shared::{get_app_handle, get_ts, DATABASE_URL, STORAGE_PATH, WORKING_PATH};
 use sea_orm::{entity::prelude::*, Database, Statement};
 use anyhow::{Context, Result};
 use tauri::Manager;
@@ -28,15 +28,16 @@ pub async fn init() -> Result<()> {
         db.get_database_backend(), "PRAGMA user_version".to_string()
     )).await?;
     drop(db);
+    let backup_path = format!("{}_{}", STORAGE_PATH.to_string_lossy(), get_ts(true));
     if let Some(row) = result {
         let version: i32 = row.try_get("", "user_version").unwrap_or(0);
         log::info!("Storage version {version}");
         if version < STORAGE_VERSION {
-            fs::remove_file(STORAGE_PATH.as_path()).await.map_err(|e| { log::error!("{}", e.to_string()); e.to_string() }).unwrap();
+            fs::rename(STORAGE_PATH.as_path(), backup_path).await?;
             app.restart();
         }
     } else {
-        fs::remove_file(STORAGE_PATH.as_path()).await?;
+        fs::rename(STORAGE_PATH.as_path(), backup_path).await?;
         app.restart();
     }
     Ok(())

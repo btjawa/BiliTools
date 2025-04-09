@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.5] - 2025-04-09
+
+### 更新
+
+- [`f2719de`](https://github.com/btjawa/BiliTools/commit/f2719de4bfdda84892928d9b9456a1a841a284cd) 多选下载节流机制 ([#33](https://github.com/btjawa/BiliTools/issues/33) by [@zss2430922519](https://github.com/zss2430922519))
+- [`f2719de`](https://github.com/btjawa/BiliTools/commit/f2719de4bfdda84892928d9b9456a1a841a284cd) 更新部分翻译文本
+
 ## [1.3.4] - 2025-04-08
 
 现已支持 M 系列芯片 Mac

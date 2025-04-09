@@ -5,5 +5,6 @@
     "loginExpired": "ログインの有効期限が切れています",
     "countryListFailed": "国際電話番号の取得に失敗しました",
     "tryManualUpdate": "GitHub から手動で更新をダウンロードしてください",
+    "multiSelectLimit": "一度に30個以上選択することはお勧めしません",
     "errorProvider": "{0} からのエラー"
 }

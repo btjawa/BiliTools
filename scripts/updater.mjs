@@ -111,8 +111,8 @@ async function updater() {
 
   const promises = latestRelease.assets.map(async (asset) => {
     await setAsset(asset, /.nsis.zip/, 'windows-x86_64');
-    await setAsset(asset, /x64.app.tar.gz/, 'darwin-x86_64');
-    await setAsset(asset, /aarch64.app.tar.gz/, 'darwin-aarch64');
+    await setAsset(asset, /universal.app.tar.gz/, 'darwin-x86_64');
+    await setAsset(asset, /universal.app.tar.gz/, 'darwin-aarch64');
     // await setAsset(asset, /.AppImage.tar.gz/, 'linux-x86_64');
   });
   await Promise.allSettled(promises);

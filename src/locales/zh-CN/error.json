@@ -5,5 +5,6 @@
     "loginExpired": "登录状态已过期",
     "countryListFailed": "获取国际冠字码失败",
     "tryManualUpdate": "请在 GitHub 手动下载最新更新",
+    "multiSelectLimit": "不建议一次选择超过 30 个选项",
     "errorProvider": "来自 {0} 的错误"
 }

@@ -5,5 +5,6 @@
     "loginExpired": "登錄狀態已過期",
     "countryListFailed": "獲取國際區號失敗",
     "tryManualUpdate": "請在 GitHub 手動下載最新更新",
+    "multiSelectLimit": "不建議一次選擇超過 30 個選項",
     "errorProvider": "來自 {0} 的錯誤"
 }
