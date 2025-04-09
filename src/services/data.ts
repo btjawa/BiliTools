@@ -550,7 +550,7 @@ export async function getFavoriteContent(media_id: number, pn: number) {
 
 export async function getSubtitles(id: number, cid: number): Promise<Types.SubtitleList[]> {
     const playerInfo = await getPlayerInfo(id, cid);
-    return playerInfo.subtitle.subtitles;
+    return playerInfo.subtitle?.subtitles;
 }
 
 export async function getSubtitle(input: string) {

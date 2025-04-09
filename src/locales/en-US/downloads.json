@@ -18,7 +18,8 @@
         "merge": "Merge",
         "complete": "Complete",
         "download": "Download",
-        "startDownload": "Start Download"
+        "startDownload": "Click to Start Download"
     },
+    "nextStep": "Next Step",
     "empty": "This queue is empty~"
 }

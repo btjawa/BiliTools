@@ -28,7 +28,7 @@
             v-if="isOthers ? (key === 'dms' || key === 'ads') : key === 'fmt'"
             @click="confirm(key)">
               <i :class="[settings.dynFa, 'fa-right']"></i>
-              <span>{{ $t('common.confirm') }}</span>
+              <span>{{ $t('downloads.nextStep') }}</span>
           </button>
           <hr v-if="index < Object.keys(optionsProvider).length - 1" />
         </template>
@@ -56,7 +56,7 @@ const playUrlProvider = ref<PlayUrlProvider>({} as any);
 const othersProvider = ref<OthersProvider>({} as any);
 const mediaType = ref<MediaType>(MediaType.Video);
 const select = ref<CurrentSelect>({ dms: -1, cdc: -1, ads: -1, fmt: -1 });
-const subtitle = ref(-1);
+const subtitle = ref(String());
 const date = ref(new Intl.DateTimeFormat('en-CA').format(new Date()));
 const optionsProvider = ref<Record<string, { data: any[], icon: string; title: string; getText: Function }>>({});
 
@@ -77,7 +77,7 @@ function init(playUrl: PlayUrlProvider, type: MediaType, options?: { others?: Ot
   );
   select.value.fmt = playUrl.codecid;
   const others = options?.others ?? {} as OthersProvider;
-  subtitle.value = others.subtitles?.[0]?.id;
+  subtitle.value = others.subtitles?.[0]?.lan;
   othersProvider.value = others;
   optionsProvider.value = {
     danmaku: {
@@ -161,8 +161,8 @@ function handleClick(key: string, id: any) {
 
 function getDropdown() {
   return othersProvider.value.subtitles.map(v => ({
-    id: v.id, name: v.lan_doc + `(${v.lan})`
-  })).sort((a, b) => b.id - a.id);
+    id: v.lan, name: v.lan_doc + `(${v.lan})`
+  }));
 }
 
 function confirm(key: string) {

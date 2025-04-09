@@ -5,5 +5,6 @@
     "loginExpired": "Login session has expired",
     "countryListFailed": "Failed to retrieve the international dialing code",
     "tryManualUpdate": "Try to manually download updates from GitHub",
+    "multiSelectLimit": "It is not recommended to select more than 30 items at once",
     "errorProvider": "Error from {0}"
 }

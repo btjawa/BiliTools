@@ -45,7 +45,7 @@
             </div>
         </div>
         <button v-if="queuePage === 0 && queue.waiting.length > 0" @click="processQueue()"
-            class="absolute right-6 top-6"
+            class="absolute right-6 top-6 primary-color"
         >
             <i :class="[settings.dynFa, 'fa-download']"></i><span>{{ $t('downloads.label.startDownload') }}</span>
         </button>
