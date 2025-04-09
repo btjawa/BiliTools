@@ -30,6 +30,10 @@
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "/**" }]
     },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "*://*" }]
+    },
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask",

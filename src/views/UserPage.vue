@@ -41,7 +41,7 @@
                     <span class="whitespace-pre-wrap text-center text-[color:var(--dark-button-color)]">{{ $t('user.scan.' + scanCode) }}</span>
                 </div>
             </div>
-            <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]">
+            <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]" scope="global">
             <template v-slot:link>
                 <a @click="openUrl('https://app.bilibili.com')">{{ $t('user.scan.client') }}</a><br>
             </template>
@@ -67,7 +67,7 @@
                             +{{ cid }}
                             <i class="fa-solid fa-triangle text-[10px] absolute -right-3 top-1.5 rotate-180"></i>
                         </div>
-                        <Dropdown class="absolute z-20 pointer-events-none translate-y-6"
+                        <Dropdown class="!absolute z-20 pointer-events-none translate-y-6"
                             :drop="getCountryList()" :emit="(v) => cid = v" :name="cid"
                             :use-active="{ active: dropdownActive, close: () => dropdownActive = false, target: dropdownButton }"
                         ></Dropdown>
@@ -99,7 +99,7 @@
             </div>
             <div class="absolute bottom-2 text-sm">
                 <span class="desc">{{ $t('user.others.exempt') }}</span>
-                <i18n-t keypath="user.others.agree" tag="span" class="desc">
+                <i18n-t keypath="user.others.agree" tag="span" class="desc" scope="global">
                 <template v-slot:bilibili>
                     <a @click="openUrl('https://www.bilibili.com')">{{ $t('common.bilibili') }}</a>
                 </template>

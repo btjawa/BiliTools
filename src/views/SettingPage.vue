@@ -11,14 +11,14 @@
         <div class="flex flex-col flex-1 mr-6" ref="$subPage">
             <Empty v-if="settingsTree.find(item => item.id == subPage)?.content?.length === 0" text="common.wip" />
             <section v-for="(item, index) in settingsTree.find(item => item.id == subPage)?.content">
-                <h3 v-if="item.name" class="font-semibold">
+                <h3 v-if="item.id" class="font-semibold">
                     <i class="mr-1" :class="[settings.dynFa, item.icon]"></i>
-                    {{ item.name }}
+                    {{ $t(`settings.${subPage}.${item.id}.name`) }}
                 </h3>
-                <span v-if="'desc' in item" class="desc">{{ item.desc }}</span>
-                <div v-for="unit in item.data as UnitType[]" :class=unit.type class="mt-3">
-                    <h3>{{ unit.name }}</h3>
-                    <span v-if="'desc' in unit" class="desc">{{ unit.desc }}</span>
+                <span v-if="item.desc" class="desc">{{ $t(`settings.${subPage}.${item.id}.desc`) }}</span>
+                <div v-for="unit in item.data" :class=unit.type class="mt-3">
+                    <h3 v-if="unit.name || unit.id">{{ unit.name ?? $t(`settings.label.${unit.id}`) }}</h3>
+                    <span v-if="unit.desc" class="desc">{{ unit.desc }}</span>
                     <Path v-if="unit.type === 'path'" class="h-8 mt-2"
                         :data="unit.data" :update="updatePath" :open="openPath"
                     />
@@ -27,11 +27,11 @@
                     />
                     <Dropdown v-if="unit.type === 'dropdown'"
                         :drop="getDropdown(unit.drop)" :emit="(v) => updateSettings(unit.data, v)"
-                        :name="getDropdown(unit.drop).find(v => v.id === settings[unit.data])?.name"
+                        :name="getDropdown(unit.drop).find(v => v.id === (settings as any)[unit.data])?.name"
                     />
                     <Drag v-if="unit.type === 'drag'"
                         :data="unit.data" :placeholders="unit.placeholders"
-                        :update="updateNest" :shorten="unit.shorten"
+                        :update="updateNest" :shorten="$t(`settings.${subPage}.${item.id}.shorten`)"
                     />
                     <input v-if="unit.type === 'input'"
                         :type="unit.data === 'password' ? 'password' : 'text'"
@@ -47,7 +47,7 @@
                         <div class="circle h-4 w-4 rounded-lg bg-[color:var(--desc-color)] absolute left-[3px] top-[3px]"></div>
                     </button>
                     <button v-if="unit.type === 'button'" @click="unit.data()">
-                        <span>{{ unit.name }}</span>
+                        <span>{{ $t(`settings.label.${unit.id}`) }}</span>
                         <i :class="[settings.dynFa, unit.icon]"></i>
                     </button>
                     <div v-if="unit.type === 'about'">
@@ -76,7 +76,7 @@
             <button v-for="item in settingsTree" @click="subPage = item.id" :class="subPage !== item.id || 'active'"
                 class="pr-0 w-60 flex items-center justify-end bg-[color:unset] gap-3 hover:bg-[color:var(--button-color)]"
             >
-                <span class="text-base">{{ item.name }}</span>
+                <span class="text-base">{{ $t(`settings.${item.id}.name`) }}</span>
                 <i :class="['fa-light', 'min-w-4', item.icon]"></i>
                 <label class="w-[3px] rounded-md h-4 bg-[color:var(--primary-color)] invisible"></label>
             </button>
@@ -94,24 +94,12 @@ import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
 import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 import { Empty } from '@/components';
 import { commands } from '@/services/backend';
+import i18n, { locales } from '@/i18n';
 import * as path from '@tauri-apps/api/path';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import Dropdown from '@/components/Dropdown.vue';
-import locales from '@/locales/index.json';
-import i18n from '@/i18n';
 
 type PathAlias = keyof typeof app.cache;
-
-type UnitType =
-| { name: string; type: 'path'; data: keyof typeof settings.$state; }
-| { name: string; type: 'switch'; data: keyof typeof settings.$state; }
-| { name: string; type: 'cache'; data: PathAlias; }
-| { name: string; type: 'dropdown'; data: keyof typeof settings.$state; drop: keyof typeof infoStore.mediaMap | { id: number, name: string }[]; }
-| { name: string; type: 'button'; data: Function; icon: string; }
-| { name: string; type: 'input'; data: string; placeholder: string; }
-| { name: string; type: 'drag'; data: string; shorten: string; placeholders: Array<{ id: number | string, name: string | number }>; }
-| { name: string; type: 'about' }
-| { name: string; type: 'reference' };
 
 const subPage = ref("storage");
 const $subPage = ref<HTMLElement>();
@@ -119,29 +107,26 @@ const settings = useSettingsStore();
 const infoStore = useInfoStore();
 const app = useAppStore();
 
-const settingsTree = computed(() => {
+const settingsTree = computed<any[]>(() => {
     const t = i18n.global.t;
     return [
-        { id: "storage", name: t('settings.storage.name'), icon: "fa-database", content: [
-            { name: t('settings.storage.paths.name'), icon: "fa-folder", data: [
-                { name: t('settings.label.down_dir'), type: "path", data: "down_dir" },
-                { name: t('settings.label.temp_dir'), type: "path", desc: t('settings.storage.paths.temp_dir.desc'), data: "temp_dir" },
+        { id: "storage", icon: "fa-database", content: [
+            { id: 'paths', icon: "fa-folder", data: [
+                { id: 'down_dir', type: "path", data: "down_dir" },
+                { id: 'temp_dir', type: "path", desc: t('settings.storage.paths.temp_dir.desc'), data: "temp_dir" },
             ] },
-            { name: t('settings.storage.cache.name'), icon: "fa-database", desc: t('settings.storage.cache.desc'), data: [
-                { name: t('settings.label.log'), type: "cache", data: "log" },
-                { name: t('settings.label.temp'), type: "cache", data: "temp" },
-                { name: t('settings.label.webview'), type: "cache", data: "webview" },
-                { name: t('settings.label.database'), type: "cache", data: "database" },
+            { id: 'cache', icon: "fa-database", desc: true, data: [
+                { id: 'log', type: "cache", data: "log" },
+                { id: 'temp', type: "cache", data: "temp" },
+                { id: 'webview', type: "cache", data: "webview" },
+                { id: 'database', type: "cache", data: "database" },
             ] },
-            { name: t('settings.storage.language.name'), icon: "fa-earth-americas", data: [
-                { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: locales.languages.map(lang => ({
-                    id: lang.id,
-                    name: `${lang.name} ${lang.flag}`
-                })) }
+            { id: 'language', icon: "fa-earth-americas", data: [
+                { name: t('settings.storage.language.name'), type: "dropdown", data: "language", drop: locales }
             ] },
         ] },
-        { id: "download", name: t('settings.download.name'), icon: "fa-download", content: [
-            { name: t('settings.download.default.name'), icon: "fa-user", desc: t('settings.download.default.desc'), data: [
+        { id: "download", icon: "fa-download", content: [
+            { id: 'default', icon: "fa-user", desc: true, data: [
                 { name: t('common.default.dms.name'), type: "dropdown", data: "df_dms", drop: "dms" },
                 { name: t('common.default.ads.name'), type: "dropdown", data: "df_ads", drop: "ads" },
                 { name: t('common.default.cdc.name'), type: "dropdown", data: "df_cdc", drop: "cdc" },
@@ -153,39 +138,33 @@ const settingsTree = computed(() => {
                     { id: 5, name: "5" },
                 ] },
             ] },
-            { name: t('settings.download.filename.name'), icon: "fa-file", data: [
-                { name: String(), type: "drag", data: 'filename', shorten: t('settings.download.filename.shorten'), placeholders: [
-                    { id: "{mediaType}", name: t('settings.download.filename.data.mediaType') },
-                    { id: "{aid}", name: t('settings.download.filename.data.aid') },
-                    { id: "{title}", name: t('settings.download.filename.data.title') },
-                    { id: "{date}", name: t('settings.download.filename.data.date') },
-                    { id: "{timestamp}", name: t('settings.download.filename.data.timestamp') },
-                ] },
+            { id: 'filename', icon: "fa-file", data: [
+                { type: "drag", data: 'filename', placeholders: ["{mediaType}", "{aid}", "{title}", "{date}", "{timestamp}"] },
             ] },
-            { name: t('settings.download.proxy.name'), icon: "fa-globe", desc: t('settings.download.proxy.desc'), data: [
+            { id: 'proxy', icon: "fa-globe", desc: true, data: [
                 { name: t('common.address'), type: "input", data: "proxy.addr", placeholder: "http(s)://server:port" },
                 { name: t('common.username'), type: "input", data: "proxy.username", placeholder: t('common.optional') },
                 { name: t('common.password'), type: "input", data: "proxy.password", placeholder: t('common.optional') },
-                { name: t('settings.label.checkProxy'), type: "button", data: checkProxy.bind(this), icon: "fa-cloud-question" },
+                { id: 'checkProxy', type: "button", data: checkProxy.bind(this), icon: "fa-cloud-question" },
             ] }
         ] },
-        { id: "advanced", name: t('settings.advanced.name'), icon: "fa-flask", content: [
-            { name: t('settings.advanced.auto_convert_flac.name'), icon: "fa-exchange", desc: t('settings.advanced.auto_convert_flac.desc'), data: [
-                { name: t('settings.label.enable'), type: "switch", data: "advanced.auto_convert_flac" },
+        { id: "advanced", icon: "fa-flask", content: [
+            { id: 'auto_convert_flac', icon: "fa-exchange", desc: true, data: [
+                { id: 'enable', type: "switch", data: "advanced.auto_convert_flac" },
             ] },
-            { name: t('settings.advanced.prefer_pb_danmaku.name'), icon: "fa-exchange", desc: t('settings.advanced.prefer_pb_danmaku.desc'), data: [
-                { name: t('settings.label.enable'), type: "switch", data: "advanced.prefer_pb_danmaku" },
+            { id: 'prefer_pb_danmaku', icon: "fa-exchange", desc: true, data: [
+                { id: 'enable', type: "switch", data: "advanced.prefer_pb_danmaku" },
             ] }
         ] },
-        { id: "about", name: t('settings.about.name'), icon: "fa-circle-info", content: [
+        { id: "about", icon: "fa-circle-info", content: [
             { data: [{ type: "about" }] },
-            { name: t('settings.about.update.name'), icon: "fa-upload", data: [
-                { name: t('settings.label.auto_check_update'), type: "switch", data: "auto_check_update" },
-                { name: t('settings.label.checkUpdate'), type: "button", data: checkUpdate.bind(this), icon: "fa-wrench" },
+            { id: 'update', icon: "fa-upload", data: [
+                { id: 'auto_check_update', type: "switch", data: "auto_check_update" },
+                { id: 'checkUpdate', type: "button", data: checkUpdate.bind(this), icon: "fa-wrench" },
             ] },
-            { name: t('settings.about.links.name'), icon: "fa-link", data: [
-                { name: t('settings.label.documentation'), type: "button", data: () => openUrl("https://btjawa.top/bilitools"), icon: "fa-book" },
-                { name: t('settings.label.feedback'), type: "button", data: () => openUrl("https://github.com/btjawa/BiliTools/issues/new/choose"), icon: "fa-comment-exclamation" }
+            { id: 'links', icon: "fa-link", data: [
+                { id: 'documentation', type: "button", data: () => openUrl("https://btjawa.top/bilitools"), icon: "fa-book" },
+                { id: 'feedback', type: "button", data: () => openUrl("https://github.com/btjawa/BiliTools/issues/new/choose"), icon: "fa-comment-exclamation" }
             ] },
             { data: [{ type: "reference" }] }
         ] }

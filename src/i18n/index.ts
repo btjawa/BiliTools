@@ -18,6 +18,13 @@ export async function loadLanguage() {
     return messages;
 }
 
+export const locales = [
+    { "id": "zh-CN", "name": "简体中文 🇨🇳" },
+    { "id": "zh-HK", "name": "繁體中文 🇭🇰" },
+    { "id": "en-US", "name": "English 🇺🇸" },
+    { "id": "ja-JP", "name": "日本語 🇯🇵" }
+]
+
 export default createI18n({
     legacy: false,
     locale: window.navigator.language,

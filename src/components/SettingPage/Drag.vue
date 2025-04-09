@@ -26,13 +26,14 @@
 import { onMounted, ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { useSettingsStore } from "@/store";
+import i18n from '@/i18n';
 
 const settings = useSettingsStore();
 const sources = ref<{ id: string | number, name: string | number }[]>([]);
 const target = ref<{ id: string | number, name: string | number }[]>([]);
 
 const props = defineProps<{
-    placeholders: { id: number | string, name: string | number }[],
+    placeholders: string[],
     update: (key: string, data: any) => any,
     shorten: string,
     data: string,
@@ -41,7 +42,7 @@ const props = defineProps<{
 onMounted(() => {
     onSourceAdd();
     target.value = settings.filename.split('_').map((id) => {
-        return { id, name: props.placeholders.find(item => item.id === id)?.name || id };
+        return { id, name: sources.value.find(item => item.id === id)?.name || id };
     });
 })
 
@@ -53,7 +54,10 @@ function onUpdate(e: any) {
 }
 
 function onSourceAdd() {
-    sources.value = props.placeholders;
+    sources.value = props.placeholders.map(id => ({
+        id,
+        name: i18n.global.t(`settings.download.filename.data.${id.slice(1, -1)}`),
+    }));
 }
 </script>
 
