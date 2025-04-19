@@ -17,11 +17,6 @@
             <i :class="`fa-${isActive('/down-page') ? 'solid' : 'light'}`" class="fa-download"></i>
         </li>
     </router-link>
-    <router-link to="/fav-page" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/fav-page') }" @click="navigate">
-            <i :class="`fa-${isActive('/fav-page') ? 'solid' : 'light'}`" class="fa-star"></i>
-        </li>
-    </router-link>
     <li class="sidebar-item !mt-auto" @click="setTheme">
         <i class="fa-solid fa-moon-over-sun"></i>
     </li>

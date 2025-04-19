@@ -56,7 +56,6 @@ pub struct SettingsProxy {
 pub struct SettingsAdvanced {
     pub auto_convert_flac: bool,
     pub prefer_pb_danmaku: bool,
-    pub inspect_manga: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

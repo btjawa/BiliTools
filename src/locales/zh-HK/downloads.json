@@ -8,8 +8,9 @@
         "video": "視頻",
         "bangumi": "番劇",
         "music": "音樂",
+        "musicList": "歌單",
         "lesson": "課程",
-        "manga": "漫畫"
+        "favorite": "收藏夾"
     },
     "label": {
         "waiting": "等待",

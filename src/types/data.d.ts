@@ -18,7 +18,7 @@ export enum MediaType {
   Music = "music",
   MusicList = "musicList",
   Lesson = "lesson",
-  Manga = "manga",
+  Favorite = "favorite",
 }
 
 export enum StreamCodecType {
@@ -385,95 +385,50 @@ export interface MusicListDetailInfo {
   };
 }
 
-export interface MangaInfo {
+export interface FavoriteInfo {
   code: number;
-  msg: string;
+  message: string;
+  ttl: number;
   data: {
-    id: number;
-    title: string;
-    horizontal_cover: string;
-    square_cover: string;
-    vertical_cover: string;
-    author_name: string[];
-    styles: string[];
-    evaluate: string;
-    ep_list: {
+    info: {
       id: number;
-      size: number;
-      short_title: string;
+      fid: number;
+      mid: number;
       title: string;
       cover: string;
-      pub_time: string;
-      comments: number;
-      like_count: number;
-      image_count: number;
-    }[];
-    read_epid: number;
-    classic_lines: string;
-    wiki_id: number;
-    interact_value: string;
-    introduction: string;
-    tags: {
-      id: number;
-      name: string;
-    }[];
-    authors: {
-      id: number;
-      name: string;
-      avatar: string;
-      uid: string;
-    }[];
-    horizontal_covers: string[];
-    data_info: {
-      fav_count: number;
+      upper: {
+        mid: number;
+        name: string;
+        face: string;
+      };
+      cnt_info: {
+        collect: number;
+        play: number;
+        thumb_up: number;
+        share: number;
+      };
+      intro: string;
+      ctime: number;
+      media_count: number;
     };
-  };
-}
-
-export interface MangaImageIndex {
-  code: number;
-  msg: string;
-  bytesData: string;
-  data: {
-    path: string;
-    images: {
-      path: string;
-      x: number;
-      y: number;
-      video_path: string;
-      video_size: string;
+    medias: {
+      id: number;
+      bvid: string;
+      title: string;
+      cover: string;
+      intro: string;
+      duration: number;
+      upper: {
+        mid: number;
+        name: string;
+        face: string;
+      };
+      ctime: number;
+      pubtime: number;
     }[];
-    last_modified: string;
-    host: string;
-    video: {
-      svid: string;
-      filename: string;
-      route: string;
-      resource: unknown[];
-      raw_width: string;
-      raw_height: string;
-      raw_rotate: string;
-      img_urls: unknown[];
-      bin_url: string;
-      img_x_len: number;
-      img_x_size: number;
-      img_y_len: number;
-      img_y_size: number;
-    };
-    cpx: string;
+    has_more: boolean;
+    ttl: number;
   };
-};
-
-export interface MangaImageToken {
-  code: number;
-  msg: string;
-  bytesData: string;
-  data: {
-    url: string;
-    token: string;
-    complete_url: string;
-    hit_encrpyt: boolean;
-  }[];
 }
 
 export interface VideoPlayUrlInfo  {
@@ -928,102 +883,5 @@ export interface SteinInfo {
       skip_overwrite: number;
     }[];
     is_leaf: number;
-  };
-}
-
-export interface FavoriteList {
-  code: number;
-  message: string;
-  ttl: number;
-  data: {
-    count: number;
-    list: {
-      id: number;
-      fid: number;
-      mid: number;
-      attr: number;
-      title: string;
-      fav_state: number;
-      media_count: number;
-    }[];
-    season: null;
-  };
-}
-
-export interface FavoriteContent {
-  code: number;
-  message: string;
-  ttl: number;
-  data: {
-    info: {
-      id: number;
-      fid: number;
-      mid: number;
-      attr: number;
-      title: string;
-      cover: string;
-      upper: {
-        mid: number;
-        name: string;
-        face: string;
-        followed: boolean;
-        vip_type: number;
-        vip_statue: number;
-      };
-      cover_type: number;
-      cnt_info: {
-        collect: number;
-        play: number;
-        thumb_up: number;
-        share: number;
-      };
-      type: number;
-      intro: string;
-      ctime: number;
-      mtime: number;
-      state: number;
-      fav_state: number;
-      like_state: number;
-      media_count: number;
-      is_top: boolean;
-    };
-    medias: {
-      id: number;
-      type: number;
-      title: string;
-      cover: string;
-      intro: string;
-      page: number;
-      duration: number;
-      upper: {
-        mid: number;
-        name: string;
-        face: string;
-      };
-      attr: number;
-      cnt_info: {
-        collect: number;
-        play: number;
-        danmaku: number;
-        vt: number;
-        play_switch: number;
-        reply: number;
-        view_text_1: string;
-      };
-      link: string;
-      ctime: number;
-      pubtime: number;
-      fav_time: number;
-      bv_id: string;
-      bvid: string;
-      season: null;
-      ogv: null;
-      ugc: {
-        first_cid: number;
-      };
-      media_list_link: string;
-    }[];
-    has_more: boolean;
-    ttl: number;
   };
 }

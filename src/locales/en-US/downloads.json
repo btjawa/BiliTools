@@ -8,8 +8,9 @@
         "video": "Video",
         "bangumi": "Bangumi",
         "music": "Music",
+        "musicList": "Music List",
         "lesson": "Lesson",
-        "manga": "Manga"
+        "favorite": "Favorite"
     },
     "label": {
         "waiting": "Waiting",

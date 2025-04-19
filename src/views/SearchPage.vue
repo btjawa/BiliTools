@@ -1,18 +1,22 @@
 <template><div>
     <div ref="searchInput" :style="{ 'top': v.searchActive ? '13px' : 'calc(50% - 13px)' }"
-		class="search_input absolute flex h-[52px] w-[calc(100%-397px)] rounded-[26px] p-2.5 bg-[color:var(--block-color)]"
+		class="search_input absolute flex w-[calc(100%-397px)] rounded-[26px] p-2.5 gap-2 bg-[color:var(--block-color)]"
 	>
         <input
 			type="text" :placeholder="$t('home.inputPlaceholder', [$t('common.bilibili')])" @keydown.enter="search()"
-			v-model="v.searchInput" class="w-full mr-2.5 !rounded-2xl" autocomplete="off" spellcheck="false"
+			v-model="v.searchInput" class="w-full !rounded-2xl" autocomplete="off" spellcheck="false"
 			@input="v.searchInput = v.searchInput.replace(/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g, '')"
 		/>
-        <button @click="search()" :class="[settings.dynFa, 'fa-search rounded-full']"></button>
+		<Dropdown class="float-left media_type"
+			:drop="getMediaType()" :emit="i => v.searchMediaType = i"
+			:id="v.searchMediaType"
+		/>
+		<button @click="search()" :class="[settings.dynFa, 'fa-search rounded-full float-right']"></button>
     </div>
 	<div :style="{ 'opacity': v.listActive ? 1 : 0, 'pointerEvents': v.listActive ? 'all' : 'none' }"
 		class="media_root absolute top-[78px] w-[calc(100%-269px)] h-[calc(100%-93px)]"
 	>
-		<MediaInfo class="media_info mb-[13px]" :info="v.mediaInfo" :open="openUrl" />
+		<MediaInfo class="media_info" :info="v.mediaInfo" :open="openUrl" />
         <Empty v-if="v.mediaInfo.list.length === 0" text="home.empty" />
 		<div class="my-2 flex justify-center gap-[5px] max-w-full overflow-auto stein-nodes" v-if="v.mediaInfo?.stein_gate">
 			<button v-for="story in v.mediaInfo.stein_gate.story_list"
@@ -21,8 +25,13 @@
 				<i :class="[settings.dynFa, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
 			</button>
 		</div>
+		<div class="mt-3" v-if="v.searchMediaType === Types.MediaType.Favorite">
+			<span>Page</span>
+			<input type="number" v-model="v.pageIndex" class="ml-2" />
+		</div>
 		<RecycleScroller
-			class="scrollList h-[calc(100%-158px)]"
+			class="scrollList mt-3"
+			:class="v.searchMediaType === Types.MediaType.Favorite ? 'h-[calc(100%-202px)]' : 'h-[calc(100%-158px)]'"
 			:items="v.mediaInfo.list" :item-size="50"
 			key-field="index" v-slot="{ item, index }"
 		>
@@ -74,17 +83,29 @@ import { save as dialogSave } from '@tauri-apps/plugin-dialog';
 import { transformImage } from '@tauri-apps/api/image';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Empty } from '@/components';
+import { TYPE } from 'vue-toastification';
 import * as data from '@/services/data';
 import * as Types from '@/types/data.d';
+import Dropdown from '@/components/Dropdown.vue';
 import i18n from '@/i18n';
 import router from '@/router';
-import { TYPE } from 'vue-toastification';
+
+function getMediaType() {
+	return [
+		{ id: 'auto', name: i18n.global.t('home.label.autoDetect') },
+		...Object.values(Types.MediaType).map(id => ({
+			id, name: i18n.global.t('downloads.media_type.' + id)
+		}))
+	];
+}
 
 const settings = useSettingsStore();
 const v = reactive({
 	searchInput: String(),
 	searchActive: false,
 	listActive: false,
+	searchMediaType: 'auto' as Types.MediaType | 'auto',
+	pageIndex: 1,
 	mediaInfo: { list: [] } as unknown as Types.MediaInfo,
 	searchTarget: 0,
 	useCheckbox: false,
@@ -100,7 +121,6 @@ const othersMap = {
 	'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
 	'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
 	'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
-	'manga': { suffix: 'jpg', desc: 'JPG Image' },
 	'subtitles': { suffix: 'srt', desc: 'SRT Subtitle File' },
 }
 
@@ -125,9 +145,20 @@ watch(() => v.checkboxs, (v, old) => {
 	return AppLog(i18n.global.t('error.multiSelectLimit'), TYPE.WARNING);
 });
 
+watch(() => v.pageIndex, async (pn) => {
+    if (pn < 1) return v.pageIndex = 1;
+	try {
+		const info = await getMediaInfo(String(v.mediaInfo.id), Types.MediaType.Favorite, { pn });
+		v.mediaInfo.list = info.list;
+	} catch(err) {
+		new ApplicationError(err).handleError();
+	}
+})
+
 defineExpose({ search });
 async function search(overrideInput?: string) {
 	function reset() {
+		v.mediaInfo = { list: [] } as any;
 		v.searchActive = false;
 		v.listActive = false;
 		v.useCheckbox = false;
@@ -139,13 +170,10 @@ async function search(overrideInput?: string) {
 	reset();
 	v.searchActive = true;
 	try {
-		const { id, type } = await parseId(input);
-		if (type === Types.MediaType.Manga) {
-			return await openUrl('https://btjawa.top/bilitools#关于漫画')
-		}
-		const info = await getMediaInfo(id, type);
+		const parsed = v.searchMediaType === Types.MediaType.Favorite ? { id: input, type: v.searchMediaType } : await parseId(input);
+		const type = v.searchMediaType === 'auto' ? parsed.type : v.searchMediaType;
+		const info = await getMediaInfo(parsed.id, type);
 		v.searchTarget = info.list.findIndex(v => v.id === info.id);
-		v.checkboxs = [v.searchTarget];
 		info.cover = await getImageBlob(info.cover);
 		info.upper.avatar = info.upper.avatar ? await getImageBlob(info.upper.avatar + '@128h') : null;
 		v.mediaInfo = info;
@@ -303,7 +331,7 @@ async function handlePopupClose(select: CurrentSelect, options?: { others?: { ke
 				);
 				if (!others || ['dms', 'cdc', 'ads'].includes(others.key)) {
 					await handleGeneral(newSelect, info, playurl, { output, others });
-				} else await handleOthers(others, v.mediaInfo.list[item], { output });
+				} else await handleOthers(others, info, { output });
 			} catch(err) {
 				new ApplicationError(err).handleError();
 			}
@@ -344,5 +372,8 @@ async function updateStein(edge_id: number) {
 }
 .multi-select .active {
 	@apply text-[color:var(--dark-button-color)] bg-[color:var(--primary-color)];;
+}
+:deep(.media_type > button) {
+	@apply rounded-full
 }
 </style>

@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU番号...",
+    "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU/FID番号...",
     "downloadOptions": {
         "audioVideo": "音声と映像",
         "audio": "音声",
@@ -14,7 +14,8 @@
         "metaSnapshot": "メタスナップショット",
         "multiSelect": "複数選択",
         "selectAll": "すべて選択",
-        "manga": "マンガ"
+        "subtitles": "字幕",
+        "autoDetect": "自動検出"
     },
     "empty": "利用可能なリソースがありません~"
 }

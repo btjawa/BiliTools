@@ -27,7 +27,7 @@
                     />
                     <Dropdown v-if="unit.type === 'dropdown'"
                         :drop="getDropdown(unit.drop)" :emit="(v) => updateSettings(unit.data, v)"
-                        :name="getDropdown(unit.drop).find(v => v.id === (settings as any)[unit.data])?.name"
+                        :id="(settings as any)[unit.data]"
                     />
                     <Drag v-if="unit.type === 'drag'"
                         :data="unit.data" :placeholders="unit.placeholders"

@@ -162,6 +162,7 @@ async function processQueue() {
         }
         const result = await commands.processQueue(event);
         if (result.status === 'error') throw result.error;
+        queuePage.value = 2;
     } catch (err) {
         new ApplicationError(err).handleError();
     }

@@ -21,7 +21,6 @@ export const useSettingsStore = defineStore('settings', {
         advanced: {
             auto_convert_flac: true,
             prefer_pb_danmaku: true,
-            inspect_manga: false,
         }
     }),
     getters: {

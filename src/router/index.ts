@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { UserPage, SearchPage, DownPage, FavPage, SettingPage } from '@/views';
+import { UserPage, SearchPage, DownPage, SettingPage } from '@/views';
 import { ApplicationError } from '@/services/utils';
 import { useAppStore } from "@/store";
 import i18n from '@/i18n';
@@ -10,7 +10,6 @@ const router = createRouter({
     { path: '/user-page', component: UserPage },
     { path: '/', component: SearchPage },
     { path: '/down-page', component: DownPage },
-    { path: '/fav-page', component: FavPage },
     { path: '/setting-page', component: SettingPage },
   ],
 });

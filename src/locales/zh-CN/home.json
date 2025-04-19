@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0}链接/AV/BV/SS/EP/AU号...",
+    "inputPlaceholder": "{0}链接/AV/BV/SS/EP/AU/FID号...",
     "downloadOptions": {
         "audioVideo": "下载音视频",
         "audio": "音频",
@@ -14,8 +14,8 @@
         "metaSnapshot": "元信息快照",
         "multiSelect": "启用多选",
         "selectAll": "全选",
-        "manga": "漫画",
-        "subtitles": "字幕"
+        "subtitles": "字幕",
+        "autoDetect": "自动检测"
     },
     "empty": "可用资源为空~"
 }

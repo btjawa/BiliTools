@@ -53,7 +53,6 @@ lazy_static! {
         advanced: SettingsAdvanced {
             auto_convert_flac: true,
             prefer_pb_danmaku: true,
-            inspect_manga: false,
         }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));

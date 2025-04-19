@@ -87,7 +87,7 @@ export function setEventHook() {
 }
 
 export async function tryFetch(url: string | URL, options?: {
-    auth?: 'wbi' | 'ultra_sign',
+    auth?: 'wbi',
     params?: Record<string, string | number | Object>,
     post?: {
         type: 'json' | 'form',
@@ -211,8 +211,6 @@ export async function parseId(input: string) {
             if (match) return { id: match[0], type: MediaType.Music };
             match = input.match(/am(\d+)/i);
             if (match) return { id: match[0], type: MediaType.MusicList };
-            match = input.match(/mc(\d+)/i);
-            if (match) return { id: match[0], type: MediaType.Manga };
             if (url.hostname === 'b23.tv') {
                 try {
                     const response = await fetch(url);
@@ -229,7 +227,7 @@ export async function parseId(input: string) {
         }
         throw new ApplicationError(err);
     } catch(_) { // NOT URL
-        if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)|mc\d+$/i.test(input)) {
+        if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
             throw new ApplicationError(err);
         }
         const map = {
@@ -239,7 +237,6 @@ export async function parseId(input: string) {
             'ss': MediaType.Bangumi,
             'au': MediaType.Music,
             'am': MediaType.MusicList,
-            'mc': MediaType.Manga
         };
         const prefix = input.slice(0, 2).toLowerCase() as keyof typeof map;
         return { id: input, type: map[prefix] || null };

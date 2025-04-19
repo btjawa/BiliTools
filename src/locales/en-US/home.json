@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU ID...",
+    "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU/FID ID...",
     "downloadOptions": {
         "audioVideo": "Audio-Video",
         "audio": "Audio",
@@ -14,7 +14,8 @@
         "metaSnapshot": "Metadata Snapshot",
         "multiSelect": "Multi-Select",
         "selectAll": "Select All",
-        "manga": "Manga"
+        "subtitles": "Subtitles",
+        "autoDetect": "Auto Detect"
     },
     "empty": "No available resources~"
 }

@@ -1,10 +1,10 @@
 <template><div class="relative min-w-[152px]">
   <template v-if="!props.useActive">
-    <button @click="active = !active" ref="dropdown" class="w-full text-left" type="button">{{ props.name }}</button>
+    <button @click="active = !active" ref="dropdown" class="w-full text-left" type="button">{{ props.drop.find(v => v.id === props.id)?.name }}</button>
     <i class="fa-solid fa-triangle text-[10px] absolute right-[14px] top-[11px] transition-transform pointer-events-none"></i>
   </template>
   <div :class="{ 'active': active }" class="list absolute flex flex-col">
-    <button v-for="option in drop" @click="props.emit(option.id)" type="button">{{ option.name }}</button>
+    <button v-for="v in drop" @click="props.emit(v.id)" type="button">{{ v.name }}</button>
   </div>
 </div></template>
 
@@ -12,7 +12,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 const props = defineProps<{
   drop: { id: any, name: any }[],
-  name: any,
+  id: any,
   emit: (id: any) => any,
   useActive?: { active: boolean, close: Function, target?: HTMLElement },
 }>();

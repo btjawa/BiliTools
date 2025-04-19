@@ -1,12 +1,11 @@
 import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
-import { useAppStore, useSettingsStore, useUserStore } from "@/store";
-import { checkRefresh } from "@/services/login";
+import { useSettingsStore, useUserStore } from "@/store";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
 import * as dm_v1 from "@/proto/dm_v1";
 import pako from 'pako';
 
-export async function getMediaInfo(id: string, type: Types.MediaType): Promise<Types.MediaInfo> {
+export async function getMediaInfo(id: string, type: Types.MediaType, options?: { pn?: number }): Promise<Types.MediaInfo> {
     let url = "https://api.bilibili.com";
     let params = {} as any;
     const _id = Number(id.match(/\d+/)?.[0]);
@@ -31,294 +30,250 @@ export async function getMediaInfo(id: string, type: Types.MediaType): Promise<T
             url = "https://www.bilibili.com/audio/music-service-c/web/menu/info";
             params = { sid: _id };
             break;
-        case Types.MediaType.Manga:
-            url = "https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail";
-            params = { device: "pc", platform: "web", nov: 25 };
-            break;
+        case Types.MediaType.Favorite:
+            url += "/x/v3/fav/resource/list";
+            params = { media_id: _id, ps: 36, pn: options?.pn ?? 1 };
     }
-    const body = await tryFetch(url, {
-        params, handleError: false,
-        ...(type === Types.MediaType.Manga && {
-            auth: 'ultra_sign',
-            post: { type: 'json', body: { comic_id: _id } }
-        })
-    });
-    switch(type) {
-        case Types.MediaType.Video: {
-            const info = body as Types.VideoInfo;
-            if (info.code !== 0) {
-                throw new ApplicationError(info.message, { code: info.code });
-            }
-            const data = info.data;
-            return {
-                id: data.aid,
-                title: data.title,
-                cover: data.pic.replace("http:", "https:"),
-                covers: [{ id: 'ugc_cover', url: data?.ugc_season?.cover }]
-                .filter(v => v.url?.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
-                desc: data.desc,
-                type,
-                stein_gate: data.rights.is_stein_gate ? await (async () => {
-                    const playerInfo = await getPlayerInfo(data.aid, data.cid);
-                    const steinInfo = await getSteinInfo(data.aid, playerInfo.interaction.graph_version);
-                    return {
-                        edge_id: 1,
-                        grapth_version: playerInfo.interaction.graph_version,
-                        story_list: steinInfo.story_list,
-                        choices: steinInfo.edges.questions[0].choices,
-                        hidden_vars: steinInfo.hidden_vars,
-                    };
-                })() : undefined,
-                stat: {
-                    play: data.stat.view,
-                    danmaku: data.stat.danmaku,
-                    reply: data.stat.reply,
-                    like: data.stat.like,
-                    coin: data.stat.coin,
-                    favorite: data.stat.favorite,
-                    share: data.stat.share,
-                },
-                upper: {
-                    avatar: data.owner.face.replace("http:", "https:"),
-                    name: data.owner.name,
-                    mid: data.owner.mid,
-                },
-                list: data?.ugc_season ?
-                    data.ugc_season.sections[0].episodes.map((episode, index) => ({
-                        title: episode.title,
-                        cover: episode.arc.pic.replace("http:", "https:"),
-                        desc: episode.arc.desc,
-                        id: episode.aid,
-                        cid: episode.cid,
-                        eid: episode.id,
-                        duration: episode.page.duration,
-                        ss_title: data.ugc_season.title,
-                        index
-                    })) :
-                    data?.pages ? data.pages.map((page, index) => ({
-                        title: page.part || data.title,
-                        cover: data.pic.replace("http:", "https:"),
-                        desc: data.desc,
-                        id: data.aid,
-                        cid: page.cid,
-                        eid: page.page,
-                        duration: page.duration,
-                        ss_title: data.title || page.part,
-                        index
-                    })) : [{
-                        title: data.title,
-                        cover: data.pic.replace("http:", "https:"),
-                        desc: data.desc,
-                        id: data.aid,
-                        cid: data.aid,
-                        eid: data.aid,
-                        duration: data.duration,
-                        ss_title: data.title,
-                        index: 0,
-                    }]
-            };
-        }
-        case Types.MediaType.Bangumi: {
-            const info = body as Types.BangumiInfo;
-            if (info.code !== 0) {
-                if (info.code === -404) {
-                    return await getMediaInfo(id, Types.MediaType.Lesson);
-                }
-                throw new ApplicationError(info.message, { code: info.code });
-            }
-            const data = info.result;
-            const season = data.seasons.find(v => v.season_id === data.season_id);
-            const covers = [{ id: 'square_cover', url: data.square_cover }];
-            if (season) {
-                covers.push({ id: 'horizontal_cover_169', url: season.horizontal_cover_169 });
-                covers.push({ id: 'horizontal_cover_1610', url: season.horizontal_cover_1610 });
-            }
-            return {
-                id: data.season_id,
-                title: data.title,
-                cover: data.cover.replace("http:", "https:"),
-                covers: covers.filter(v => v.url.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
-                desc: data.evaluate,
-                type,
-                stat: {
-                    play: data.stat.views,
-                    danmaku: data.stat.danmakus,
-                    reply: data.stat.reply,
-                    like: data.stat.likes,
-                    coin: data.stat.coins,
-                    favorite: data.stat.favorite,
-                    share: data.stat.share,
-                },
-                upper: {
-                    avatar: data?.up_info?.avatar.replace("http:", "https:"),
-                    name: data?.up_info?.uname,
-                    mid: data?.up_info?.mid,
-                },
-                list: data.episodes.map((episode, index) => ({
-                    title: episode?.show_title ?? episode.share_copy,
-                    cover: episode.cover.replace("http:", "https:"),
-                    desc: data.evaluate,
-                    id: episode.aid,
-                    cid: episode.cid,
-                    eid: episode.ep_id,
-                    duration: episode.duration / 1000,
-                    ss_title: data.season_title,
-                    index
-                }))
-            };
-        }
-        case Types.MediaType.Lesson: {
-            const info = body as Types.LessonInfo;
-            if (info.code !== 0) {
-                throw new ApplicationError(info.message, { code: info.code });
-            }
-            const data = info.data;
-            return {
-                id: data.season_id,
-                title: data.title,
-                cover: data.cover.replace("http:", "https:"),
-                covers: data.brief.img.map((v, i) => ({ id: 'brief_' + i, url: v.url.replace('http:', 'https:') })),
-                desc: `${data.subtitle}\n${data.faq.title}\n${data.faq.content}`,
-                type,
-                stat: {
-                    play: data.stat.play,
-                },
-                upper: {
-                    avatar: data.up_info.avatar.replace("http:", "https:"),
-                    name: data.up_info.uname,
-                    mid: data.up_info.mid,
-                },
-                list: data.episodes.map((episode, index) => ({
+    const body = await tryFetch(url, { params });
+    if (type === Types.MediaType.Video) {
+        const data = (body as Types.VideoInfo).data;
+        return {
+            id: data.aid,
+            title: data.title,
+            cover: data.pic.replace("http:", "https:"),
+            covers: [{ id: 'ugc_cover', url: data?.ugc_season?.cover }]
+            .filter(v => v.url?.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
+            desc: data.desc,
+            type,
+            stein_gate: data.rights.is_stein_gate ? await (async () => {
+                const playerInfo = await getPlayerInfo(data.aid, data.cid);
+                const steinInfo = await getSteinInfo(data.aid, playerInfo.interaction.graph_version);
+                return {
+                    edge_id: 1,
+                    grapth_version: playerInfo.interaction.graph_version,
+                    story_list: steinInfo.story_list,
+                    choices: steinInfo.edges.questions[0].choices,
+                    hidden_vars: steinInfo.hidden_vars,
+                };
+            })() : undefined,
+            stat: {
+                play: data.stat.view,
+                danmaku: data.stat.danmaku,
+                reply: data.stat.reply,
+                like: data.stat.like,
+                coin: data.stat.coin,
+                favorite: data.stat.favorite,
+                share: data.stat.share,
+            },
+            upper: {
+                avatar: data.owner.face.replace("http:", "https:"),
+                name: data.owner.name,
+                mid: data.owner.mid,
+            },
+            list: data?.ugc_season ?
+                data.ugc_season.sections[0].episodes.map((episode, index) => ({
                     title: episode.title,
-                    cover: episode.cover.replace("http:", "https:"),
-                    desc: data.subtitle,
+                    cover: episode.arc.pic.replace("http:", "https:"),
+                    desc: episode.arc.desc,
                     id: episode.aid,
                     cid: episode.cid,
                     eid: episode.id,
-                    duration: episode.duration,
-                    ss_title: data.title,
+                    duration: episode.page.duration,
+                    ss_title: data.ugc_season.title,
                     index
-                }))
-            };
-        }
-        case Types.MediaType.Music: {
-            const info = body as Types.MusicInfo;
-            if (info.code !== 0) {
-                throw new ApplicationError(info.msg, { code: info.code });
-            }
-            const data = info.data;
-            return {
-                id: data.aid,
-                title: data.title,
-                cover: data.cover.replace("http:", "https:"),
-                covers: [],
-                desc: data.intro,
-                type,
-                stat: {
-                    play: data.statistic.play,
-                    reply: data.statistic.comment,
-                    favorite: data.statistic.collect,
-                    share: data.statistic.share,
-                },
-                upper: {
-                    avatar: null,
-                    name: data.uname,
-                    mid: data.uid,
-                },
-                list: [{
+                })) :
+                data?.pages ? data.pages.map((page, index) => ({
+                    title: page.part || data.title,
+                    cover: data.pic.replace("http:", "https:"),
+                    desc: data.desc,
+                    id: data.aid,
+                    cid: page.cid,
+                    eid: page.page,
+                    duration: page.duration,
+                    ss_title: data.title || page.part,
+                    index
+                })) : [{
                     title: data.title,
-                    cover: data.cover.replace("http:", "https:"),
-                    desc: data.intro,
-                    id: data.id,
-                    cid: data.cid,
-                    eid: data.id,
+                    cover: data.pic.replace("http:", "https:"),
+                    desc: data.desc,
+                    id: data.aid,
+                    cid: data.aid,
+                    eid: data.aid,
                     duration: data.duration,
                     ss_title: data.title,
                     index: 0,
                 }]
-            };
+        };
+    } else if (type === Types.MediaType.Bangumi) {
+        const data = (body as Types.BangumiInfo).result;
+        const season = data.seasons.find(v => v.season_id === data.season_id);
+        const covers = [{ id: 'square_cover', url: data.square_cover }];
+        if (season) {
+            covers.push({ id: 'horizontal_cover_169', url: season.horizontal_cover_169 });
+            covers.push({ id: 'horizontal_cover_1610', url: season.horizontal_cover_1610 });
         }
-        case Types.MediaType.MusicList: {
-            const info = body as Types.MusicListInfo;
-            if (info.code !== 0) {
-                throw new ApplicationError(info.msg, { code: info.code });
-            }
-            const data = info.data;
-            const listInfo = await tryFetch('https://www.bilibili.com/audio/music-service-c/web/song/of-menu?pn=1&ps=100&sid=' + _id) as Types.MusicListDetailInfo;
-            return {
-                id: data.menuId,
+        return {
+            id: data.season_id,
+            title: data.title,
+            cover: data.cover.replace("http:", "https:"),
+            covers: covers.filter(v => v.url.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
+            desc: data.evaluate,
+            type,
+            stat: {
+                play: data.stat.views,
+                danmaku: data.stat.danmakus,
+                reply: data.stat.reply,
+                like: data.stat.likes,
+                coin: data.stat.coins,
+                favorite: data.stat.favorite,
+                share: data.stat.share,
+            },
+            upper: {
+                avatar: data?.up_info?.avatar.replace("http:", "https:"),
+                name: data?.up_info?.uname,
+                mid: data?.up_info?.mid,
+            },
+            list: data.episodes.map((episode, index) => ({
+                title: episode?.show_title ?? episode.share_copy,
+                cover: episode.cover.replace("http:", "https:"),
+                desc: data.evaluate,
+                id: episode.aid,
+                cid: episode.cid,
+                eid: episode.ep_id,
+                duration: episode.duration / 1000,
+                ss_title: data.season_title,
+                index
+            }))
+        };
+    } else if (type === Types.MediaType.Lesson) {
+        const data = (body as Types.LessonInfo).data;
+        return {
+            id: data.season_id,
+            title: data.title,
+            cover: data.cover.replace("http:", "https:"),
+            covers: data.brief.img.map((v, i) => ({ id: 'brief_' + i, url: v.url.replace('http:', 'https:') })),
+            desc: `${data.subtitle}\n${data.faq.title}\n${data.faq.content}`,
+            type,
+            stat: {
+                play: data.stat.play,
+            },
+            upper: {
+                avatar: data.up_info.avatar.replace("http:", "https:"),
+                name: data.up_info.uname,
+                mid: data.up_info.mid,
+            },
+            list: data.episodes.map((episode, index) => ({
+                title: episode.title,
+                cover: episode.cover.replace("http:", "https:"),
+                desc: data.subtitle,
+                id: episode.aid,
+                cid: episode.cid,
+                eid: episode.id,
+                duration: episode.duration,
+                ss_title: data.title,
+                index
+            }))
+        };
+    } else if (type === Types.MediaType.Music) {
+        const data = (body as Types.MusicInfo).data;
+        return {
+            id: data.aid,
+            title: data.title,
+            cover: data.cover.replace("http:", "https:"),
+            covers: [],
+            desc: data.intro,
+            type,
+            stat: {
+                play: data.statistic.play,
+                reply: data.statistic.comment,
+                favorite: data.statistic.collect,
+                share: data.statistic.share,
+            },
+            upper: {
+                avatar: null,
+                name: data.uname,
+                mid: data.uid,
+            },
+            list: [{
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
-                covers: [],
                 desc: data.intro,
-                type: Types.MediaType.Music,
-                stat: {
-                    play: data.statistic.play,
-                    reply: data.statistic.comment,
-                    favorite: data.statistic.collect,
-                    share: data.statistic.share,
-                },
-                upper: {
-                    avatar: null,
-                    name: data.uname,
-                    mid: data.uid,
-                },
-                list: listInfo.data.data.map((item, index) => ({
-                    title: item.title,
-                    cover: item.cover.replace("http:", "https:"),
-                    desc: data.intro,
-                    id: item.id,
-                    cid: item.cid,
-                    eid: item.id,
-                    duration: item.duration,
-                    ss_title: data.title,
-                    index
-                }))
-            };
-        }
-        case Types.MediaType.Manga: {
-            const info = body as Types.MangaInfo;
-            if (info.code !== 0) {
-                throw new ApplicationError(info.msg, { code: info.code });
-            }
-            const data = info.data;
-            return {
                 id: data.id,
-                title: data.title,
-                cover: data.vertical_cover.replace("http:", "https:"),
-                covers: [
-                    { id: 'horizontal_cover', url: data.horizontal_cover },
-                    { id: 'square_cover', url: data.square_cover },
-                    { id: 'vertical_cover', url: data.vertical_cover },
-                    ...data.horizontal_covers.map((url, i) => ({ id: 'horizontal_cover_' + i, url }))
-                ].filter(v => v.url.length).map(v => ({ id: v.id, url: v.url.replace('http:', 'https:') })),
-                desc: data.evaluate,
-                type,
-                stat: {
-                    reply: data?.ep_list.map(episode => episode.comments).reduce((a, b) => a + b),
-                    like: data?.ep_list.map(episode => episode.like_count).reduce((a, b) => a + b),
-                    favorite: data.data_info.fav_count,
-                },
-                upper: {
-                    avatar: data.authors[0].avatar.replace("http:", "https:"),
-                    name: data.authors[0].name,
-                    mid: data.authors[0].id,
-                },
-                list: data.ep_list.length ? data.ep_list.reverse().map((episode, index) => ({
-                    title: episode.title.trim() || episode.short_title,
-                    cover: episode.cover.replace("http:", "https:"),
-                    desc: data.evaluate,
-                    id: episode.id,
-                    cid: episode.id,
-                    eid: episode.id,
-                    duration: episode.image_count,
-                    ss_title: data.title,
-                    index
-                })) : [],
-            }
+                cid: data.cid,
+                eid: data.id,
+                duration: data.duration,
+                ss_title: data.title,
+                index: 0,
+            }]
+        };
+    } else if (type === Types.MediaType.MusicList) {
+        const data = (body as Types.MusicListInfo).data;
+        const listInfo = await tryFetch('https://www.bilibili.com/audio/music-service-c/web/song/of-menu?pn=1&ps=100&sid=' + _id) as Types.MusicListDetailInfo;
+        return {
+            id: data.menuId,
+            title: data.title,
+            cover: data.cover.replace("http:", "https:"),
+            covers: [],
+            desc: data.intro,
+            type: Types.MediaType.Music,
+            stat: {
+                play: data.statistic.play,
+                reply: data.statistic.comment,
+                favorite: data.statistic.collect,
+                share: data.statistic.share,
+            },
+            upper: {
+                avatar: null,
+                name: data.uname,
+                mid: data.uid,
+            },
+            list: listInfo.data.data.map((item, index) => ({
+                title: item.title,
+                cover: item.cover.replace("http:", "https:"),
+                desc: data.intro,
+                id: item.id,
+                cid: item.cid,
+                eid: item.id,
+                duration: item.duration,
+                ss_title: data.title,
+                index
+            }))
         }
-        default: throw 'No type named ' + type;
-    }
+    } else if (type === Types.MediaType.Favorite) {
+        const data = (body as Types.FavoriteInfo).data;
+        const info = data.info;
+        const list = data.medias;
+        return {
+            id: info.id,
+            title: info.title,
+            cover: info.cover.replace("http:", "https:"),
+            covers: [],
+            desc: info.intro,
+            type: Types.MediaType.Video,
+            stat: {
+                play: info.cnt_info.play,
+                like: info.cnt_info.thumb_up,
+                favorite: info.cnt_info.collect,
+                share: info.cnt_info.share,
+            },
+            upper: {
+                avatar: info.upper.face.replace("http:", "https:"),
+                name: info.upper.name,
+                mid: info.upper.mid,
+            },
+            list: list.map((item, index) => ({
+                title: item.title,
+                cover: item.cover.replace("http:", "https:"),
+                desc: info.intro,
+                id: item.id,
+                cid: item.id,
+                eid: item.id,
+                duration: item.duration,
+                ss_title: info.title,
+                index
+            }))
+        }
+    } else throw 'No type named ' + type;
 }
 
 export async function getPlayUrl(
@@ -341,7 +296,7 @@ export async function getPlayUrl(
         case Types.MediaType.Video:
             url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
             params.avid = info.id;
-            params.cid = info.cid;
+            params.cid = info.id === info.cid ? await getCid(info.id) : info.cid;
             break;
         case Types.MediaType.Bangumi:
             url += '/pgc/player/web/v2/playurl';
@@ -446,11 +401,11 @@ export async function pushBackQueue(params: {
     };
     const tasks = [
         params.video && {
-            urls: [params.video.baseUrl, ...params.video.backupUrl],
+            urls: [params.video.baseUrl, ...(Array.isArray(params.video.backupUrl) ? params.video.backupUrl : [])],
             taskType: 'video'
         },
         params.audio && {
-            urls: [params.audio.baseUrl, ...params.audio.backupUrl],
+            urls: [params.audio.baseUrl, ...(Array.isArray(params.audio.backupUrl) ? params.audio.backupUrl : [])],
             taskType: 'audio'
         },
         (params.video && params.audio) && {
@@ -471,9 +426,14 @@ export async function getBinary(url: string | URL) {
     return await tryFetch(url, { type: 'binary' });
 }
 
+export async function getCid(aid: number) {
+    const body = await tryFetch('https://api.bilibili.com/x/player/pagelist', { params: { aid } });
+    return body.data[0].cid as number;
+}
+
 export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
     const params = {
-        aid: info.id, cid: info.cid, up_mid: mid
+        aid: info.id, cid: info.id === info.cid ? await getCid(info.id) : info.cid, up_mid: mid
     };
     const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { auth: 'wbi', params });
     const body = response as Types.AISummaryInfo;
@@ -530,21 +490,6 @@ export async function getSteinInfo(id: number, graph_version: number, edge_id?: 
     const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
     const response = await tryFetch('https://api.bilibili.com/x/stein/edgeinfo_v2', { auth: 'wbi', params });
     const body = response as Types.SteinInfo;
-    return body.data;
-}
-
-export async function getFavoriteList() {
-    const result = await checkRefresh();
-    const up_mid = useAppStore().headers.Cookie.match(/DedeUserID=(\d+)(?=;|$)/)?.[1];
-    if (result !== 0 || !up_mid) return;
-    const response = await tryFetch('https://api.bilibili.com/x/v3/fav/folder/created/list-all', { params: { up_mid } });
-    const body = response as Types.FavoriteList;
-    return body.data.list;
-}
-
-export async function getFavoriteContent(media_id: number, pn: number) {
-    const response = await tryFetch('https://api.bilibili.com/x/v3/fav/resource/list', { params: { media_id, ps: 20, pn } });
-    const body = response as Types.FavoriteContent;
     return body.data;
 }
 
