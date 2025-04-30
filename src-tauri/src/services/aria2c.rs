@@ -61,7 +61,6 @@ pub struct ArchiveInfo {
     pub title: String,
     pub cover: String,
     pub id: usize,
-    pub cid: usize,
     pub ts: Timestamp,
     pub output_dir: String,
     pub output_filename: String,
@@ -532,7 +531,7 @@ pub async fn push_back_queue(
     } else {
         CONFIG.read().unwrap().down_dir.join(info.output_dir.clone())
     };
-    if parent.exists() {
+    if parent.exists() && output_dir.is_none() {
         let mut count = 1;
         let original = parent.clone();
         while parent.exists() {
@@ -561,8 +560,8 @@ pub async fn push_back_queue(
         let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
         fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
         let dir = check_breakpoint(
-            &temp_dir, format!("{}_{}", info.id, info.cid)
-        )?.unwrap_or(temp_dir.join(format!("{}_{}_{}", info.id, info.cid, info.ts.millis)));
+            &temp_dir, format!("{}_{}", info.id, info.ts.millis)
+        )?.unwrap_or(temp_dir.join(format!("{}_{}", info.id, info.ts.millis)));
         let params = vec![json!(urls), json!({ "dir": dir, "out": name, "pause": "true" })];
         let body: Aria2General = serde_json::from_value(
             post_aria2c("addUri", params).await?

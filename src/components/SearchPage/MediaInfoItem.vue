@@ -10,7 +10,7 @@
     <div class="flex gap-2">
         <button v-for="(item) in options" @click="item.action(index)">
             <i :class="[settings.dynFa, item.icon]"></i>
-            <span>{{ item.text }}</span>
+            <span>{{ $t(item.text) }}</span>
         </button>
     </div>
 </div></template>

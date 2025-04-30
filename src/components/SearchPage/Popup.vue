@@ -4,82 +4,82 @@
       <button class="absolute right-4 top-4 rounded-full w-8 h-8 p-0 z-30" @click="close">
         <i class="fa-solid fa-close"></i>
       </button>
-      <div v-for="(item, key, index) in optionsProvider" class="relative">
-        <template v-if="item.data.length">
-          <h3>{{ $t(item.title) }}</h3>
-          <div class="flex gap-1 mt-2 items-center">
-            <button v-for="btn in item.data"
-              :class="{ 'selected': select[key as keyof CurrentSelect] === btn }"
-              @click="handleClick(key, btn?.id ?? btn)">
-                <i :class="[settings.dynFa, btn?.icon ?? item.icon]"></i>
-                <span>{{ key === 'covers' ? item.getText(key, btn?.id ?? btn): $t(item.getText(key, btn?.id ?? btn)) }}</span>
-            </button>
-            <VueDatePicker v-if="key === 'danmaku' && item.data.find(i => i.id === 'historyDanmaku')"
-              v-model="date" :dark="settings.isDark"
-              model-type="format" format="yyyy-MM-dd"
-              id="historyDanmakuDate" />
-            <Dropdown v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')"
-              :drop="getDropdown()" :emit="(v) => subtitle = v"
-              :name="getDropdown().find(v => v.id === subtitle)?.name"
-            ></Dropdown>
-          </div>
-          <button class="absolute right-4 primary-color"
-            :class="[key === 'fmt' ? 'bottom-0' : 'bottom-4']"
-            v-if="isOthers ? (key === 'dms' || key === 'ads') : key === 'fmt'"
-            @click="confirm(key)">
-              <i :class="[settings.dynFa, 'fa-right']"></i>
-              <span>{{ $t('downloads.nextStep') }}</span>
+      <div v-for="(item, key) in provider.options" class="relative">
+      <template v-if="item.data.length">
+        <h3>{{ $t(item.title) }}</h3>
+        <div class="flex gap-1 mt-2 items-center">
+          <button v-for="btn in item.data"
+            :class="{ 'selected': select[key as keyof CurrentSelect] === btn }"
+            @click="handleClick(key, btn?.id ?? btn)">
+              <i :class="[settings.dynFa, btn?.icon ?? item.icon]"></i>
+              <span>{{ key === 'covers' ? item.getText(key, btn?.id ?? btn): $t(item.getText(key, btn?.id ?? btn)) }}</span>
           </button>
-          <hr v-if="index < Object.keys(optionsProvider).length - 1" />
-        </template>
+          <VueDatePicker v-if="key === 'danmaku' && item.data.find(i => i.id === 'historyDanmaku')"
+            v-model="date" :dark="settings.isDark"
+            model-type="format" format="yyyy-MM-dd"
+            id="historyDanmakuDate" />
+          <Dropdown v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')"
+            :drop="provider.others.subtitles.map(v => ({
+              id: v.lan, name: v.lan_doc + `(${v.lan})`
+            }))" :emit="(v) => subtitle = v" :id="subtitle"
+          ></Dropdown>
+        </div>
+        <hr />
+      </template>
+      </div>
+      <div class="flex gap-1 float-right">
+        <button v-for="(icon, key) in provider.buttons" class="primary-color" @click="confirm(key)">
+          <i :class="[settings.dynFa, icon]"></i>
+          <span>{{ $t(`home.button.${key}`) }}</span>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, reactive } from 'vue';
 import { useSettingsStore, useInfoStore } from '@/store';
-import { MediaType, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap } from '@/types/data.d';
+import { PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap } from '@/types/data.d';
 import { CurrentSelect } from '@/services/backend';
 import Dropdown from '../Dropdown.vue';
 
 const props = defineProps<{
-  handleClose: (select: CurrentSelect, options?: { others?: { key: string, data: any }, multi?: boolean }) => void,
-  codecChange: (codec: StreamCodecType, others?: boolean, multi?: boolean) => void
+  process: (select: CurrentSelect, target: { key: string, data: any }, options?: { multi?: boolean }) => void,
+  codecChange: (codec: StreamCodecType, others?: OthersProvider, multi?: boolean) => void
 }>();
 
 const settings = useSettingsStore();
 
 const active = ref(false);
-const playUrlProvider = ref<PlayUrlProvider>({} as any);
-const othersProvider = ref<OthersProvider>({} as any);
-const mediaType = ref<MediaType>(MediaType.Video);
 const select = ref<CurrentSelect>({ dms: -1, cdc: -1, ads: -1, fmt: -1 });
 const subtitle = ref(String());
 const date = ref(new Intl.DateTimeFormat('en-CA').format(new Date()));
-const optionsProvider = ref<Record<string, { data: any[], icon: string; title: string; getText: Function }>>({});
+
+const provider = reactive({
+  playUrl: {} as PlayUrlProvider,
+  others: {} as OthersProvider,
+  options: {} as Record<string, { data: any[], icon: string; title: string; getText: Function }>,
+  buttons: {} as Record<string, string>
+})
 
 const isMulti = ref(false);
-const isOthers = computed(() => Object.keys(othersProvider.value).length > 0);
 
 defineExpose({ init });
-function init(playUrl: PlayUrlProvider, type: MediaType, options?: { others?: OthersProvider, multi?: boolean }) {
+function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean) {
   cleanState();
-  isMulti.value = options?.multi ?? false;
-  playUrlProvider.value = playUrl;
-  mediaType.value = type;
+  isMulti.value = multi ?? false;
+  provider.playUrl = playUrl;
+  provider.others = others;
   select.value.dms = getDefault(playUrl.videoQualities ?? [], 'df_dms');
   select.value.ads = getDefault(playUrl.audioQualities ?? [], 'df_ads');
   select.value.cdc = getDefault(
-    playUrl.video?.filter(v => v.id === select.value.dms).map(v => v.codecid!) ?? [],
+    playUrl.video?.filter(v => v.id === select.value.dms).map(v => v.codecid ?? -1) ?? [],
     'df_cdc'
   );
   select.value.fmt = playUrl.codecid;
-  const others = options?.others ?? {} as OthersProvider;
   subtitle.value = others.subtitles?.[0]?.lan;
-  othersProvider.value = others;
-  optionsProvider.value = {
+  provider.options = {
     danmaku: {
       data: others?.danmaku ? [
         { id: 'liveDanmaku', icon: 'fa-clock' },
@@ -101,73 +101,69 @@ function init(playUrl: PlayUrlProvider, type: MediaType, options?: { others?: Ot
         ...(others.subtitles?.length ? [{ id: 'subtitles', icon: 'fa-closed-captioning' }] : [])
       ] : [],
       icon: '',
-      title: 'home.downloadOptions.others',
+      title: 'home.label.others',
       getText: (_: any, id: any) => `home.label.${id}`
     },
     dms: {
       data: playUrl.videoQualities ?? [],
-      icon: 'fa-file-video',
+      icon: 'fa-video',
       title: 'common.default.dms.name',
       getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
     },
     cdc: {
       data: playUrl.video?.filter(v => v.id === select.value.dms).map(v => v.codecid).filter(Boolean) ?? [],
-      icon: 'fa-file-code',
+      icon: 'fa-code',
       title: 'common.default.cdc.name',
       getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
     },
     ads: {
       data: playUrl.audioQualities ?? [],
-      icon: 'fa-file-audio',
+      icon: 'fa-volume-high',
       title: 'common.default.ads.name',
       getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
     },
     fmt: {
       data: useInfoStore().mediaMap.fmt.map(v => v.id),
-      icon: 'fa-file-code',
+      icon: 'fa-code-simple',
       title: 'common.default.fmt.name',
       getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
     },
+  }
+  provider.buttons = {
+    ...(playUrl.video && { video: 'fa-video' }),
+    ...(playUrl.audio && { audio: 'fa-volume-high' }),
+    ...(playUrl.video && playUrl.audio && { audioVideo: 'fa-video-plus' }),
   }
   active.value = true;
 }
 
 function handleClick(key: string, id: any) {
   if (['danmaku', 'covers', 'others'].includes(key)) {
-    const others = { key, data: '' as any };
-    if (id === 'subtitles') {
-      others.key = id;
-      others.data = subtitle.value;
-    } else if (key === 'covers') others.data = id;
-    else {
-      others.key = id;
-      others.data = date.value;
+    const target = { key, data: null as any };
+    if (key === 'others' || key === 'danmaku') {
+      target.key = id;
     }
-    props.handleClose(select.value, { others, multi: isMulti.value });
-    return close();
-  }
-  if (key === 'fmt') {
-    if (select.value.fmt === id) return;
-    props.codecChange(StreamCodecMap[id], isOthers.value, isMulti.value);
+    if (id === 'subtitles') target.data = subtitle.value;
+    if (key === 'danmaku') target.data = date.value;
+    if (key === 'covers') target.data = id;
+    props.process(select.value, target, { multi: isMulti.value });
     return close();
   }
   select.value[key as keyof CurrentSelect] = id;
   if (key === 'dms') {
-    const cdc = playUrlProvider.value.video?.filter(v => v.id === id).map(v => v.codecid!).filter(Boolean) ?? [];
-    optionsProvider.value['cdc'].data = cdc;
+    const cdc = provider.playUrl.video?.filter(v => v.id === id).map(v => v.codecid ?? -1).filter(Boolean) ?? [];
+    provider.options['cdc'].data = cdc;
     select.value.cdc = getDefault(cdc, 'df_cdc');
+  }
+  if (key === 'fmt') {
+    props.codecChange(StreamCodecMap[id], provider.others, isMulti.value);
+    close();
   }
 }
 
-function getDropdown() {
-  return othersProvider.value.subtitles.map(v => ({
-    id: v.lan, name: v.lan_doc + `(${v.lan})`
-  }));
-}
-
 function confirm(key: string) {
-  const others = isOthers.value ? { key, data: select.value[key as keyof CurrentSelect] } : undefined;
-  props.handleClose(select.value, { others, multi: isMulti.value });
+  const target = { key, data: select.value[key as keyof CurrentSelect] };
+  props.process(select.value, target, { multi: isMulti.value });
   close();
 }
 
@@ -182,11 +178,9 @@ function close() {
 
 function cleanState() {
   select.value = { dms: -1, cdc: -1, ads: -1, fmt: -1 };
-  subtitle.value = [] as any;
+  subtitle.value = String();
   date.value = new Intl.DateTimeFormat('en-CA').format(new Date());
-  playUrlProvider.value = {} as any;
-  othersProvider.value = {} as any;
-  optionsProvider.value = {} as any;
+  for (const v in provider) (provider as any)[v] = {};
 }
 </script>
 

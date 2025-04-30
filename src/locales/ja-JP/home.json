@@ -1,21 +1,31 @@
 {
     "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU/FID番号...",
-    "downloadOptions": {
-        "audioVideo": "音声と映像",
-        "audio": "音声",
-        "others": "その他"
-    },
     "label": {
+        "package": "パッケージリソース",
+        "video": "動画",
+        "audio": "音声",
+        "audioVideo": "音声と動画",
         "covers": "カバー",
         "aiSummary": "AIサマリー",
-        "danmaku": "弾幕",
+        "danmaku": "コメント（弾幕）",
         "liveDanmaku": "リアルタイム弾幕",
-        "historyDanmaku": "歴史弾幕",
-        "metaSnapshot": "メタスナップショット",
-        "multiSelect": "複数選択",
-        "selectAll": "すべて選択",
+        "historyDanmaku": "履歴弾幕",
         "subtitles": "字幕",
-        "autoDetect": "自動検出"
+        "multiSelect": "複数選択",
+        "autoDetect": "自動検出",
+        "selectAll": "すべて選択",
+        "others": "その他"
     },
-    "empty": "利用可能なリソースがありません~"
+    "button": {
+        "general": "通常で",
+        "package": "パッケージで",
+        "video": "動画をダウンロード",
+        "audio": "音声をダウンロード",
+        "audioVideo": "音声と動画をダウンロード"
+    },
+    "packagePopup": {
+        "title": "必要なリソースを選択してください",
+        "desc": "動画と音声は「設定 → ダウンロード → デフォルトオプション」で設定されたオプションを使用します"
+    },
+    "empty": "利用可能なリソースがありません～"
 }

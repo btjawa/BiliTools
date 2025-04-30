@@ -32,7 +32,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
             break;
         case Types.MediaType.Favorite:
             url += "/x/v3/fav/resource/list";
-            params = { media_id: _id, ps: 36, pn: options?.pn ?? 1 };
+            params = { media_id: _id, ps: 36, pn: options?.pn ?? 1, platform: 'web' };
     }
     const body = await tryFetch(url, { params });
     if (type === Types.MediaType.Video) {
@@ -266,7 +266,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 cover: item.cover.replace("http:", "https:"),
                 desc: info.intro,
                 id: item.id,
-                cid: item.id,
+                cid: -1,
                 eid: item.id,
                 duration: item.duration,
                 ss_title: info.title,
@@ -296,7 +296,7 @@ export async function getPlayUrl(
         case Types.MediaType.Video:
             url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
             params.avid = info.id;
-            params.cid = info.id === info.cid ? await getCid(info.id) : info.cid;
+            params.cid = info.cid === -1 ? await getCid(info.id) : info.cid;
             break;
         case Types.MediaType.Bangumi:
             url += '/pgc/player/web/v2/playurl';
@@ -389,7 +389,6 @@ export async function pushBackQueue(params: {
         title: info.title,
         cover: info.cover,
         id: info.id,
-        cid: info.cid,
         ts: {
             millis: Date.now(),
             string: timestamp(Date.now(), { file: true })
@@ -414,9 +413,9 @@ export async function pushBackQueue(params: {
         ext === 'flac' && {
             taskType: 'flac'
         }
-    ].filter(Boolean);
+    ].filter(Boolean) as any[];
     const result = await Backend.commands.pushBackQueue(
-        archiveInfo, newSelect, tasks as any, params.output ?? null,
+        archiveInfo, newSelect, tasks, params.output ?? null,
     );
     if (result.status === 'error') throw result.error;
     return result.data;
@@ -433,7 +432,7 @@ export async function getCid(aid: number) {
 
 export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
     const params = {
-        aid: info.id, cid: info.id === info.cid ? await getCid(info.id) : info.cid, up_mid: mid
+        aid: info.id, cid: info.cid === -1 ? await getCid(info.id) : info.cid, up_mid: mid
     };
     const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { auth: 'wbi', params });
     const body = response as Types.AISummaryInfo;
@@ -455,11 +454,12 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
 }
 
 export async function getLiveDanmaku(id: number, cid: number, duration: number) {
+    const oid = cid === -1 ? await getCid(id) : cid;
     if (useSettingsStore().advanced.prefer_pb_danmaku) {
         let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
         for (let i = 0; i < Math.ceil(duration / 360); i++) {
             const params = {
-                type: 1, oid: cid, pid: id, segment_index: i + 1,
+                type: 1, oid, pid: id, segment_index: i + 1,
             }
             const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', auth: 'wbi', params });
             dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
@@ -467,20 +467,20 @@ export async function getLiveDanmaku(id: number, cid: number, duration: number) 
         }
         return new TextEncoder().encode(new XMLSerializer().serializeToString(xmlDoc));
     } else {
-        const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid: cid } });
+        const buffer = await tryFetch('https://api.bilibili.com/x/v1/dm/list.so', { type: 'binary', params: { oid } });
         return pako.inflateRaw(buffer);
     }
 }
 
-export async function getHistoryDanmaku(oid: number, date: string) {
-    const params = { type: 1, oid, date };
+export async function getHistoryDanmaku(id: number, oid: number, date: string) {
+    const params = { type: 1, oid: oid === -1 ? await getCid(id) : oid, date };
     const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { type: 'binary', params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
     return new TextEncoder().encode(xml);
 }
 
 export async function getPlayerInfo(id: number, cid: number) {
-    const params = { aid: id, cid };
+    const params = { aid: id, cid: cid === -1 ? await getCid(id) : cid };
     const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { auth: 'wbi', params });
     const body = response as Types.PlayerInfo;
     return body.data;
@@ -493,8 +493,8 @@ export async function getSteinInfo(id: number, graph_version: number, edge_id?: 
     return body.data;
 }
 
-export async function getSubtitles(id: number, cid: number): Promise<Types.SubtitleList[]> {
-    const playerInfo = await getPlayerInfo(id, cid);
+export async function getSubtitles(id: number, cid: number): Promise<Types.Subtitle[]> {
+    const playerInfo = await getPlayerInfo(id, cid === -1 ? await getCid(id) : cid);
     return playerInfo.subtitle?.subtitles;
 }
 

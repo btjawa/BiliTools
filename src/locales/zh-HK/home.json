@@ -1,21 +1,31 @@
 {
     "inputPlaceholder": "{0}連結/AV/BV/SS/EP/AU/FID號...",
-    "downloadOptions": {
-        "audioVideo": "下載音視頻",
-        "audio": "音頻",
-        "others": "下載其他"
-    },
     "label": {
+        "package": "打包資源",
+        "video": "影片",
+        "audio": "音訊",
+        "audioVideo": "音訊與影片",
         "covers": "封面",
-        "aiSummary": "AI總結",
+        "aiSummary": "AI摘要",
         "danmaku": "彈幕",
-        "liveDanmaku": "實時彈幕",
+        "liveDanmaku": "即時彈幕",
         "historyDanmaku": "歷史彈幕",
-        "metaSnapshot": "元信息快照",
-        "multiSelect": "啟用多選",
-        "selectAll": "全選",
         "subtitles": "字幕",
-        "autoDetect": "自動檢測"
+        "multiSelect": "啟用多選",
+        "autoDetect": "自動偵測",
+        "selectAll": "全選",
+        "others": "其他"
     },
-    "empty": "可用資源為空~"
+    "button": {
+        "general": "一般下載",
+        "package": "打包下載",
+        "video": "下載影片",
+        "audio": "下載音訊",
+        "audioVideo": "下載音訊與影片"
+    },
+    "packagePopup": {
+        "title": "請選擇所需資源",
+        "desc": "影片、音訊將會預設使用「設定 -> 下載 -> 預設選項」中的參數"
+    },
+    "empty": "可用資源為空～"
 }

@@ -68,7 +68,9 @@
                             <i class="fa-solid fa-triangle text-[10px] absolute -right-3 top-1.5 rotate-180"></i>
                         </div>
                         <Dropdown class="!absolute z-20 pointer-events-none translate-y-6"
-                            :drop="getCountryList()" :emit="(v) => cid = v" :id="cid"
+                            :drop="countryList.map(v => ({
+                                id: v.country_id, name: v.cname + ' +' + v.country_id
+                            }))" :emit="(v) => cid = v" :id="cid"
                             :use-active="{ active: dropdownActive, close: () => dropdownActive = false, target: dropdownButton }"
                         ></Dropdown>
                         </template>
@@ -200,12 +202,6 @@ async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'ini
     } catch (err) {
         new ApplicationError(err).handleError();
     }
-}
-
-function getCountryList() {
-    return countryList.value.map(v => ({
-        id: v.country_id, name: v.cname + ' +' + v.country_id
-    }))
 }
 </script>
 

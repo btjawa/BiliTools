@@ -9,7 +9,7 @@
     <div ref="updaterAction"
         class="updater-action inline-block relative transition-opacity z-[2]"
     >
-        <button @click="doUpdate" class="primary-color">
+        <button @click="update" class="primary-color">
             <i class="fa-solid fa-download"></i>
             <span>{{ $t('updater.install') }}</span>
         </button>
@@ -68,31 +68,30 @@ watch(() => settings.auto_check_update,
 );
 
 async function checkUpdate() {
-    const proxyUrl = settings.proxyUrl();
+    const proxy = settings.proxyUrl();
     const update = await check({
-        ...(proxyUrl && { proxy: proxyUrl})
+        ...(proxy && { proxy })
     });
     console.log('Update:', update);
     info('Update: ' + JSON.stringify(update));
-    if (update?.available) {
-        updateData.value = markRaw(update);
-        body.value = await marked.parse(update.body || '');
-        body.value = body.value.replace(/<a href=/g, '<a target="_blank" href=');
-        mainElement.value = (document.querySelector('.main') as HTMLElement);
-        sidebarElement.value = (document.querySelector('.sidebar') as HTMLElement);
-        mainElement.value.animate(
-            [ { maskPosition: '0' },
-                { maskPosition: '-100vw' } ],
-            { duration: 600,
-                easing: 'cubic-bezier(0.2,1,1,1)',
-                fill: 'forwards' } );
-        sidebarElement.value.style.opacity = '0';
-        sidebarElement.value.style.pointerEvents = 'none';
-        setTimeout(() => active.value = true, 400);
-    }
+    if (!update) return;
+    updateData.value = markRaw(update);
+    body.value = await marked.parse(update.body || '');
+    body.value = body.value.replace(/<a href=/g, '<a target="_blank" href=');
+    mainElement.value = (document.querySelector('.main') as HTMLElement);
+    sidebarElement.value = (document.querySelector('.sidebar') as HTMLElement);
+    mainElement.value.animate(
+        [ { maskPosition: '0' },
+            { maskPosition: '-100vw' } ],
+        { duration: 600,
+            easing: 'cubic-bezier(0.2,1,1,1)',
+            fill: 'forwards' } );
+    sidebarElement.value.style.opacity = '0';
+    sidebarElement.value.style.pointerEvents = 'none';
+    setTimeout(() => active.value = true, 400);
 }
 
-async function doUpdate() {
+async function update() {
     if (!updaterAction.value || !progress.value) return;
     updaterAction.value.style.opacity = '0';
     updaterAction.value.style.pointerEvents = 'none';

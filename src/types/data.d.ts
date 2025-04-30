@@ -48,6 +48,16 @@ export interface PlayUrlResult {
   backupUrl: string[];
 }
 
+interface PackageSelect {
+  video?: boolean;
+  audio?: boolean;
+  audioVideo?: boolean;
+  covers?: boolean;
+  aiSummary?: boolean;
+  liveDanmaku?: boolean;
+  subtitles?: string;
+}
+
 export interface PlayUrlProvider {
   video?: PlayUrlResult[];
   videoQualities?: number[];
@@ -61,7 +71,7 @@ export interface OthersProvider {
   aiSummary: boolean;
   danmaku: boolean;
   covers: { id: string; url: string }[],
-  subtitles: SubtitleList[],
+  subtitles: Subtitle[],
 }
 
 export interface MediaInfo {
@@ -646,7 +656,7 @@ export interface AISummaryInfo {
   };
 }
 
-export interface SubtitleList {
+export interface Subtitle {
   id: number;
   lan: string;
   lan_doc: string;

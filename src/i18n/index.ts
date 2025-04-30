@@ -28,6 +28,6 @@ export const locales = [
 export default createI18n({
     legacy: false,
     locale: window.navigator.language,
-    fallbackLocale: 'en-US',
+    fallbackLocale: 'zh-CN',
     messages: await loadLanguage()
 });

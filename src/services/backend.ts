@@ -120,6 +120,14 @@ async setTheme(theme: Theme, modify: boolean) : Promise<Result<Theme, TauriError
     else return { status: "error", error: e  as any };
 }
 },
+async newFolder(secret: string, path: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("new_folder", { secret, path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async pushBackQueue(info: ArchiveInfo, select: CurrentSelect, tasks: Task[], outputDir: string | null) : Promise<Result<string, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("push_back_queue", { info, select, tasks, outputDir }) };
@@ -175,7 +183,7 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type ArchiveInfo = { title: string; cover: string; id: number; cid: number; ts: Timestamp; output_dir: string; output_filename: string }
+export type ArchiveInfo = { title: string; cover: string; id: number; ts: Timestamp; output_dir: string; output_filename: string }
 export type CurrentSelect = { dms: number; ads: number; cdc: number; fmt: number }
 export type DownloadEvent = { status: "Started"; id: string; gid: string; taskType: TaskType } | { status: "Progress"; id: string; gid: string; contentLength: number; chunkLength: number } | { status: "Finished"; id: string; gid: string }
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }

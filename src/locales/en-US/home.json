@@ -1,21 +1,31 @@
 {
-    "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU/FID ID...",
-    "downloadOptions": {
-        "audioVideo": "Audio-Video",
-        "audio": "Audio",
-        "others": "Others"
-    },
+    "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU/FID number...",
     "label": {
-        "covers": "Cover",
+        "package": "Package Resources",
+        "video": "Video",
+        "audio": "Audio",
+        "audioVideo": "Audio & Video",
+        "covers": "Covers",
         "aiSummary": "AI Summary",
         "danmaku": "Danmaku",
         "liveDanmaku": "Live Danmaku",
         "historyDanmaku": "History Danmaku",
-        "metaSnapshot": "Metadata Snapshot",
-        "multiSelect": "Multi-Select",
-        "selectAll": "Select All",
         "subtitles": "Subtitles",
-        "autoDetect": "Auto Detect"
+        "multiSelect": "Multi-Select",
+        "autoDetect": "Auto Detect",
+        "selectAll": "Select All",
+        "others": "Others"
+    },
+    "button": {
+        "general": "General Download",
+        "package": "Package Download",
+        "video": "Download Video",
+        "audio": "Download Audio",
+        "audioVideo": "Download Audio & Video"
+    },
+    "packagePopup": {
+        "title": "Please select the required resources",
+        "desc": "Video and audio will use the options configured in \"Settings -> Download -> Default Options\" by default"
     },
     "empty": "No available resources~"
 }
