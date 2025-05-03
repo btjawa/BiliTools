@@ -1,7 +1,7 @@
 import { CurrentSelect, TauriError, commands, events } from '@/services/backend';
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
-import { MediaType } from '@/types/data.d';
+import { MediaInfo, MediaType } from '@/types/data.d';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
@@ -311,13 +311,17 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
 }
 
-export function filename(options: { mediaType: string, aid: number, title: string }): string {
-    return useSettingsStore().filename.replace(/{(\w+)}/g, (_, key) => {
-        switch(key) {
-            case 'date': return timestamp(Date.now(), { file: true });
-            case 'timestamp': return Date.now().toString();
-            case 'title': return options.title.replace(/[\\/:*?"<>|]/g, "_");
-            default: return key in options ? String(options[key as keyof typeof options]) : "";
+export function filename(info: Record<string, any>, upper: MediaInfo['upper'], index: number): string {
+    const format = useSettingsStore().advanced.filename_format;
+    return format.replace(/{(\w+)}/g, (_, key) => {
+        switch (key) {
+            case 'index': return index;
+            case 'upper': return upper.name;
+            case 'upperid': return upper.mid;
+            case 'date_sec': return timestamp(Date.now(), { file: true });
+            case 'ts_sec': return String(Math.floor(Date.now() / 1000));
+            case 'ts_ms': return String(Date.now());
+            default: return info[key] ?? -1;
         }
     });
 }

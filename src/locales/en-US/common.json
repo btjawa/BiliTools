@@ -61,6 +61,22 @@
                 "1": "MP4 Format",
                 "2": "FLV Format"
             }
+        },
+        "placeholders": {
+            "index": "Index (starting from 1)",
+            "title": "Title",
+            "upper": "Author Name",
+            "upperid": "Author ID (UID)",
+            "aid": "AV",
+            "sid": "SID",
+            "fid": "FID",
+            "bvid": "BV",
+            "cid": "CID",
+            "epid": "EP",
+            "ssid": "SS",
+            "date_sec": "Date",
+            "ts_sec": "Timestamp (sec)",
+            "ts_ms": "Timestamp (ms)"
         }
     },
     "context_menu": {

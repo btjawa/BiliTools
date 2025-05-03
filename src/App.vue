@@ -2,7 +2,7 @@
     <TitleBar />
     <ContextMenu ref="contextMenu" />
     <SideBar />
-	<Updater @contextmenu.prevent="showMenu" />
+	<Updater @contextmenu.prevent="showMenu" ref="updater" />
     <div class="main" @contextmenu.prevent="showMenu">
         <div class="loading"></div>
         <router-view v-slot="{ Component }">
@@ -19,12 +19,13 @@ import { onMounted, provide, ref } from "vue";
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { ApplicationError, setEventHook } from "@/services/utils";
 import { fetchUser, activateCookies, checkRefresh } from "@/services/login";
-import { useQueueStore, useInfoStore, useAppStore } from "@/store";
+import { useQueueStore, useAppStore } from "@/store";
 import { commands } from "@/services/backend";
 import { SearchPage } from "@/views";
 import { useRouter } from "vue-router";
 
 const page = ref<InstanceType<typeof SearchPage>>();
+const updater = ref<InstanceType<typeof Updater>>();
 const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
 const router = useRouter();
 const queuePage = ref(0)
@@ -35,6 +36,7 @@ onMounted(async () => {
 	router.push("/");
 	setEventHook();
 	provide('queuePage', queuePage);
+	provide('checkUpdate', updater.value?.checkUpdate);
 	provide('trySearch', async (input?: string) => {
 		router.push('/');
 		const start = Date.now();
@@ -46,16 +48,18 @@ onMounted(async () => {
 		};
 		checkCondition();
 	});
+	const app = useAppStore();
 	try {
 		const ready = await commands.ready();
 		if (ready.status === 'error') throw new ApplicationError(ready.error);
 		const secret = ready.data;
+		updater.value?.checkUpdate();
 		const init = await commands.init(secret);
 		if (init.status === 'error') throw new ApplicationError(init.error);
 		const data = init.data;
 		const { downloads, ...initData } = init.data;
 		useQueueStore().complete = data.downloads;
-		useInfoStore().$patch({
+		app.$patch({
 			secret, ...initData
 		});
 		await checkRefresh();
@@ -63,12 +67,8 @@ onMounted(async () => {
 	} catch(err) {
 		new ApplicationError(err).handleError();
 	} finally {
-		try {
-			await activateCookies();
-		} catch(err) {
-			new ApplicationError(err).handleError();
-		}
-		useAppStore().inited = true;
+		await activateCookies().catch(e => new ApplicationError(e).handleError());
+		app.inited = true;
 	}
 })
 </script>

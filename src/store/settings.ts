@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
-import { Settings } from "@/services/backend";
+import { commands, Settings } from "@/services/backend";
+import { useAppStore } from "./app";
 
 export const useSettingsStore = defineStore('settings', {
     state: (): Settings => ({
@@ -12,15 +13,14 @@ export const useSettingsStore = defineStore('settings', {
         language: String(),
         theme: 'dark',
         auto_check_update: false,
-        filename: String(),
         proxy: {
             addr: String(),
             username: String(),
             password: String(),
         },
         advanced: {
-            auto_convert_flac: true,
             prefer_pb_danmaku: true,
+            filename_format: String(),
         }
     }),
     getters: {
@@ -37,13 +37,19 @@ export const useSettingsStore = defineStore('settings', {
         }
     },
     actions: {
-        updateNest(key: string, value: string | number | Object) {
+        value(key: string) {
+            return key.split('.').reduce((acc, part) => acc?.[part], this.$state as any);
+        },
+        async updateNest(key: string, value: string | number | Object) {
             const keys = key.split('.');
             let current = this.$state as any;
             for (let i = 0; i < keys.length - 1; i++) {
                 current = current[keys[i]];
             }
             current[keys[keys.length - 1]] = value;
+            const secret = useAppStore().secret;
+            const result = await commands.rwConfig('write', { [keys[0]]: (this.$state as any)[keys[0]] }, secret);
+            if (result.status === 'error') throw result.error;
         },
     }
 });

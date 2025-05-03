@@ -39,8 +39,8 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
-import { useSettingsStore, useInfoStore } from '@/store';
-import { PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap } from '@/types/data.d';
+import { useSettingsStore } from '@/store';
+import { QualityMap, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap } from '@/types/data.d';
 import { CurrentSelect } from '@/services/backend';
 import Dropdown from '../Dropdown.vue';
 
@@ -123,7 +123,7 @@ function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean)
       getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
     },
     fmt: {
-      data: useInfoStore().mediaMap.fmt.map(v => v.id),
+      data: QualityMap.fmt.map(v => v.id),
       icon: 'fa-code-simple',
       title: 'common.default.fmt.name',
       getText: (key: any, id: any) => `common.default.${key}.data.${id}`,

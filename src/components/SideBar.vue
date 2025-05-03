@@ -31,7 +31,7 @@
 import { onMounted, computed, ref } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { ApplicationError } from '@/services/utils';
-import { useUserStore, useSettingsStore, useInfoStore } from "@/store";
+import { useUserStore, useSettingsStore, useAppStore } from "@/store";
 import { commands } from '@/services/backend';
 import { useRoute } from 'vue-router';
 
@@ -48,7 +48,7 @@ async function setTheme() {
     try {
         const newTheme = await commands.setTheme(useSettingsStore().theme, true);
         if (newTheme.status === 'error') throw newTheme.error;
-        const result = await commands.rwConfig('write', { theme: newTheme.data }, useInfoStore().secret);
+        const result = await commands.rwConfig('write', { theme: newTheme.data }, useAppStore().secret);
         if (result.status === 'error') throw result.error;
     } catch(err) {
         new ApplicationError(err).handleError();

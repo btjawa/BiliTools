@@ -1,3 +1,34 @@
+export const QualityMap = {
+  dms: [
+    { id: 6 }, { id: 16 }, { id: 32 }, { id: 64 },
+    { id: 80 }, { id: 112 }, { id: 116 }, { id: 120 },
+    { id: 125 }, { id: 126 }, { id: 127 },
+  ],
+  ads: [
+    { id: 30216 }, { id: 30228 }, { id: 30232 }, { id: 30280 },
+    { id: 30250 }, { id: 30380 }, { id: 30251 }, { id: 30252 },
+  ],
+  cdc: [{ id: 7 }, { id: 12 }, { id: 13 }],
+  fmt: [{ id: 0 }, { id: 1 }, { id: 2 }]
+}
+
+export const FilenamePlaceholders = [
+  'index',
+  'title',
+  'upper',
+  'upperid',
+  'aid',
+  'sid',
+  'fid',
+  'bvid',
+  'cid',
+  'epid',
+  'ssid',
+  'date_sec',
+  'ts_sec',
+  'ts_ms'
+] as const;
+
 export interface Headers {
   'Cookie': string;
   'User-Agent': string;
@@ -98,17 +129,21 @@ export interface MediaInfo {
     share?: number,
   },
   upper: {
-    avatar: string | null,
-    name: string | null,
-    mid: number | null,
+    avatar?: string,
+    name?: string,
+    mid?: number,
   },
   list: {
     title: string;
     cover: string;
     desc: string;
-    id: number;
-    cid: number;
-    eid: number;
+    aid?: number; // general video
+    sid?: number; // music
+    fid?: number; // favorite
+    cid?: number;
+    bvid?: string;
+    epid?: number;
+    ssid?: number;
     duration?: number;
     ss_title: string;
     index: number

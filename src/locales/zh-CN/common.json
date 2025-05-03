@@ -61,6 +61,22 @@
                 "1": "MP4 格式",
                 "2": "FLV 格式"
             }
+        },
+        "placeholders": {
+            "index": "序号 从1开始",
+            "title": "标题",
+            "upper": "UP主名称",
+            "upperid": "UP主ID UID",
+            "aid": "AV号",
+            "sid": "SID",
+            "fid": "FID",
+            "bvid": "BV号",
+            "cid": "CID",
+            "epid": "EP号",
+            "ssid": "SS号",
+            "date_sec": "日期",
+            "ts_sec": "时间戳 秒",
+            "ts_ms": "时间戳 毫秒"
         }
     },
     "context_menu": {

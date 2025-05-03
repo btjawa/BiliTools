@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { ApplicationError, formatBytes } from '@/services/utils';
-import { markRaw, reactive, ref, watch } from 'vue';
+import { markRaw, reactive, ref } from 'vue';
 import { useSettingsStore } from "@/store";
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -56,27 +56,19 @@ const updateProgress = reactive({
 
 const settings = useSettingsStore();
 
-watch(() => settings.auto_check_update,
-    async (v, _) => {
-        if (!v) return null;
-        try {
-            await checkUpdate();
-        } catch(err) {
-            new ApplicationError(err + '\n' + i18n.global.t('error.tryManualUpdate')).handleError();
-        }
-    }, { deep: true }
-);
-
+defineExpose({ checkUpdate });
 async function checkUpdate() {
     const proxy = settings.proxyUrl();
-    const update = await check({
-        ...(proxy && { proxy })
-    });
-    console.log('Update:', update);
-    info('Update: ' + JSON.stringify(update));
-    if (!update) return;
-    updateData.value = markRaw(update);
-    body.value = await marked.parse(update.body || '');
+    try {
+        const update = await check({ ...(proxy && { proxy }) });
+        console.log('Update:', update);
+        info('Update: ' + JSON.stringify(update));
+        if (!update) return;
+        updateData.value = markRaw(update);
+        body.value = await marked.parse(update.body || '');
+    } catch(err) {
+        new ApplicationError(err + '\n' + i18n.global.t('error.tryManualUpdate')).handleError();
+    }
     body.value = body.value.replace(/<a href=/g, '<a target="_blank" href=');
     mainElement.value = (document.querySelector('.main') as HTMLElement);
     sidebarElement.value = (document.querySelector('.sidebar') as HTMLElement);

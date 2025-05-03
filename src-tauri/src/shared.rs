@@ -42,7 +42,6 @@ lazy_static! {
                     } else { "zh-CN".into() }
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
-        filename: "{mediaType}_{title}_{date}".into(),
         auto_check_update: true,
         theme: Theme::Auto,
         proxy: SettingsProxy {
@@ -51,8 +50,8 @@ lazy_static! {
             password: String::new()
         },
         advanced: SettingsAdvanced {
-            auto_convert_flac: true,
             prefer_pb_danmaku: true,
+            filename_format: "{index}_{title}".into()
         }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
@@ -129,6 +128,14 @@ pub async fn init_headers() -> Result<BTreeMap<String, String>> {
 }
 
 pub async fn init_client() -> Result<Client> {
+    init_client_inner(true).await
+}
+
+pub async fn init_client_no_proxy() -> Result<Client> {
+    init_client_inner(false).await
+}
+
+pub async fn init_client_inner(proxy: bool) -> Result<Client> {
     let mut headers = HeaderMap::new();
     for (key, value) in init_headers().await? {
         headers.insert(
@@ -139,7 +146,7 @@ pub async fn init_client() -> Result<Client> {
     let config = CONFIG.read().unwrap();
     let client_builder = Client::builder()
         .default_headers(headers);
-    let client_builder = if !config.proxy.addr.is_empty() {
+    let client_builder = if !config.proxy.addr.is_empty() && proxy {
         client_builder.proxy(
             match config.proxy.addr.starts_with("https") {
                 true => Proxy::https(&config.proxy.addr),
@@ -185,8 +192,6 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
 pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {
     use tauri::utils::{config::WindowEffectsConfig, WindowEffect};
     use tauri_plugin_os::Version;
-    #[cfg(debug_assertions)]
-    window.open_devtools();
     #[cfg(all(target_os = "windows", not(debug_assertions)))]
     window.with_webview(|webview| unsafe {
         use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings4;

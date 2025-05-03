@@ -22,7 +22,7 @@
                 </template>
                 <span>{{ item.info.ts.string }}</span>
             </div>
-            <span class="absolute top-3 right-4 desc text">{{ item.info.id }}</span>
+            <span class="absolute top-3 right-4 desc text">{{ item.id }}</span>
             <div class="progress flex items-center justify-center">
                 <span class="pr-2 min-w-fit text-sm">{{ queuePage === 2 ? $t('downloads.label.complete') : (statusList[item.id]?.message ?? $t('downloads.label.waiting')) }}</span>
                 <div :style="`--progress-width: ${queuePage === 2 ? 100.0 : (statusList[item.id]?.progress ?? 0)}%`"

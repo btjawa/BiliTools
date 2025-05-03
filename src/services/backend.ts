@@ -183,7 +183,7 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type ArchiveInfo = { title: string; cover: string; id: number; ts: Timestamp; output_dir: string; output_filename: string }
+export type ArchiveInfo = { title: string; sstitle: string; cover: string; ts: Timestamp; filename: string }
 export type CurrentSelect = { dms: number; ads: number; cdc: number; fmt: number }
 export type DownloadEvent = { status: "Started"; id: string; gid: string; taskType: TaskType } | { status: "Progress"; id: string; gid: string; contentLength: number; chunkLength: number } | { status: "Finished"; id: string; gid: string }
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
@@ -192,8 +192,8 @@ export type JsonValue = null | boolean | number | string | JsonValue[] | { [key 
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; tasks: Task[]; output: string; info: ArchiveInfo; select: CurrentSelect }
 export type QueueType = "waiting" | "doing" | "complete"
-export type Settings = { max_conc: number; temp_dir: string; down_dir: string; df_dms: number; df_ads: number; df_cdc: number; auto_check_update: boolean; filename: string; proxy: SettingsProxy; advanced: SettingsAdvanced; theme: Theme; language: string }
-export type SettingsAdvanced = { auto_convert_flac: boolean; prefer_pb_danmaku: boolean }
+export type Settings = { max_conc: number; temp_dir: string; down_dir: string; df_dms: number; df_ads: number; df_cdc: number; auto_check_update: boolean; proxy: SettingsProxy; advanced: SettingsAdvanced; theme: Theme; language: string }
+export type SettingsAdvanced = { prefer_pb_danmaku: boolean; filename_format: string }
 export type SettingsProxy = { addr: string; username: string; password: string }
 export type SidecarError = { name: string; error: string }
 export type Task = { urls: string[] | null; gid: string | null; taskType: TaskType; path: string | null }

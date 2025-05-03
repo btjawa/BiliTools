@@ -13,17 +13,7 @@ use specta::Type;
 
 use crate::{
     downloads, errors::TauriResult, ffmpeg, shared::{
-        filename,
-        get_app_handle,
-        init_client,
-        random_string,
-        process_err,
-        WORKING_PATH,
-        CONFIG,
-        SECRET,
-        READY,
-        SidecarError,
-        USER_AGENT
+        filename, get_app_handle, init_client_no_proxy, process_err, random_string, SidecarError, CONFIG, READY, SECRET, USER_AGENT, WORKING_PATH
     }, TauriError
 };
 
@@ -59,11 +49,10 @@ pub struct Task {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct ArchiveInfo {
     pub title: String,
+    pub sstitle: String,
     pub cover: String,
-    pub id: usize,
     pub ts: Timestamp,
-    pub output_dir: String,
-    pub output_filename: String,
+    pub filename: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -463,7 +452,7 @@ pub fn init() -> Result<()> {
 }
 
 pub async fn post_aria2c(action: &str, params: Vec<Value>) -> TauriResult<Value> {
-    let client = init_client().await?;
+    let client = init_client_no_proxy().await?;
     let mut params_vec = vec![Value::String(format!("token:{}", *SECRET.read().unwrap()))];
     for param in params {
         let value = match param {
@@ -529,7 +518,9 @@ pub async fn push_back_queue(
     let mut parent = if let Some(output_dir) = &output_dir {
         PathBuf::from(output_dir)
     } else {
-        CONFIG.read().unwrap().down_dir.join(info.output_dir.clone())
+        CONFIG.read().unwrap().down_dir.join(
+            format!("{}_{}", info.sstitle, info.ts.string)
+        )
     };
     if parent.exists() && output_dir.is_none() {
         let mut count = 1;
@@ -545,7 +536,7 @@ pub async fn push_back_queue(
     let mut queue_info = QueueInfo {
         id: random_string(16),
         tasks,
-        output: parent.join(filename(info.output_filename.clone())),
+        output: parent.join(filename(info.filename.clone())),
         info: info.clone(),
         select,
     };
@@ -560,8 +551,8 @@ pub async fn push_back_queue(
         let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
         fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
         let dir = check_breakpoint(
-            &temp_dir, format!("{}_{}", info.id, info.ts.millis)
-        )?.unwrap_or(temp_dir.join(format!("{}_{}", info.id, info.ts.millis)));
+            &temp_dir, format!("{}_{}", info.filename, info.ts.millis)
+        )?.unwrap_or(temp_dir.join(format!("{}_{}", info.filename, info.ts.millis)));
         let params = vec![json!(urls), json!({ "dir": dir, "out": name, "pause": "true" })];
         let body: Aria2General = serde_json::from_value(
             post_aria2c("addUri", params).await?
@@ -593,7 +584,8 @@ pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
                 match result {
                     Err(e) => { process_err(e, "aria2c"); },
                     Ok(r) => if QUEUE_MANAGER.get_len(QueueType::Doing).await == 0 {
-                        break notifica::notify("BiliTools", &format!("{}\nDownload Complete.", r.info.output_dir))?;
+                        let parent = r.output.parent().unwrap().to_string_lossy();
+                        break notifica::notify("BiliTools", &format!("{parent}\nDownload Complete."))?;
                     }
                 }
             }

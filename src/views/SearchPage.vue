@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId } from '@/services/utils';
 import { MediaInfo, MediaInfoItem, Popup, PackagePopup } from '@/components/SearchPage';
-import { useInfoStore, useSettingsStore, useUserStore } from '@/store';
+import { useAppStore, useSettingsStore, useUserStore } from '@/store';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
 import { reactive, ref, computed, inject, watch } from 'vue';
 import { getMediaInfo, getPlayUrl } from '@/services/data';
@@ -165,9 +165,11 @@ async function search(overrideInput?: string) {
 		const parsed = v.searchMediaType === Types.MediaType.Favorite ? { id: input, type: v.searchMediaType } : await parseId(input);
 		const type = v.searchMediaType === 'auto' ? parsed.type : v.searchMediaType;
 		const info = await getMediaInfo(parsed.id, type);
-		v.searchTarget = info.list.findIndex(v => v.id === info.id);
+		v.searchTarget = info.list.findIndex(v => v.aid === info.id);
 		info.cover = await getImageBlob(info.cover);
-		info.upper.avatar = info.upper.avatar ? await getImageBlob(info.upper.avatar + '@128h') : null;
+		if (info.upper.avatar) {
+			info.upper.avatar = await getImageBlob(info.upper.avatar + '@128h');
+		}
 		v.mediaInfo = info;
 		v.listActive = true;
 		await new Promise(resolve => setTimeout(resolve, 0)); // Wait for v-if to be applied
@@ -195,7 +197,7 @@ async function initOthers(info: Types.MediaInfo['list'][0]) {
 	if (v.mediaInfo.type === Types.MediaType.Video && useUserStore().isLogin) {
 		const status = await data.getAISummary(info, v.mediaInfo.upper.mid ?? 0, { check: true });
 		others.aiSummary = Boolean(status);
-		const subtitles = await data.getSubtitles(info.id, info.cid);
+		const subtitles = await data.getSubtitles(info);
 		others.subtitles = subtitles;
 	}
 	return others;
@@ -225,7 +227,7 @@ async function initPackage(index: number, options?: { multi?: boolean }) {
 	}
 }
 
-async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, options?: { output?: string }) {
+async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, index: number, output?: string) {
 	const params: {
 		video?: Types.PlayUrlResult,
 		audio?: Types.PlayUrlResult,
@@ -236,22 +238,24 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 	if (ref.key === 'audio' || ref.key === 'audioVideo') {
 		params.audio = playurl.audio?.find(v => v.id === select.ads);
 	} else select.ads = -1;
+	const upper = v.mediaInfo.upper;
 	let title = info.title;
 	let body;
 	switch (ref.key) {
 		case 'video': case 'audio': case 'audioVideo':
 			return await data.pushBackQueue({
-				mediaType: i18n.global.t('downloads.media_type.' + v.mediaInfo.type),
-				select, info, ...params, output: options?.output
+				info, upper, ...params, select,
+				sstitle: v.mediaInfo.title,
+				index, output,
 			});
-		case 'liveDanmaku': body = await data.getLiveDanmaku(info.id, info.cid, info.duration ?? 0); break;
+		case 'liveDanmaku': body = await data.getLiveDanmaku(info); break;
 		case 'historyDanmaku':
-			body = await data.getHistoryDanmaku(info.id, info.cid, ref.data);
+			body = await data.getHistoryDanmaku(info, ref.data);
 			title += ('_' + ref.data);
 			break;
-		case 'aiSummary': body = await data.getAISummary(info, v.mediaInfo.upper.mid ?? 0); break;
+		case 'aiSummary': body = await data.getAISummary(info, upper.mid ?? 0); break;
 		case 'subtitles':
-			const subtitles = await data.getSubtitles(info.id, info.cid);
+			const subtitles = await data.getSubtitles(info);
 			const subtitle = subtitles.find(v => v.lan === ref.data);
 			if (!subtitle) throw 'subtitle url not found';
 			body = await data.getSubtitle(subtitle.subtitle_url);
@@ -262,17 +266,16 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 			title += ('_' +( v.mediaInfo.covers.find(v => v.id === ref.data)?.id ?? 'cover'));
 			break;
 	}
-	const name = filename({ title, mediaType: i18n.global.t('home.label.' + ref.key), aid: info.id  });
 	const map = othersMap[ref.key as keyof typeof othersMap];
-	const file = `${name}.${map.suffix}`;
-	const path = options?.output ?
-		await pathJoin(options.output, file) :
+	const file = `${filename(info, upper, index)}.${map.suffix}`;
+	const path = output ?
+		await pathJoin(output, file) :
 		await dialogSave({
 		filters: [{ name: map.desc, extensions: [map.suffix] }],
 		defaultPath: await pathJoin(settings.down_dir, file)
 	});
 	if (!path) return;
-	const secret = useInfoStore().secret;
+	const secret = useAppStore().secret;
 	let result;
 	switch (ref.key) {
 		case 'liveDanmaku': case 'historyDanmaku': result = await commands.xmlToAss(secret, path, body); break;
@@ -294,8 +297,10 @@ async function processGeneral(select: CurrentSelect, target: { key: string, data
 		router.push('/down-page');
 	}
 	let output: string | undefined = options?.output;
+	let index = 0;
 	for (const chunk of chunks) {
 		await Promise.all(chunk.map(async item => {
+			index++;
 			const info = v.mediaInfo.list[item];
 			const getId = (ids: number[], ref: number) => ids.includes(ref) ? ref : ids.sort((a, b) => b - a)[0];
 			try {
@@ -306,7 +311,7 @@ async function processGeneral(select: CurrentSelect, target: { key: string, data
 					cdc: getId(playurl.video?.filter(v => v.id === dms).map(v => v.codecid ?? -1) ?? [], select.cdc),
 					dms, fmt: playurl.codecid,
 				}
-				const result = await download(newSelect, info, playurl, target, { output });
+				const result = await download(newSelect, info, playurl, target, index, output);
 				if (result) output = result;
 			} catch(err) {
 				new ApplicationError(err).handleError();
@@ -328,13 +333,9 @@ async function processPackage(select: Types.PackageSelect, options?: { multi?: b
 		router.push('/down-page');
 	}
 	const entries = Object.entries(select);
-	for (const chunk of chunks) {
-		let output = await pathJoin(settings.down_dir, filename({
-			title: v.mediaInfo.list[chunk].title,
-			mediaType: i18n.global.t('home.label.package'),
-			aid: v.mediaInfo.id
-		}));
-		const secret = useInfoStore().secret;
+	for (const [index, chunk] of chunks.entries()) {
+		let output = await pathJoin(settings.down_dir, filename(v.mediaInfo.list[chunk], v.mediaInfo.upper, index));
+		const secret = useAppStore().secret;
 		await commands.newFolder(secret, output);
 		await Promise.all(entries.map(async ([key, data]) => {
 			const newSelect = {

@@ -26,22 +26,19 @@
                         :data="unit.data" :update="cleanCache" :open="(v) => getPath(v).then(v => openPath(v))"
                     />
                     <Dropdown v-if="unit.type === 'dropdown'"
-                        :drop="getDropdown(unit.drop)" :emit="(v) => updateSettings(unit.data, v)"
-                        :id="(settings as any)[unit.data]"
+                        :drop="getDropdown(unit.drop)"
+                        :id="settings.value(unit.data)"
+                        :emit="(v) => bind(unit.data).value = v"
                     />
-                    <Drag v-if="unit.type === 'drag'"
-                        :data="unit.data" :placeholders="unit.placeholders"
-                        :update="updateNest" :shorten="$t(`settings.${subPage}.${item.id}.shorten`)"
-                    />
+                    <Filename v-if="unit.type === 'filename'" />
                     <input v-if="unit.type === 'input'"
-                        :type="unit.data === 'password' ? 'password' : 'text'"
-                        :placeholder="unit.placeholder"
-                        @blur="(e) => updateNest(unit.data, (e.target as HTMLInputElement).value)"
-                        autocorrect="off" spellcheck="false" autocapitalize="off"
+                        type="text" spellcheck="false"
+                        :value="bind(unit.data).value" :placeholder="unit.placeholder"
+                        @blur="(e) => bind(unit.data).value = (e.target as HTMLInputElement).value"
                     />
                     <button v-if="unit.type === 'switch'"
-                        @click="updateNest(unit.data, !getNestedValue(settings.$state, unit.data))"
-                        :class="{ 'active': getNestedValue(settings.$state, unit.data) }"
+                        @click="bind(unit.data).value = !bind(unit.data).value"
+                        :class="{ 'active': bind(unit.data).value }"
                         class="inline-block w-11 h-[22px] relative delay-100 p-[3px] rounded-xl"
                     >
                         <div class="circle h-4 w-4 rounded-lg bg-[color:var(--desc-color)] absolute left-[3px] top-[3px]"></div>
@@ -55,12 +52,12 @@
                             <img class="h-16 mr-6 w-auto inline" src="@/assets/img/icon.svg" draggable="false" />
                             <img class="h-10 w-auto inline" src="@/assets/img/icon-big.svg" draggable="false" />
                         </div>
-                        {{ $t('common.version') }}: <span @click="openUrl('https://github.com/btjawa/BiliTools/releases/tag/v' + infoStore.version)"
+                        {{ $t('common.version') }}: <span @click="openUrl('https://github.com/btjawa/BiliTools/releases/tag/v' + app.version)"
                             class="mx-2 text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md font-semibold cursor-pointer"
-                        >{{ infoStore.version }}</span>
+                        >{{ app.version }}</span>
                         <span class="text desc ml-2">
                             <i :class="settings.dynFa" class="fa-code-commit"></i>
-                            {{ infoStore.hash.slice(0, 7) }}
+                            {{ app.hash.slice(0, 7) }}
                         </span>
                     </div>
                     <div v-if="unit.type === 'reference'" class="desc">
@@ -84,19 +81,20 @@
     </div>
 </div></template>
 <script setup lang="ts">
-import { computed, nextTick, onActivated, ref, watch } from 'vue';
+import { computed, inject, nextTick, onActivated, ref, watch } from 'vue';
 import { ApplicationError, AppLog, tryFetch } from '@/services/utils';
-import { Channel } from '@tauri-apps/api/core';
-import { TYPE } from 'vue-toastification';
-import { type as osType } from '@tauri-apps/plugin-os';
-import { Path, Cache, Drag } from '@/components/SettingPage';
-import { useSettingsStore, useAppStore, useInfoStore } from '@/store';
+import { Path, Cache, Filename } from '@/components/SettingPage';
 import { openPath, openUrl } from '@tauri-apps/plugin-opener';
-import { Empty } from '@/components';
+import { useSettingsStore, useAppStore } from '@/store';
+import { type as osType } from '@tauri-apps/plugin-os';
+import { Channel } from '@tauri-apps/api/core';
 import { commands } from '@/services/backend';
+import { QualityMap } from '@/types/data.d';
+import { TYPE } from 'vue-toastification';
 import i18n, { locales } from '@/i18n';
-import * as path from '@tauri-apps/api/path';
+import { Empty } from '@/components';
 import * as dialog from '@tauri-apps/plugin-dialog';
+import * as path from '@tauri-apps/api/path';
 import Dropdown from '@/components/Dropdown.vue';
 
 type PathAlias = keyof typeof app.cache;
@@ -104,8 +102,14 @@ type PathAlias = keyof typeof app.cache;
 const subPage = ref("storage");
 const $subPage = ref<HTMLElement>();
 const settings = useSettingsStore();
-const infoStore = useInfoStore();
 const app = useAppStore();
+
+const checkUpdate = inject<Function>('checkUpdate');
+
+const bind = (key: string) => computed({
+    get() { return settings.value(key) },
+    set(v) { settings.updateNest(key, v) }
+});
 
 const settingsTree = computed<any[]>(() => {
     const t = i18n.global.t;
@@ -138,29 +142,24 @@ const settingsTree = computed<any[]>(() => {
                     { id: 5, name: "5" },
                 ] },
             ] },
-            { id: 'filename', icon: "fa-file", data: [
-                { type: "drag", data: 'filename', placeholders: ["{mediaType}", "{aid}", "{title}", "{date}", "{timestamp}"] },
-            ] },
             { id: 'proxy', icon: "fa-globe", desc: true, data: [
                 { name: t('common.address'), type: "input", data: "proxy.addr", placeholder: "http(s)://server:port" },
                 { name: t('common.username'), type: "input", data: "proxy.username", placeholder: t('common.optional') },
                 { name: t('common.password'), type: "input", data: "proxy.password", placeholder: t('common.optional') },
-                { id: 'checkProxy', type: "button", data: checkProxy.bind(this), icon: "fa-cloud-question" },
+                { id: 'checkProxy', type: "button", data: checkProxy, icon: "fa-cloud-question" },
             ] }
         ] },
         { id: "advanced", icon: "fa-flask", content: [
-            { id: 'auto_convert_flac', icon: "fa-exchange", desc: true, data: [
-                { id: 'enable', type: "switch", data: "advanced.auto_convert_flac" },
-            ] },
             { id: 'prefer_pb_danmaku', icon: "fa-exchange", desc: true, data: [
                 { id: 'enable', type: "switch", data: "advanced.prefer_pb_danmaku" },
-            ] }
+            ] },
+            { id: 'filename', icon: "fa-file", desc: true, data: [{ type: "filename" }] },
         ] },
         { id: "about", icon: "fa-circle-info", content: [
             { data: [{ type: "about" }] },
             { id: 'update', icon: "fa-upload", data: [
                 { id: 'auto_check_update', type: "switch", data: "auto_check_update" },
-                { id: 'checkUpdate', type: "button", data: checkUpdate.bind(this), icon: "fa-wrench" },
+                { id: 'checkUpdate', type: "button", data: checkUpdate, icon: "fa-wrench" },
             ] },
             { id: 'links', icon: "fa-link", data: [
                 { id: 'documentation', type: "button", data: () => openUrl("https://btjawa.top/bilitools"), icon: "fa-book" },
@@ -186,40 +185,9 @@ watch(subPage, (oldPage, newPage) => {
 
 onActivated(() => Object.keys(app.cache).forEach(key => getSize(key as PathAlias)));
 
-function checkUpdate() {
-    const status = settings.auto_check_update;
-    updateSettings('auto_check_update', !status);
-    updateSettings('auto_check_update', status);
-}
-
-function updatePath(type: string) {
-    dialog.open({
-        directory: true,
-        defaultPath: (settings.$state as any)[type]
-    }).then(path => {
-        if (!path) return null;
-        updateSettings(type, path);
-    }).catch(err => {
-        new ApplicationError(err).handleError();
-    })
-}
-
-function updateNest(key: string, data: any) {
-    const parent = key.split('.')[0] as keyof typeof settings.$state;
-    let value = getNestedValue(settings.$state, key);
-    if (data === value) return null;
-    settings.updateNest(key, data);
-    updateSettings(parent, settings.$state[parent]);
-}
-
-async function updateSettings(key: string, item: any) {
-    const result = await commands.rwConfig('write', { [key]: item }, infoStore.secret);
-    if (result.status === 'error') throw result.error;
-}
-
-function getDropdown(drop: keyof typeof infoStore.mediaMap | { id: number, name: string }[]) {
+function getDropdown(drop: keyof typeof QualityMap | { id: number, name: string }[]) {
     if (Array.isArray(drop)) return drop;
-    else return infoStore.mediaMap[drop].map(v => ({ id: v.id, name: i18n.global.t(`common.default.${drop}.data.${v.id}`) }))
+    else return QualityMap[drop].map(v => ({ id: v.id, name: i18n.global.t(`common.default.${drop}.data.${v.id}`) }))
 }
 
 async function getPath(type: PathAlias) {
@@ -238,6 +206,16 @@ async function getPath(type: PathAlias) {
     }
 }
 
+async function getSize(pathName: PathAlias) {
+    (app.cache as any)[pathName] = 0;
+    const event = new Channel<number>();
+    event.onmessage = (bytes) => {
+        (app.cache as any)[pathName] = bytes;
+    }
+    const result = await commands.getSize(await getPath(pathName), event);
+    if (result.status === 'error') throw result.error;
+}
+
 async function checkProxy() {
     try {
         const body = await tryFetch('https://api.bilibili.com/x/report/click/now');
@@ -250,29 +228,21 @@ async function checkProxy() {
         new ApplicationError(err).handleError();
     }
 }
-async function getSize(pathName: PathAlias) {
-    (app.cache as any)[pathName] = 0;
-    const event = new Channel<number>();
-    event.onmessage = (bytes) => {
-        (app.cache as any)[pathName] = bytes;
-    }
-    const result = await commands.getSize(await getPath(pathName), event);
-    if (result.status === 'error') throw result.error;
+
+async function updatePath(type: string) {
+    const path = await dialog.open({
+        directory: true,
+        defaultPath: settings.value(type)
+    });
+    if (path) bind(type).value = path;
 }
+
 async function cleanCache(pathName: PathAlias) {
     const result = await dialog.ask(i18n.global.t('settings.askDelete'), { 'kind': 'warning' });
     if (!result) return;
     const clean = await commands.cleanCache(await getPath(pathName));
     if (clean.status === 'error') throw new ApplicationError(clean.error);
     await getSize(pathName);
-}
-function getNestedValue(obj: Record<string, any>, path: string): any {
-    if (!path.includes('.')) return obj[path];
-    const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
-    if (value && typeof value === 'object') {
-        return Array.isArray(value) ? [...value] : { ...value };
-    }
-    return value;
 }
 </script>
 <style lang="scss" scoped>
@@ -284,7 +254,7 @@ hr {
     @apply w-full my-4;
 }
 .page span.desc {
-    @apply text-sm;
+    @apply text-sm whitespace-pre-wrap;
 }
 .setting-page__sub-tab button.active {
     @apply bg-[color:var(--button-color)];

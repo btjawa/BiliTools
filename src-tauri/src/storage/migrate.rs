@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use tauri::Manager;
 use tokio::fs;
 
-const STORAGE_VERSION: i32 = 2;
+const STORAGE_VERSION: i32 = 3;
 
 pub async fn init() -> Result<()> {
     let storage_exists = STORAGE_PATH.exists();

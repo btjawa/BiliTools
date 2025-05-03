@@ -22,17 +22,6 @@
             "name": "Default Options",
             "desc": "If the options below are unavailable in the searched resource, the highest available ones will be used."
         },
-        "filename": {
-            "name": "Filename Format",
-            "shorten": "Filename",
-            "data": {
-                "mediaType": "Resource Type",
-                "aid": "AV ID",
-                "title": "Title",
-                "date": "Date",
-                "timestamp": "Unix Timestamp"
-            }
-        },
         "proxy": {
             "name": "Network Proxy",
             "desc": "Only HTTP(S) is supported yet. Restart the app for global changes to take effect."
@@ -40,9 +29,9 @@
     },
     "advanced": {
         "name": "Advanced",
-        "auto_convert_flac": {
-            "name": "Auto convert FLAC",
-            "desc": "Use FFmpeg to convert raw FLAC to standard FLAC format."
+        "filename": {
+            "name": "Filename Format",
+            "desc": "The folder naming is currently fixed in the format {'{'}title{'}'}_{'{'}date_sec{'}'}.\nIf the downloaded resource does not contain any of the variables here, that variable will be -1."
         },
         "prefer_pb_danmaku": {
             "name": "Prefer downloading danmaku via ProtoBuf",

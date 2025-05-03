@@ -1,23 +1,7 @@
 import { defineStore } from "pinia";
 
-interface State {
-    avatar: string,
-    name: string,
-    desc: string,
-    mid: number,
-    level: number,
-    vipLabel: string,
-    topPhoto: string,
-    stat: {
-        coins: number,
-        following: number,
-        follower: number,
-        dynamic: number,
-    },
-}
-
 export const useUserStore = defineStore('user', {
-    state: (): State => ({
+    state: () => ({
         avatar: String(),
         name: String(),
         desc: String(),

@@ -75,9 +75,9 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                     title: episode.title,
                     cover: episode.arc.pic.replace("http:", "https:"),
                     desc: episode.arc.desc,
-                    id: episode.aid,
+                    aid: episode.aid,
+                    bvid: episode.bvid,
                     cid: episode.cid,
-                    eid: episode.id,
                     duration: episode.page.duration,
                     ss_title: data.ugc_season.title,
                     index
@@ -86,9 +86,9 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                     title: page.part || data.title,
                     cover: data.pic.replace("http:", "https:"),
                     desc: data.desc,
-                    id: data.aid,
+                    aid: data.aid,
+                    bvid: data.bvid,
                     cid: page.cid,
-                    eid: page.page,
                     duration: page.duration,
                     ss_title: data.title || page.part,
                     index
@@ -96,9 +96,9 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                     title: data.title,
                     cover: data.pic.replace("http:", "https:"),
                     desc: data.desc,
-                    id: data.aid,
-                    cid: data.aid,
-                    eid: data.aid,
+                    aid: data.aid,
+                    bvid: data.bvid,
+                    cid: data.cid,
                     duration: data.duration,
                     ss_title: data.title,
                     index: 0,
@@ -134,12 +134,14 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 mid: data?.up_info?.mid,
             },
             list: data.episodes.map((episode, index) => ({
-                title: episode?.show_title ?? episode.share_copy,
+                title: `${episode.share_copy} - ${episode.show_title}`,
                 cover: episode.cover.replace("http:", "https:"),
                 desc: data.evaluate,
-                id: episode.aid,
+                aid: episode.aid,
+                bvid: episode.bvid,
                 cid: episode.cid,
-                eid: episode.ep_id,
+                epid: episode.ep_id,
+                ssid: data.season_id,
                 duration: episode.duration / 1000,
                 ss_title: data.season_title,
                 index
@@ -166,9 +168,10 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 title: episode.title,
                 cover: episode.cover.replace("http:", "https:"),
                 desc: data.subtitle,
-                id: episode.aid,
+                aid: episode.aid,
                 cid: episode.cid,
-                eid: episode.id,
+                epid: episode.id,
+                ssid: data.season_id,
                 duration: episode.duration,
                 ss_title: data.title,
                 index
@@ -190,7 +193,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 share: data.statistic.share,
             },
             upper: {
-                avatar: null,
                 name: data.uname,
                 mid: data.uid,
             },
@@ -198,9 +200,10 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 title: data.title,
                 cover: data.cover.replace("http:", "https:"),
                 desc: data.intro,
-                id: data.id,
+                aid: data.aid,
+                sid: data.id,
+                bvid: data.bvid,
                 cid: data.cid,
-                eid: data.id,
                 duration: data.duration,
                 ss_title: data.title,
                 index: 0,
@@ -223,7 +226,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 share: data.statistic.share,
             },
             upper: {
-                avatar: null,
                 name: data.uname,
                 mid: data.uid,
             },
@@ -231,9 +233,10 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 title: item.title,
                 cover: item.cover.replace("http:", "https:"),
                 desc: data.intro,
-                id: item.id,
+                aid: item.aid,
+                sid: item.id,
+                bvid: item.bvid,
                 cid: item.cid,
-                eid: item.id,
                 duration: item.duration,
                 ss_title: data.title,
                 index
@@ -241,8 +244,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
         }
     } else if (type === Types.MediaType.Favorite) {
         const data = (body as Types.FavoriteInfo).data;
-        const info = data.info;
-        const list = data.medias;
+        const { info, medias } = data;
         return {
             id: info.id,
             title: info.title,
@@ -261,13 +263,13 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 name: info.upper.name,
                 mid: info.upper.mid,
             },
-            list: list.map((item, index) => ({
+            list: medias.map((item, index) => ({
                 title: item.title,
                 cover: item.cover.replace("http:", "https:"),
                 desc: info.intro,
-                id: item.id,
-                cid: -1,
-                eid: item.id,
+                aid: item.id,
+                fid: info.id,
+                bvid: item.bvid,
                 duration: item.duration,
                 ss_title: info.title,
                 index
@@ -284,8 +286,8 @@ export async function getPlayUrl(
     let url = "https://api.bilibili.com";
     const user = useUserStore();
     let params = { qn: user.isLogin ? 127 : 64, fnver: 0, fnval: 16, fourk: 1 } as {
-        qn: number, fnver: number, fnval: number, fourk: number,
-        avid?: number, cid?: number, ep_id?: number, quality?: number
+        qn: number, fnver: number, fnval: number, fourk: number, quality?: number,
+        avid?: number, cid?: number, ep_id?: number, season_id?: number,
     };
     switch (codec) {
         case Types.StreamCodecType.Flv: params.fnval = 0; break;
@@ -295,22 +297,24 @@ export async function getPlayUrl(
     switch(type) {
         case Types.MediaType.Video:
             url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
-            params.avid = info.id;
-            params.cid = info.cid === -1 ? await getCid(info.id) : info.cid;
+            params.avid = info.aid;
+            params.cid = info.cid ?? await getCid(info.aid ?? -1);
             break;
         case Types.MediaType.Bangumi:
             url += '/pgc/player/web/v2/playurl';
-            params.ep_id = info.eid;
+            params.ep_id = info.epid;
+            params.season_id = info.ssid;
             break;
         case Types.MediaType.Lesson:
             url += '/pugv/player/web/playurl';
-            params.avid = info.id;
+            params.avid = info.aid;
             params.cid = info.cid;
-            params.ep_id = info.eid;
+            params.ep_id = info.epid;
+            params.season_id = info.ssid;
             break;
         case Types.MediaType.Music:
             url = 'https://www.bilibili.com/audio/music-service-c/web/url';
-            params = { sid: info.id, privilege: 2, quality: 0 } as any;
+            params = { sid: info.sid, privilege: 2, quality: 0 } as any;
             break;
     }
     const body = await tryFetch(url, {
@@ -374,10 +378,12 @@ export async function getPlayUrl(
 
 export async function pushBackQueue(params: {
     info: Types.MediaInfo['list'][0],
+    upper: Types.MediaInfo['upper'],
     video?: Types.PlayUrlResult,
     audio?: Types.PlayUrlResult,
     select: Backend.CurrentSelect,
-    mediaType: string,
+    sstitle: string,
+    index: number,
     output?: string,
 }) {
     if (!params.video && !params.audio) throw new ApplicationError('No videos or audios found');
@@ -387,16 +393,13 @@ export async function pushBackQueue(params: {
     const info = params.info;
     const archiveInfo = {
         title: info.title,
+        sstitle: params.sstitle,
         cover: info.cover,
-        id: info.id,
         ts: {
             millis: Date.now(),
             string: timestamp(Date.now(), { file: true })
         },
-        output_dir: filename({
-            mediaType: params.mediaType, aid: info.id, title: info.ss_title
-        }),
-        output_filename: info.title + '.' + ext,
+        filename: `${filename(info, params.upper, params.index)}.${ext}`,
     };
     const tasks = [
         params.video && {
@@ -431,8 +434,9 @@ export async function getCid(aid: number) {
 }
 
 export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number, options?: { check?: boolean }) {
+    if (!info.aid) throw 'No aid found';
     const params = {
-        aid: info.id, cid: info.cid === -1 ? await getCid(info.id) : info.cid, up_mid: mid
+        aid: info.aid, cid: info.cid ?? await getCid(info.aid), up_mid: mid
     };
     const response = await tryFetch("https://api.bilibili.com/x/web-interface/view/conclusion/get", { auth: 'wbi', params });
     const body = response as Types.AISummaryInfo;
@@ -441,25 +445,26 @@ export async function getAISummary(info: Types.MediaInfo["list"][0], mid: number
     if (!model_result.result_type) {
         throw new ApplicationError('No summary', { code: body.code });
     }
-    let text = `# ${info.title} - av${info.id}\n\n${model_result.summary}\n\n`;
+    let text = `# ${info.title} - ${info.bvid}\n\n${model_result.summary}\n\n`;
     if (model_result.result_type === 2) {
         model_result.outline.forEach(section => {
-            text += `## ${section.title} - [${duration(section.timestamp, 'video')}](https://www.bilibili.com/video/av${info.id}?t=${section.timestamp})\n\n`;
+            text += `## ${section.title} - [${duration(section.timestamp, 'video')}](https://www.bilibili.com/video/${info.bvid}?t=${section.timestamp})\n\n`;
             section.part_outline.forEach(part => {
-                text += `- ${part.content} - [${duration(part.timestamp, 'video')}](https://www.bilibili.com/video/av${info.id}?t=${part.timestamp})\n\n`;
+                text += `- ${part.content} - [${duration(part.timestamp, 'video')}](https://www.bilibili.com/video/${info.bvid}?t=${part.timestamp})\n\n`;
             });
         })
     }
     return text;
 }
 
-export async function getLiveDanmaku(id: number, cid: number, duration: number) {
-    const oid = cid === -1 ? await getCid(id) : cid;
+export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
+    if (!info.aid) throw 'No aid found';
+    const oid = info.cid ?? await getCid(info.aid);
     if (useSettingsStore().advanced.prefer_pb_danmaku) {
         let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
-        for (let i = 0; i < Math.ceil(duration / 360); i++) {
+        for (let i = 0; i < Math.ceil((info.duration ?? 0) / 360); i++) {
             const params = {
-                type: 1, oid, pid: id, segment_index: i + 1,
+                type: 1, oid, pid: info.aid, segment_index: i + 1,
             }
             const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', auth: 'wbi', params });
             dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
@@ -472,15 +477,16 @@ export async function getLiveDanmaku(id: number, cid: number, duration: number) 
     }
 }
 
-export async function getHistoryDanmaku(id: number, oid: number, date: string) {
-    const params = { type: 1, oid: oid === -1 ? await getCid(id) : oid, date };
+export async function getHistoryDanmaku(info: Types.MediaInfo["list"][0], date: string) {
+    if (!info.aid) throw 'No aid found';
+    const params = { type: 1, oid: info.cid ?? await getCid(info.aid), date };
     const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { type: 'binary', params });
     const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
     return new TextEncoder().encode(xml);
 }
 
-export async function getPlayerInfo(id: number, cid: number) {
-    const params = { aid: id, cid: cid === -1 ? await getCid(id) : cid };
+export async function getPlayerInfo(id: number, cid?: number) {
+    const params = { aid: id, cid: cid ?? await getCid(id) };
     const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { auth: 'wbi', params });
     const body = response as Types.PlayerInfo;
     return body.data;
@@ -493,8 +499,9 @@ export async function getSteinInfo(id: number, graph_version: number, edge_id?: 
     return body.data;
 }
 
-export async function getSubtitles(id: number, cid: number): Promise<Types.Subtitle[]> {
-    const playerInfo = await getPlayerInfo(id, cid === -1 ? await getCid(id) : cid);
+export async function getSubtitles(info: Types.MediaInfo["list"][0]): Promise<Types.Subtitle[]> {
+    if (!info.aid) throw 'No aid found';
+    const playerInfo = await getPlayerInfo(info.aid, info.cid ?? await getCid(info.aid));
     return playerInfo.subtitle?.subtitles;
 }
 

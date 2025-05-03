@@ -61,6 +61,22 @@
                 "1": "MP4 フォーマット",
                 "2": "FLV フォーマット"
             }
+        },
+        "placeholders": {
+            "index": "番号 1から始まる",
+            "title": "タイトル",
+            "upper": "作者名",
+            "upperid": "作者ID UID",
+            "aid": "AV",
+            "sid": "SID",
+            "fid": "FID",
+            "bvid": "BV",
+            "cid": "CID",
+            "epid": "EP",
+            "ssid": "SS",
+            "date_sec": "日付",
+            "ts_sec": "タイムスタンプ 秒",
+            "ts_ms": "タイムスタンプ ミリ秒"
         }
     },
     "context_menu": {

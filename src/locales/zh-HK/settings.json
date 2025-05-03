@@ -20,18 +20,7 @@
         "name": "下載",
         "default": {
             "name": "預設選項",
-            "desc": "若搜尋的資源沒有此處的預設選項，將使用該資源支持的最高可用選項。"
-        },
-        "filename": {
-            "name": "檔案名稱格式",
-            "shorten": "檔案名稱",
-            "data": {
-                "mediaType": "資源類型",
-                "aid": "AV號",
-                "title": "標題",
-                "date": "時間",
-                "timestamp": "Unix 時間戳"
-            }
+            "desc": "若下載的資源沒有此處的預設選項，將使用該資源支持的最高可用選項。"
         },
         "proxy": {
             "name": "網絡代理",
@@ -40,13 +29,13 @@
     },
     "advanced": {
         "name": "高級",
-        "auto_convert_flac": {
-            "name": "自動轉換 FLAC",
-            "desc": "使用FFmpeg將原始FLAC轉換為標準FLAC格式。"
-        },
         "prefer_pb_danmaku": {
             "name": "優先使用 ProtoBuf 方式下載彈幕",
             "desc": "相比 XML 方式，此方式可以獲得資源中幾乎所有彈幕，但處理時間會變長。"
+        },
+        "filename": {
+            "name": "檔案名稱格式",
+            "desc": "資料夾命名當前固定採用 {'{'}title{'}'}_{'{'}date_sec{'}'} 的格式\n若下載的資源沒有此處的某一變數，則會使用 -1 替換。"
         }
     },
     "about": {
