@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.6] - 2025-05-04
+
+Update STORAGE_VERSION to 3
+
+自定义文件名设置由 `设置->下载` 迁移至 `设置->高级`，支持高级自定义，同时添加了更多变量<br>
+`下载音视频` 与 `下载其他` 合并至 `常规下载`，同时支持 `打包下载`
+
+### 更新
+
+- [`a9a03be`](https://github.com/btjawa/BiliTools/commit/a9a03bec77e1b21517fc6928d77d0c5eb167c2f2) 支持高级自定义文件名 ([#35](https://github.com/btjawa/BiliTools/issues/35) by [@Excitedfighter](https://github.com/Excitedfighter))
+- [`41fe352`](https://github.com/btjawa/BiliTools/commit/41fe3520c96bf950aafe2b7a334d6d20dd7275ed) 支持打包下载 ([#35](https://github.com/btjawa/BiliTools/issues/35) by [@Excitedfighter](https://github.com/Excitedfighter))
+- [`41fe352`](https://github.com/btjawa/BiliTools/commit/41fe3520c96bf950aafe2b7a334d6d20dd7275ed) 收藏夹支持显示番剧 ([#43](https://github.com/btjawa/BiliTools/issues/43) by [@Soltus](https://github.com/Soltus))
+- [`13dbd60`](https://github.com/btjawa/BiliTools/commit/13dbd602e911d5d796f1f5ff32c3dffd1eb9a2ab) 支持解析 `FID` 收藏夹，以及支持指定资源类型 ([#37](https://github.com/btjawa/BiliTools/issues/37) by [@obentnet](https://github.com/obentnet))
+
+### 修复
+
+- [`a9a03be`](https://github.com/btjawa/BiliTools/commit/a9a03bec77e1b21517fc6928d77d0c5eb167c2f2) 修复设置同步逻辑
+
 ## [1.3.5] - 2025-04-09
 
 ### 更新
@@ -10,6 +28,8 @@
 ## [1.3.4] - 2025-04-08
 
 现已支持 M 系列芯片 Mac
+
+Update STORAGE_VERSION to 2
 
 ### 更新
 

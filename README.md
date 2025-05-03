@@ -23,7 +23,6 @@
 
 > [!WARNING]  
 > **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
-> **添加下载项目后，须在 下载->等待中 右上角点击开始下载，不写成立即下载是为了方便添加后续项目**<br>
 
 ## 安装使用
 
@@ -62,10 +61,10 @@ macOS 下载 [Release](https://github.com/btjawa/BiliTools/releases/latest) 中�
 | 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC、320Kbps 音乐(AU) 与 歌单(AM)</li></ul> |
 | 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
 | 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
-| 封面    | ✅ 已完成 ||
+| 封面    | ✅ 已完成 | 包括番剧海报 |
 | 字幕    | ✅ 已完成 | 支持 SRT 格式 |
 | AI总结  | ✅ 已完成 | MD Markdown格式，来自于哔哩哔哩 |
-| 漫画    | ❌ TODO | 暂时停止该功能的更新 \| 原因：[博客](https://btjawa.top/bilitools#关于漫画) |
+| 收藏夹  | ✅ 已完成 | FID 号解析 |
 
 ### 登录相关
 
