@@ -4,8 +4,8 @@
   "pub_date": "2025-05-03T17:38:31.187Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3Zrdk9JVEpXRWtZTWhwa20yVnRyZGcyNXNNbmRrQWpBTDdHa242b25melpDZXNMOXZnYmdUVndMUU1FbEdPVG5BTE1XQ1RySFpzZW91TVl6WHlCWlFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ2MjkzNzczCWZpbGU6QmlsaVRvb2xzXzEuMy42X3g2NC1zZXR1cC5uc2lzLnppcApQa1prOStXaURIMGhrcjU2RGYrZGdWekdpd0NqQmZRZmVqbzNsWlowbHJsdkxSa1czRzkwODgySDZzMjR2SmI0eWRaaU1wMGsrRG1uRE9mS0JzVHNBZz09Cg==",
-      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.6/BiliTools_1.3.6_x64-setup.nsis.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN2dVVlFJMHlhUzB2U2hwTGRONjIvOWdua2QrSzVaNmVSSElpY1NicjFtemJKYWI2STB6WDBVaDdmeEFXMktFajJWUlM2RDlEWkN0NFA2ZDFLTWpBNVFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ2Mjk2MTQ5CWZpbGU6QmlsaVRvb2xzXzEuMy42X3g2NC1zZXR1cC5leGUKZkRsY1d1ZEFoK2tzZFhXVWZ5MlpZRDNoZldUVVVHMlVhWXdhaHRpeEorSnYrbHZMaG4yMCtvak1PZytxK1NxOGJRWUdiMXoxdFZYOG1KNEpENEo1Qnc9PQo=",
+      "url": "https://ghproxy.net/https://github.com/btjawa/BiliTools/releases/download/v1.3.6/BiliTools_1.3.6_x64-setup.exe"
     },
     "darwin-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRby9YNUdSenFsN3M4bnF5M0hzQ3c2TWdBenhpNmhTNmVLSmF2Mmo5Q3p4MCszYy9ZVklrc1hJY1Z3WTV5SDA4VDc3UEd0cjA1U1h0UHdUNzRLdWtCV0VUZStPR2FURXdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQ2MjkzNTQwCWZpbGU6QmlsaVRvb2xzLmFwcC50YXIuZ3oKRUNpU2JKb2FWN0w4U2RueTRVbnRmVE42aWtqSXViWklnWWdlQk56YlZXUG9rNWtCUHZWZGEwZTRUeUZXbWRLVTVMeURnNXJBdmw0Q05uS1ZBMmlWQUE9PQo=",
