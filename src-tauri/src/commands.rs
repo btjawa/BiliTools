@@ -99,17 +99,6 @@ pub async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Ta
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn new_folder(secret: String, path: String) -> TauriResult<()> {
-    if secret != *shared::SECRET.read().unwrap() {
-        return Err(anyhow!("403 Forbidden").into())
-    }
-    let path = PathBuf::from(path);
-    fs::create_dir_all(path).await?;
-    Ok(())
-}
-
-#[tauri::command(async)]
-#[specta::specta]
 pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, contents: Vec<u8>) -> TauriResult<()> {
     let ts = shared::get_ts(true);
     let temp_dir = shared::CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools");

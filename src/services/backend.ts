@@ -120,14 +120,6 @@ async setTheme(theme: Theme, modify: boolean) : Promise<Result<Theme, TauriError
     else return { status: "error", error: e  as any };
 }
 },
-async newFolder(secret: string, path: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("new_folder", { secret, path }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async pushBackQueue(info: ArchiveInfo, select: CurrentSelect, tasks: Task[], outputDir: string | null) : Promise<Result<string, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("push_back_queue", { info, select, tasks, outputDir }) };

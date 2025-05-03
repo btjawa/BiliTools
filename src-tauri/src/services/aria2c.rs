@@ -287,7 +287,6 @@ impl DownloadManager {
         Ok(())
     }
     async fn process(&self, info: Arc<QueueInfo>) -> TauriResult<bool> {
-        fs::create_dir_all(info.output.parent().unwrap())?;
         let id = Arc::new(info.id.clone());
         for task in info.tasks.iter() {
             if task.task_type == TaskType::Merge {
@@ -533,6 +532,7 @@ pub async fn push_back_queue(
             count += 1;
         }
     }
+    fs::create_dir_all(&parent).context("Failed to create output folder")?;
     let mut queue_info = QueueInfo {
         id: random_string(16),
         tasks,

@@ -6,16 +6,20 @@
     </div>
     <input class="w-full mb-4"
         type="text" spellcheck="false" @blur="check"
-        v-model="settings.advanced.filename_format"
+        v-model="input" @input="(e) => update((e.target as HTMLInputElement).value)"
     />
 </div></template>
 
 <script lang="ts" setup>
 import { useSettingsStore } from '@/store';
 import { FilenamePlaceholders } from '@/types/data.d';
+import { ref } from 'vue';
 const settings = useSettingsStore();
 
+const input = ref(settings.advanced.filename_format);
+
 function update(v: string) {
+    input.value = v;
     settings.updateNest('advanced.filename_format', v);
 };
 

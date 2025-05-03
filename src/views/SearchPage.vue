@@ -286,9 +286,9 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 	return await dirname(path);
 }
 
-async function processGeneral(select: CurrentSelect, target: { key: string, data: any }, options?: { multi?: boolean, index?: number, output?: string }) {
+async function processGeneral(select: CurrentSelect, target: { key: string, data: any }, options?: { multi?: boolean, index?: number, output?: string, noSleep?: boolean }) {
 	const conc = settings.max_conc;
-	const chunks = [[options?.multi ? v.checkboxs[0] : (options?.index ?? v.index)]];
+	const chunks = [[options?.multi ? v.checkboxs[0] : v.index]];
 	if (options?.multi) for (let i = 1; i < v.checkboxs.length; i += conc) {
 		chunks.push(v.checkboxs.slice(i, i + conc));
 	}
@@ -297,9 +297,9 @@ async function processGeneral(select: CurrentSelect, target: { key: string, data
 		router.push('/down-page');
 	}
 	let output: string | undefined = options?.output;
-	let index = 0;
+	let index = -1;
 	for (const chunk of chunks) {
-		await Promise.all(chunk.map(async item => {
+		for (const item of chunk) {
 			index++;
 			const info = v.mediaInfo.list[item];
 			const getId = (ids: number[], ref: number) => ids.includes(ref) ? ref : ids.sort((a, b) => b - a)[0];
@@ -311,20 +311,20 @@ async function processGeneral(select: CurrentSelect, target: { key: string, data
 					cdc: getId(playurl.video?.filter(v => v.id === dms).map(v => v.codecid ?? -1) ?? [], select.cdc),
 					dms, fmt: playurl.codecid,
 				}
-				const result = await download(newSelect, info, playurl, target, index, output);
+				const result = await download(newSelect, info, playurl, target, (options?.index ?? index) + 1, output);
 				if (result) output = result;
 			} catch(err) {
 				new ApplicationError(err).handleError();
 			}
-		}));
-		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
+		};
+		if (!options?.noSleep) await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
 	}
 	return output;
 }
 
 async function processPackage(select: Types.PackageSelect, options?: { multi?: boolean }) {
 	const chunks = [options?.multi ? v.checkboxs[0] : v.index];
-	for (let i = 1; i < v.checkboxs.length; i++) {
+	if (options?.multi) for (let i = 1; i < v.checkboxs.length; i++) {
 		chunks.push(v.checkboxs[i]);
 	}
 	const keys = Object.keys(select);
@@ -333,19 +333,18 @@ async function processPackage(select: Types.PackageSelect, options?: { multi?: b
 		router.push('/down-page');
 	}
 	const entries = Object.entries(select);
-	for (const [index, chunk] of chunks.entries()) {
-		let output = await pathJoin(settings.down_dir, filename(v.mediaInfo.list[chunk], v.mediaInfo.upper, index));
-		const secret = useAppStore().secret;
-		await commands.newFolder(secret, output);
-		await Promise.all(entries.map(async ([key, data]) => {
+	for (const chunk of chunks) {
+		let output: string | undefined = undefined;
+		v.index = chunk;
+		for (const [index, [key, data]] of entries.entries()) {
 			const newSelect = {
 				dms: settings.df_dms,
 				ads: settings.df_ads,
 				cdc: settings.df_cdc,
 				fmt: settings.df_cdc,
 			}
-			await processGeneral(newSelect, { key, data }, { index: chunk, output });
-		}));
+			output = await processGeneral(newSelect, { key, data }, { index, output, noSleep: true });
+		}
 		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
 	}
 }
