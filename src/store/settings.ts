@@ -12,7 +12,8 @@ export const useSettingsStore = defineStore('settings', {
         df_cdc: Number(),
         language: String(),
         theme: 'dark',
-        auto_check_update: false,
+        auto_check_update: true,
+        auto_download: false,
         proxy: {
             addr: String(),
             username: String(),
