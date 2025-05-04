@@ -68,8 +68,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
             log::info!("BiliTools v{}", VERSION.unwrap_or("unknown"));
             builder.mount_events(app);
+            let window = app.get_webview_window("main").unwrap();
+            #[cfg(debug_assertions)]
+            window.open_devtools();
+            shared::set_window(window, None)?;
             shared::APP_HANDLE.set(app.app_handle().clone()).unwrap();
-            shared::set_window(app.get_webview_window("main").unwrap(), None)?;
             async_runtime::spawn(async move {
                 use shared::process_err as err;
                 storage::init().await.map_err(|e| err(e, "storage").to_string())?;
