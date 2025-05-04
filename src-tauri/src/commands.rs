@@ -109,7 +109,8 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, con
         .args(["-i", input.to_str().unwrap(), "-o", output.to_str().unwrap()])
         .output().await?;
 
-    log::info!("{:?}", String::from_utf8_lossy(&result.stdout));
+    log::info!("STDOUT: {:?}", String::from_utf8_lossy(&result.stdout));
+    log::info!("STDERR: {:?}", String::from_utf8_lossy(&result.stderr));
     fs::rename(output, path).await?;
     fs::remove_file(input).await?;
     Ok(())

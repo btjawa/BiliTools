@@ -9,7 +9,6 @@ use tokio::sync::OnceCell;
 use tauri_specta::Event;
 use serde_json::Value;
 use specta::Type;
-use regex::Regex;
 use chrono::Utc;
 
 use crate::{
@@ -161,11 +160,6 @@ pub async fn init_client_inner(proxy: bool) -> Result<Client> {
 
 pub fn get_app_handle() -> AppHandle<Wry> {
     APP_HANDLE.get().unwrap().clone()
-}
-
-pub fn filename(filename: String) -> String {
-    let re = Regex::new(r##"[\\/:*?\"<>|]"##).unwrap();
-    re.replace_all(&filename, "_").to_string()
 }
 
 pub fn get_ts(mills: bool) -> i64 {

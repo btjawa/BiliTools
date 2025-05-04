@@ -61,7 +61,6 @@ import { ApplicationError } from '@/services/utils';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';
-import { info } from '@tauri-apps/plugin-log';
 import { Empty } from '@/components';
 import i18n from '@/i18n';
 
@@ -127,8 +126,6 @@ async function processQueue() {
     try {
         const event = new Channel<DownloadEvent>();
         event.onmessage = (msg) => {
-            console.log(msg);
-            info(JSON.stringify(msg))
             switch(msg.status) {
             case 'Started': 
                 statusList.value[msg.id] = {

@@ -104,7 +104,7 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
         _ => "copy",
     };
     let ffmpeg = async {
-        let status = app.shell().sidecar("ffmpeg")?
+        let result = app.shell().sidecar("ffmpeg")?
             .args([
                 "-i", paths[0].clone().unwrap().to_str().unwrap(),
                 "-i", paths[1].clone().unwrap().to_str().unwrap(),
@@ -113,13 +113,14 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
                 "-shortest",
                 &output.to_str().unwrap(), "-progress",
                 progress_path_clone.to_str().unwrap(), "-y"
-            ])
-            .status().await?;
-    
-        if status.success() {
+            ]).output().await?;
+
+        log::info!("STDOUT: {:?}", String::from_utf8_lossy(&result.stdout));
+        log::info!("STDERR: {:?}", String::from_utf8_lossy(&result.stderr));
+        if result.status.success() {
             Ok::<(), anyhow::Error>(())
         } else {
-            Err(anyhow!("FFmpeg exited with status: {}", status.code().unwrap_or(-1)))
+            Err(anyhow!("FFmpeg exited with status: {}", result.status.code().unwrap_or(-1)))
         }
     };
     let monitor = async {

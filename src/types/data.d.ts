@@ -75,8 +75,10 @@ export interface PlayUrlResult {
   md5?: string;
   size?: number;
   codecid?: number;
-  baseUrl: string;
-  backupUrl: string[];
+  baseUrl?: string;
+  base_url?: string;
+  backupUrl?: string[];
+  backup_url?: string[];
 }
 
 interface PackageSelect {

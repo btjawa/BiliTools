@@ -13,7 +13,7 @@ use specta::Type;
 
 use crate::{
     downloads, errors::TauriResult, ffmpeg, shared::{
-        filename, get_app_handle, init_client_no_proxy, process_err, random_string, SidecarError, CONFIG, READY, SECRET, USER_AGENT, WORKING_PATH
+        get_app_handle, init_client_no_proxy, process_err, random_string, SidecarError, CONFIG, READY, SECRET, USER_AGENT, WORKING_PATH
     }, TauriError
 };
 
@@ -49,9 +49,9 @@ pub struct Task {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct ArchiveInfo {
     pub title: String,
-    pub sstitle: String,
     pub cover: String,
     pub ts: Timestamp,
+    pub output_dir: String,
     pub filename: String,
 }
 
@@ -512,16 +512,16 @@ pub async fn push_back_queue(
     info: Arc<ArchiveInfo>,
     select: CurrentSelect,
     tasks: Vec<Task>,
-    output_dir: Option<String>,
+    parent: Option<String>,
 ) -> TauriResult<PathBuf> {
-    let mut parent = if let Some(output_dir) = &output_dir {
-        PathBuf::from(output_dir)
+    let mut parent = if let Some(parent) = &parent {
+        PathBuf::from(parent)
     } else {
         CONFIG.read().unwrap().down_dir.join(
-            format!("{}_{}", info.sstitle, info.ts.string)
+            format!("{}_{}", info.output_dir, info.ts.string)
         )
     };
-    if parent.exists() && output_dir.is_none() {
+    if parent.exists() {
         let mut count = 1;
         let original = parent.clone();
         while parent.exists() {
@@ -536,7 +536,7 @@ pub async fn push_back_queue(
     let mut queue_info = QueueInfo {
         id: random_string(16),
         tasks,
-        output: parent.join(filename(info.filename.clone())),
+        output: parent.join(&info.filename),
         info: info.clone(),
         select,
     };
@@ -551,8 +551,8 @@ pub async fn push_back_queue(
         let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
         fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
         let dir = check_breakpoint(
-            &temp_dir, format!("{}_{}", info.filename, info.ts.millis)
-        )?.unwrap_or(temp_dir.join(format!("{}_{}", info.filename, info.ts.millis)));
+            &temp_dir, format!("{}_{}", &info.filename, info.ts.millis)
+        )?.unwrap_or(temp_dir.join(format!("{}_{}", &info.filename, info.ts.millis)));
         let params = vec![json!(urls), json!({ "dir": dir, "out": name, "pause": "true" })];
         let body: Aria2General = serde_json::from_value(
             post_aria2c("addUri", params).await?

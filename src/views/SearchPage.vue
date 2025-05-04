@@ -245,7 +245,7 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 		case 'video': case 'audio': case 'audioVideo':
 			return await data.pushBackQueue({
 				info, upper, ...params, select,
-				sstitle: v.mediaInfo.title,
+				output_dir: v.mediaInfo.title,
 				index, output,
 			});
 		case 'liveDanmaku': body = await data.getLiveDanmaku(info); break;

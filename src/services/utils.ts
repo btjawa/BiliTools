@@ -93,7 +93,7 @@ export async function tryFetch(url: string | URL, options?: {
         type: 'json' | 'form',
         body?: Record<string, string | number | Object>
     },
-    type?: 'text' | 'binary' | 'blob',
+    type?: 'text' | 'binary' | 'blob' | 'url',
     times?: number,
     handleError?: boolean
 }) {
@@ -146,6 +146,7 @@ export async function tryFetch(url: string | URL, options?: {
         try {
             body = await response.json();
         } catch(_) {
+            if (options?.type === 'url') return response.url;
             throw new ApplicationError(response.statusText, { code: response.status });
         }
         if (body.code !== 0 && body.code) {
@@ -202,30 +203,29 @@ export async function parseId(input: string) {
     const err = i18n.global.t('error.invalidInput');
     try {
         const url = new URL(input);
-        if (url.pathname) {
-            let match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-            if (match) return { id: match[1] || match[0], type: MediaType.Video };
-            match = input.match(/ep(\d+)|ss(\d+)/i);
-            if (match) return { id: match[0], type: MediaType.Bangumi };
-            match = input.match(/au(\d+)/i);
-            if (match) return { id: match[0], type: MediaType.Music };
-            match = input.match(/am(\d+)/i);
-            if (match) return { id: match[0], type: MediaType.MusicList };
-            if (url.hostname === 'b23.tv') {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new ApplicationError(response.statusText, { code: response.status });
-                    }
-                    if (response.url) {
-                        return await parseId(response.url);
-                    }
-                } catch(err) {
-                    throw new ApplicationError(err).handleError();
-                }
-            }
+        const prefix = url.pathname.split('/')[1];
+        if (!prefix) throw err;
+        if (url.hostname === 'b23.tv') {
+            return await parseId(await tryFetch(url, { type: 'url' }));
+        } else if (!url.hostname.endsWith('bilibili.com')) throw err;
+        let match;
+        switch (prefix) {
+            case 'video':
+                match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
+                if (match) return { id: match[1] || match[0], type: MediaType.Video }; break;
+            case 'cheese':
+                match = input.match(/ep(\d+)|ss(\d+)/i);
+                if (match) return { id: match[0], type: MediaType.Lesson }; break;
+            case 'bangumi':
+                match = input.match(/ep(\d+)|ss(\d+)/i);
+                if (match) return { id: match[0], type: MediaType.Bangumi }; break;
+            case 'audio':
+                match = input.match(/au(\d+)/i);
+                if (match) return { id: match[0], type: MediaType.Music };
+                match = input.match(/am(\d+)/i);
+                if (match) return { id: match[0], type: MediaType.MusicList }; break;
+            default: throw err;
         }
-        throw new ApplicationError(err);
     } catch(_) { // NOT URL
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
             throw new ApplicationError(err);
@@ -313,7 +313,7 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
 
 export function filename(info: Record<string, any>, upper: MediaInfo['upper'], index: number): string {
     const format = useSettingsStore().advanced.filename_format;
-    return format.replace(/{(\w+)}/g, (_, key) => {
+    return safeName(format.replace(/{(\w+)}/g, (_, key) => {
         switch (key) {
             case 'index': return index;
             case 'upper': return upper.name;
@@ -323,7 +323,11 @@ export function filename(info: Record<string, any>, upper: MediaInfo['upper'], i
             case 'ts_ms': return String(Date.now());
             default: return info[key] ?? -1;
         }
-    });
+    }));
+}
+
+export function safeName(input: string): string {
+    return input.replace(/[\\/:*?"<>|]/g, '_');
 }
 
 export function formatBytes(bytes: number): string {

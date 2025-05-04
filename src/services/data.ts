@@ -1,4 +1,4 @@
-import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange } from "@/services/utils";
+import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange, safeName } from "@/services/utils";
 import { useSettingsStore, useUserStore } from "@/store";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
@@ -382,7 +382,7 @@ export async function pushBackQueue(params: {
     video?: Types.PlayUrlResult,
     audio?: Types.PlayUrlResult,
     select: Backend.CurrentSelect,
-    sstitle: string,
+    output_dir: string,
     index: number,
     output?: string,
 }) {
@@ -393,21 +393,27 @@ export async function pushBackQueue(params: {
     const info = params.info;
     const archiveInfo = {
         title: info.title,
-        sstitle: params.sstitle,
         cover: info.cover,
         ts: {
             millis: Date.now(),
             string: timestamp(Date.now(), { file: true })
         },
+        output_dir: safeName(params.output_dir),
         filename: `${filename(info, params.upper, params.index)}.${ext}`,
     };
     const tasks = [
         params.video && {
-            urls: [params.video.baseUrl, ...(Array.isArray(params.video.backupUrl) ? params.video.backupUrl : [])],
+            urls: [
+                params.video.baseUrl ?? params.video.base_url,
+                ...(params.video.backupUrl ?? params.video.backup_url ?? [])
+            ],
             taskType: 'video'
         },
         params.audio && {
-            urls: [params.audio.baseUrl, ...(Array.isArray(params.audio.backupUrl) ? params.audio.backupUrl : [])],
+            urls: [
+                params.audio.baseUrl ?? params.audio.base_url,
+                ...(params.audio.backupUrl ?? params.audio.backup_url ?? [])
+            ],
             taskType: 'audio'
         },
         (params.video && params.audio) && {
@@ -462,11 +468,13 @@ export async function getLiveDanmaku(info: Types.MediaInfo["list"][0]) {
     const oid = info.cid ?? await getCid(info.aid);
     if (useSettingsStore().advanced.prefer_pb_danmaku) {
         let xmlDoc = new DOMParser().parseFromString('<?xml version="1.0" encoding="UTF-8"?><i></i>', "application/xml");
+        const user = useUserStore();
+        const url = user.isLogin ? 'https://api.bilibili.com/x/v2/dm/wbi/web/seg.so' : 'https://api.bilibili.com/x/v2/dm/web/seg.so';
         for (let i = 0; i < Math.ceil((info.duration ?? 0) / 360); i++) {
             const params = {
                 type: 1, oid, pid: info.aid, segment_index: i + 1,
             }
-            const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/wbi/web/seg.so', { type: 'binary', auth: 'wbi', params });
+            const buffer = await tryFetch(url, { type: 'binary', params, ...(user.isLogin && { auth: 'wbi' }) });
             dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: xmlDoc });
             await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
         }
