@@ -91,36 +91,7 @@ watch(queuePage, (oldPage, newPage) => {
     }
 })
 
-async function togglePause(id: string) {
-    try {
-        const status = statusList.value[id];
-        if (!status) return;
-        const result = await commands.togglePause(!status.paused, status.gid);
-        if (result.status === 'error') throw result.error;
-        status.paused = !status.paused;
-    } catch (err) {
-        new ApplicationError(err).handleError();
-    }
-}
-async function removeTask(id: string, type: string) {
-    try {
-        const status = statusList.value[id];
-        if (status) {
-            const queueType = (() => { switch(status.status) {
-                case 'Started': return 'doing';
-                case 'Progress': return 'doing';
-                case 'Finished': return 'complete';
-            }})();
-            const result = await commands.removeTask(id, queueType, status.gid);
-            if (result.status === 'error') throw result.error;
-            return result.data;
-        }
-        const result = await commands.removeTask(id, type as keyof typeof queue.$state, null);
-        if (result.status === 'error') throw result.error;
-    } catch (err) {
-        new ApplicationError(err).handleError();
-    }
-}
+defineExpose({ processQueue });
 async function processQueue() {
     queuePage.value = 1;
     try {
@@ -160,6 +131,38 @@ async function processQueue() {
         const result = await commands.processQueue(event);
         if (result.status === 'error') throw result.error;
         queuePage.value = 2;
+    } catch (err) {
+        new ApplicationError(err).handleError();
+    }
+}
+
+async function togglePause(id: string) {
+    try {
+        const status = statusList.value[id];
+        if (!status) return;
+        const result = await commands.togglePause(!status.paused, status.gid);
+        if (result.status === 'error') throw result.error;
+        status.paused = !status.paused;
+    } catch (err) {
+        new ApplicationError(err).handleError();
+    }
+}
+
+async function removeTask(id: string, type: string) {
+    try {
+        const status = statusList.value[id];
+        if (status) {
+            const queueType = (() => { switch(status.status) {
+                case 'Started': return 'doing';
+                case 'Progress': return 'doing';
+                case 'Finished': return 'complete';
+            }})();
+            const result = await commands.removeTask(id, queueType, status.gid);
+            if (result.status === 'error') throw result.error;
+            return result.data;
+        }
+        const result = await commands.removeTask(id, type as keyof typeof queue.$state, null);
+        if (result.status === 'error') throw result.error;
     } catch (err) {
         new ApplicationError(err).handleError();
     }

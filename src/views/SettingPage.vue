@@ -147,7 +147,10 @@ const settingsTree = computed<any[]>(() => {
                 { name: t('common.username'), type: "input", data: "proxy.username", placeholder: t('common.optional') },
                 { name: t('common.password'), type: "input", data: "proxy.password", placeholder: t('common.optional') },
                 { id: 'checkProxy', type: "button", data: checkProxy, icon: "fa-cloud-question" },
-            ] }
+            ] },
+            { id: 'auto_download', icon: "fa-download", desc: true, data: [
+                { id: 'enable', type: "switch", data: "auto_download" },
+            ] },
         ] },
         { id: "advanced", icon: "fa-flask", content: [
             { id: 'prefer_pb_danmaku', icon: "fa-exchange", desc: true, data: [

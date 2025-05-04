@@ -38,6 +38,7 @@ pub struct Settings {
     pub df_ads: usize,
     pub df_cdc: usize,
     pub auto_check_update: bool,
+    pub auto_download: bool,
     pub proxy: SettingsProxy,
     pub advanced: SettingsAdvanced,
     pub theme: Theme,

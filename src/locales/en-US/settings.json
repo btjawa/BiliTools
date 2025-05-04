@@ -25,6 +25,10 @@
         "proxy": {
             "name": "Network Proxy",
             "desc": "Only HTTP(S) is supported yet. Restart the app for global changes to take effect."
+        },
+        "auto_download": {
+            "name": "Auto download",
+            "desc": "After adding a task, automatically start downloading"
         }
     },
     "advanced": {

@@ -131,6 +131,7 @@ const downloadOptions = computed(() => [{
 const popup = ref<InstanceType<typeof Popup>>();
 const packagePopup = ref<InstanceType<typeof PackagePopup>>();
 const queuePage = inject('queuePage', ref(0));
+const processQueue = inject('processQueue', () => {});
 
 watch(() => v.checkboxs, (v, old) => {
 	if (v.length > old.length && v.length > 30)
@@ -243,11 +244,12 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 	let body;
 	switch (ref.key) {
 		case 'video': case 'audio': case 'audioVideo':
-			return await data.pushBackQueue({
+			await data.pushBackQueue({
 				info, upper, ...params, select,
 				output_dir: v.mediaInfo.title,
 				index, output,
 			});
+			return processQueue();
 		case 'liveDanmaku': body = await data.getLiveDanmaku(info); break;
 		case 'historyDanmaku':
 			body = await data.getHistoryDanmaku(info, ref.data);

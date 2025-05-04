@@ -42,6 +42,7 @@ lazy_static! {
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
         auto_check_update: true,
+        auto_download: false,
         theme: Theme::Auto,
         proxy: SettingsProxy {
             addr: String::new(),

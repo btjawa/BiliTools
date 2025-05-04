@@ -21,12 +21,12 @@ import { ApplicationError, setEventHook } from "@/services/utils";
 import { fetchUser, activateCookies, checkRefresh } from "@/services/login";
 import { useQueueStore, useAppStore } from "@/store";
 import { commands } from "@/services/backend";
-import { SearchPage } from "@/views";
+import { DownPage } from "@/views";
 import { useRouter } from "vue-router";
 
-const page = ref<InstanceType<typeof SearchPage>>();
+const page = ref();
 const updater = ref<InstanceType<typeof Updater>>();
-const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null);
+const contextMenu = ref<InstanceType<typeof ContextMenu>>();
 const router = useRouter();
 const queuePage = ref(0)
 
@@ -37,16 +37,8 @@ onMounted(async () => {
 	setEventHook();
 	provide('queuePage', queuePage);
 	provide('checkUpdate', updater.value?.checkUpdate);
-	provide('trySearch', async (input?: string) => {
-		router.push('/');
-		const start = Date.now();
-		const checkCondition = () => {
-			if (Date.now() - start > 1000) return;
-			if (typeof page.value?.search === 'function') {
-				page.value.search(input);
-			} else setTimeout(checkCondition, 50);
-		};
-		checkCondition();
+	provide('processQueue', async () => {
+		await (page.value as InstanceType<typeof DownPage>)?.processQueue();
 	});
 	const app = useAppStore();
 	try {

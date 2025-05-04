@@ -25,6 +25,10 @@
         "proxy": {
             "name": "网络代理",
             "desc": "暂仅支持 HTTP(S) 协议，修改完成后建议重启应用以全局生效。"
+        },
+        "auto_download": {
+            "name": "自动下载",
+            "desc": "添加任务后，自动开始下载"
         }
     },
     "advanced": {

@@ -224,8 +224,8 @@ export async function parseId(input: string) {
                 if (match) return { id: match[0], type: MediaType.Music };
                 match = input.match(/am(\d+)/i);
                 if (match) return { id: match[0], type: MediaType.MusicList }; break;
-            default: throw err;
         }
+        throw err;
     } catch(_) { // NOT URL
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
             throw new ApplicationError(err);
