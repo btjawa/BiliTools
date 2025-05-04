@@ -249,7 +249,8 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 				output_dir: v.mediaInfo.title,
 				index, output,
 			});
-			return processQueue();
+			if (settings.auto_download) processQueue();
+			return;
 		case 'liveDanmaku': body = await data.getLiveDanmaku(info); break;
 		case 'historyDanmaku':
 			body = await data.getHistoryDanmaku(info, ref.data);
