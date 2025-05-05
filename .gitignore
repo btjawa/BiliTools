@@ -26,3 +26,6 @@ dist-ssr
 *.sw?
 *.psd
 ._*
+
+# Avoid cross-platform dependencies issues
+package-lock.json
