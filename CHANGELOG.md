@@ -7,12 +7,12 @@ Update STORAGE_VERSION to 4
 ### 更新
 
 - [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) 增强 `自动检测` 输入链接的识别能力
-- [`884aa45`](https://github.com/btjawa/BiliTools/commit/884aa455bcd7fe7939c4cd98c7ae75d4f27d3992) 允许在 `设置->下载` 中启用 `添加任务后自动开始下载` (#[#39](https://github.com/btjawa/BiliTools/issues/46) by [@hqc8848](https://github.com/hqc8848))
+- [`884aa45`](https://github.com/btjawa/BiliTools/commit/884aa455bcd7fe7939c4cd98c7ae75d4f27d3992) 允许在 `设置->下载` 中启用 `添加任务后自动开始下载` ([#46](https://github.com/btjawa/BiliTools/issues/46) by [@hqc8848](https://github.com/hqc8848))
 
 ### 修复
 
-- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) 修复课程下载链接格式问题 (#[#39](https://github.com/btjawa/BiliTools/issues/39) by [@ShannonNi](https://github.com/ShannonNi))
-- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) 修复不合法文件名问题 (#[#48](https://github.com/btjawa/BiliTools/issues/48) by [@yuabc66](https://github.com/yuabc66))
+- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) 修复课程下载链接格式问题 ([#39](https://github.com/btjawa/BiliTools/issues/39) by [@ShannonNi](https://github.com/ShannonNi))
+- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) 修复不合法文件名问题 ([#48](https://github.com/btjawa/BiliTools/issues/48) by [@yuabc66](https://github.com/yuabc66))
 
 ## [1.3.6] - 2025-05-04
 
