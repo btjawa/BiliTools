@@ -512,16 +512,16 @@ pub async fn push_back_queue(
     info: Arc<ArchiveInfo>,
     select: CurrentSelect,
     tasks: Vec<Task>,
-    parent: Option<String>,
+    output_dir: Option<String>,
 ) -> TauriResult<PathBuf> {
-    let mut parent = if let Some(parent) = &parent {
-        PathBuf::from(parent)
+    let mut parent = if let Some(dir) = &output_dir {
+        PathBuf::from(dir)
     } else {
         CONFIG.read().unwrap().down_dir.join(
             format!("{}_{}", info.output_dir, info.ts.string)
         )
     };
-    if parent.exists() {
+    if parent.exists() && output_dir.is_none() {
         let mut count = 1;
         let original = parent.clone();
         while parent.exists() {
@@ -532,7 +532,6 @@ pub async fn push_back_queue(
             count += 1;
         }
     }
-    fs::create_dir_all(&parent).context("Failed to create output folder")?;
     let mut queue_info = QueueInfo {
         id: random_string(16),
         tasks,
@@ -566,6 +565,7 @@ pub async fn push_back_queue(
     }
     QUEUE_MANAGER.push_back(Arc::new(queue_info), QueueType::Waiting).await?;
     QUEUE_MANAGER.update(QueueType::Waiting).await;
+    fs::create_dir_all(&parent).context("Failed to create output folder")?;
     Ok(parent)
 }
 

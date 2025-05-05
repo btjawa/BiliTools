@@ -63,6 +63,17 @@ pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriRes
 
 #[tauri::command(async)]
 #[specta::specta]
+pub async fn new_folder(secret: String, path: String) -> TauriResult<()> {
+    if secret != *shared::SECRET.read().unwrap() {
+        return Err(anyhow!("403 Forbidden").into())
+    }
+    let path = PathBuf::from(path);
+    fs::create_dir_all(path).await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn clean_cache(path: String) -> TauriResult<()> {
     if path.ends_with("Storage") {
         let _ = fs::remove_file(&path).await;
@@ -109,8 +120,8 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, con
         .args(["-i", input.to_str().unwrap(), "-o", output.to_str().unwrap()])
         .output().await?;
 
-    log::info!("STDOUT: {:?}", String::from_utf8_lossy(&result.stdout));
-    log::info!("STDERR: {:?}", String::from_utf8_lossy(&result.stderr));
+    log::info!("STDOUT:\n{}", String::from_utf8_lossy(&result.stdout));
+    log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
     fs::rename(output, path).await?;
     fs::remove_file(input).await?;
     Ok(())

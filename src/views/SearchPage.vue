@@ -77,7 +77,7 @@
 </div></template>
 
 <script setup lang="ts">
-import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId } from '@/services/utils';
+import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId, safeName, timestamp } from '@/services/utils';
 import { MediaInfo, MediaInfoItem, Popup, PackagePopup } from '@/components/SearchPage';
 import { useAppStore, useSettingsStore, useUserStore } from '@/store';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
@@ -336,8 +336,13 @@ async function processPackage(select: Types.PackageSelect, options?: { multi?: b
 		router.push('/down-page');
 	}
 	const entries = Object.entries(select);
+	const secret = useAppStore().secret;
 	for (const chunk of chunks) {
-		let output: string | undefined = undefined;
+		let output = await pathJoin(
+			settings.down_dir,
+			`${safeName(v.mediaInfo.title)}_${timestamp(Date.now(), { file: true })}`
+		);
+		await commands.newFolder(secret, output);
 		v.index = chunk;
 		for (const [index, [key, data]] of entries.entries()) {
 			const newSelect = {
@@ -346,7 +351,7 @@ async function processPackage(select: Types.PackageSelect, options?: { multi?: b
 				cdc: settings.df_cdc,
 				fmt: settings.df_cdc,
 			}
-			output = await processGeneral(newSelect, { key, data }, { index, output, noSleep: true });
+			await processGeneral(newSelect, { key, data }, { index, output, noSleep: true });
 		}
 		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
 	}

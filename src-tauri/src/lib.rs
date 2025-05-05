@@ -23,7 +23,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         // Then register them (separated by a comma)
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            ready, init, get_size, clean_cache, write_binary, xml_to_ass, rw_config, set_theme, // Essentials
+            ready, init, get_size, clean_cache, write_binary, xml_to_ass, rw_config, set_theme, new_folder, // Essentials
             push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
         ])
         .events(collect_events![

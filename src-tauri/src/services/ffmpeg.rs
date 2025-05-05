@@ -34,7 +34,7 @@ struct FFmpegLog {
 
 pub async fn get_stream_info(video: PathBuf, audio: PathBuf) -> Result<(u64, String)> {
     let app = get_app_handle();
-    let meta_output = app.shell().sidecar("ffmpeg")?
+    let result = app.shell().sidecar("ffmpeg")?
         .args([
             "-i", video.to_str().unwrap(),
             "-i", audio.to_str().unwrap(),
@@ -46,8 +46,8 @@ pub async fn get_stream_info(video: PathBuf, audio: PathBuf) -> Result<(u64, Str
         .output()
         .await?;
 
-    let stderr = String::from_utf8_lossy(&meta_output.stderr);
-    log::info!("FFmpeg stderr:\n{}", &stderr);
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    log::info!("STDERR:\n{}", &stderr);
 
     let video_frames = Regex::new(r"frame=\s*(\d+)")?
         .captures_iter(&stderr)
@@ -115,8 +115,7 @@ pub async fn merge(info: Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Taur
                 progress_path_clone.to_str().unwrap(), "-y"
             ]).output().await?;
 
-        log::info!("STDOUT: {:?}", String::from_utf8_lossy(&result.stdout));
-        log::info!("STDERR: {:?}", String::from_utf8_lossy(&result.stderr));
+        log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
         if result.status.success() {
             Ok::<(), anyhow::Error>(())
         } else {
