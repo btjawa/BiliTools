@@ -96,9 +96,9 @@ async writeBinary(secret: string, path: string, contents: number[]) : Promise<Re
     else return { status: "error", error: e  as any };
 }
 },
-async xmlToAss(secret: string, path: string, contents: number[]) : Promise<Result<null, TauriError>> {
+async xmlToAss(secret: string, output: string, contents: number[]) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("xml_to_ass", { secret, path, contents }) };
+    return { status: "ok", data: await TAURI_INVOKE("xml_to_ass", { secret, output, contents }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -183,21 +183,21 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type ArchiveInfo = { title: string; cover: string; ts: Timestamp; output_dir: string; filename: string }
-export type CurrentSelect = { dms: number; ads: number; cdc: number; fmt: number }
+export type ArchiveInfo = { title: string; desc: string; tags: string[]; artist: string; pubtime: string; cover: string; ts: Timestamp; output_dir: string; filename: string }
+export type CurrentSelect = { dms: string | null; ads: string | null; cdc: string | null; fmt: string | null }
 export type DownloadEvent = { status: "Started"; id: string; gid: string; taskType: TaskType } | { status: "Progress"; id: string; gid: string; contentLength: number; chunkLength: number } | { status: "Finished"; id: string; gid: string }
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { version: string; hash: string; downloads: QueueInfo[] }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
-export type QueueInfo = { id: string; tasks: Task[]; output: string; info: ArchiveInfo; select: CurrentSelect }
+export type QueueInfo = { id: string; tasks: Task[]; output: string; temp_dir: string; info: ArchiveInfo; select: CurrentSelect }
 export type QueueType = "waiting" | "doing" | "complete"
 export type Settings = { max_conc: number; temp_dir: string; down_dir: string; df_dms: number; df_ads: number; df_cdc: number; auto_check_update: boolean; auto_download: boolean; proxy: SettingsProxy; advanced: SettingsAdvanced; theme: Theme; language: string }
-export type SettingsAdvanced = { prefer_pb_danmaku: boolean; filename_format: string }
+export type SettingsAdvanced = { prefer_pb_danmaku: boolean; add_metadata: boolean; filename_format: string }
 export type SettingsProxy = { addr: string; username: string; password: string }
 export type SidecarError = { name: string; error: string }
 export type Task = { urls: string[] | null; gid: string | null; taskType: TaskType; path: string | null }
-export type TaskType = "video" | "audio" | "merge" | "flac"
+export type TaskType = "video" | "audio" | "merge" | "metadata"
 export type TauriError = { code: number | null; message: string }
 export type Theme = 
 /**

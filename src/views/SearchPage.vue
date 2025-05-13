@@ -77,13 +77,13 @@
 </div></template>
 
 <script setup lang="ts">
-import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId, safeName, timestamp } from '@/services/utils';
+import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId, safeName, timestamp, tryFetch } from '@/services/utils';
 import { MediaInfo, MediaInfoItem, Popup, PackagePopup } from '@/components/SearchPage';
 import { useAppStore, useSettingsStore, useUserStore } from '@/store';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
 import { reactive, ref, computed, inject, watch } from 'vue';
 import { getMediaInfo, getPlayUrl } from '@/services/data';
-import { commands, CurrentSelect } from '@/services/backend';
+import { commands } from '@/services/backend';
 import { save as dialogSave } from '@tauri-apps/plugin-dialog';
 import { transformImage } from '@tauri-apps/api/image';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -228,7 +228,7 @@ async function initPackage(index: number, options?: { multi?: boolean }) {
 	}
 }
 
-async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, index: number, output?: string) {
+async function download(select: Types.CurrentSelect, info: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, index: number, output?: string) {
 	const params: {
 		video?: Types.PlayUrlResult,
 		audio?: Types.PlayUrlResult,
@@ -240,37 +240,18 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 		params.audio = playurl.audio?.find(v => v.id === select.ads);
 	} else select.ads = -1;
 	const upper = v.mediaInfo.upper;
-	let title = info.title;
-	let body;
-	switch (ref.key) {
-		case 'video': case 'audio': case 'audioVideo':
-			await data.pushBackQueue({
-				info, upper, ...params, select,
-				output_dir: v.mediaInfo.title,
-				index, output,
-			});
-			if (settings.auto_download) processQueue();
-			return;
-		case 'liveDanmaku': body = await data.getLiveDanmaku(info); break;
-		case 'historyDanmaku':
-			body = await data.getHistoryDanmaku(info, ref.data);
-			title += ('_' + ref.data);
-			break;
-		case 'aiSummary': body = await data.getAISummary(info, upper.mid ?? 0); break;
-		case 'subtitles':
-			const subtitles = await data.getSubtitles(info);
-			const subtitle = subtitles.find(v => v.lan === ref.data);
-			if (!subtitle) throw 'subtitle url not found';
-			body = await data.getSubtitle(subtitle.subtitle_url);
-			title += ('_' + subtitle.lan_doc);
-			break;
-		case 'covers':
-			body = await data.getBinary(v.mediaInfo.covers.find(v => v.id === ref.data)?.url ?? info.cover);
-			title += ('_' +( v.mediaInfo.covers.find(v => v.id === ref.data)?.id ?? 'cover'));
-			break;
+	if (ref.data === 'queue') {
+		const result = await data.pushBackQueue({
+			info, upper, ...params, select,
+			output_dir: v.mediaInfo.title,
+			tags: v.mediaInfo.tags,
+			index, output,
+		});
+		if (settings.auto_download) processQueue();
+		return result;
 	}
 	const map = othersMap[ref.key as keyof typeof othersMap];
-	const file = `${filename(info, upper, index)}.${map.suffix}`;
+	const file = `${filename(info, upper, index)}_${ref.data}.${map.suffix}`;
 	const path = output ?
 		await pathJoin(output, file) :
 		await dialogSave({
@@ -278,24 +259,37 @@ async function download(select: CurrentSelect, info: Types.MediaInfo['list'][0],
 		defaultPath: await pathJoin(settings.down_dir, file)
 	});
 	if (!path) return;
+	let body;
+	switch (ref.key) {
+		case 'liveDanmaku': body = await data.getDanmaku(info); break;
+		case 'historyDanmaku': body = await data.getDanmaku(info, ref.data); break;
+		case 'aiSummary': body = await data.getAISummary(info, upper.mid ?? 0); break;
+		case 'covers': body = await tryFetch(v.mediaInfo.covers.find(v => v.id === ref.data)?.url ?? info.cover, { type: 'binary' }); break;
+		case 'subtitles':
+			const subtitles = await data.getSubtitles(info);
+			const subtitle = subtitles.find(v => v.lan === ref.data);
+			if (!subtitle) throw 'subtitle url not found';
+			body = await data.getSubtitle(subtitle.subtitle_url);
+			break;
+	}
 	const secret = useAppStore().secret;
 	let result;
 	switch (ref.key) {
 		case 'liveDanmaku': case 'historyDanmaku': result = await commands.xmlToAss(secret, path, body); break;
-		case 'aiSummary': case 'subtitles': result = await commands.writeBinary(secret, path, new TextEncoder().encode(body) as any); break;
+		case 'aiSummary': case 'subtitles': case 'nfo': result = await commands.writeBinary(secret, path, new TextEncoder().encode(body) as any); break;
 		case 'covers': result = await commands.writeBinary(secret, path, transformImage(body)); break;
 	}
 	if (result?.status === 'error') throw result.error;
 	return await dirname(path);
 }
 
-async function processGeneral(select: CurrentSelect, target: { key: string, data: any }, options?: { multi?: boolean, index?: number, output?: string, noSleep?: boolean }) {
+async function processGeneral(select: Types.CurrentSelect, target: { key: string, data: any }, options?: { multi?: boolean, index?: number, output?: string, noSleep?: boolean }) {
 	const conc = settings.max_conc;
 	const chunks = [[options?.multi ? v.checkboxs[0] : v.index]];
 	if (options?.multi) for (let i = 1; i < v.checkboxs.length; i += conc) {
 		chunks.push(v.checkboxs.slice(i, i + conc));
 	}
-	if (target.key === 'video' || target.key === 'audio' || target.key === 'audioVideo') {
+	if (target.data === 'queue') {
 		queuePage.value = 0;
 		router.push('/down-page');
 	}

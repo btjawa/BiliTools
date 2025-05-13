@@ -37,6 +37,10 @@
             "name": "Filename Format",
             "desc": "The folder naming is currently fixed in the format {'{'}title{'}'}_{'{'}date_sec{'}'}.\nIf the downloaded resource does not contain any of the variables here, that variable will be -1."
         },
+        "add_metadata": {
+            "name": "メタデータを追加する",
+            "desc": "After download, embed title, description, author, tags, cover, etc. into media file."
+        },
         "prefer_pb_danmaku": {
             "name": "Prefer downloading danmaku via ProtoBuf",
             "desc": "the ProtoBuf method can get almost all danmaku, but processing time will be longer."

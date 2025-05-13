@@ -51,6 +51,7 @@ lazy_static! {
         },
         advanced: SettingsAdvanced {
             prefer_pb_danmaku: true,
+            add_metadata: true,
             filename_format: "{index}_{title}".into()
         }
     }));
@@ -147,15 +148,12 @@ pub async fn init_client_inner(proxy: bool) -> Result<Client> {
     let client_builder = Client::builder()
         .default_headers(headers);
     let client_builder = if !config.proxy.addr.is_empty() && proxy {
-        client_builder.proxy(
-            match config.proxy.addr.starts_with("https") {
-                true => Proxy::https(&config.proxy.addr),
-                false => Proxy::http(&config.proxy.addr),
-            }
-            .map_err(|e| anyhow!(e))?
-            .basic_auth(&config.proxy.username, &config.proxy.password)
-        )
-    } else { client_builder };
+        let proxy = Proxy::all(&config.proxy.addr)?
+            .basic_auth(&config.proxy.username, &config.proxy.password);
+        client_builder.proxy(proxy)
+    } else {
+        client_builder.no_proxy()
+    };
     Ok(client_builder.build()?)
 }
 
@@ -212,7 +210,7 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> 
     match tauri_plugin_os::platform() {
         "windows" => if let Version::Semantic(major, minor, patch) = tauri_plugin_os::version() {
             if major < 6 || (major == 6 && minor < 2) {
-                return Err(anyhow::anyhow!("Unsupported Windows Version"));
+                return Err(anyhow!("Unsupported Windows Version"));
             } else if major >= 10 {
                 if patch >= 22000 {
                     window.set_effects(WindowEffectsConfig {

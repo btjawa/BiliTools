@@ -40,8 +40,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useSettingsStore } from '@/store';
-import { QualityMap, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap } from '@/types/data.d';
-import { CurrentSelect } from '@/services/backend';
+import { QualityMap, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap, CurrentSelect } from '@/types/data.d';
 import Dropdown from '../Dropdown.vue';
 
 const props = defineProps<{
@@ -162,7 +161,7 @@ function handleClick(key: string, id: any) {
 }
 
 function confirm(key: string) {
-  const target = { key, data: select.value[key as keyof CurrentSelect] };
+  const target = { key, data: 'queue' };
   props.process(select.value, target, { multi: isMulti.value });
   close();
 }

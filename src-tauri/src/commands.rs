@@ -81,11 +81,13 @@ pub async fn clean_cache(path: String) -> TauriResult<()> {
         let mut entries = fs::read_dir(&path).await?;
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_dir() {
-                async_runtime::spawn(async move { let _ = fs::remove_dir_all(&path).await; });
-            } else {
-                async_runtime::spawn(async move { let _ = fs::remove_file(&path).await; });
-            }
+            async_runtime::spawn(async move {
+                let _ = if path.is_dir() {
+                    fs::remove_dir_all(&path).await
+                } else {
+                    fs::remove_file(&path).await
+                };
+            });
         }
     }
     Ok(())
@@ -110,19 +112,17 @@ pub async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Ta
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, path: String, contents: Vec<u8>) -> TauriResult<()> {
+pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, output: String, contents: Vec<u8>) -> TauriResult<()> {
     let ts = shared::get_ts(true);
     let temp_dir = shared::CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools");
     let input = temp_dir.join(format!("{ts}.xml"));
-    let output = temp_dir.join(format!("{ts}.ass"));
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
     let result = app.shell().sidecar("DanmakuFactory")?
-        .args(["-i", input.to_str().unwrap(), "-o", output.to_str().unwrap()])
+        .args(["-i", input.to_str().unwrap(), "-o", &output])
         .output().await?;
 
     log::info!("STDOUT:\n{}", String::from_utf8_lossy(&result.stdout));
     log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
-    fs::rename(output, path).await?;
     fs::remove_file(input).await?;
     Ok(())
 }

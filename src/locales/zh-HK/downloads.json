@@ -12,11 +12,14 @@
         "lesson": "課程",
         "favorite": "收藏夾"
     },
-    "label": {
-        "waiting": "等待",
+    "task_type": {
         "video": "影片",
         "audio": "音頻",
         "merge": "合併",
+        "metadata": "中繼資料"
+    },
+    "label": {
+        "waiting": "等待",
         "complete": "完成",
         "download": "下載",
         "startDownload": "點擊以開始下載"

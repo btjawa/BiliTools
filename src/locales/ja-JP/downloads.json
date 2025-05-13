@@ -12,11 +12,14 @@
         "lesson": "ミュージック",
         "favorite": "お気に入り"
     },
-    "label": {
-        "waiting": "待機",
+    "task_type": {
         "video": "ビデオ",
         "audio": "オーディオ",
         "merge": "マージ",
+        "metadata": "メタデータ"
+    },
+    "label": {
+        "waiting": "待機",
         "complete": "完了",
         "download": "ダウンロード",
         "startDownload": "クリックしてダウンロードを開始"

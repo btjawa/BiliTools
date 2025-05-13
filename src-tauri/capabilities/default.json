@@ -49,7 +49,7 @@
       "identifier": "http:default",
       "allow": [
         { "url": "https://*.bilibili.com/*" },
-        { "url": "https://*.hdslb.com/*" },
+        { "url": "*://*.hdslb.com/*" },
         { "url": "https://*.biliimg.com/*" },
         { "url": "*://b23.tv/*" }
       ]

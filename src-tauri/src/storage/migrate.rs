@@ -21,7 +21,7 @@ pub async fn init() -> Result<()> {
     let old_work_dir = app.path().local_data_dir()?.join("com.btjawa.bilitools");
     for file in ["Downloads", "config.json"] { // For 1.1.x users
         let path = old_work_dir.join(file);
-        if path.exists() { let _ = fs::remove_file(&path); }
+        if path.exists() { fs::remove_file(&path).await?; }
     }
     if !WORKING_PATH.exists() {
         fs::create_dir_all(WORKING_PATH.as_os_str()).await?;

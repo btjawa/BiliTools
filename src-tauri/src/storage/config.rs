@@ -55,6 +55,7 @@ pub struct SettingsProxy {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
 pub struct SettingsAdvanced {
     pub prefer_pb_danmaku: bool,
+    pub add_metadata: bool,
     pub filename_format: String,
 }
 

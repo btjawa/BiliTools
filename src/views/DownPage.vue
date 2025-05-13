@@ -11,14 +11,12 @@
         <div v-for="item in queueData"
             class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
         >
-            <h3 class="w-[calc(100%-92px)] text-base text ellipsis">
+            <h3 class="w-[calc(100%-108px)] text-base text ellipsis">
                 {{ item.info.title }}
             </h3>
             <div class="!flex gap-2 desc">
                 <template v-for="option in item.select">
-                <span v-if="!(option < 0)">
-                    {{ $t(`common.default.${Object.keys(item.select).find(k => (item.select as any)[k] === option)}.data.${option}`) }}
-                </span>
+                <span v-if="option">{{ option }}</span>
                 </template>
                 <span>{{ item.info.ts.string }}</span>
             </div>
@@ -101,7 +99,7 @@ async function processQueue() {
             case 'Started': 
                 statusList.value[msg.id] = {
                     gid: msg.gid,
-                    message: i18n.global.t('downloads.label.' + msg.taskType),
+                    message: i18n.global.t('downloads.task_type.' + msg.taskType),
                     status: msg.status,
                     progress: 0.0,
                     paused: false,

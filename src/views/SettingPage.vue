@@ -156,6 +156,9 @@ const settingsTree = computed<any[]>(() => {
             { id: 'prefer_pb_danmaku', icon: "fa-exchange", desc: true, data: [
                 { id: 'enable', type: "switch", data: "advanced.prefer_pb_danmaku" },
             ] },
+            { id: 'add_metadata', icon: "fa-memo-circle-info", desc: true, data: [
+                { id: 'enable', type: "switch", data: "advanced.add_metadata" },
+            ] },
             { id: 'filename', icon: "fa-file", desc: true, data: [{ type: "filename" }] },
         ] },
         { id: "about", icon: "fa-circle-info", content: [

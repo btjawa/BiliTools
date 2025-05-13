@@ -1,7 +1,7 @@
-use std::{collections::VecDeque, fs, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{Arc, RwLock as StdRwLock}, time::Duration};
+use std::{collections::VecDeque, net::{SocketAddr, TcpListener}, path::PathBuf, sync::{Arc, RwLock as StdRwLock}, time::Duration};
 use tauri::{async_runtime::{self, Receiver}, http::StatusCode, ipc::Channel, Manager};
 use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
-use tokio::{sync::{mpsc, RwLock}, time::sleep};
+use tokio::{sync::{mpsc, RwLock}, time::sleep, fs};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use sea_orm::FromJsonQueryResult;
@@ -27,6 +27,7 @@ pub struct QueueInfo {
     pub id: String,
     pub tasks: Vec<Task>,
     pub output: PathBuf,
+    pub temp_dir: PathBuf,
     pub info: Arc<ArchiveInfo>,
     pub select: CurrentSelect,
 }
@@ -49,6 +50,10 @@ pub struct Task {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct ArchiveInfo {
     pub title: String,
+    pub desc: String,
+    pub tags: Vec<String>,
+    pub artist: String,
+    pub pubtime: String,
     pub cover: String,
     pub ts: Timestamp,
     pub output_dir: String,
@@ -57,10 +62,10 @@ pub struct ArchiveInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct CurrentSelect {
-    pub dms: i32,
-    pub ads: i32,
-    pub cdc: i32,
-    pub fmt: i32,
+    pub dms: Option<String>,
+    pub ads: Option<String>,
+    pub cdc: Option<String>,
+    pub fmt: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
@@ -114,7 +119,7 @@ pub enum TaskType {
     Video,
     Audio,
     Merge,
-    Flac,
+    Metadata,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -260,24 +265,18 @@ impl DownloadManager {
         let max_conc = CONFIG.read().unwrap().max_conc;
         let doing_len = QUEUE_MANAGER.get_len(QueueType::Doing).await;
         for _ in 0..(max_conc - doing_len) {
+            let self_cloned = self.clone();
+            let tx_cloned = tx.clone();
             if let Some(info) = QUEUE_MANAGER.waiting_to_doing().await? {
-                let self_cloned = self.clone();
-                let tx_cloned = tx.clone();
+                let task = async move {
+                    self_cloned.process(&info).await?;
+                    downloads::insert(info.clone()).await?;
+                    QUEUE_MANAGER.doing_to_complete(info.clone()).await?;
+                    fs::remove_dir_all(&info.temp_dir).await?;
+                    Ok::<Arc<QueueInfo>, TauriError>(info)
+                };
                 async_runtime::spawn(async move {
-                    let result = async {
-                        let success = self_cloned.process(info.clone()).await?;
-                        let path = info.tasks[0].clone().path.unwrap();
-                        if success {
-                            downloads::insert(info.clone()).await?;
-                            QUEUE_MANAGER.doing_to_complete(info.clone()).await?;                    
-                            if info.tasks.len() < 2 {
-                                fs::rename(&path, &info.output)?;
-                            }
-                        }
-                        fs::remove_dir_all(&path.parent().unwrap())?;
-                        Ok::<Arc<QueueInfo>, TauriError>(info)
-                    }.await;
-                    tx_cloned.send(result).await.context("Failed to send task result")?;
+                    tx_cloned.send(task.await).await.context("Failed to send task result")?;
                     Ok::<(), TauriError>(())
                 });
             } else {
@@ -286,73 +285,73 @@ impl DownloadManager {
         }
         Ok(())
     }
-    async fn process(&self, info: Arc<QueueInfo>) -> TauriResult<bool> {
-        let id = Arc::new(info.id.clone());
-        for task in info.tasks.iter() {
-            if task.task_type == TaskType::Merge {
-                ffmpeg::merge(info.clone(), &self.event).await?;
-                continue;
-            }
-            if task.task_type == TaskType::Flac {
-                ffmpeg::raw_flac(info.clone()).await?;
-                continue;
-            }
-            let gid = Arc::new(task.gid.as_ref().unwrap().clone());
-            let body: Aria2General = serde_json::from_value(
-                post_aria2c("unpause", vec![json!(gid)]).await?
-            ).context("Failed to decode aria2c unpause response")?;
-            if let Some(err) = body.error {
-                QUEUE_MANAGER.retain(QueueType::Doing, (*id).clone()).await?;
-                return Err(TauriError::new(err.message, Some(err.code)));
-            }
-            self.event.send(DownloadEvent::Started {
-                id: id.clone(), gid: gid.clone(), task_type: task.task_type.clone()
-            })?;
-            let mut success = false;
-            loop {
-                let body: Aria2TellStatus = serde_json::from_value(
-                    post_aria2c("tellStatus", vec![json!(gid)]).await?
-                ).context("Failed to decode aria2c tellStatus response")?;
-                if let Some(error) = body.error {
-                    if error.code == 1 {
-                        break;
-                    }
-                    return Err(TauriError::new(error.message, Some(error.code)));
-                }
-                if let Some(data) = body.result {
-                    if let Some(code) = data.error_code {
-                        let code = code.parse::<isize>()?;
-                        if code != 0 && code != 31 {
-                            QUEUE_MANAGER.retain(QueueType::Doing, (*id).clone()).await?;
-                            return Err(TauriError::new(
-                                data.error_message.unwrap_or(String::new()), Some(code)
-                            ));
-                        }
-                    }
-                    match data.status.as_str() {
-                        "active" => {
-                            self.event.send(DownloadEvent::Progress {
-                                id: id.clone(), gid: gid.clone(),
-                                content_length: data.total_length.parse::<u64>()?,
-                                chunk_length: data.completed_length.parse::<u64>()?,
-                            })?;
-                        },
-                        "complete" => {
-                            self.event.send(DownloadEvent::Finished { id: id.clone(), gid: gid.clone() })?;
-                            success = true;
-                            break;
-                        },
-                        "paused" => (),
-                        _ => break,
-                    }
-                }
-                sleep(Duration::from_millis(100)).await;
-            }
-            if !success {
-                return Ok(false);
-            }
+    async fn process(&self, info: &Arc<QueueInfo>) -> TauriResult<()> {
+        let mut path = PathBuf::new();
+        if &info.tasks[0].task_type == &TaskType::Metadata {
+            return Err(anyhow!("Metadata task cannot appear as the first task").into());
         }
-        Ok(true)
+        for task in info.tasks.iter() {
+            match task.task_type {
+                TaskType::Merge => ffmpeg::merge(info, &self.event).await?,
+                TaskType::Metadata => ffmpeg::add_metadata(info, path, &self.event).await?,
+                _ => self.download(info, task).await?
+            };
+            path = task.path.clone().unwrap();
+        }
+        Ok(())
+    }
+    async fn download(&self, info: &Arc<QueueInfo>, task: &Task) -> TauriResult<()> {
+        let id = Arc::new(info.id.clone());
+        let gid = Arc::new(task.gid.as_ref().unwrap().clone());
+        let body: Aria2General = serde_json::from_value(
+            post_aria2c("unpause", vec![json!(gid)]).await?
+        ).context("Failed to decode aria2c unpause response")?;
+        if let Some(err) = body.error {
+            QUEUE_MANAGER.retain(QueueType::Doing, (*id).clone()).await?;
+            return Err(TauriError::new(err.message, Some(err.code)));
+        }
+        self.event.send(DownloadEvent::Started {
+            id: id.clone(), gid: gid.clone(), task_type: task.task_type.clone()
+        })?;
+        loop {
+            let body: Aria2TellStatus = serde_json::from_value(
+                post_aria2c("tellStatus", vec![json!(gid)]).await?
+            ).context("Failed to decode aria2c tellStatus response")?;
+            if let Some(error) = body.error {
+                if error.code == 1 {
+                    break;
+                }
+                return Err(TauriError::new(error.message, Some(error.code)));
+            }
+            if let Some(data) = body.result {
+                if let Some(code) = data.error_code {
+                    let code = code.parse::<isize>()?;
+                    if code != 0 && code != 31 {
+                        QUEUE_MANAGER.retain(QueueType::Doing, (*id).clone()).await?;
+                        return Err(TauriError::new(
+                            data.error_message.unwrap_or(String::new()), Some(code)
+                        ));
+                    }
+                }
+                match data.status.as_str() {
+                    "active" => {
+                        self.event.send(DownloadEvent::Progress {
+                            id: id.clone(), gid: gid.clone(),
+                            content_length: data.total_length.parse::<u64>()?,
+                            chunk_length: data.completed_length.parse::<u64>()?,
+                        })?;
+                    },
+                    "complete" => {
+                        self.event.send(DownloadEvent::Finished { id: id.clone(), gid: gid.clone() })?;
+                        break;
+                    },
+                    "paused" => (),
+                    _ => break,
+                }
+            }
+            sleep(Duration::from_millis(100)).await;
+        }
+        Ok(())
     }
 }
 
@@ -427,7 +426,10 @@ pub fn init() -> Result<()> {
     *ARIA2C_PORT.write().unwrap() = port;
     let app = get_app_handle();
     let session_file = WORKING_PATH.join("aria2.session");
-    if !session_file.exists() { fs::write(&session_file, [])?; }
+    if !session_file.exists() {
+        std::fs::write(&session_file, [])
+            .context("Failed to write session_file")?;
+    }
     let session_file = session_file.to_string_lossy();
     let log_file = app.path().app_log_dir()?.join("aria2.log");
     let log_file = log_file.to_string_lossy();
@@ -485,22 +487,21 @@ pub async fn post_aria2c(action: &str, params: Vec<Value>) -> TauriResult<Value>
 
 fn check_breakpoint(
     input: &PathBuf,
-    start_with: String
+    start: &String
 ) -> Result<Option<PathBuf>> {
-    let entries = fs::read_dir(&input)?;
-    for entry in entries {
-        let entry = entry?;
-        let folder_path = entry.path();
-        let folder = folder_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if entry.file_type()?.is_dir() && folder.starts_with(&start_with) {
-            let folder_entries = fs::read_dir(&folder_path)?;
-            for sub_entry in folder_entries {
-                let sub_path = sub_entry?.path();
-                let file_name = sub_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if file_name.ends_with("aria2") {
-                    return Ok(Some(folder_path))
-                }
-            }
+    let dirs = std::fs::read_dir(input)?;
+    for dir in dirs {
+        let dir = dir?;
+        let path = dir.path();
+        let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("");
+        if !dir.file_type()?.is_dir() || !name.starts_with(start) {
+            continue;
+        }
+        let has_aria2 = std::fs::read_dir(&path)?
+            .filter_map(|v| v.ok())
+            .any(|file| file.path().extension() == Some("aria2".as_ref()));
+        if has_aria2 {
+            return Ok(Some(path));
         }
     }
     Ok(None)
@@ -514,6 +515,8 @@ pub async fn push_back_queue(
     tasks: Vec<Task>,
     output_dir: Option<String>,
 ) -> TauriResult<PathBuf> {
+    let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
+    fs::create_dir_all(&temp_dir).await.context("Failed to create app temp dir")?;
     let mut parent = if let Some(dir) = &output_dir {
         PathBuf::from(dir)
     } else {
@@ -532,26 +535,29 @@ pub async fn push_back_queue(
             count += 1;
         }
     }
+    let id = random_string(16);
+    let dir_name = format!("{}_{}", &id, info.ts.millis);
+    let temp_dir = check_breakpoint(&temp_dir, &dir_name)?
+        .unwrap_or(temp_dir.join(dir_name));
+
+    let dir = temp_dir.clone();
     let mut queue_info = QueueInfo {
-        id: random_string(16),
+        id,
         tasks,
         output: parent.join(&info.filename),
+        temp_dir,
         info: info.clone(),
         select,
     };
     for task in &mut queue_info.tasks {
-        if task.task_type == TaskType::Merge || task.task_type == TaskType::Flac || task.urls.is_none() { // Non-download task
+        if task.urls.is_none() { // Non-download task
             task.gid = Some(random_string(16));
+            task.path = Some(dir.join(&info.filename));
             continue;
         }
         let urls = task.urls.clone().unwrap();
         let parsed_url = reqwest::Url::parse(&urls[0])?;
         let name = parsed_url.path_segments().unwrap().last().unwrap();
-        let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
-        fs::create_dir_all(&temp_dir).context("Failed to create app temp dir")?;
-        let dir = check_breakpoint(
-            &temp_dir, format!("{}_{}", &info.filename, info.ts.millis)
-        )?.unwrap_or(temp_dir.join(format!("{}_{}", &info.filename, info.ts.millis)));
         let params = vec![json!(urls), json!({ "dir": dir, "out": name, "pause": "true" })];
         let body: Aria2General = serde_json::from_value(
             post_aria2c("addUri", params).await?
@@ -565,7 +571,7 @@ pub async fn push_back_queue(
     }
     QUEUE_MANAGER.push_back(Arc::new(queue_info), QueueType::Waiting).await?;
     QUEUE_MANAGER.update(QueueType::Waiting).await;
-    fs::create_dir_all(&parent).context("Failed to create output folder")?;
+    fs::create_dir_all(&parent).await.context("Failed to create output folder")?;
     Ok(parent)
 }
 

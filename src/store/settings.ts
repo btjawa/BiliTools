@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { commands, Settings } from "@/services/backend";
 import { useAppStore } from "./app";
+import { ProxyConfig } from "@tauri-apps/plugin-http";
 
 export const useSettingsStore = defineStore('settings', {
     state: (): Settings => ({
@@ -12,7 +13,7 @@ export const useSettingsStore = defineStore('settings', {
         df_cdc: Number(),
         language: String(),
         theme: 'dark',
-        auto_check_update: true,
+        auto_check_update: false,
         auto_download: false,
         proxy: {
             addr: String(),
@@ -21,6 +22,7 @@ export const useSettingsStore = defineStore('settings', {
         },
         advanced: {
             prefer_pb_danmaku: true,
+            add_metadata: true,
             filename_format: String(),
         }
     }),
@@ -29,13 +31,21 @@ export const useSettingsStore = defineStore('settings', {
         dynFa(): string {
             return this.isDark ? 'fa-solid' : 'fa-light';
         },
-        proxyUrl: (s) => () => {
+        proxyUrl: (s) => {
             if (!s.proxy.addr.length) return null;
             const url = new URL(s.proxy.addr);
             url.username = s.proxy.username || '';
             url.password = s.proxy.password || '';
             return url.toString();
-        }
+        },
+        proxyConfig(): ProxyConfig { return {
+            url: this.proxy.addr || '*',
+            basicAuth: {
+                username: this.proxy.username,
+                password: this.proxy.password,
+            },
+            noProxy: this.proxy.addr ? undefined : '*',
+        }},
     },
     actions: {
         value(key: string) {

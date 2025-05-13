@@ -12,6 +12,13 @@ export const QualityMap = {
   fmt: [{ id: 0 }, { id: 1 }, { id: 2 }]
 }
 
+export interface CurrentSelect {
+  dms: number;
+  ads: number;
+  cdc: number;
+  fmt: number
+};
+
 export const FilenamePlaceholders = [
   'index',
   'title',
@@ -108,12 +115,13 @@ export interface OthersProvider {
 }
 
 export interface MediaInfo {
+  type: MediaType;
   id: number;
   title: string;
   cover: string;
   covers: OthersProvider['covers'];
   desc: string;
-  type: MediaType;
+  tags: string[];
   stein_gate?: {
     grapth_version: number;
     edge_id: number;
@@ -139,6 +147,8 @@ export interface MediaInfo {
     title: string;
     cover: string;
     desc: string;
+    duration: number;
+    pubtime: number; // sec timestamp
     aid?: number; // general video
     sid?: number; // music
     fid?: number; // favorite
@@ -146,10 +156,18 @@ export interface MediaInfo {
     bvid?: string;
     epid?: number;
     ssid?: number;
-    duration?: number;
-    ss_title: string;
     index: number
   }[]
+}
+
+export interface VideoTags {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    tag_id: number;
+    tag_name: string;
+  }[];
 }
 
 export interface VideoInfo {
@@ -198,6 +216,7 @@ export interface VideoInfo {
       sections: {
         season_id: number;
         id: number;
+        type: number;
         title: string;
         episodes: {
           season_id: number;
@@ -363,6 +382,27 @@ export interface LessonInfo {
     };
   };
   message: string;
+}
+
+export interface MusicTagsInfo {
+  code: number;
+  msg: string;
+  data: {
+    key: number;
+    info: string;
+  }[]
+}
+
+export interface MusicMembersInfo {
+  code: number;
+  msg: string;
+  data: {
+    type: number;
+    list: {
+      member_id: number;
+      name: string;
+    }[];
+  }
 }
 
 interface MusicInfoData {
@@ -805,7 +845,13 @@ export interface PlayerInfo {
         ai_status: number;
       }[];
     };
-    view_points: unknown[];
+    view_points: {
+      type: number,
+      from: number,
+      to: number,
+      content: number,
+      imgUrl: string,
+    }[];
     preview_toast: string;
     interaction: {
       history_node: {

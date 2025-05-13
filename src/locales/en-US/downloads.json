@@ -12,11 +12,14 @@
         "lesson": "Lesson",
         "favorite": "Favorite"
     },
-    "label": {
-        "waiting": "Waiting",
+    "task_type": {
         "video": "Video",
         "audio": "Audio",
         "merge": "Merge",
+        "metadata": "Metadata"
+    },
+    "label": {
+        "waiting": "Waiting",
         "complete": "Complete",
         "download": "Download",
         "startDownload": "Click to Start Download"

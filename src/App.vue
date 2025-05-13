@@ -45,15 +45,13 @@ onMounted(async () => {
 		const ready = await commands.ready();
 		if (ready.status === 'error') throw new ApplicationError(ready.error);
 		const secret = ready.data;
-		updater.value?.checkUpdate();
+		app.secret = secret;
 		const init = await commands.init(secret);
 		if (init.status === 'error') throw new ApplicationError(init.error);
 		const data = init.data;
 		const { downloads, ...initData } = init.data;
 		useQueueStore().complete = data.downloads;
-		app.$patch({
-			secret, ...initData
-		});
+		app.$patch({ ...initData });
 		await checkRefresh();
 		await fetchUser();
 	} catch(err) {

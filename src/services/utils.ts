@@ -1,7 +1,7 @@
-import { CurrentSelect, TauriError, commands, events } from '@/services/backend';
+import { TauriError, commands, events } from '@/services/backend';
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
-import { MediaInfo, MediaType } from '@/types/data.d';
+import { MediaInfo, MediaType, CurrentSelect } from '@/types/data.d';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 import * as auth from '@/services/auth';
@@ -112,10 +112,9 @@ export async function tryFetch(url: string | URL, options?: {
         } else params = String();
         const settings = useSettingsStore();
         const app = useAppStore();
-        const proxyUrl = settings.proxyUrl();
         const fetchOptions = {
             headers: app.headers,
-            ...(proxyUrl && { proxy: { all: proxyUrl }}),
+            proxy: { all: settings.proxyConfig },
             method: 'GET',
             body: undefined as string | undefined
         };
@@ -151,15 +150,14 @@ export async function tryFetch(url: string | URL, options?: {
         }
         if (body.code !== 0 && body.code) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
-                const proxyUrl = settings.proxyUrl();
                 const csrf = new Headers(app.headers).get('Cookie')?.match(/bili_jct=([^;]+);/)?.[1] || '';
                 const captchaParams = new URLSearchParams({
                     v_voucher: body.data.v_voucher, ...(csrf && { csrf })
                 }).toString();
                 const captchaResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/register?' + captchaParams, {
                     headers: app.headers,
+                    proxy: { all: settings.proxyConfig },
                     method: 'POST',
-                    ...(proxyUrl && { proxy: { all: proxyUrl }}),
                 });
                 const captchaBody = await captchaResp.json();
                 if (captchaBody.code !== 0) {
@@ -174,11 +172,10 @@ export async function tryFetch(url: string | URL, options?: {
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })
                 }).toString();
-                const _proxyUrl = settings.proxyUrl();
                 const validateResp = await fetch('https://api.bilibili.com/x/gaia-vgate/v1/validate?' + validateParams, {
                     headers: app.headers,
+                    proxy: { all: settings.proxyConfig },
                     method: 'POST',
-                    ...(_proxyUrl && { proxy: { all: _proxyUrl }}),
                 });
                 const validateBody = await validateResp.json();
                 if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
@@ -350,7 +347,7 @@ export function getFileExtension(options: CurrentSelect) {
         videoExt = 'mkv';
     }
     if (options.ads >= 30216 && options.ads <= 30232 || options.ads === 30280 || options.ads === 30380) {
-        audioExt = 'aac';
+        audioExt = 'm4a';
     }
     if (options.ads === 30250) {
         audioExt = 'eac3';
