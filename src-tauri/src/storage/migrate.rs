@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use tauri::Manager;
 use tokio::fs;
 
-const STORAGE_VERSION: i32 = 4;
+const STORAGE_VERSION: i32 = 5;
 
 async fn init_empty() -> Result<()> {
     fs::write(STORAGE_PATH.as_path(), &[]).await?;

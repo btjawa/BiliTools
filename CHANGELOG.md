@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.7] - 2025-05-17
+
+Update STORAGE_VERSION to 5
+
+重构配置读写逻辑，提高效率<br>
+自定义文件名设置更名为 `命名格式`，同时支持自定义文件夹命名，并添加了更多变量
+
+### 更新
+
+- [`43b760c`](https://github.com/btjawa/BiliTools/commit/43b760c0606708927ebfb9959ba7b09f6c7f7da1) 对图标细节重新进行设计，`macOS` 下将会使用白底圆角图标 ([#46](https://github.com/btjawa/BiliTools/issues/46) by [@hqc8848](https://github.com/hqc8848))
+- [`1ef31a3`](https://github.com/btjawa/BiliTools/commit/1ef31a3da8d563a0c889463dcc712df0389060ee) 支持将元数据自动嵌入媒体文件 ([#50](https://github.com/btjawa/BiliTools/issues/50) by [@include-H](https://github.com/include-H))
+- [`bd8048e`](https://github.com/btjawa/BiliTools/commit/bd8048e4c3c1ef30e9f8302b03035c98d1b36cce) 支持自定义文件夹命名格式 ([#54](https://github.com/btjawa/BiliTools/issues/54) by [@Excitedfighter](https://github.com/Excitedfighter))
+- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) (`1.3.7-1`) 增强 `自动检测` 输入链接的识别能力
+- [`884aa45`](https://github.com/btjawa/BiliTools/commit/884aa455bcd7fe7939c4cd98c7ae75d4f27d3992) (`1.3.7-1`) 允许在 `设置->下载` 中启用 `添加任务后自动开始下载` ([#46](https://github.com/btjawa/BiliTools/issues/46) by [@hqc8848](https://github.com/hqc8848))
+
+### 修复
+
+- [`1ef31a3`](https://github.com/btjawa/BiliTools/commit/1ef31a3da8d563a0c889463dcc712df0389060ee) 修复合集视频检测合集错误问题 ([#55](https://github.com/btjawa/BiliTools/issues/55) by [@vce527](https://github.com/vce527))
+- [`1ef31a3`](https://github.com/btjawa/BiliTools/commit/1ef31a3da8d563a0c889463dcc712df0389060ee) 修复代理检测混乱问题 ([#34](https://github.com/btjawa/BiliTools/issues/34) by [@AceCandy](https://github.com/AceCandy))
+- [`745061a`](https://github.com/btjawa/BiliTools/commit/745061ae9568feb7592a2ba04dee63242dbf4033) 修复多选下载时文件夹创建混乱问题 ([#49](https://github.com/btjawa/BiliTools/issues/49) by [@yuabc66](https://github.com/yuabc66))
+- [`1ef31a3`](https://github.com/btjawa/BiliTools/commit/1ef31a3da8d563a0c889463dcc712df0389060ee) 修复 "系统无法将文件移到不同的磁盘驱动器。 (os error 17)" ([#52](https://github.com/btjawa/BiliTools/issues/52) by [@caty17173](https://github.com/caty17173))
+- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) (`1.3.7-1`) 修复课程下载链接格式问题 ([#39](https://github.com/btjawa/BiliTools/issues/39) by [@ShannonNi](https://github.com/ShannonNi))
+- [`5c9ac31`](https://github.com/btjawa/BiliTools/commit/5c9ac31482528bff99115ce586361c3fef8c2958) (`1.3.7-1`) 修复不合法文件名问题 ([#48](https://github.com/btjawa/BiliTools/issues/48) by [@yuabc66](https://github.com/yuabc66))
+
 ## [1.3.7-1] - 2025-05-05
 
 Update STORAGE_VERSION to 4

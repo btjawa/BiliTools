@@ -1,6 +1,6 @@
 {
   "productName": "BiliTools",
-  "version": "1.3.7-1",
+  "version": "1.3.7",
   "identifier": "com.btjawa.bilitools",
   "build": {
     "beforeDevCommand": "npm run dev",
