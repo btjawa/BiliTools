@@ -52,7 +52,8 @@ lazy_static! {
         advanced: SettingsAdvanced {
             prefer_pb_danmaku: true,
             add_metadata: true,
-            filename_format: "{index}_{title}".into()
+            filename_format: "{index}_{title}".into(),
+            folder_format: "{title}_{date_sec}".into()
         }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
@@ -170,6 +171,20 @@ pub fn get_ts(mills: bool) -> i64 {
 pub fn random_string(len: usize) -> String {
     rand::rng().sample_iter(&Alphanumeric)
         .take(len).map(char::from).collect()
+}
+
+pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
+    let mut count = 1;
+    let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+    let ext = path.extension().map(|e| e.to_string_lossy().to_string());
+    while path.exists() {
+        path.set_file_name(match &ext {
+            Some(ext) => format!("{}_{}.{}", stem, count, ext),
+            None => format!("{}_{}", stem, count),
+        });
+        count += 1;
+    }
+    path
 }
 
 pub fn process_err<T: ToString>(e: T, name: &str) -> T {

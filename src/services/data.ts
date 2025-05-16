@@ -1,10 +1,9 @@
-import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, filename, getRandomInRange, safeName } from "@/services/utils";
+import { ApplicationError, tryFetch, timestamp, duration, getFileExtension, getRandomInRange, getFormat } from "@/services/utils";
 import { useSettingsStore, useUserStore } from "@/store";
 import * as Types from "@/types/data.d";
 import * as Backend from "@/services/backend";
 import * as dm_v1 from "@/proto/dm_v1";
 import pako from 'pako';
-import i18n from "@/i18n";
 
 export async function getMediaInfo(id: string, type: Types.MediaType, options?: { pn?: number }): Promise<Types.MediaInfo> {
     let url = "https://api.bilibili.com";
@@ -385,31 +384,34 @@ export async function getPlayUrl(
 }
 
 export async function pushBackQueue(params: {
-    info: Types.MediaInfo['list'][0],
-    upper: Types.MediaInfo['upper'],
+    item: Types.MediaInfo['list'][0],
+    info: {
+        title: string,
+        upper: Types.MediaInfo['upper'],
+        tags: string[],
+    },
     video?: Types.PlayUrlResult,
     audio?: Types.PlayUrlResult,
     select: Types.CurrentSelect,
-    output_dir: string,
-    tags: string[],
     index: number,
     output?: string,
 }) {
     const select = params.select;
-    const info = params.info;
+    const { item, info } = params;
+    const ext = getFileExtension(select);
     const archiveInfo = {
-        title: info.title,
-        cover: info.cover,
-        desc: info.desc,
-        tags: params.tags,
-        artist: params.upper.name ?? String(),
-        pubtime: new Date(info.pubtime * 1000).toISOString(),
+        title: item.title,
+        cover: item.cover,
+        desc: item.desc,
+        tags: info.tags,
+        artist: info.upper.name ?? String(),
+        pubtime: new Date(item.pubtime * 1000).toISOString(),
         ts: {
             millis: Date.now(),
             string: timestamp(Date.now(), { file: true })
         },
-        output_dir: safeName(params.output_dir),
-        filename: `${filename(info, params.upper, params.index)}.${getFileExtension(select)}`,
+        folder: getFormat('folder', { ...info, select }),
+        filename: `${getFormat('filename', { item, upper: info.upper, select, index: params.index })}.${ext}`,
     };
     const tasks = [
         params.video && {
@@ -433,17 +435,8 @@ export async function pushBackQueue(params: {
             taskType: 'metadata'
         }
     ].filter(Boolean) as any[];
-    const quality = (k: string, v: number) => {
-        return v === -1 ? null : i18n.global.t(`common.default.${k}.data.${v}`)
-    }
-    const archiveSelect = {
-        dms: quality('dms', select.dms),
-        cdc: quality('cdc', select.cdc),
-        ads: quality('ads', select.ads),
-        fmt: quality('fmt', select.fmt),
-    };
     const result = await Backend.commands.pushBackQueue(
-        archiveInfo, archiveSelect, tasks, params.output ?? null,
+        archiveInfo, tasks, params.output ?? null,
     );
     if (result.status === 'error') throw result.error;
     return result.data;
@@ -507,8 +500,10 @@ export async function getDanmaku(info: Types.MediaInfo["list"][0], date?: string
 }
 
 export async function getPlayerInfo(id: number, cid?: number) {
+    const user = useUserStore();
     const params = { aid: id, cid: cid ?? await getCid(id) };
-    const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', { auth: 'wbi', params });
+    const url = user.isLogin ? 'https://api.bilibili.com/x/player/wbi/v2' : 'https://api.bilibili.com/x/player/v2';
+    const response = await tryFetch(url, { params, ...(user.isLogin && { auth: 'wbi' }) });
     const body = response as Types.PlayerInfo;
     return body.data;
 }

@@ -24,6 +24,7 @@ export const useSettingsStore = defineStore('settings', {
             prefer_pb_danmaku: true,
             add_metadata: true,
             filename_format: String(),
+            folder_format: String(),
         }
     }),
     getters: {

@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./assets/bilitools.png" width="500" />
+    <img src="./assets/logo.svg" width="500" />
 </p>
 
 <div align="center">

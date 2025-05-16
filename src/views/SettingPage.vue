@@ -30,7 +30,7 @@
                         :id="settings.value(unit.data)"
                         :emit="(v) => bind(unit.data).value = v"
                     />
-                    <Filename v-if="unit.type === 'filename'" />
+                    <Format v-if="unit.type === 'format'" />
                     <input v-if="unit.type === 'input'"
                         type="text" spellcheck="false"
                         :value="bind(unit.data).value" :placeholder="unit.placeholder"
@@ -83,7 +83,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onActivated, ref, watch } from 'vue';
 import { ApplicationError, AppLog, tryFetch } from '@/services/utils';
-import { Path, Cache, Filename } from '@/components/SettingPage';
+import { Path, Cache, Format } from '@/components/SettingPage';
 import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 import { useSettingsStore, useAppStore } from '@/store';
 import { type as osType } from '@tauri-apps/plugin-os';
@@ -117,7 +117,7 @@ const settingsTree = computed<any[]>(() => {
         { id: "storage", icon: "fa-database", content: [
             { id: 'paths', icon: "fa-folder", data: [
                 { id: 'down_dir', type: "path", data: "down_dir" },
-                { id: 'temp_dir', type: "path", desc: t('settings.storage.paths.temp_dir.desc'), data: "temp_dir" },
+                { id: 'temp_dir', type: "path", desc: t('settings.storage.paths.temp_dir'), data: "temp_dir" },
             ] },
             { id: 'cache', icon: "fa-database", desc: true, data: [
                 { id: 'log', type: "cache", data: "log" },
@@ -131,9 +131,9 @@ const settingsTree = computed<any[]>(() => {
         ] },
         { id: "download", icon: "fa-download", content: [
             { id: 'default', icon: "fa-user", desc: true, data: [
-                { name: t('common.default.dms.name'), type: "dropdown", data: "df_dms", drop: "dms" },
-                { name: t('common.default.ads.name'), type: "dropdown", data: "df_ads", drop: "ads" },
-                { name: t('common.default.cdc.name'), type: "dropdown", data: "df_cdc", drop: "cdc" },
+                { name: t('common.default.placeholders.dms'), type: "dropdown", data: "df_dms", drop: "dms" },
+                { name: t('common.default.placeholders.ads'), type: "dropdown", data: "df_ads", drop: "ads" },
+                { name: t('common.default.placeholders.cdc'), type: "dropdown", data: "df_cdc", drop: "cdc" },
                 { name: t('settings.label.max_conc'), type: "dropdown", data: "max_conc", drop: [
                     { id: 1, name: "1" },
                     { id: 2, name: "2" },
@@ -159,7 +159,7 @@ const settingsTree = computed<any[]>(() => {
             { id: 'add_metadata', icon: "fa-memo-circle-info", desc: true, data: [
                 { id: 'enable', type: "switch", data: "advanced.add_metadata" },
             ] },
-            { id: 'filename', icon: "fa-file", desc: true, data: [{ type: "filename" }] },
+            { id: 'format', icon: "fa-file", desc: true, data: [{ type: "format" }] },
         ] },
         { id: "about", icon: "fa-circle-info", content: [
             { data: [{ type: "about" }] },
@@ -193,7 +193,7 @@ onActivated(() => Object.keys(app.cache).forEach(key => getSize(key as PathAlias
 
 function getDropdown(drop: keyof typeof QualityMap | { id: number, name: string }[]) {
     if (Array.isArray(drop)) return drop;
-    else return QualityMap[drop].map(v => ({ id: v.id, name: i18n.global.t(`common.default.${drop}.data.${v.id}`) }))
+    else return QualityMap[drop].map(v => ({ id: v.id, name: i18n.global.t(`common.default.${drop}.${v.id}`) }))
 }
 
 async function getPath(type: PathAlias) {

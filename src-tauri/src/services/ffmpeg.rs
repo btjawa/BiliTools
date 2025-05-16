@@ -12,7 +12,7 @@ use super::aria2c::{
     DownloadEvent,
 };
 
-use crate::{shared::{get_app_handle, get_ts, init_client, process_err, CONFIG}, TauriError, TauriResult};
+use crate::{shared::{get_app_handle, get_ts, get_unique_path, init_client, process_err, CONFIG}, TauriError, TauriResult};
 
 macro_rules! svec {
     ( $( $x:expr ),* ) => {
@@ -96,7 +96,7 @@ pub async fn merge(info: &Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Tau
         .find(|v| v.task_type == TaskType::Merge)
         .context("No merge task found")?;
 
-    let merge_path = merge_task.path.clone().unwrap();
+    let merge_path = get_unique_path(merge_task.path.clone().unwrap());
     let merge_gid = merge_task.gid.clone().unwrap();
 
     let app = get_app_handle();
@@ -191,13 +191,10 @@ async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: 
     }
     if add_metadata {
         if ext == "mp4" || ext == "m4a" {
-            output_args.extend(svec![
-                "-map", "1:v:0",
-                "-disposition:v", "attached_pic"
-            ]);
+            output_args.extend(svec!["-map", "1:v:0"]);
             output_args.extend(match has_video {
-                true => svec!["-c:v:1", "mjpeg"],
-                false => svec!["-c:v", "mjpeg"]
+                true => svec!["-c:v:1", "mjpeg", "-disposition:v:1", "attached_pic"],
+                false => svec!["-c:v", "mjpeg", "-disposition:v", "attached_pic"]
             });
         } else if ext == "mkv" {
             output_args.extend(svec![
@@ -222,7 +219,7 @@ async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: 
 
 pub async fn add_metadata(info: &Arc<QueueInfo>, input: PathBuf, event: &Channel<DownloadEvent>) -> Result<()> {
     let app = get_app_handle();
-    let output = info.output.clone();
+    let output = get_unique_path(info.output.clone());
     let log_path = info.temp_dir.join(format!("metadata_{}_{}.log", info.id, get_ts(true)));
     let log_path_clone = log_path.clone();
     let video_path = info.tasks.iter().find(|t| t.task_type == TaskType::Video).and_then(|f| f.path.as_ref());

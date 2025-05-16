@@ -25,6 +25,7 @@ pub use crate::{
         downloads,
     },
     shared,
+    config::ConfigAction,
     errors::{TauriResult, TauriError},
 };
 
@@ -116,13 +117,15 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, output: String, c
     let ts = shared::get_ts(true);
     let temp_dir = shared::CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools");
     let input = temp_dir.join(format!("{ts}.xml"));
+    let tmp_output = temp_dir.join(format!("{ts}.ass"));
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
     let result = app.shell().sidecar("DanmakuFactory")?
-        .args(["-i", input.to_str().unwrap(), "-o", &output])
+        .args(["-i", input.to_str().unwrap(), "-o", tmp_output.to_str().unwrap()])
         .output().await?;
 
     log::info!("STDOUT:\n{}", String::from_utf8_lossy(&result.stdout));
     log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
+    fs::copy(tmp_output, output).await?;
     fs::remove_file(input).await?;
     Ok(())
 }
@@ -168,7 +171,7 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     if secret != *shared::SECRET.read().unwrap() {
         return Err(anyhow!("403 Forbidden").into())
     }
-    rw_config("read", None, secret).await?;
+    rw_config(ConfigAction::Init, None, secret).await?;
     login::stop_login();
     login::get_extra_cookies().await?;
     shared::init_headers().await?;

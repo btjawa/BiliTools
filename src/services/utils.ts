@@ -308,23 +308,27 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
 }
 
-export function filename(info: Record<string, any>, upper: MediaInfo['upper'], index: number): string {
-    const format = useSettingsStore().advanced.filename_format;
-    return safeName(format.replace(/{(\w+)}/g, (_, key) => {
+export function getFormat(type: 'filename' | 'folder', data: { title?: string, item?: MediaInfo['list'][0], upper: MediaInfo['upper'], select?: CurrentSelect, index?: number }) {
+    const format = useSettingsStore().advanced[`${type}_format`];
+    const quality = (k: string, v: number) => {
+        return v === -1 ? -1 : i18n.global.t(`common.default.${k}.${v}`)
+    }
+    return format.replace(/{(\w+)}/g, (_, key) => {
         switch (key) {
-            case 'index': return index;
-            case 'upper': return upper.name;
-            case 'upperid': return upper.mid;
+            case 'title': return data.title ?? data.item?.title;
+            case 'index': return data.index;
+            case 'upper': return data.upper.name;
+            case 'upperid': return data.upper.mid;
             case 'date_sec': return timestamp(Date.now(), { file: true });
-            case 'ts_sec': return String(Math.floor(Date.now() / 1000));
-            case 'ts_ms': return String(Date.now());
-            default: return info[key] ?? -1;
+            case 'ts_sec': return Math.floor(Date.now() / 1000);
+            case 'ts_ms': return Date.now();
+            case 'dms': return quality('dms', data.select?.dms ?? -1);
+            case 'cdc': return quality('cdc', data.select?.cdc ?? -1);
+            case 'ads': return quality('ads', data.select?.ads ?? -1);
+            case 'fmt': return quality('fmt', data.select?.fmt ?? -1);
+            default: return (data.item as any)?.[key] ?? -1;
         }
-    }));
-}
-
-export function safeName(input: string): string {
-    return input.replace(/[\\/:*?"<>|]/g, '_');
+    }).replace(/[\\/:*?"<>|]/g, '_');
 }
 
 export function formatBytes(bytes: number): string {

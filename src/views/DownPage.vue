@@ -15,10 +15,7 @@
                 {{ item.info.title }}
             </h3>
             <div class="!flex gap-2 desc">
-                <template v-for="option in item.select">
-                <span v-if="option">{{ option }}</span>
-                </template>
-                <span>{{ item.info.ts.string }}</span>
+                <span>{{ timestamp(item.info.ts.millis) }}</span>
             </div>
             <span class="absolute top-3 right-4 desc text">{{ item.id }}</span>
             <div class="progress flex items-center justify-center">
@@ -53,9 +50,9 @@
 
 <script setup lang="ts">
 import { inject, nextTick, ref, watch, Ref, computed } from 'vue';
+import { ApplicationError, timestamp } from '@/services/utils';
 import { commands, DownloadEvent } from '@/services/backend';
 import { useSettingsStore, useQueueStore } from '@/store';
-import { ApplicationError } from '@/services/utils';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { Channel } from '@tauri-apps/api/core';
 import { dirname } from '@tauri-apps/api/path';

@@ -77,7 +77,7 @@
 </div></template>
 
 <script setup lang="ts">
-import { ApplicationError, AppLog, filename, getImageBlob, getRandomInRange, parseId, safeName, timestamp, tryFetch } from '@/services/utils';
+import { ApplicationError, AppLog, getFormat, getImageBlob, getRandomInRange, parseId, tryFetch } from '@/services/utils';
 import { MediaInfo, MediaInfoItem, Popup, PackagePopup } from '@/components/SearchPage';
 import { useAppStore, useSettingsStore, useUserStore } from '@/store';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
@@ -228,7 +228,7 @@ async function initPackage(index: number, options?: { multi?: boolean }) {
 	}
 }
 
-async function download(select: Types.CurrentSelect, info: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, index: number, output?: string) {
+async function download(select: Types.CurrentSelect, item: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, index: number, output?: string) {
 	const params: {
 		video?: Types.PlayUrlResult,
 		audio?: Types.PlayUrlResult,
@@ -242,16 +242,14 @@ async function download(select: Types.CurrentSelect, info: Types.MediaInfo['list
 	const upper = v.mediaInfo.upper;
 	if (ref.data === 'queue') {
 		const result = await data.pushBackQueue({
-			info, upper, ...params, select,
-			output_dir: v.mediaInfo.title,
-			tags: v.mediaInfo.tags,
-			index, output,
+			item, info: { ...v.mediaInfo }, ...params,
+			select, index, output
 		});
 		if (settings.auto_download) processQueue();
 		return result;
 	}
 	const map = othersMap[ref.key as keyof typeof othersMap];
-	const file = `${filename(info, upper, index)}_${ref.data}.${map.suffix}`;
+	const file = `${getFormat('filename', { item, upper, index })}.${map.suffix}`;
 	const path = output ?
 		await pathJoin(output, file) :
 		await dialogSave({
@@ -261,12 +259,12 @@ async function download(select: Types.CurrentSelect, info: Types.MediaInfo['list
 	if (!path) return;
 	let body;
 	switch (ref.key) {
-		case 'liveDanmaku': body = await data.getDanmaku(info); break;
-		case 'historyDanmaku': body = await data.getDanmaku(info, ref.data); break;
-		case 'aiSummary': body = await data.getAISummary(info, upper.mid ?? 0); break;
-		case 'covers': body = await tryFetch(v.mediaInfo.covers.find(v => v.id === ref.data)?.url ?? info.cover, { type: 'binary' }); break;
+		case 'liveDanmaku': body = await data.getDanmaku(item); break;
+		case 'historyDanmaku': body = await data.getDanmaku(item, ref.data); break;
+		case 'aiSummary': body = await data.getAISummary(item, upper.mid ?? 0); break;
+		case 'covers': body = await tryFetch(v.mediaInfo.covers.find(v => v.id === ref.data)?.url ?? item.cover, { type: 'binary' }); break;
 		case 'subtitles':
-			const subtitles = await data.getSubtitles(info);
+			const subtitles = await data.getSubtitles(item);
 			const subtitle = subtitles.find(v => v.lan === ref.data);
 			if (!subtitle) throw 'subtitle url not found';
 			body = await data.getSubtitle(subtitle.subtitle_url);
@@ -319,33 +317,35 @@ async function processGeneral(select: Types.CurrentSelect, target: { key: string
 	return output;
 }
 
-async function processPackage(select: Types.PackageSelect, options?: { multi?: boolean }) {
+async function processPackage(target: Types.PackageSelect, options?: { multi?: boolean }) {
 	const chunks = [options?.multi ? v.checkboxs[0] : v.index];
 	if (options?.multi) for (let i = 1; i < v.checkboxs.length; i++) {
 		chunks.push(v.checkboxs[i]);
 	}
-	const keys = Object.keys(select);
+	const keys = Object.keys(target);
 	if (keys.includes('video') || keys.includes('audio') || keys.includes('audioVideo')) {
 		queuePage.value = 0;
 		router.push('/down-page');
 	}
-	const entries = Object.entries(select);
+	const entries = Object.entries(target);
 	const secret = useAppStore().secret;
 	for (const chunk of chunks) {
+		const item = v.mediaInfo.list[chunk];
+		const { title, upper } = v.mediaInfo;
+		const select = {
+			dms: settings.df_dms,
+			ads: settings.df_ads,
+			cdc: settings.df_cdc,
+			fmt: settings.df_cdc,
+		}
 		let output = await pathJoin(
 			settings.down_dir,
-			`${safeName(v.mediaInfo.title)}_${timestamp(Date.now(), { file: true })}`
+			getFormat('folder', { title, item, upper, select })
 		);
 		await commands.newFolder(secret, output);
 		v.index = chunk;
 		for (const [index, [key, data]] of entries.entries()) {
-			const newSelect = {
-				dms: settings.df_dms,
-				ads: settings.df_ads,
-				cdc: settings.df_cdc,
-				fmt: settings.df_cdc,
-			}
-			await processGeneral(newSelect, { key, data }, { index, output, noSleep: true });
+			await processGeneral(select, { key, data }, { index, output, noSleep: true });
 		}
 		await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
 	}

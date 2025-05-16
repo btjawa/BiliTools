@@ -45,31 +45,23 @@ watch(active, () => {
 })
 
 async function handleAction(action: string) {
-    switch (action) {
-        case 'cut':
-            return document.execCommand('cut');
-        case 'copy':
-            return document.execCommand('copy');
-        case 'paste':
-            return handleTextUpdate(activeElement.value, await readText());
-    }
-}
-
-function handleTextUpdate(element: HTMLInputElement | HTMLTextAreaElement | null, text: string = '') {
-    if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
-        const start = element.selectionStart ?? 0;
-        const end = element.selectionEnd ?? 0;
-        element.value = element.value.substring(0, start) + text + element.value.substring(end);
+    if (action === 'cut') return document.execCommand('cut');
+    if (action === 'copy') return document.execCommand('copy');
+    const target = activeElement.value;
+    const text = await readText();
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        const start = target.selectionStart ?? 0;
+        const end = target.selectionEnd ?? 0;
+        target.value = target.value.substring(0, start) + text + target.value.substring(end);
         const pos = start + text.length;
-        element.setSelectionRange(pos, pos);
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        return element.value.substring(start, end) || selection.value;
+        target.setSelectionRange(pos, pos);
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        return target.value.substring(start, end) || selection.value;
     }
-    return text;
 }
 
 function showMenu(e: MouseEvent) {
-    activeElement.value = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+    activeElement.value = document.activeElement as any;
     selection.value = window.getSelection()?.toString() || "";
     active.value = true;
     nextTick(() => {

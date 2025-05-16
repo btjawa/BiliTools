@@ -106,26 +106,26 @@ function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean)
     dms: {
       data: playUrl.videoQualities ?? [],
       icon: 'fa-video',
-      title: 'common.default.dms.name',
-      getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
+      title: 'common.default.placeholders.dms',
+      getText: (key: any, id: any) => `common.default.${key}.${id}`,
     },
     cdc: {
       data: playUrl.video?.filter(v => v.id === select.value.dms).map(v => v.codecid).filter(Boolean) ?? [],
       icon: 'fa-code',
-      title: 'common.default.cdc.name',
-      getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
+      title: 'common.default.placeholders.cdc',
+      getText: (key: any, id: any) => `common.default.${key}.${id}`,
     },
     ads: {
       data: playUrl.audioQualities ?? [],
       icon: 'fa-volume-high',
-      title: 'common.default.ads.name',
-      getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
+      title: 'common.default.placeholders.ads',
+      getText: (key: any, id: any) => `common.default.${key}.${id}`,
     },
     fmt: {
       data: QualityMap.fmt.map(v => v.id),
       icon: 'fa-code-simple',
-      title: 'common.default.fmt.name',
-      getText: (key: any, id: any) => `common.default.${key}.data.${id}`,
+      title: 'common.default.placeholders.fmt',
+      getText: (key: any, id: any) => `common.default.${key}.${id}`,
     },
   }
   provider.buttons = {

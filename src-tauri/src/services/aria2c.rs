@@ -13,7 +13,8 @@ use specta::Type;
 
 use crate::{
     downloads, errors::TauriResult, ffmpeg, shared::{
-        get_app_handle, init_client_no_proxy, process_err, random_string, SidecarError, CONFIG, READY, SECRET, USER_AGENT, WORKING_PATH
+        get_app_handle, get_unique_path, init_client_no_proxy, process_err, random_string,
+        SidecarError, CONFIG, READY, SECRET, USER_AGENT, WORKING_PATH
     }, TauriError
 };
 
@@ -29,7 +30,6 @@ pub struct QueueInfo {
     pub output: PathBuf,
     pub temp_dir: PathBuf,
     pub info: Arc<ArchiveInfo>,
-    pub select: CurrentSelect,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -56,7 +56,7 @@ pub struct ArchiveInfo {
     pub pubtime: String,
     pub cover: String,
     pub ts: Timestamp,
-    pub output_dir: String,
+    pub folder: String,
     pub filename: String,
 }
 
@@ -269,6 +269,8 @@ impl DownloadManager {
             let tx_cloned = tx.clone();
             if let Some(info) = QUEUE_MANAGER.waiting_to_doing().await? {
                 let task = async move {
+                    fs::create_dir_all(&info.output.parent().unwrap())
+                        .await.context("Failed to create output folder")?;
                     self_cloned.process(&info).await?;
                     downloads::insert(info.clone()).await?;
                     QUEUE_MANAGER.doing_to_complete(info.clone()).await?;
@@ -511,30 +513,16 @@ fn check_breakpoint(
 #[specta::specta]
 pub async fn push_back_queue(
     info: Arc<ArchiveInfo>,
-    select: CurrentSelect,
     tasks: Vec<Task>,
-    output_dir: Option<String>,
+    output: Option<String>,
 ) -> TauriResult<PathBuf> {
     let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
     fs::create_dir_all(&temp_dir).await.context("Failed to create app temp dir")?;
-    let mut parent = if let Some(dir) = &output_dir {
+    let parent = if let Some(dir) = &output {
         PathBuf::from(dir)
     } else {
-        CONFIG.read().unwrap().down_dir.join(
-            format!("{}_{}", info.output_dir, info.ts.string)
-        )
+        get_unique_path(CONFIG.read().unwrap().down_dir.join(&info.folder))
     };
-    if parent.exists() && output_dir.is_none() {
-        let mut count = 1;
-        let original = parent.clone();
-        while parent.exists() {
-            parent = original.with_file_name(format!(
-                "{}_{count}",
-                original.file_name().unwrap().to_string_lossy(),
-            ));
-            count += 1;
-        }
-    }
     let id = random_string(16);
     let dir_name = format!("{}_{}", &id, info.ts.millis);
     let temp_dir = check_breakpoint(&temp_dir, &dir_name)?
@@ -547,7 +535,6 @@ pub async fn push_back_queue(
         output: parent.join(&info.filename),
         temp_dir,
         info: info.clone(),
-        select,
     };
     for task in &mut queue_info.tasks {
         if task.urls.is_none() { // Non-download task
@@ -571,7 +558,6 @@ pub async fn push_back_queue(
     }
     QUEUE_MANAGER.push_back(Arc::new(queue_info), QueueType::Waiting).await?;
     QUEUE_MANAGER.update(QueueType::Waiting).await;
-    fs::create_dir_all(&parent).await.context("Failed to create output folder")?;
     Ok(parent)
 }
 

@@ -4,9 +4,7 @@
         "name": "Storage",
         "paths": {
             "name": "Paths",
-            "temp_dir": {
-                "desc": "We download files here, then move processed files to the Output Files folder."
-            }
+            "temp_dir": "We download files here, then move processed files to the Output Files folder."
         },
         "cache": {
             "name": "Cache",
@@ -33,12 +31,14 @@
     },
     "advanced": {
         "name": "Advanced",
-        "filename": {
-            "name": "Filename Format",
-            "desc": "The folder naming is currently fixed in the format {'{'}title{'}'}_{'{'}date_sec{'}'}.\nIf the downloaded resource does not contain any of the variables here, that variable will be -1."
+        "format": {
+            "name": "Naming Format",
+            "desc": "If the downloaded resource does not contain any of the variables here, that variable will be -1.",
+            "filename": "Filename format",
+            "folder": "Folder name format"
         },
         "add_metadata": {
-            "name": "メタデータを追加する",
+            "name": "Add metadata into media file",
             "desc": "After download, embed title, description, author, tags, cover, etc. into media file."
         },
         "prefer_pb_danmaku": {

@@ -53,7 +53,7 @@ const select = reactive<PackageSelect>({});
 const provider = reactive({
   playUrl: {} as PlayUrlProvider,
   others: {} as OthersProvider,
-  options: {} as { [K in keyof PackageSelect]?: { icon: string; name: string } }
+  options: {} as { [K in keyof PackageSelect]?: { icon: string; name: string, type?: string } }
 })
 
 const isMulti = ref(false);
@@ -67,9 +67,9 @@ function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean)
   active.value = true;
   subtitle.value = others.subtitles?.[0]?.lan;
   provider.options = {
-    ...(playUrl.video && { video: { icon: 'fa-video', name: 'video' } }),
-    ...(playUrl.audio && { audio: { icon: 'fa-volume-high', name: 'audio' } }),
-    ...(playUrl.video && playUrl.audio && { audioVideo: { icon: 'fa-video-plus', name: 'audioVideo' } }),
+    ...(playUrl.video && { video: { icon: 'fa-video', name: 'video', type: 'queue' } }),
+    ...(playUrl.audio && { audio: { icon: 'fa-volume-high', name: 'audio', type: 'queue' } }),
+    ...(playUrl.video && playUrl.audio && { audioVideo: { icon: 'fa-video-plus', name: 'audioVideo', type: 'queue' } }),
     ...(others.aiSummary && { aiSummary: { icon: 'fa-microchip-ai', name: 'aiSummary' } }),
     ...(others.danmaku && { liveDanmaku: { icon: 'fa-clock', name: 'liveDanmaku' } }),
     ...(others.subtitles.length && { subtitles: { icon: 'fa-closed-captioning', name: 'subtitles' } }),
@@ -85,7 +85,9 @@ function close() {
 function handleClick(key: keyof typeof select) {
   if (key === 'subtitles') {
     select[key] = select[key] ? undefined : subtitle.value;
-  } else select[key] ? delete select[key] : select[key] = true;
+  } else {
+    select[key] ? delete select[key] : select[key] = provider.options[key]?.type ?? true;
+  }
 }
 
 function cleanState() {

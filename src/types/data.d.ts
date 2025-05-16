@@ -33,7 +33,24 @@ export const FilenamePlaceholders = [
   'ssid',
   'date_sec',
   'ts_sec',
-  'ts_ms'
+  'ts_ms',
+  'dms',
+  'cdc',
+  'ads',
+  'fmt',
+] as const;
+
+export const FolderPlaceholders = [
+  'title',
+  'upper',
+  'upperid',
+  'date_sec',
+  'ts_sec',
+  'ts_ms',
+  'dms',
+  'cdc',
+  'ads',
+  'fmt',
 ] as const;
 
 export interface Headers {
@@ -89,12 +106,12 @@ export interface PlayUrlResult {
 }
 
 interface PackageSelect {
-  video?: boolean;
-  audio?: boolean;
-  audioVideo?: boolean;
-  covers?: boolean;
-  aiSummary?: boolean;
-  liveDanmaku?: boolean;
+  video?: any;
+  audio?: any;
+  audioVideo?: any;
+  covers?: any;
+  aiSummary?: any;
+  liveDanmaku?: any;
   subtitles?: string;
 }
 
