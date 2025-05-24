@@ -112,8 +112,9 @@ pub async fn merge(info: &Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Tau
             .args([
                 "-i", video_path.to_str().unwrap(),
                 "-i", audio_path.to_str().unwrap(),
-                "-c:v", "copy",
-                "-c:a", "copy",
+                "-c", "copy",
+                "-movflags", "+faststart",
+                "-strict", "unofficial",
                 "-shortest",
                 &merge_path.to_str().unwrap(), "-progress",
                 &log_path_clone.to_str().unwrap(), "-y"
@@ -213,6 +214,10 @@ async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: 
     if ext == "m4a" {
         output_args.extend(svec!["-f", "mp4"]);
     }
+    args.extend(svec![
+        "-movflags", "+faststart",
+        "-strict", "unofficial"
+    ]);
     args.extend(output_args);
     Ok(args)
 }

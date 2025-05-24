@@ -83,10 +83,11 @@ import { useAppStore, useSettingsStore, useUserStore } from '@/store';
 import { dirname, join as pathJoin } from '@tauri-apps/api/path';
 import { reactive, ref, computed, inject, watch } from 'vue';
 import { getMediaInfo, getPlayUrl } from '@/services/data';
-import { commands } from '@/services/backend';
 import { save as dialogSave } from '@tauri-apps/plugin-dialog';
+import { info as LogInfo } from '@tauri-apps/plugin-log';
 import { transformImage } from '@tauri-apps/api/image';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { commands } from '@/services/backend';
 import { Empty } from '@/components';
 import { TYPE } from 'vue-toastification';
 import * as data from '@/services/data';
@@ -165,6 +166,7 @@ async function search(overrideInput?: string) {
 	try {
 		const parsed = v.searchMediaType === Types.MediaType.Favorite ? { id: input, type: v.searchMediaType } : await parseId(input);
 		const type = v.searchMediaType === 'auto' ? parsed.type : v.searchMediaType;
+		LogInfo('Parsed input: ' + JSON.stringify(parsed));
 		const info = await getMediaInfo(parsed.id, type);
 		v.searchTarget = info.list.findIndex(v => v.aid === info.id);
 		info.cover = await getImageBlob(info.cover);
@@ -234,7 +236,9 @@ async function download(select: Types.CurrentSelect, item: Types.MediaInfo['list
 		audio?: Types.PlayUrlResult,
 	} = {};
 	if (ref.key === 'video' || ref.key === 'audioVideo') {
-		params.video = playurl.video?.find(v => v.id === select.dms && v.codecid === select.cdc);
+		params.video = playurl.video?.find(v => 
+			v.codecid ? v.id === select.dms && v.codecid === select.cdc : v.id === select.dms
+		);
 	} else select.cdc = -1, select.dms = -1;
 	if (ref.key === 'audio' || ref.key === 'audioVideo') {
 		params.audio = playurl.audio?.find(v => v.id === select.ads);

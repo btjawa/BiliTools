@@ -1,24 +1,24 @@
 <template><div class="flex w-full h-40 bg-[color:var(--block-color)] rounded-lg p-4 gap-4">
     <img :src="info.cover" draggable="false" class="object-cover rounded-lg" />
-    <div class="text h-full w-full">
-        <h3 ref="title" class="w-[calc(100%-64px)] text-lg">{{ info.title }}</h3>
-        <div v-if="info.upper && info.upper.avatar" @click="open('https://space.bilibili.com/' + info.upper.mid)"
-            class="user absolute flex flex-col items-center top-4 right-4 cursor-pointer"
+    <div class="flex w-full gap-4">
+        <div class="text h-full w-full">
+            <h3 ref="title" class="text-lg">{{ info.title }}</h3>
+            <div class="text-xs flex gap-3 mt-1.5 text-[var(--desc-color)]">
+                <template v-if="info.stat" v-for="([key, value]) in Object.entries(info.stat)">
+                <div class="flex" v-if="value">
+                    <i class="bcc-iconfont mr-1" :class="iconMap[key as keyof typeof iconMap]"></i>
+                    <span>{{ stat(value) }}</span>
+                </div>
+                </template>
+            </div>
+            <span ref="desc" class="text-sm block mt-2 whitespace-pre-wrap">{{ info.desc }}</span>
+        </div>
+        <div v-if="info.upper.avatar" @click="open('https://space.bilibili.com/' + info.upper.mid)"
+            class="flex flex-col items-center cursor-pointer"
         >
-            <img :src="info.upper?.avatar" draggable="false" class="w-9 rounded-full" />
+            <img :src="info.upper.avatar" draggable="false" class="w-9 rounded-full" />
             <span class="text-xs ellipsis max-w-16 mt-1">{{ info.upper.name }}</span>
         </div>
-        <div class="text-xs flex gap-3 mt-1.5 text-[var(--desc-color)]">
-            <template v-if="info.stat" v-for="([key, value]) in Object.entries(info.stat)">
-                <div class="flex" v-if="typeof value === 'string' || typeof value === 'number'">
-                    <i class="bcc-iconfont mr-1" :class="iconMap[key as keyof typeof iconMap]"></i>
-                    <span>{{ stat(value ?? '') }}</span>
-                </div>
-            </template>
-        </div>
-        <span ref="desc" class="w-[calc(100%-64px)] text-sm block mt-2 whitespace-pre-wrap">
-            {{ info.desc }}
-        </span>
     </div>
 </div></template>
 

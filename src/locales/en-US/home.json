@@ -27,5 +27,9 @@
         "title": "Please select the required resources",
         "desc": "Video and audio will use the options configured in \"Settings -> Download -> Default Options\" by default"
     },
+    "dash": {
+        "desc": "Please read this before changing any options here: {title}",
+        "title": "About DASH / FLV / MP4"
+    },
     "empty": "No available resources~"
 }

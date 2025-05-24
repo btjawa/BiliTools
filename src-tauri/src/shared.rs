@@ -198,7 +198,7 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
 }
 
 pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {
-    use tauri::utils::{config::WindowEffectsConfig, WindowEffect};
+    use tauri::{utils::{config::WindowEffectsConfig, WindowEffect}, window::Color};
     use tauri_plugin_os::Version;
     #[cfg(all(target_os = "windows", not(debug_assertions)))]
     window.with_webview(|webview| unsafe {
@@ -211,15 +211,11 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> 
         settings.SetIsPasswordAutosaveEnabled(false).unwrap();
     })?;
     let set_default = || {
-        let mut c = 0;
-        let theme: tauri::Theme = if let Some(theme) = theme { theme }
-        else { Theme::Auto.into() };
-        match theme {
-            tauri::Theme::Dark => c = 32,
-            tauri::Theme::Light => c = 249,
-            _ => ()
-        }
-        window.set_background_color(Some(tauri::window::Color(c, c, c, 255)))?;
+        let theme: tauri::Theme = theme.unwrap_or(Theme::Auto.into());
+        window.set_background_color(Some(match theme {
+            tauri::Theme::Dark => Color(32, 32, 32, 255),
+            _ => Color(249, 249, 249, 255),
+        }))?;
         Ok::<(), anyhow::Error>(())
     };
     match tauri_plugin_os::platform() {

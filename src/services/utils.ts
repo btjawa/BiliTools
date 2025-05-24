@@ -200,13 +200,16 @@ export async function parseId(input: string) {
     const err = i18n.global.t('error.invalidInput');
     try {
         const url = new URL(input);
-        const prefix = url.pathname.split('/')[1];
-        if (!prefix) throw err;
+        const segs = url.pathname.split('/');
         if (url.hostname === 'b23.tv') {
             return await parseId(await tryFetch(url, { type: 'url' }));
         } else if (!url.hostname.endsWith('bilibili.com')) throw err;
         let match;
-        switch (prefix) {
+        if (segs[2] === 'favlist') {
+            match = input.match(/fid=(\d+)/i);
+            if (match) return { id: match[1], type: MediaType.Favorite };
+        }
+        switch (segs[1]) {
             case 'video':
                 match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
                 if (match) return { id: match[1] || match[0], type: MediaType.Video }; break;
@@ -361,6 +364,9 @@ export function getFileExtension(options: CurrentSelect) {
     }
     if (options.fmt === 2) {
         videoExt = 'flv';
+    }
+    if (options.dms === 126) {
+        videoExt = 'mp4';
     }
     return options.dms >= 0 ? videoExt : audioExt;
 }

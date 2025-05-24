@@ -11,13 +11,13 @@
         <div v-for="item in queueData"
             class="queue_item relative flex w-full bg-[color:var(--block-color)] flex-col rounded-lg px-4 py-3"
         >
-            <h3 class="w-[calc(100%-108px)] text-base text ellipsis">
-                {{ item.info.title }}
-            </h3>
+            <div class="flex gap-4">
+                <h3 class="text-base text ellipsis w-full">{{ item.info.title }}</h3>
+                <span class="desc text">{{ item.id }}</span>
+            </div>
             <div class="!flex gap-2 desc">
                 <span>{{ timestamp(item.info.ts.millis) }}</span>
             </div>
-            <span class="absolute top-3 right-4 desc text">{{ item.id }}</span>
             <div class="progress flex items-center justify-center">
                 <span class="pr-2 min-w-fit text-sm">{{ queuePage === 2 ? $t('downloads.label.complete') : (statusList[item.id]?.message ?? $t('downloads.label.waiting')) }}</span>
                 <div :style="`--progress-width: ${queuePage === 2 ? 100.0 : (statusList[item.id]?.progress ?? 0)}%`"

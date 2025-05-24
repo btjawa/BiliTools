@@ -228,9 +228,6 @@ h3 {
     font-size: 18px;
     text-align: center;
 }
-a {
-    color: var(--primary-color);
-}
 .others__tab h3.active {
     color: var(--primary-color);
 }

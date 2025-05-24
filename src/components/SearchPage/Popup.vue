@@ -7,9 +7,17 @@
       <div v-for="(item, key) in provider.options" class="relative">
       <template v-if="item.data.length">
         <h3>{{ $t(item.title) }}</h3>
+        <i18n-t keypath="home.dash.desc" tag="span" class="desc" scope="global" v-if="key === 'fmt'">
+          <template v-slot:title>
+            <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('home.dash.title') }}</a>
+          </template>
+        </i18n-t>
         <div class="flex gap-1 mt-2 items-center">
           <button v-for="btn in item.data"
-            :class="{ 'selected': select[key as keyof CurrentSelect] === btn }"
+            :class="{
+              'selected': select[key as keyof CurrentSelect] === btn,
+              'line-through desc': key === 'fmt' && btn // non-dash
+            }"
             @click="handleClick(key, btn?.id ?? btn)">
               <i :class="[settings.dynFa, btn?.icon ?? item.icon]"></i>
               <span>{{ key === 'covers' ? item.getText(key, btn?.id ?? btn): $t(item.getText(key, btn?.id ?? btn)) }}</span>
@@ -38,6 +46,7 @@
 </template>
 
 <script setup lang="ts">
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { ref, reactive } from 'vue';
 import { useSettingsStore } from '@/store';
 import { QualityMap, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap, CurrentSelect } from '@/types/data.d';

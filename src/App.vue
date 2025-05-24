@@ -68,7 +68,6 @@ onMounted(async () => {
 	@apply absolute right-0 bottom-0 h-[calc(100vh_-_30px)];
 }
 .main {
-	// background-color: rgba(24,24,24);
 	@apply flex justify-center items-center w-[calc(100vw_-_61px)] bg-transparent;
 	mask-size: 100% 100%;
     mask-repeat: no-repeat;

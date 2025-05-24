@@ -96,7 +96,8 @@ I work on translations mainly to improve my English. If you find anything unnatu
 
 ## 开发 / 构建
 
-- 需要 Rust 2021+ Edition 与 Node.js 20+
+- Rust >= **1.70**
+- Node.js >= **20**
 
 1. 克隆项目 `git clone https://github.com/btjawa/BiliTools.git`
 2. 进入目录 `cd BiliTools`
