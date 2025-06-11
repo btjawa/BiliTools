@@ -78,7 +78,7 @@ export function setEventHook() {
     });
     events.queueEvent.listen(e => {
         const type = e.payload.type.toLowerCase() as keyof typeof queue.$state;
-        queue[type] = e.payload.data;
+        queue.$patch({ [type]: e.payload.data });
     })
     events.sidecarError.listen(e => {
         const err = e.payload;
@@ -130,7 +130,10 @@ export async function tryFetch(url: string | URL, options?: {
                 fetchOptions.body = JSON.stringify(options.post.body);
             }
         }
+        const loadingBox = document.querySelector('.loading');
+        loadingBox?.classList.add('active');
         const response = await fetch(url + params, fetchOptions);
+        loadingBox?.classList.remove('active');
         if (options?.type) {
             if (!response.ok) {
                 throw new ApplicationError(response.statusText, { code: response.status });
@@ -311,25 +314,26 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
 }
 
-export function getFormat(type: 'filename' | 'folder', data: { title?: string, item?: MediaInfo['list'][0], upper: MediaInfo['upper'], select?: CurrentSelect, index?: number }) {
-    const format = useSettingsStore().advanced[`${type}_format`];
+export function getFormat(data: { isFolder?: boolean, item: MediaInfo['list'][0], nfo: MediaInfo['nfo'], select?: CurrentSelect, index?: number }) {
+    const { isFolder, item, nfo, select, index } = data;
+    const format = useSettingsStore().advanced[`${isFolder ? 'folder' : 'filename'}_format`];
     const quality = (k: string, v: number) => {
         return v === -1 ? -1 : i18n.global.t(`common.default.${k}.${v}`)
     }
     return format.replace(/{(\w+)}/g, (_, key) => {
         switch (key) {
-            case 'title': return data.title ?? data.item?.title;
-            case 'index': return data.index;
-            case 'upper': return data.upper.name;
-            case 'upperid': return data.upper.mid;
+            case 'title': return isFolder ? nfo.showtitle : item.title;
+            case 'index': return index;
+            case 'upper': return nfo.upper.name;
+            case 'upperid': return nfo.upper.mid;
             case 'date_sec': return timestamp(Date.now(), { file: true });
             case 'ts_sec': return Math.floor(Date.now() / 1000);
             case 'ts_ms': return Date.now();
-            case 'dms': return quality('dms', data.select?.dms ?? -1);
-            case 'cdc': return quality('cdc', data.select?.cdc ?? -1);
-            case 'ads': return quality('ads', data.select?.ads ?? -1);
-            case 'fmt': return quality('fmt', data.select?.fmt ?? -1);
-            default: return (data.item as any)?.[key] ?? -1;
+            case 'dms': return quality('dms', select?.dms ?? -1);
+            case 'cdc': return quality('cdc', select?.cdc ?? -1);
+            case 'ads': return quality('ads', select?.ads ?? -1);
+            case 'fmt': return quality('fmt', select?.fmt ?? -1);
+            default: return (item as any)?.[key] ?? -1;
         }
     }).replace(/[\\/:*?"<>|]/g, '_');
 }
@@ -378,4 +382,14 @@ export function getRandomInRange(min: number, max: number) {
 export async function getImageBlob(url: string | URL) {
     const blob = await tryFetch(url, { type: 'blob' })
     return URL.createObjectURL(blob);
+}
+
+export function getPublicImages(season: Record<string, any>, ext: 'png' | 'jpg') {
+    if (!season) return [];
+    return Object.entries(season)
+        .filter(([_, url]) =>
+            typeof url === 'string'
+            && url.endsWith(ext)
+        )
+        .map(([id, url]) => ({ id, url }));
 }

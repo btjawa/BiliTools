@@ -48,7 +48,7 @@
     },
     "about": {
         "name": "About",
-        "thanks": "If you find it useful, please give me a Star on GitHub!",
+        "thanks": "If you find it useful, please star our project on GitHub!",
         "update": {
             "name": "Update"
         },

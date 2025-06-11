@@ -1,49 +1,48 @@
-<template>
-  <div class="popup_container absolute flex items-center justify-center w-full h-full" :class="{ active }">
-    <div class="min-w-[calc(100%-269px)] relative h-fit p-4 rounded-xl bg-[color:var(--solid-block-color)]">
-      <button class="absolute right-4 top-4 rounded-full w-8 h-8 p-0 z-30" @click="close">
-        <i class="fa-solid fa-close"></i>
-      </button>
-      <div v-for="(item, key) in provider.options" class="relative">
-      <template v-if="item.data.length">
-        <h3>{{ $t(item.title) }}</h3>
-        <i18n-t keypath="home.dash.desc" tag="span" class="desc" scope="global" v-if="key === 'fmt'">
-          <template v-slot:title>
-            <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('home.dash.title') }}</a>
-          </template>
-        </i18n-t>
-        <div class="flex gap-1 mt-2 items-center">
-          <button v-for="btn in item.data"
-            :class="{
-              'selected': select[key as keyof CurrentSelect] === btn,
-              'line-through desc': key === 'fmt' && btn // non-dash
-            }"
-            @click="handleClick(key, btn?.id ?? btn)">
-              <i :class="[settings.dynFa, btn?.icon ?? item.icon]"></i>
-              <span>{{ key === 'covers' ? item.getText(key, btn?.id ?? btn): $t(item.getText(key, btn?.id ?? btn)) }}</span>
-          </button>
-          <VueDatePicker v-if="key === 'danmaku' && item.data.find(i => i.id === 'historyDanmaku')"
-            v-model="date" :dark="settings.isDark"
-            model-type="format" format="yyyy-MM-dd"
-            id="historyDanmakuDate" />
-          <Dropdown v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')"
-            :drop="provider.others.subtitles.map(v => ({
-              id: v.lan, name: v.lan_doc + `(${v.lan})`
-            }))" :emit="(v) => subtitle = v" :id="subtitle"
-          ></Dropdown>
-        </div>
-        <hr />
+<template><div class="popup absolute flex items-center w-full h-full" :class="{ active }">
+<div class="container flex flex-col relative h-fit p-4 rounded-xl">
+  <button class="absolute right-4 top-4 rounded-full w-8 h-8 p-0 z-30" @click="close">
+    <i class="fa-solid fa-close"></i>
+  </button>
+  <div class="overflow-auto">
+  <template v-for="(item, key) in provider.options" class="relative">
+  <div v-if="item.data.length">
+    <h3>{{ $t(item.title ?? `home.class.${key}`) }}</h3>
+    <i18n-t keypath="home.dash.desc" tag="span" class="desc" scope="global" v-if="key === 'fmt'">
+      <template v-slot:title>
+        <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('home.dash.title') }}</a>
       </template>
-      </div>
-      <div class="flex gap-1 float-right">
-        <button v-for="(icon, key) in provider.buttons" class="primary-color" @click="confirm(key)">
-          <i :class="[settings.dynFa, icon]"></i>
-          <span>{{ $t(`home.button.${key}`) }}</span>
-        </button>
-      </div>
+    </i18n-t>
+    <div class="flex gap-1 mt-2 items-center overflow-x-auto overflow-y-hidden">
+      <button v-for="btn in item.data"
+        :class="{
+          'selected': select[key as keyof CurrentSelect] === btn,
+          'line-through desc': (key === 'fmt' && btn /* non-dash */) || btn.id === 'albumNfo' /* wip */,
+          'whitespace-nowrap': 1
+        }"
+        @click="handleClick(key, btn?.id ?? btn)">
+          <i :class="[settings.dynFa, btn?.icon ?? item.icon]"></i>
+          <span>{{ $t(item.getText?.(key, btn?.id ?? btn) ?? `home.label.${btn?.id}`) }}</span>
+      </button>
+      <VueDatePicker v-if="key === 'danmaku' && item.data.find(i => i.id === 'historyDanmaku')"
+        v-model="date" :dark="settings.isDark"
+        model-type="format" format="yyyy-MM-dd"
+        id="historyDanmakuDate" />
+      <Dropdown v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')"
+        :drop="provider.others.subtitles.map(v => ({
+          id: v.lan, name: v.lan_doc + `(${v.lan})`
+        }))" :emit="(v) => subtitle = v"
+        :id="subtitle" :icon="'fa-earth-americas'"
+      ></Dropdown>
     </div>
+    <hr />
+  </div></template></div>
+  <div class="flex gap-1 float-left">
+    <button v-for="(icon, key) in provider.buttons" class="primary-color" @click="confirm(key)">
+      <i :class="[settings.dynFa, icon]"></i>
+      <span>{{ $t(`home.button.${key}`) }}</span>
+    </button>
   </div>
-</template>
+</div></div></template>
 
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -53,7 +52,7 @@ import { QualityMap, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCod
 import Dropdown from '../Dropdown.vue';
 
 const props = defineProps<{
-  process: (select: CurrentSelect, target: { key: string, data: any }, options?: { multi?: boolean }) => void,
+  process: (select: CurrentSelect, ref: { key: string, data: any }, options?: { multi?: boolean }) => void,
   codecChange: (codec: StreamCodecType, others?: OthersProvider, multi?: boolean) => void
 }>();
 
@@ -67,7 +66,7 @@ const date = ref(new Intl.DateTimeFormat('en-CA').format(new Date()));
 const provider = reactive({
   playUrl: {} as PlayUrlProvider,
   others: {} as OthersProvider,
-  options: {} as Record<string, { data: any[], icon: string; title: string; getText: Function }>,
+  options: {} as Record<string, { data: any[], icon?: string; title?: string; getText?: Function }>,
   buttons: {} as Record<string, string>
 })
 
@@ -75,7 +74,10 @@ const isMulti = ref(false);
 
 defineExpose({ init });
 function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean) {
-  cleanState();
+  select.value = { dms: -1, cdc: -1, ads: -1, fmt: -1 };
+  subtitle.value = String();
+  date.value = new Intl.DateTimeFormat('en-CA').format(new Date());
+  for (const v in provider) (provider as any)[v] = {};
   isMulti.value = multi ?? false;
   provider.playUrl = playUrl;
   provider.others = others;
@@ -88,29 +90,27 @@ function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean)
   select.value.fmt = playUrl.codecid;
   subtitle.value = others.subtitles?.[0]?.lan;
   provider.options = {
+    nfo: {
+      data: [
+        { id: 'albumNfo', icon: 'fa-memo-circle-info' },
+        { id: 'singleNfo', icon: 'fa-file-circle-info' },
+      ],
+    },
     danmaku: {
       data: others?.danmaku ? [
         { id: 'liveDanmaku', icon: 'fa-clock' },
         { id: 'historyDanmaku', icon: 'fa-clock-rotate-left' }
       ] : [],
-      icon: '',
-      title: 'home.label.danmaku',
-      getText: (_: any, id: any) => `home.label.${id}`
     },
     covers: {
-      data: others.covers ? [{ id: 'cover', icon: 'fa-image' }, ...others.covers.map(c => ({ id: c.id, icon: 'fa-image' }))] : [],
-      icon: '',
-      title: 'home.label.covers',
-      getText: (_: any, id: any) => id
+      data: others.covers.map(id => ({ id, icon: 'fa-image' })),
+      getText: (_: any, id: any) => id,
     },
     others: {
-      data: (others?.aiSummary || others?.subtitles?.length) ? [
+      data: [
         ...(others.aiSummary ? [{ id: 'aiSummary', icon: 'fa-microchip-ai' }] : []),
         ...(others.subtitles?.length ? [{ id: 'subtitles', icon: 'fa-closed-captioning' }] : [])
-      ] : [],
-      icon: '',
-      title: 'home.label.others',
-      getText: (_: any, id: any) => `home.label.${id}`
+      ],
     },
     dms: {
       data: playUrl.videoQualities ?? [],
@@ -146,15 +146,13 @@ function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean)
 }
 
 function handleClick(key: string, id: any) {
-  if (['danmaku', 'covers', 'others'].includes(key)) {
-    const target = { key, data: null as any };
-    if (key === 'others' || key === 'danmaku') {
-      target.key = id;
-    }
-    if (id === 'subtitles') target.data = subtitle.value;
-    if (key === 'danmaku') target.data = date.value;
-    if (key === 'covers') target.data = id;
-    props.process(select.value, target, { multi: isMulti.value });
+  if (['nfo', 'danmaku', 'covers', 'others'].includes(key)) {
+    const ref = { key, data: null as any };
+    if (key !== 'covers') ref.key = id;
+    if (id === 'subtitles') ref.data = subtitle.value;
+    if (id === 'historyDanmaku') ref.data = date.value;
+    if (key === 'covers') ref.data = id;
+    props.process(select.value, ref, { multi: isMulti.value });
     return close();
   }
   select.value[key as keyof CurrentSelect] = id;
@@ -170,8 +168,8 @@ function handleClick(key: string, id: any) {
 }
 
 function confirm(key: string) {
-  const target = { key, data: 'queue' };
-  props.process(select.value, target, { multi: isMulti.value });
+  const ref = { key, data: 'queue' };
+  props.process(select.value, ref, { multi: isMulti.value });
   close();
 }
 
@@ -181,35 +179,28 @@ function getDefault(ids: number[], name: 'df_dms' | 'df_cdc' | 'df_ads') {
 
 function close() {
   active.value = false;
-  setTimeout(() => cleanState(), 100);
-}
-
-function cleanState() {
-  select.value = { dms: -1, cdc: -1, ads: -1, fmt: -1 };
-  subtitle.value = String();
-  date.value = new Intl.DateTimeFormat('en-CA').format(new Date());
-  for (const v in provider) (provider as any)[v] = {};
 }
 </script>
 
-<style lang="scss">
-.popup_container {
-  @apply bg-opacity-50 bg-black transition-opacity duration-200 opacity-0 pointer-events-none;
-  & > div {
-    @apply transform translate-y-8;
-    transition: transform .5s cubic-bezier(0,1,.6,1);
-    button {
-      border: 2px solid transparent;
-      &.selected {
-        border: 2px solid var(--primary-color)
-      }
+<style lang="scss" scoped>
+.popup {
+  @apply bg-opacity-50 bg-black opacity-0 px-[135px] py-[50px];
+  @apply transition-opacity pointer-events-none;
+  &.active {
+    @apply opacity-100 pointer-events-auto;
+    & > div {
+      @apply translate-y-0;
     }
   }
-  &.active {
-    @apply opacity-100;
-    pointer-events: all;
-    & > div {
-      @apply transform translate-y-0;
+}
+
+.container {
+  @apply bg-[color:var(--solid-block-color)] max-h-full transform translate-y-8;
+  transition: transform .5s cubic-bezier(0,1,.6,1);
+  button {
+    border: 2px solid transparent;
+    &.selected {
+      border: 2px solid var(--primary-color)
     }
   }
   hr {

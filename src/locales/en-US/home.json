@@ -6,14 +6,18 @@
         "audio": "Audio",
         "audioVideo": "Audio & Video",
         "covers": "Covers",
+        "subtitles": "Subtitles",
         "aiSummary": "AI Summary",
-        "danmaku": "Danmaku",
+        "albumNfo": "NFO Scraping (Pack/Series)",
+        "singleNfo": "NFO Scraping (Single Episode)",
         "liveDanmaku": "Live Danmaku",
         "historyDanmaku": "History Danmaku",
-        "subtitles": "Subtitles",
-        "multiSelect": "Multi-Select",
-        "autoDetect": "Auto Detect",
-        "selectAll": "Select All",
+        "multiSelect": "Enable Multi-Select",
+        "autoDetect": "Auto Detect"
+    },
+    "class": {
+        "nfo": "NFO Metadata",
+        "danmaku": "Danmaku",
         "others": "Others"
     },
     "button": {
@@ -21,11 +25,12 @@
         "package": "Package Download",
         "video": "Download Video",
         "audio": "Download Audio",
-        "audioVideo": "Download Audio & Video"
+        "audioVideo": "Download Audio & Video",
+        "selectAll": "Select All"
     },
     "packagePopup": {
         "title": "Please select the required resources",
-        "desc": "Video and audio will use the options configured in \"Settings -> Download -> Default Options\" by default"
+        "desc": "Video and audio will use the parameters configured in \"Settings -> Download -> Default Options\""
     },
     "dash": {
         "desc": "Please read this before changing any options here: {title}",

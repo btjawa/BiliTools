@@ -6,29 +6,34 @@
         "audio": "音声",
         "audioVideo": "音声と動画",
         "covers": "カバー",
+        "subtitles": "字幕",
         "aiSummary": "AIサマリー",
-        "danmaku": "コメント（弾幕）",
+        "albumNfo": "NFOスクリaping（パック/シリーズ）",
+        "singleNfo": "NFOスクリaping（単話）",
         "liveDanmaku": "リアルタイム弾幕",
         "historyDanmaku": "履歴弾幕",
-        "subtitles": "字幕",
-        "multiSelect": "複数選択",
-        "autoDetect": "自動検出",
-        "selectAll": "すべて選択",
+        "multiSelect": "複数選択を有効化",
+        "autoDetect": "自動検出"
+    },
+    "class": {
+        "nfo": "NFOメタデータ",
+        "danmaku": "弾幕",
         "others": "その他"
     },
     "button": {
-        "general": "通常で",
-        "package": "パッケージで",
+        "general": "通常ダウンロード",
+        "package": "パッケージダウンロード",
         "video": "動画をダウンロード",
         "audio": "音声をダウンロード",
-        "audioVideo": "音声と動画をダウンロード"
+        "audioVideo": "音声と動画をダウンロード",
+        "selectAll": "すべて選択"
     },
     "packagePopup": {
         "title": "必要なリソースを選択してください",
-        "desc": "動画と音声は「設定 → ダウンロード → デフォルトオプション」で設定されたオプションを使用します"
+        "desc": "動画、音声は「設定 → ダウンロード → デフォルトオプション」で設定されたパラメータが使用されます"
     },
     "dash": {
-        "desc": "こちらの設定を変更する前に、まずこの紹介お読みください：{title}",
+        "desc": "こちらの設定を変更する前に、まずこちらをお読みください：{title}",
         "title": "DASH / FLV / MP4 について"
     },
     "empty": "利用可能なリソースがありません～"

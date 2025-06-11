@@ -51,8 +51,7 @@ pub struct Task {
 pub struct ArchiveInfo {
     pub title: String,
     pub desc: String,
-    pub tags: Vec<String>,
-    pub artist: String,
+    pub nfo: NfoInfo,
     pub pubtime: String,
     pub cover: String,
     pub ts: Timestamp,
@@ -66,6 +65,30 @@ pub struct CurrentSelect {
     pub ads: Option<String>,
     pub cdc: Option<String>,
     pub fmt: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct NfoUpper {
+    pub name: String,
+    pub mid: Option<u64>,
+    pub avatar: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct NfoActor {
+    pub role: String,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct NfoInfo {
+    pub tags: Vec<String>,
+    pub thumbs: Value,
+    pub showtitle: String,
+    pub premiered: String,
+    pub upper: NfoUpper,
+    pub actors: Vec<NfoActor>,
+    pub staff: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]

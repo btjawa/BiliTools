@@ -28,13 +28,13 @@
 				<i :class="[settings.dynFa, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
 			</button>
 		</div>
-		<div class="mt-3" v-if="v.searchMediaType === Types.MediaType.Favorite">
+		<div class="mt-3" v-if="v.mediaInfo.type === Types.MediaType.Favorite">
 			<span>Page</span>
 			<input type="number" v-model="v.pageIndex" class="ml-2" />
 		</div>
 		<RecycleScroller
 			class="scrollList mt-3"
-			:class="v.searchMediaType === Types.MediaType.Favorite ? 'h-[calc(100%-202px)]' : 'h-[calc(100%-158px)]'"
+			:class="v.mediaInfo.type === Types.MediaType.Favorite ? 'h-[calc(100%-202px)]' : 'h-[calc(100%-158px)]'"
 			:items="v.mediaInfo.list" :item-size="50"
 			key-field="index" v-slot="{ item, index }"
 			v-if="v.mediaInfo.list.length"
@@ -72,7 +72,7 @@
 			</button>
 		</div>
 	</div>
-	<Popup ref="popup" :process="processGeneral" :codec-change="(codec, others, multi) => initGeneral(v.index, { codec, others, multi })" />
+	<Popup ref="popup" :process="processGeneral" :codec-change="(codec, others, multi) => initPopup(v.index, true, { codec, others, multi })" />
 	<PackagePopup ref="packagePopup" :process="processPackage" />
 </div></template>
 
@@ -103,7 +103,7 @@ const v = reactive({
 	listActive: false,
 	searchMediaType: 'auto' as Types.MediaType | 'auto',
 	pageIndex: 1,
-	mediaInfo: { list: [] } as unknown as Types.MediaInfo,
+	mediaInfo: { nfo: {}, list: [] } as unknown as Types.MediaInfo,
 	searchTarget: 0,
 	useCheckbox: false,
 	checkboxs: [] as number[],
@@ -112,21 +112,22 @@ const v = reactive({
 
 const othersMap = {
 	'covers': { suffix: 'jpg', desc: 'JPG Image' },
+	'albumNfo': { suffix: 'nfo', desc: 'NFO File' },
+	'singleNfo': { suffix: 'nfo', desc: 'NFO File' },
 	'aiSummary': { suffix: 'md', desc: 'Markdown Document' },
-	'metaSnapshot': { suffix: 'md', desc: 'Markdown Document' },
+	'subtitles': { suffix: 'srt', desc: 'SRT Subtitle File' },
 	'liveDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
 	'historyDanmaku': { suffix: 'ass', desc: 'ASS Subtitle File' },
-	'subtitles': { suffix: 'srt', desc: 'SRT Subtitle File' },
 }
 
 const downloadOptions = computed(() => [{
 	icon: 'fa-cloud-arrow-down',
 	text: 'home.button.general',
-	action: (i: number, multi?: boolean) => initGeneral(i, { multi }),
+	action: (i: number, multi?: boolean) => initPopup(i, true, { multi }),
 }, {
 	icon: 'fa-folder-plus',
 	text: 'home.button.package',
-	action: (i: number, multi?: boolean) => initPackage(i, { multi }),
+	action: (i: number, multi?: boolean) => initPopup(i, false, { multi }),
 }]);
 
 const popup = ref<InstanceType<typeof Popup>>();
@@ -152,7 +153,7 @@ watch(() => v.pageIndex, async (pn) => {
 defineExpose({ search });
 async function search(overrideInput?: string) {
 	function reset() {
-		v.mediaInfo = { list: [] } as any;
+		v.mediaInfo = { nfo: {}, list: [] } as any;
 		v.searchActive = false;
 		v.listActive = false;
 		v.useCheckbox = false;
@@ -168,10 +169,11 @@ async function search(overrideInput?: string) {
 		const type = v.searchMediaType === 'auto' ? parsed.type : v.searchMediaType;
 		LogInfo('Parsed input: ' + JSON.stringify(parsed));
 		const info = await getMediaInfo(parsed.id, type);
+		console.log(info)
 		v.searchTarget = info.list.findIndex(v => v.aid === info.id);
 		info.cover = await getImageBlob(info.cover);
-		if (info.upper.avatar) {
-			info.upper.avatar = await getImageBlob(info.upper.avatar + '@128h');
+		if (info.nfo.upper.avatar) {
+			info.nfo.upper.avatar = await getImageBlob(info.nfo.upper.avatar + '@64h');
 		}
 		v.mediaInfo = info;
 		v.listActive = true;
@@ -191,14 +193,11 @@ async function initOthers(info: Types.MediaInfo['list'][0]) {
 		covers: [],
 		subtitles: [],
 	};
-	if (v.mediaInfo.covers.length) {
-		others.covers = v.mediaInfo.covers;
-	}
-	if (v.mediaInfo.type !== Types.MediaType.Music) {
-		others.danmaku = true;
-	}
+	const nfo = v.mediaInfo.nfo;
+	others.covers = nfo.thumbs.map(v => v.id);
+	others.danmaku = v.mediaInfo.type !== Types.MediaType.Music;
 	if (v.mediaInfo.type === Types.MediaType.Video && useUserStore().isLogin) {
-		const status = await data.getAISummary(info, v.mediaInfo.upper.mid ?? 0, { check: true });
+		const status = await data.getAISummary(info, nfo.upper.mid ?? 0, { check: true });
 		others.aiSummary = Boolean(status);
 		const subtitles = await data.getSubtitles(info);
 		others.subtitles = subtitles;
@@ -206,31 +205,24 @@ async function initOthers(info: Types.MediaInfo['list'][0]) {
 	return others;
 }
 
-async function initGeneral(index: number, options?: { codec?: Types.StreamCodecType, others?: Types.OthersProvider, multi?: boolean }) {
+async function initPopup(index: number, general: boolean, options?: { codec?: Types.StreamCodecType, others?: Types.OthersProvider, multi?: boolean }) {
 	try {
 		v.index = index;
+		const type = v.mediaInfo.type;
 		const info = v.mediaInfo.list[v.index];
-		const playUrl = await getPlayUrl(info, v.mediaInfo.type, options?.codec ?? Types.StreamCodecType.Dash);
+		if (!info.cid && info.aid) {
+			v.mediaInfo.list[v.index].cid = await data.getCid(info.aid);
+		}
+		const playUrl = await getPlayUrl(info, type, options?.codec ?? Types.StreamCodecType.Dash);
 		const others = options?.others ?? await initOthers(info);
-		popup.value?.init(playUrl, others, options?.multi);
-	} catch(err) {
-		new ApplicationError(err).handleError();
-	}
-}
-
-async function initPackage(index: number, options?: { multi?: boolean }) {
-	try {
-		v.index = index;
-		const info = v.mediaInfo.list[v.index];
-		const playUrl = await getPlayUrl(info, v.mediaInfo.type, Types.StreamCodecType.Dash);
-		const others = await initOthers(info);
-		packagePopup.value?.init(playUrl, others, options?.multi);
+		(general ? popup : packagePopup).value?.init(playUrl, others, options?.multi);
 	} catch(err) {
 		new ApplicationError(err).handleError();
 	}
 }
 
 async function download(select: Types.CurrentSelect, item: Types.MediaInfo['list'][0], playurl: Types.PlayUrlProvider, ref: { key: string, data: any }, index: number, output?: string) {
+	if (ref.key === 'albumNfo') return;
 	const params: {
 		video?: Types.PlayUrlResult,
 		audio?: Types.PlayUrlResult,
@@ -243,17 +235,16 @@ async function download(select: Types.CurrentSelect, item: Types.MediaInfo['list
 	if (ref.key === 'audio' || ref.key === 'audioVideo') {
 		params.audio = playurl.audio?.find(v => v.id === select.ads);
 	} else select.ads = -1;
-	const upper = v.mediaInfo.upper;
+	const nfo = v.mediaInfo.nfo;
 	if (ref.data === 'queue') {
 		const result = await data.pushBackQueue({
-			item, info: { ...v.mediaInfo }, ...params,
-			select, index, output
+			item, nfo, ...params, select, index, output
 		});
 		if (settings.auto_download) processQueue();
 		return result;
 	}
 	const map = othersMap[ref.key as keyof typeof othersMap];
-	const file = `${getFormat('filename', { item, upper, index })}.${map.suffix}`;
+	const file = `${getFormat({ item, nfo, index })}.${map.suffix}`;
 	const path = output ?
 		await pathJoin(output, file) :
 		await dialogSave({
@@ -263,10 +254,11 @@ async function download(select: Types.CurrentSelect, item: Types.MediaInfo['list
 	if (!path) return;
 	let body;
 	switch (ref.key) {
+		case 'covers': body = await tryFetch(nfo.thumbs.find(v => v.id === ref.data)?.url ?? item.cover, { type: 'binary' }); break;
+		case 'singleNfo': body = await data.getSingleNfo(v.mediaInfo, item); break;
+		case 'aiSummary': body = await data.getAISummary(item, nfo.upper.mid ?? 0); break;
 		case 'liveDanmaku': body = await data.getDanmaku(item); break;
 		case 'historyDanmaku': body = await data.getDanmaku(item, ref.data); break;
-		case 'aiSummary': body = await data.getAISummary(item, upper.mid ?? 0); break;
-		case 'covers': body = await tryFetch(v.mediaInfo.covers.find(v => v.id === ref.data)?.url ?? item.cover, { type: 'binary' }); break;
 		case 'subtitles':
 			const subtitles = await data.getSubtitles(item);
 			const subtitle = subtitles.find(v => v.lan === ref.data);
@@ -274,12 +266,13 @@ async function download(select: Types.CurrentSelect, item: Types.MediaInfo['list
 			body = await data.getSubtitle(subtitle.subtitle_url);
 			break;
 	}
+	if (!body) throw 'No data to write';
 	const secret = useAppStore().secret;
 	let result;
 	switch (ref.key) {
-		case 'liveDanmaku': case 'historyDanmaku': result = await commands.xmlToAss(secret, path, body); break;
-		case 'aiSummary': case 'subtitles': case 'nfo': result = await commands.writeBinary(secret, path, new TextEncoder().encode(body) as any); break;
 		case 'covers': result = await commands.writeBinary(secret, path, transformImage(body)); break;
+		case 'liveDanmaku': case 'historyDanmaku': result = await commands.xmlToAss(secret, path, body); break;
+		default: result = await commands.writeBinary(secret, path, new TextEncoder().encode(body) as any); break;
 	}
 	if (result?.status === 'error') throw result.error;
 	return await dirname(path);
@@ -335,7 +328,7 @@ async function processPackage(target: Types.PackageSelect, options?: { multi?: b
 	const secret = useAppStore().secret;
 	for (const chunk of chunks) {
 		const item = v.mediaInfo.list[chunk];
-		const { title, upper } = v.mediaInfo;
+		const nfo = v.mediaInfo.nfo;
 		const select = {
 			dms: settings.df_dms,
 			ads: settings.df_ads,
@@ -344,7 +337,7 @@ async function processPackage(target: Types.PackageSelect, options?: { multi?: b
 		}
 		let output = await pathJoin(
 			settings.down_dir,
-			getFormat('folder', { title, item, upper, select })
+			getFormat({ isFolder: true, item, nfo, select })
 		);
 		await commands.newFolder(secret, output);
 		v.index = chunk;
@@ -372,7 +365,7 @@ async function updateStein(edge_id: number) {
 		...stein, ...stein_info, edge_id: 1,
 		choices: stein_info.edges.questions[0].choices,
 	};
-	const current = stein_info.story_list.find(story => story.edge_id === edge_id)!;
+	const current = stein_info.story_list.find(story => story.is_current)!;
 	Object.assign(v.mediaInfo.list[0], {
 		cid: current.cid,
 		title: current.title,

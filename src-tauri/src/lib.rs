@@ -40,17 +40,27 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             )
             .expect("Failed to export typescript bindings");
 
+    let log_builder = tauri_plugin_log::Builder::new()
+        .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+        .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+        .level(log::LevelFilter::Info)
+        .level_for("sqlx::query", log::LevelFilter::Warn);
+
+    #[cfg(debug_assertions)]
+    let log_builder = log_builder
+        .with_colors(
+            ColoredLevelConfig::new()
+                .error(Color::Red)
+                .warn(Color::Yellow)
+                .info(Color::Green)
+                .debug(Color::Blue)
+                .trace(Color::Magenta)
+        );
+
+    use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_log::Builder::new()
-            .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-            .target(tauri_plugin_log::Target::new(
-                tauri_plugin_log::TargetKind::Webview,
-            ))
-            .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
-            .level(log::LevelFilter::Info)
-            .level_for("sqlx::query", log::LevelFilter::Warn)
-        .build())
+        .plugin(log_builder.build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())

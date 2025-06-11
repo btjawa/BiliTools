@@ -109,6 +109,7 @@ interface PackageSelect {
   video?: any;
   audio?: any;
   audioVideo?: any;
+  singleNfo?: any;
   covers?: any;
   aiSummary?: any;
   liveDanmaku?: any;
@@ -125,20 +126,33 @@ export interface PlayUrlProvider {
 }
 
 export interface OthersProvider {
-  aiSummary: boolean;
+  covers: string[],
   danmaku: boolean;
-  covers: { id: string; url: string }[],
+  aiSummary: boolean;
   subtitles: Subtitle[],
 }
 
 export interface MediaInfo {
   type: MediaType;
   id: number;
-  title: string;
   cover: string;
-  covers: OthersProvider['covers'];
   desc: string;
-  tags: string[];
+  nfo: {
+    tags: string[];
+    thumbs: { id: string; url: string }[];
+    showtitle: string;
+    premiered: string; // YYYY-MM-DD, pubtime
+    upper: {
+      name: string;
+      mid: number;
+      avatar: string;
+    };
+    actors: {
+      role: string;
+      name: string;
+    }[];
+    staff: string[];
+  },
   stein_gate?: {
     grapth_version: number;
     edge_id: number;
@@ -155,17 +169,13 @@ export interface MediaInfo {
     favorite?: number,
     share?: number,
   },
-  upper: {
-    avatar?: string,
-    name?: string,
-    mid?: number,
-  },
   list: {
     title: string;
     cover: string;
     desc: string;
     duration: number;
     pubtime: number; // sec timestamp
+    type?: MediaType; // specific type
     aid?: number; // general video
     sid?: number; // music
     fid?: number; // favorite
@@ -419,6 +429,17 @@ export interface MusicMembersInfo {
       member_id: number;
       name: string;
     }[];
+  }[]
+}
+
+export interface MusicUpperInfo {
+  code: number;
+  msg: string;
+  data: {
+    uid: number;
+    uname: string;
+    avatar: string;
+    sign: string;
   }
 }
 
@@ -518,6 +539,7 @@ export interface FavoriteInfo {
     medias: {
       id: number;
       bvid: string;
+      type: number;
       title: string;
       cover: string;
       intro: string;
@@ -778,12 +800,7 @@ export interface PlayerInfo {
   data: {
     aid: number;
     bvid: string;
-    allow_bp: boolean;
-    no_share: boolean;
     cid: number;
-    max_limit: number;
-    page_no: number;
-    has_next: boolean;
     ip_info: {
       ip: string;
       zone_ip: string;
@@ -792,75 +809,10 @@ export interface PlayerInfo {
       province: string;
       city: string;
     };
-    login_mid: number;
-    login_mid_hash: string;
-    is_owner: boolean;
-    name: string;
-    permission: string;
-    level_info: {
-      current_level: number;
-      current_min: number;
-      current_exp: number;
-      next_exp: number;
-      level_up: number;
-    };
-    vip: {
-      type: number;
-      status: number;
-      due_date: number;
-      vip_pay_type: number;
-      theme_type: number;
-      label: {
-        path: string;
-        text: string;
-        label_theme: string;
-        text_color: string;
-        bg_style: number;
-        bg_color: string;
-        border_color: string;
-        use_img_label: boolean;
-        img_label_uri_hans: string;
-        img_label_uri_hant: string;
-        img_label_uri_hans_static: string;
-        img_label_uri_hant_static: string;
-      };
-      avatar_subscript: number;
-      nickname_color: string;
-      role: number;
-      avatar_subscript_url: string;
-      tv_vip_status: number;
-      tv_vip_pay_type: number;
-      tv_due_date: number;
-      avatar_icon: {
-        icon_type: number;
-        icon_resource: {
-        };
-      };
-    };
-    answer_status: number;
-    block_time: number;
-    role: string;
-    last_play_time: number;
-    last_play_cid: number;
-    now_time: number;
-    online_count: number;
-    need_login_subtitle: boolean;
     subtitle: {
-      allow_submit: boolean;
       lan: string;
       lan_doc: string;
-      subtitles: {
-        id: number;
-        lan: string;
-        lan_doc: string;
-        is_lock: boolean;
-        subtitle_url: string;
-        subtitle_url_v2: string;
-        type: number;
-        id_str: string;
-        ai_type: number;
-        ai_status: number;
-      }[];
+      subtitles: Subtitle[];
     };
     view_points: {
       type: number,
@@ -869,59 +821,14 @@ export interface PlayerInfo {
       content: number,
       imgUrl: string,
     }[];
-    preview_toast: string;
     interaction: {
-      history_node: {
-        node_id: number;
-        title: string;
-        cid: number;
-      };
       graph_version: number;
-      msg: string;
-      error_toast: string;
-      mark: number;
-      need_reload: number;
-    };
-    options: {
-      is_360: boolean;
-      without_vip: boolean;
-    };
-    guide_attention: unknown[];
-    jump_card: unknown[];
-    operation_card: unknown[];
-    online_switch: {
-      enable_gray_dash_playback: string;
-      new_broadcast: string;
-      realtime_dm: string;
-      subtitle_submit_switch: string;
-    };
-    fawkes: {
-      config_version: number;
-      ff_version: number;
-    };
-    show_switch: {
-      long_progress: boolean;
     };
     bgm_info: {
       music_id: string;
       music_title: string;
       jump_url: string;
     };
-    toast_block: boolean;
-    is_upower_exclusive: boolean;
-    is_upower_play: boolean;
-    is_ugc_pay_preview: boolean;
-    elec_high_level: {
-      privilege_type: number;
-      title: string;
-      sub_title: string;
-      show_button: boolean;
-      button_text: string;
-      jump_url: string;
-      intro: string;
-      new: boolean;
-    };
-    disable_show_up_info: boolean;
   };
 }
 
@@ -930,68 +837,28 @@ export interface SteinInfo {
   message: string;
   ttl: number;
   data: {
-    title: string;
     edge_id: number;
     story_list: {
-      node_id: number;
       edge_id: number;
       title: string;
       cid: number;
-      start_pos: number;
       cover: string;
       is_current: number;
       cursor: number;
     }[];
     edges: {
-      dimension: {
-        width: number;
-        height: number;
-        rotate: number;
-        sar: string;
-      };
       questions: {
-        id: number;
-        type: number;
-        start_time_r: number;
-        duration: number;
-        pause_video: number;
-        title: string;
         choices: {
           id: number;
-          platform_action: string;
-          native_action: string;
           condition: string;
-          cid: number;
           option: string;
-          is_default: number;
         }[];
-      }[];
-      skin: {
-        choice_image: string;
-        title_text_color: string;
-        title_shadow_color: string;
-        title_shadow_offset_y: number;
-        title_shadow_radius: number;
-        progressbar_color: string;
-        progressbar_shadow_color: string;
-      };
-    };
-    buvid: string;
-    preload: {
-      video: {
-        aid: number;
-        cid: number;
       }[];
     };
     hidden_vars: {
       value: number;
-      id: string;
       id_v2: string;
-      type: number;
-      is_show: number;
       name: string;
-      skip_overwrite: number;
     }[];
-    is_leaf: number;
   };
 }

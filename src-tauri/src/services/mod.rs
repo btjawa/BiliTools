@@ -4,5 +4,6 @@ pub mod login;
 
 pub async fn init() -> crate::TauriResult<()> {
     aria2c::init()?;
+    ffmpeg::test().await?;
     Ok(())
 }

@@ -6,14 +6,18 @@
         "audio": "音訊",
         "audioVideo": "音訊與影片",
         "covers": "封面",
+        "subtitles": "字幕",
         "aiSummary": "AI摘要",
-        "danmaku": "彈幕",
+        "albumNfo": "NFO刮削 (合集/劇集)",
+        "singleNfo": "NFO刮削 (單集)",
         "liveDanmaku": "即時彈幕",
         "historyDanmaku": "歷史彈幕",
-        "subtitles": "字幕",
         "multiSelect": "啟用多選",
-        "autoDetect": "自動偵測",
-        "selectAll": "全選",
+        "autoDetect": "自動偵測"
+    },
+    "class": {
+        "nfo": "NFO元資料",
+        "danmaku": "彈幕",
         "others": "其他"
     },
     "button": {
@@ -21,7 +25,8 @@
         "package": "打包下載",
         "video": "下載影片",
         "audio": "下載音訊",
-        "audioVideo": "下載音訊與影片"
+        "audioVideo": "下載音訊與影片",
+        "selectAll": "全選"
     },
     "packagePopup": {
         "title": "請選擇所需資源",

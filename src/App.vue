@@ -50,7 +50,7 @@ onMounted(async () => {
 		if (init.status === 'error') throw new ApplicationError(init.error);
 		const data = init.data;
 		const { downloads, ...initData } = init.data;
-		useQueueStore().complete = data.downloads;
+		useQueueStore().$patch({ complete: data.downloads as any });
 		app.$patch({ ...initData });
 		await checkRefresh();
 		await fetchUser();

@@ -27,9 +27,30 @@ struct StreamInfo {
     audio_codec: Option<String>,
 }
 
+fn clean_log(raw_log: &[u8]) -> String {
+    return String::from_utf8_lossy(raw_log)
+        .lines()
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+}
+
+pub async fn test() -> Result<()> {
+    let app = get_app_handle();
+    let result = app.shell().sidecar("ffmpeg")?
+        .args(["-version"])
+        .output()
+        .await?;
+    log::info!("FFmpeg Test:\n{}", clean_log(&result.stdout));
+    if !result.status.success() {
+        return Err(anyhow!("FFmpeg test failed with status: {:?}", result.status.code()))
+    }
+    Ok(())
+}
+
 async fn get_stream_info(video: Option<&PathBuf>, audio: Option<&PathBuf>) -> Result<StreamInfo> {
     let app = get_app_handle();
-    let mut args = vec![];
+    let mut args = vec!["-hide_banner", "-nostats"];
     if let Some(ref v) = video {
         args.push("-i");
         args.push(v.to_str().unwrap());
@@ -44,8 +65,8 @@ async fn get_stream_info(video: Option<&PathBuf>, audio: Option<&PathBuf>) -> Re
         .output()
         .await?;
 
-    let stderr = String::from_utf8_lossy(&result.stderr);
-    log::info!("STDERR:\n{}", &stderr);
+    let stderr = clean_log(&result.stderr);
+    log::info!("Stream info:\n{}", &stderr);
 
     let duration = Regex::new(r"Duration:\s*(\d+):(\d+):(\d+)")?
         .captures_iter(&stderr)
@@ -110,6 +131,7 @@ pub async fn merge(info: &Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Tau
     let task = async {
         let result = app.shell().sidecar("ffmpeg")?
             .args([
+                "-hide_banner", "-loglevel", "warning", "-nostats",
                 "-i", video_path.to_str().unwrap(),
                 "-i", audio_path.to_str().unwrap(),
                 "-c", "copy",
@@ -120,7 +142,7 @@ pub async fn merge(info: &Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Tau
                 &log_path_clone.to_str().unwrap(), "-y"
             ]).output().await?;
 
-        log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
+        log::warn!("Merge warnings / errors:\n{}", clean_log(&result.stderr));
         if result.status.success() {
             Ok::<(), anyhow::Error>(())
         } else {
@@ -138,48 +160,33 @@ pub async fn merge(info: &Arc<QueueInfo>, event: &Channel<DownloadEvent>) -> Tau
 
 async fn fetch_cover(url: &String, temp_dir: &PathBuf) -> Result<PathBuf> {
     let client = init_client().await?;
-    let response = client.get(url).send().await?;
+    let response = client.get(format!("{url}@.jpg")).send().await?;
     if response.status() != StatusCode::OK {
         return Err(anyhow!("Error while fetching cover ({})", response.status()).into());
     }
     let bytes = response.bytes().await.context("Failed to read image body")?;
-    let input = temp_dir.join("cover.png");
     let output = temp_dir.join("cover.jpg");
-    fs::write(&input, bytes).await?;
-    if url.ends_with("jpg") {
-        fs::rename(&input, &output).await?;
-        return Ok(output);
-    }
-    let app = get_app_handle();
-    let result = app.shell().sidecar("ffmpeg")?
-        .args([
-            "-i", input.to_str().unwrap(),
-            "-pix_fmt", "yuvj420p",
-            "-q:v", "2", "-vframes", "1",
-            output.to_str().unwrap(), "-y"
-        ]).output().await?;
-
-    log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
-    if !result.status.success() {
-        return Err(anyhow!("FFmpeg exited with status: {:?}", result.status.code()))
-    }
-    fs::remove_file(input).await?;
+    fs::write(&output, bytes).await?;
     Ok(output)
 }
 
 async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: &StreamInfo) -> Result<Vec<String>> {
     let output = info.output.clone();
     let meta = &info.info;
+    let nfo = &meta.nfo;
     let add_metadata = { CONFIG.read().unwrap().advanced.add_metadata };
     let ext = output.extension().and_then(|v| v.to_str()).unwrap_or("");
-    let mut args = svec!["-i", input.to_str().unwrap()];
+    let mut args = svec![
+        "-hide_banner", "-loglevel", "warning", "-nostats",
+        "-i", input.to_str().unwrap()
+    ];
     let mut output_args = svec![];
     let has_video = stream_info.video_codec.is_some();
     let has_audio = stream_info.audio_codec.is_some();
     if add_metadata {
         let image = fetch_cover(&meta.cover, &info.temp_dir).await?;
         args.extend(match ext {
-            "mp4" | "m4a" => svec!["-i", image.to_str().unwrap()],
+            "flac" | "mp4" | "m4a" => svec!["-i", image.to_str().unwrap()],
             "mkv" => svec!["-attach", image.to_str().unwrap()],
             _ => svec![]
         });
@@ -191,33 +198,38 @@ async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: 
         output_args.extend(svec!["-map", "0:a:0", "-c:a", "copy"]);
     }
     if add_metadata {
-        if ext == "mp4" || ext == "m4a" {
-            output_args.extend(svec!["-map", "1:v:0"]);
-            output_args.extend(match has_video {
-                true => svec!["-c:v:1", "mjpeg", "-disposition:v:1", "attached_pic"],
-                false => svec!["-c:v", "mjpeg", "-disposition:v", "attached_pic"]
-            });
-        } else if ext == "mkv" {
-            output_args.extend(svec![
+        match ext {
+            "flac" | "mp4" | "m4a" => {
+                output_args.extend(svec!["-map", "1:v:0"]);
+                match ext {
+                    "flac" => output_args.extend(svec!["-c:v:0", "mjpeg", "-disposition:v:0", "attached_pic"]),
+                    _ => output_args.extend(match has_video {
+                        true => svec!["-c:v:1", "mjpeg", "-disposition:v:1", "attached_pic"],
+                        false => svec!["-c:v", "mjpeg", "-disposition:v", "attached_pic"]
+                    })
+                }
+            },
+            "mkv" => output_args.extend(svec![
                 "-metadata:s:t", "mimetype=image/jpeg",
                 "-metadata:s:t", "filename=cover.jpg"
-            ]);
+            ]),
+            _ => ()
         }
         output_args.extend(svec![
             "-metadata", &format!("title={}", meta.title),
-            "-metadata", &format!("artist={}", meta.artist),
+            "-metadata", &format!("artist={}", nfo.upper.name),
             "-metadata", &format!("description={}", meta.desc),
-            "-metadata", &format!("genre={}", meta.tags.join(", ")),
+            "-metadata", &format!("genre={}", nfo.tags.join(", ")),
             "-metadata", &format!("creation_time={}", meta.pubtime)
         ]);
     }
-    if ext == "m4a" {
-        output_args.extend(svec!["-f", "mp4"]);
+    match ext {
+        "m4a" => output_args.extend(svec!["-f", "mp4"]),
+        "mp4" => output_args.extend(svec!["-movflags", "+faststart"]),
+        "flac" => output_args.extend(svec!["-f", "flac"]),
+        _ => ()
     }
-    args.extend(svec![
-        "-movflags", "+faststart",
-        "-strict", "unofficial"
-    ]);
+    args.extend(svec!["-strict", "unofficial"]);
     args.extend(output_args);
     Ok(args)
 }
@@ -241,10 +253,11 @@ pub async fn add_metadata(info: &Arc<QueueInfo>, input: PathBuf, event: &Channel
             output.to_str().unwrap(), "-progress",
             log_path_clone.to_str().unwrap(), "-y"
         ]);
+        log::info!("Metadata args: {:?}", args);
         let result = app.shell().sidecar("ffmpeg")?
             .args(args).output().await?;
 
-        log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
+        log::warn!("Add metadata warnings / errors:\n{}", clean_log(&result.stderr));
         if result.status.success() {
             Ok::<(), anyhow::Error>(())
         } else {

@@ -33,7 +33,7 @@ tauri-build = { version = "2.2.0", features = [] }
 
 [dependencies]
 anyhow = "1.0.98"
-backtrace = "0.3.74"
+backtrace = "0.3.75"
 base64 = "0.22.1"
 chrono = "0.4.41"
 dark-light = "2.0.0"
@@ -52,21 +52,21 @@ specta-typescript = "0.0.7"
 sys-locale = "0.3.2"
 tauri = { version = "2.5.1", features = ["macos-private-api"] }
 tauri-plugin-clipboard-manager = "2.2.2"
-tauri-plugin-dialog = "2.2.1"
-tauri-plugin-http = { version = "2.4.3", features = ["unsafe-headers", "rustls-tls", "stream", "gzip", "brotli", "blocking"] }
-tauri-plugin-log = "2.4.0"
-tauri-plugin-opener = "2.2.6"
+tauri-plugin-dialog = "2.2.2"
+tauri-plugin-http = { version = "2.4.4", features = ["unsafe-headers", "rustls-tls", "stream", "gzip", "brotli", "blocking"] }
+tauri-plugin-log = { version = "2.4.0", features = ["colored"] }
+tauri-plugin-opener = "2.2.7"
 tauri-plugin-os = "2.2.1"
 tauri-plugin-process = "2.2.1"
-tauri-plugin-single-instance = "2.2.3"
+tauri-plugin-single-instance = "2.2.4"
 tauri-plugin-shell = "2.2.1"
 tauri-specta = { version = "2.0.0-rc", features = ["derive", "typescript"] }
-tokio = { version = "1.44", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
+tokio = { version = "1.45", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
 walkdir = "2.5.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.61.0", features = ["Win32_Foundation", "Win32_System_Com"] }
-windows-core = "0.61.0"
+windows = { version = "0.61.1", features = ["Win32_Foundation", "Win32_System_Com"] }
+windows-core = "0.61.2"
 webview2-com = "0.37.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

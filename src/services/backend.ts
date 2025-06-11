@@ -183,12 +183,15 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type ArchiveInfo = { title: string; desc: string; tags: string[]; artist: string; pubtime: string; cover: string; ts: Timestamp; folder: string; filename: string }
+export type ArchiveInfo = { title: string; desc: string; nfo: NfoInfo; pubtime: string; cover: string; ts: Timestamp; folder: string; filename: string }
 export type ConfigAction = "init" | "write"
 export type DownloadEvent = { status: "Started"; id: string; gid: string; taskType: TaskType } | { status: "Progress"; id: string; gid: string; contentLength: number; chunkLength: number } | { status: "Finished"; id: string; gid: string }
 export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { version: string; hash: string; downloads: QueueInfo[] }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
+export type NfoActor = { role: string; name: string }
+export type NfoInfo = { tags: string[]; thumbs: JsonValue; showtitle: string; premiered: string; upper: NfoUpper; actors: NfoActor[]; staff: string[] }
+export type NfoUpper = { name: string; mid: number | null; avatar: string | null }
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; tasks: Task[]; output: string; temp_dir: string; info: ArchiveInfo }
 export type QueueType = "waiting" | "doing" | "complete"
