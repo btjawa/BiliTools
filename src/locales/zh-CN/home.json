@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0}链接/AV/BV/SS/EP/AU/FID号...",
+    "inputPlaceholder": "{0}链接/AV/BV/SS/EP/AU/AM/SID/FID号...",
     "label": {
         "package": "打包资源",
         "video": "视频",

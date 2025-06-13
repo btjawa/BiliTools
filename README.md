@@ -1,91 +1,86 @@
 <p align="center">
-    <img src="./assets/logo.svg" width="500" />
+    <img src="./assets/logo.svg" width=500 />
 </p>
 
 <div align="center">
     <h1>BiliTools - 哔哩哔哩工具箱</h1>
-    <img src="https://img.shields.io/github/v/tag/btjawa/BiliTools" />
+    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
+    <img src="https://img.shields.io/github/issues/btjawa/BiliTools" />
     <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
     <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
     <img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
     <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-    <img src="https://img.shields.io/badge/Tauri-FFC131?logo=Tauri&logoColor=white" />
-    <img src="https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF" />
-    <img src="https://img.shields.io/badge/Rust-000000?logo=Rust&logoColor=white" />
 </div>
 
-## 介绍
-基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，未来还会陆续支持更多功能（请看 [Project](https://github.com/users/btjawa/projects/4)）
+<br>
 
-请确保只在该项目的 [Release](https://github.com/btjawa/BiliTools/releases/latest) 页下载应用（或自行构建），**不保证其他来源的安全性**
+💡 基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，将会陆续支持 [更多功能](https://github.com/users/btjawa/projects/4)
 
-文档 / 其他信息发布页：[https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) 
+📖 文档 / 其他信息：[https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) 
 
-> [!WARNING]  
-> **大会员下载仅限本身开通了大会员服务的账号，普通账号无法解析付费、大会员内容**<br>
+> [!IMPORTANT] 
+> 本项目的所有 [声明](#声明)，仅适用于发布在 [Release](https://github.com/btjawa/BiliTools/releases/latest) 页的版本<br>
+> 本项目涉及账号相关功能，因使用 **任何第三方版本** 所造成的任何后果，**本项目概不负责**<br>
+> **大会员 / 付费** 仅支持已开通对应服务的账号，普通账号无法解析此类内容
 
-## 安装使用
+## 💾 安装指南
 
-`bcryptprimitives.dll` 是 `Windows 7` 中系统组件缺失问题，由于该系统版本太旧，未来不会计划兼容
+要求 Windows 版本 >= **8.1**，macOS 版本 >= **11.0**
 
-要求 Windows 版本 >= **8.1**，macOS 版本 >= **11.0 (BigSur)**
+对于低于上述版本的系统环境，不会提供任何支持
 
-Windows 下载 [Release](https://github.com/btjawa/BiliTools/releases/latest) 中的 `BiliTools_xxx_x64-setup.exe` 进行安装，若卡在安装 `WebView2` 的过程，可前往 [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2) 手动安装
+Windows 下载 `BiliTools_xxx_x64-setup.exe` 进行安装，若卡在安装 `WebView2`，可前往 [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2) 手动安装
 
-macOS 下载 [Release](https://github.com/btjawa/BiliTools/releases/latest) 中的 `BiliTools_xxx_universal.dmg` 进行安装，不建议单独下载对应架构（例如 `aarch64.dmg`），容易出现 [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137) 中的 "已损坏" 问题
+macOS 下载 `BiliTools_xxx_universal.dmg` 进行安装，**一般**不建议单独下载对应架构的镜像，参考 [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137)
 
-## 参与贡献
+## 🚀 参与贡献 / Contributing
 
-该项目由我一人维护，开发难度较大；**我本人是学生，要准备中考，时间并不多**
+本项目当前由 [我](https://github.com/btjawa) 一人维护：
+- **我本人是中学生，时间并不多**
+- 个人能力有限，我也清楚有很多漏洞尚未修复
 
-如果想要提出新功能，或是有任何问题，欢迎提交 Issue
+欢迎各位为本项目做出贡献，让本项目变得更好！*贡献指南正在编写中*
 
-请只在 [Issues](https://github.com/btjawa/BiliTools/issues/new/choose) 页面提交，其他渠道提交的问题我 **也许** 不会处理
+如果你是使用者：
+- 仅在 [Issues](https://github.com/btjawa/BiliTools/issues) 提交问题，便于 Issue tracking
+- 按照模板填写好 **所有需要的信息**，提交足够的日志或错误页面截图
+- **尊重他人的劳动成果**
 
-注意事项：
-
-- 按照对应需求选择Issue模板创建新Issue，不要在已有的与问题无关的Issue下跟楼
-- 尽量把问题或需求描述清楚，若是 `BUG`，提交足够的日志或错误页面截图
-- **说话客气点，这是开源 & 免费项目**
-
-不符合以上条件的 Issue 我 **也许** 不会处理
-
-## 功能
+## 🧪 功能
 
 ### 资源解析
 
 | 功能    | 状态    | 备注                      |
 |---------|---------|---------------------------|
-| 视频    | ✅ 已完成 | <ul><li>支持视频 / 互动视频(AV/BV)、番剧 / 课程 / 电影(EP/SS)</li><li>支持 DASH、MP4、FLV</li><li>支持 4K、8K、HDR、杜比视界</li></ul> |
+| 视频    | ✅ 已完成 | <ul><li>支持合集 / 分P / 互动、番剧 / 课程 / 电影</li><li>支持 DASH、MP4、FLV</li><li>支持 4K、8K、HDR、杜比视界</li></ul> |
 | 音频    | ✅ 已完成 | <ul><li>支持 AVC、HEVC、AV1</li><li>支持 杜比、Hi-Res</li></ul> |
-| 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC、320Kbps 音乐(AU) 与 歌单(AM)</li></ul> |
-| 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 ProtoBuf 方式</li></ul> |
-| 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>支持 XML、ProtoBuf 方式</li></ul> |
-| 封面    | ✅ 已完成 | 包括番剧海报 |
-| 字幕    | ✅ 已完成 | 支持 SRT 格式 |
-| AI总结  | ✅ 已完成 | MD Markdown格式，来自于哔哩哔哩 |
+| 音乐    | ✅ 已完成 | <ul><li>支持无损 FLAC、320Kbps 音乐 / 歌单</li></ul> |
+| 历史弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>ProtoBuf 解析方式</li></ul> |
+| 实时弹幕 | ✅ 已完成 | <ul><li>ASS 字幕格式</li><li>XML、ProtoBuf 解析方式</li></ul> |
+| 封面    | ✅ 已完成 | 支持番剧 / 电影海报等等 |
+| 字幕    | ✅ 已完成 | SRT 格式 |
+| AI总结  | ✅ 已完成 | Markdown格式，**来自哔哩哔哩 `AI 小助手`**<br>*由Shanghai-Bilibili index-20231207大模型提供技术支持* |
 | 收藏夹  | ✅ 已完成 | FID 号解析 |
 | 元数据  | ✅ 已完成 | 封面、标题、简介、UP主、上传时间、TAGS |
 | NFO    | ⚠️ 进行中 | 优先适配 `Emby` |
 
-### 登录相关
+### 登录 & 验证相关
 
-| 功能             | 状态       |
-|------------------|------------|
-| 扫码登录          | ✅ 已完成 |
-| 密码登录          | ✅ 已完成 |
-| 短信登录          | ✅ 已完成 |
-| 自动刷新登录状态   | ✅ 已完成 |
-| Wbi 签名          | ✅ 已完成 |
-| buvid 参数验证     | ✅ 已完成 |
-| v_voucher 风控验证 | ✅ 已完成 |
-| 客户端指纹验证      | ✅ 已完成 |
+| 功能           | 状态       |
+|----------------|------------|
+| 扫码登录        | ✅ 已完成 |
+| 密码登录        | ✅ 已完成 |
+| 短信登录        | ✅ 已完成 |
+| 自动刷新登录状态 | ✅ 已完成 |
+| 参数签名        | ✅ 已完成 |
+| 风控验证        | ✅ 已完成 |
+| 指纹验证        | ✅ 已完成 |
 
-### I18N Translations
+## 🌎 国际化 / Internationalization
 
-I work on translations mainly to improve my English. If you find anything unnatural or incorrect, feel free to open an issue!
+I work on translations primarily to improve my expression in these languages.
 
-日本語の表現力を高めるために翻訳をしています。もし不自然な表現や誤用などがありましたら、Issue を立てていただけると助かります。
+**Simplified Chinese (zh-CN)** is the primary language maintained, and acts as the source for other translations.
 
 | Code           | Status      |
 |----------------|-------------|
@@ -94,44 +89,60 @@ I work on translations mainly to improve my English. If you find anything unnatu
 | ja-JP          | ✅ Complete |
 | en-US          | ✅ Complete |
 
-## 开发 / 构建
+## 💫 鸣谢
 
-- Rust >= **1.70**
-- Node.js >= **20**
-
-1. 克隆项目 `git clone https://github.com/btjawa/BiliTools.git`
-2. 进入目录 `cd BiliTools`
-3. 安装依赖 `npm install`
-
-- 开发 `npm run tauri dev`
-- 构建 `npm run tauri build`
-
-## 声明
-
-该项目根据 `GPL-3.0-or-later` 许可证进行授权，请参考 [LICENSE](/LICENSE) 文件
-
-本项目仅作为学习、技术研究用途，作者不对因不当使用本项目所导致的任何后果负责，若有疑似侵权、违规内容，可随时联系处理
-
-所有请求行为均为请求用户已获访问权限的在线资源，不包含任何形式的服务端破解、绕过付费会员、绕过安全校验等等行为
-
-应用数据仅存储于用户本地，使用 `SQLite` 格式明文存储于以下路径：
-
-- Windows: `%AppData%\com.btjawa.bilitools\Storage`
-- macOS: `$HOME/Library/Application Support/com.btjawa.bilitools/Storage`
-- Linux: `$HOME/.local/share/com.btjawa.bilitools/Storage`
-
-参考、使用的其他开源项目：
+Waiting for another contributor...
 
 - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 部分接口请求规范参考
 
- - [aria2](https://github.com/aria2/aria2) 用于多线程高效下载数据
+- [aria2](https://github.com/aria2/aria2) 用于多线程高效下载数据
 
- - [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) 用于音频、视频合并与混流与其他媒体处理
+- [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) 用于混流与其他媒体处理
 
- - [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 用于将 XML 转换为 ASS 字幕
+- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 用于将 XML 转换为 ASS 字幕
 
- - 其余可查看 `package.json` 与 `src-tauri/Cargo.toml`
+## 💻 本地开发 & 构建
 
-## Star History
+> Rust >= **1.70**<br>
+> Node.js >= **20**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=btjawa/BiliTools&type=Date)](https://www.star-history.com/#btjawa/BiliTools&Date)
+- 克隆项目并安装依赖
+```bash
+git clone https://github.com/btjawa/BiliTools.git
+cd BiliTools
+```
+
+- 启动开发服务器
+```bash
+npm run tauri dev
+```
+
+- 构建发行版
+```bash
+npm run tauri build
+```
+## ⚡ 赞助
+
+目前正在开发 `v1.3.8` ~ `v1.4.0`，届时会有大量更新
+
+如果你喜欢，并想助力这个项目，可以考虑请我喝杯咖啡~
+
+- [爱发电](https://afdian.com/a/BTJ_Shiroi)
+- *微信支付 (准备中)*
+
+你的支持是我继续开发的动力！
+
+## 声明
+
+本项目遵循 [GPL-3.0-or-later](/LICENSE) 开源许可证。
+
+- 本项目免费开源，旨在学习技术与研究；请遵守相关法律法规，切勿滥用，作者不对因不当使用而导致的任何后果负责。
+- 本项目所有请求调用均为 **请求用户已获访问权限的在线资源**，不包含任何形式的绕过校验、破解付资源等等行为。
+- 本项目产生与获取的所有数据将使用 `SQLite` 格式明文存储于以下路径：
+
+> Windows: `%AppData%\com.btjawa.bilitools\Storage`<br>
+> macOS: `$HOME/Library/Application Support/com.btjawa.bilitools/Storage`<br>
+> Linux: `$HOME/.local/share/com.btjawa.bilitools/Storage`
+
+- 由于本项目的特殊性，使用者应自行承担账号相关风险。
+- 如有侵权，可随时联系处理。

@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU/FID number...",
+    "inputPlaceholder": "{0} link/AV/BV/SS/EP/AU/AM/SID/FID...",
     "label": {
         "package": "Package Resources",
         "video": "Video",

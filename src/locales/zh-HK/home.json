@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0}連結/AV/BV/SS/EP/AU/FID號...",
+    "inputPlaceholder": "{0}連結/AV/BV/SS/EP/AU/AM/SID/FID號碼",
     "label": {
         "package": "打包資源",
         "video": "影片",

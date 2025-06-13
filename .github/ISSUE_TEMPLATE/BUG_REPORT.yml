@@ -1,5 +1,5 @@
 name: 反馈 Bug
-description: 反馈 Bug 以帮助我们改进代码
+description: 反馈 Bug 以帮助我们改进项目
 title: "[Bug] "
 labels: ["bug", "needs triage"]
 assignees: []
@@ -14,12 +14,19 @@ body:
       required: true
 
   - type: textarea
+    id: target_id
+    attributes:
+      label: 搜索下载的：哔哩哔哩链接/AV/BV/SS/EP/AU/AM/SID/FID号
+    validations:
+      required: true
+
+  - type: textarea
     id: steps_to_reproduce
     attributes:
       label: 复现步骤
       description: 请提供详细的复现步骤
     validations:
-      required: false
+      required: true
 
   - type: dropdown
     id: environment
@@ -39,7 +46,7 @@ body:
     attributes:
       label: 日志
       description: |
-        请粘贴日志，或是上传日志文件
+        请上传日志文件，或是粘贴（不推荐）
 
         Windows 日志文件路径：`C:\Users\用户名\AppData\Local\com.btjawa.bilitools\logs\BiliTools.log`
 

@@ -1,5 +1,5 @@
 name: 功能请求
-description: 想要什么新功能？
+description: 需要什么新功能？
 title: "[功能请求] "
 labels: ["enhancement", "needs triage"]
 assignees: []
@@ -17,17 +17,17 @@ body:
     id: reference
     attributes:
       label: 实现参考
-      description: 是否已有实现思路或参考？
+      description: 已有实现思路或参考？
     validations:
-      required: false
+      required: true
 
   - type: dropdown
     id: environment
     attributes:
       label: 系统环境
       options:
-        - Windows 10
-        - Windows 11
+        - Windows
         - macOS
+        - Linux
     validations:
       required: true

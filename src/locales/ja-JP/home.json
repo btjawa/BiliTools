@@ -1,5 +1,5 @@
 {
-    "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU/FID番号...",
+    "inputPlaceholder": "{0}リンク/AV/BV/SS/EP/AU/AM/SID/FID番号...",
     "label": {
         "package": "パッケージリソース",
         "video": "動画",
