@@ -89,18 +89,6 @@ I work on translations primarily to improve my expression in these languages.
 | ja-JP          | ✅ Complete |
 | en-US          | ✅ Complete |
 
-## 💫 鸣谢
-
-Waiting for another contributor...
-
-- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 部分接口请求规范参考
-
-- [aria2](https://github.com/aria2/aria2) 用于多线程高效下载数据
-
-- [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) 用于混流与其他媒体处理
-
-- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 用于将 XML 转换为 ASS 字幕
-
 ## 💻 本地开发 & 构建
 
 > Rust >= **1.70**<br>
@@ -121,6 +109,7 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
+
 ## ⚡ 赞助
 
 目前正在开发 `v1.3.8` ~ `v1.4.0`，届时会有大量更新
@@ -130,7 +119,34 @@ npm run tauri build
 - [爱发电](https://afdian.com/a/BTJ_Shiroi)
 - *微信支付 (准备中)*
 
-你的支持是我继续开发的动力！
+你的支持将是我持续维护的一大动力！
+
+## 💫 鸣谢
+
+Waiting for another contributor...
+
+- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 部分接口请求规范参考
+
+- [aria2](https://github.com/aria2/aria2) 用于多线程高效下载数据
+
+- [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) 用于混流与其他媒体处理
+
+- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 用于将 XML 转换为 ASS 字幕
+
+<picture>
+<source
+    media="(prefers-color-scheme: dark)"
+    srcset="https://api.star-history.com/svg?repos=btjawa/BiliTools&type=Date&theme=dark"
+/>
+<source
+    media="(prefers-color-scheme: light)"
+    srcset="https://api.star-history.com/svg?repos=btjawa/BiliTools&type=Date"
+/>
+<img
+    alt="Star History Chart"
+    src="https://api.star-history.com/svg?repos=btjawa/BiliTools&type=Date"
+/>
+</picture>
 
 ## 声明
 
