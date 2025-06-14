@@ -169,7 +169,6 @@ async function search(overrideInput?: string) {
 		const type = v.searchMediaType === 'auto' ? parsed.type : v.searchMediaType;
 		LogInfo('Parsed input: ' + JSON.stringify(parsed));
 		const info = await getMediaInfo(parsed.id, type);
-		console.log(info)
 		v.searchTarget = info.list.findIndex(v => v.aid === info.id);
 		info.cover = await getImageBlob(info.cover);
 		if (info.nfo.upper.avatar) {

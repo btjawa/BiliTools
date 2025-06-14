@@ -21,12 +21,13 @@ export async function fetchUser() {
         auth: 'wbi', params: { mid }
     }) as UserTypes.UserInfoResp;
     const userStat = await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as UserTypes.UserStatResp;
+    console.log(userInfo)
     user.$patch({
-        avatar: await getImageBlob(userInfo.data.face.replace('http:', 'https:') + '@100w_100h'),
+        avatar: await getImageBlob(userInfo.data.face + '@100w_100h'),
         name: userInfo.data.name, desc: userInfo.data.sign,
         mid: userInfo.data.mid, level: userInfo.data.level,
-        vipLabel: await getImageBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static.replace('http:', 'https:')),
-        topPhoto: await getImageBlob(userInfo.data.top_photo.replace('http:', 'https:') + '@170h'),
+        vipLabel: await getImageBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static),
+        topPhoto: await getImageBlob(userInfo.data.top_photo + '@170h'),
         stat: {
             coins: userInfo.data.coins,
             following: userStat.data.following,
