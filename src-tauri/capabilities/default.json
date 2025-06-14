@@ -48,10 +48,10 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://*.bilibili.com/*" },
+        { "url": "*://*.bilibili.com/*" },
         { "url": "*://*.hdslb.com/*" },
-        { "url": "https://*.biliimg.com/*" },
-        { "url": "*://b23.tv/*" }
+        { "url": "*://*.biliimg.com/*" },
+        { "url": "*://*.b23.tv/*" }
       ]
     },
     "updater:allow-check",

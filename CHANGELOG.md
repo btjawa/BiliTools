@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.8] - 2025-06-14
+
+Update STORAGE_VERSION to 6
+
+### 更新
+
+- [`c8f353a`](https://github.com/btjawa/BiliTools/commit/c8f353a0f8c6d2037e8b59c077abd8c3dce9f38b) NFO 元数据刮削 (Preview) ([#54](https://github.com/btjawa/BiliTools/issues/54) by [@Excitedfighter](https://github.com/Excitedfighter))
+- [`d08bad2`](https://github.com/btjawa/BiliTools/commit/d08bad255689b06c24cea5297f92f84d58eaa76c) 为 DASH 格式增加描述
+
+### 修复
+
+- [`c8f353a`](https://github.com/btjawa/BiliTools/commit/c8f353a0f8c6d2037e8b59c077abd8c3dce9f38b) 修复选择界面溢出问题 ([#56](https://github.com/btjawa/BiliTools/issues/56) by [@ream2006](https://github.com/ream2006))
+- [`c8f353a`](https://github.com/btjawa/BiliTools/commit/c8f353a0f8c6d2037e8b59c077abd8c3dce9f38b) 修复 FLAC 解析问题
+- [`d08bad2`](https://github.com/btjawa/BiliTools/commit/d08bad255689b06c24cea5297f92f84d58eaa76c) 修复 Dolby 解析问题
+- [`d08bad2`](https://github.com/btjawa/BiliTools/commit/d08bad255689b06c24cea5297f92f84d58eaa76c) 修复收藏夹链接解析问题 ([#58](https://github.com/btjawa/BiliTools/issues/58) by [@C2dark](https://github.com/C2dark))
+- [`d08bad2`](https://github.com/btjawa/BiliTools/commit/d08bad255689b06c24cea5297f92f84d58eaa76c) 修复 MP4 格式解析问题
+
 ## [1.3.7] - 2025-05-17
 
 Update STORAGE_VERSION to 5
