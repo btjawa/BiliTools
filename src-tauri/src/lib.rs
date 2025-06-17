@@ -8,6 +8,9 @@ use tauri_specta::{collect_commands, collect_events, Builder};
 use tauri::{async_runtime, Manager};
 use commands::*;
 
+#[cfg(debug_assertions)]
+use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::panic::set_hook(Box::new(|e| {
@@ -57,7 +60,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .trace(Color::Magenta)
         );
 
-    use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(log_builder.build())

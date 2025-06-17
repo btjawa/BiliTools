@@ -50,7 +50,10 @@ export interface UserInfoResp {
         nameplate: any;
         user_honour_info: any;
         is_followed: boolean;
-        top_photo: string;
+        top_photo_v2: {
+            l_200h_img: string;
+            l_img: string;
+        }
         theme: any;
         sys_notice: any;
         live_room: any;
