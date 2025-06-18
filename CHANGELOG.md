@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.0-1] - 2025-06-19
+
+## 修复
+
+- [`a6c4a64`](https://github.com/btjawa/BiliTools/commit/a6c4a646dfc795e4f8879e03a989c289a3a72e13) 更新头图链接使用的 API 字段 ([#72](https://github.com/btjawa/BiliTools/issues/72) by [@AgentOpen](https://github.com/AgentOpen))
+
 ## [1.3.8] - 2025-06-14
 
 Update STORAGE_VERSION to 6
