@@ -2,15 +2,29 @@
     <img src="./assets/logo.svg" width=500 />
 </p>
 
-<div align="center">
-    <h1>BiliTools - 哔哩哔哩工具箱</h1>
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-    <img src="https://img.shields.io/github/issues/btjawa/BiliTools" />
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
+<h1 align="center">BiliTools - 哔哩哔哩工具箱</h1>
+<p align="center">
+    <a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
+        <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
+    </a>
+    <a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
+        <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
+    </a>
     <img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</div>
+    <a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
+        <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
+    </a>
+    <a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
+        <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
+    </a>
+</p>
+
+<p align="center">
+    <a href="https://trendshift.io/repositories/13286" target="_blank">
+        <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
+    </a>
+</p>
+
 
 <br>
 
@@ -111,6 +125,8 @@ npm run tauri build
 ```
 
 ## ⚡ 赞助
+
+项目已达到 1k Stars，希望大家多多支持！
 
 目前正在开发 `v1.3.8` ~ `v1.4.0`，届时会有大量更新
 
