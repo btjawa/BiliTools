@@ -23,7 +23,7 @@
     <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
 </a>
 
-[简体中文](./README.md) | English | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md)
+[简体中文](./README.md) | English | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md)
 </div>
 
 <hr />
@@ -66,9 +66,11 @@ Download `BiliTools_xxx_universal.dmg` then follow the installation guide.
 
 Everyone is welcome to contribute and help improve this project!
 
+Please use [Contributing](./CONTRIBUTING.md) as reference~
+
 If you are just a user:
-- Submit your issues only via the [Issues](https://github.com/btjawa/BiliTools/issues) page.
-- Follow the issue template and fill in **all required info**, then upload enough logs or error screenshots.
+- Submit according to the *Issue 与 Discussion* section in [Contributing](./CONTRIBUTING.md).
+- **Note the difference between the purpose of Issues and Discussions**.
 - **Respect the work of others**.
 
 ## 🧪 Features
@@ -85,27 +87,6 @@ If you are just a user:
 | zh-HK          | ✅ Complete |
 | ja-JP          | ✅ Complete |
 | en-US          | ✅ Complete |
-
-## 💻 Local Development & Build
-
-> Rust >= **1.70**<br>
-> Node.js >= **20**
-
-- Clone the project then install the dependencies
-```bash
-git clone https://github.com/btjawa/BiliTools.git
-cd BiliTools
-```
-
-- Run dev server
-```bash
-npm run tauri dev
-```
-
-- Build release
-```bash
-npm run tauri build
-```
 
 ## ⚡ Donate
 
@@ -166,4 +147,4 @@ Your support will be a great motivation for me to keep improving!
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- If there is any infringement, feel free to contact us.
+- If there is any infringement, feel free to [contact](mailto:2407356083@qq.com) us.

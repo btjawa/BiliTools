@@ -23,7 +23,7 @@
     <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
 </a>
 
-简体中文 | [English](./README_EN.md) | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md)
+简体中文 | [English](./README_EN.md) | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md)
 </div>
 
 <hr />
@@ -66,9 +66,11 @@
 
 欢迎各位为本项目做出贡献，让本项目变得更好！
 
+请参考 [Contributing](./CONTRIBUTING.md) 进行贡献~
+
 如果你是使用者：
-- 仅在 [Issues](https://github.com/btjawa/BiliTools/issues) 提交问题，便于 Issue tracking
-- 按照模板填写好 **所有需要的信息**，提交足够的日志或错误页面截图
+- 参考 [Contributing](./CONTRIBUTING.md) 中的 *Issue 与 Discussion* 部分进行提交
+- **注意区分 Issues 与 Discussions 的用途**
 - **尊重他人的劳动成果**
 
 ## 🧪 功能
@@ -111,27 +113,6 @@
 | zh-HK          | ✅ 已完成 |
 | ja-JP          | ✅ 已完成 |
 | en-US          | ✅ 已完成 |
-
-## 💻 本地开发 & 构建
-
-> Rust >= **1.70**<br>
-> Node.js >= **20**
-
-- 克隆项目并安装依赖
-```bash
-git clone https://github.com/btjawa/BiliTools.git
-cd BiliTools
-```
-
-- 启动开发服务器
-```bash
-npm run tauri dev
-```
-
-- 构建发行版
-```bash
-npm run tauri build
-```
 
 ## ⚡ 赞助
 
@@ -192,4 +173,4 @@ npm run tauri build
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- 如有侵权，可随时联系处理。
+- 如有侵权，可随时 [联系](mailto:2407356083@qq.com) 处理。

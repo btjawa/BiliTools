@@ -23,7 +23,7 @@
     <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
 </a>
 
-[简体中文](./README.md) | [English](/README_EN.md) | 日本語 | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md)
+[简体中文](./README.md) | [English](/README_EN.md) | 日本語 | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md)
 </div>
 
 <hr />
@@ -66,16 +66,18 @@
 
 どなたでもプロジェクトとへの貢献は大歓迎です。是非一緒により良いツールにしていきましょう！
 
+詳しくは [Contributing](./CONTRIBUTING.md) をご参照してね～
+
 使用者の皆様へ：
-- 問題の報告は必ず [Issues](https://github.com/btjawa/BiliTools/issues) にて行ってください！
-- テンプレートに従って **必要な情報**, をすべて記入し、ログやエラーメッセージのスクリーンショットを添付してください。
+- [Contributing](./CONTRIBUTING.md) の *Issue 与 Discussion* セクションに従って行ってください！
+- **Issue と Discussions の目的の違いにご注意ください**
 - **他人の労力に対するリスペクトを忘れずに**
 
 ## 🧪 機能
 
 > 中国語版をご覧ください。ここの翻訳は未完成です。
 
-## 🌎 国際化
+## 🌎 I18N - 国際化
 
 **簡体字中国語 (zh-CN)** をメインの開発言語としており、他言語の翻訳元にもなっています。
 
@@ -85,27 +87,6 @@
 | zh-HK          | ✅ 対応済み |
 | ja-JP          | ✅ 対応済み |
 | en-US          | ✅ 対応済み |
-
-## 💻 ローカル開発・ビルド
-
-> Rust >= **1.70**<br>
-> Node.js >= **20**
-
-- リポジトリをクローンして依存パッケージをインストール
-```bash
-git clone https://github.com/btjawa/BiliTools.git
-cd BiliTools
-```
-
-- 開発用サーバーを起動
-```bash
-npm run tauri dev
-```
-
-- リリース版をビルド
-```bash
-npm run tauri build
-```
 
 ## ⚡ 寄付のお願い
 
@@ -167,4 +148,4 @@ npm run tauri build
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- 著作権等に関するご連絡・削除依頼は、いつでもお知らせください。
+- 著作権等に関するご連絡・削除依頼は、いつでも [お知らせ](mailto:2407356083@qq.com) ください。
