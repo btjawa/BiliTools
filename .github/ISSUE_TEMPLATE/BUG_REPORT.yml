@@ -1,58 +1,77 @@
-name: 反馈 Bug
-description: 反馈 Bug 以帮助我们改进项目
+name: Bug report / 反馈 Bug
+description: Bug report / 反馈 Bug
 title: "[Bug] "
 labels: ["bug", "needs triage"]
 assignees: []
 
 body:
-  - type: textarea
-    id: description
+  - type: checkboxes
     attributes:
-      label: 请对问题进行详细描述
-      description: 在进行什么操作时遇到的问题？问题导致？...
+      label: Please confirm before submitting
+      options:
+        - label: |
+            I'm sure there are no duplicate issues or discussions.
+            我确定没有重复的 Issue 或 Discussion。
+          required: true
+        - label: |
+            I'm sure it's BiliTools' problem and not something else.
+            我确定这是 BiliTools 的问题，而不是其他个人因素、网络因素等原因。
+          required: true
+        - label: |
+            I have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
+            我已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
+          required: true
+  - type: textarea
+    attributes:
+      label: BiliTools version / BiliTools 版本
+      description: |
+        Please use the exact version code.
+        请使用确切的版本号。
+      placeholder: v1.x.x
     validations:
       required: true
+  - type: textarea
+    attributes:
+      label: Download link / 下载的资源链接
+      description: |
+        This can be a URL, or AV / BV number, etc.
+        可以是 URL 链接，或是 AV / BV 号等。
 
   - type: textarea
-    id: target_id
     attributes:
-      label: 搜索下载的：哔哩哔哩链接/AV/BV/SS/EP/AU/AM/SID/FID号
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps_to_reproduce
-    attributes:
-      label: 复现步骤
-      description: 请提供详细的复现步骤
+      label: Describe the bug / 问题描述
     validations:
       required: true
 
   - type: dropdown
-    id: environment
     attributes:
-      label: 系统环境
+      label: System type / 系统类型
       options:
         - Windows 10
         - Windows 11
-        - macOS M 芯片
-        - macOS Intel 芯片
-        - Linux
+        - macOS M-series Chip
+        - macOS Intel Chip
+        - Linux (Please add your distribution in Reproduction)
     validations:
       required: true
 
   - type: textarea
-    id: logs
     attributes:
-      label: 日志
+      label: Reproduction / 复现步骤
       description: |
-        请上传日志文件，或是粘贴（不推荐）
+        How to reproduce the problem you ran into?
+        如何复现你提到的问题？
+    validations:
+      required: true
 
-        Windows 日志文件路径：`C:\Users\用户名\AppData\Local\com.btjawa.bilitools\logs\BiliTools.log`
+  - type: textarea
+    attributes:
+      label: Logs / 日志
+      description: |
+        Please upload your logs.
+        请上传你的日志文件。
 
-        macOS 日志文件路径：`/Users/用户名/Library/Logs/com.btjawa.bilitools/BiliTools.log`
-        
-        也可在应用内的 设置 -> 存储 -> 缓存 下找到日志，点击左侧按钮可打开日志文件夹
-
+        Windows: %LOCALAPPDATA%\com.btjawa.bilitools\logs
+        macOS: $HOME/Library/Logs/com.btjawa.bilitools
     validations:
       required: true

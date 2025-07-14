@@ -1,33 +1,28 @@
-name: 功能请求
-description: 需要什么新功能？
-title: "[功能请求] "
+name: Feature Request / 功能请求
+description: Feature Request / 功能请求
+title: "[Feature Request] "
 labels: ["enhancement", "needs triage"]
 assignees: []
 
 body:
+  - type: checkboxes
+    attributes:
+      label: Please confirm before submitting
+      options:
+        - label: |
+            I have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
+            我已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
+          required: true
   - type: textarea
     id: description
     attributes:
-      label: 功能简述
-      description: 请对新功能进行详细描述
+      label: Description / 功能简述
     validations:
       required: true
 
   - type: textarea
     id: reference
     attributes:
-      label: 实现参考
-      description: 已有实现思路或参考？
-    validations:
-      required: true
-
-  - type: dropdown
-    id: environment
-    attributes:
-      label: 系统环境
-      options:
-        - Windows
-        - macOS
-        - Linux
+      label: Implement Reference / 实现参考
     validations:
       required: true
