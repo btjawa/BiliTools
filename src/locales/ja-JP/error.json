@@ -3,8 +3,10 @@
     "risk": "リスク管理をトリガーする、検証を実施してください",
     "invalidInput": "入力を解析できません",
     "loginExpired": "ログインの有効期限が切れています",
+    "needLogin": "この機能を使用するには、まずログインしてください",
     "countryListFailed": "国際電話番号の取得に失敗しました",
     "tryManualUpdate": "GitHub から手動で更新をダウンロードしてください",
     "multiSelectLimit": "一度に30個以上選択することはお勧めしません",
-    "errorProvider": "{0} からのエラー"
+    "errorProvider": "{0} からのエラー",
+    "searchPageNotReady": "検索ページの準備ができていません"
 }

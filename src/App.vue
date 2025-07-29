@@ -4,7 +4,6 @@
     <SideBar />
 	<Updater @contextmenu.prevent="showMenu" ref="updater" />
     <div class="main" @contextmenu.prevent="showMenu">
-        <div class="loading"></div>
         <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
                 <keep-alive><component :is="Component" class="page" ref="page" /></keep-alive>
@@ -93,16 +92,8 @@ onMounted(async () => {
 .fade-leave-to {
 	opacity: 0;
 }
-.loading {
-	@apply absolute w-8 h-8 top-0 right-0 m-6 opacity-0 z-[99] pointer-events-none;
-	@apply border-solid border-2 border-[color:var(--solid-block-color)] border-l-[color:var(--content-color)] rounded-full;
-	@apply transition-opacity animate-[circle_infinite_0.75s_linear];
-	&.active { opacity: 1 }
-}
-@keyframes circle {
-    0% { transform: rotate(0); }
-    100% { transform: rotate(360deg); }
-}
+
+
 @keyframes slideIn {
     from { mask-position: 0; }
     to { mask-position: -100vw; }

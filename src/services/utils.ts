@@ -130,10 +130,7 @@ export async function tryFetch(url: string | URL, options?: {
                 fetchOptions.body = JSON.stringify(options.post.body);
             }
         }
-        const loadingBox = document.querySelector('.loading');
-        loadingBox?.classList.add('active');
         const response = await fetch(url + params, fetchOptions);
-        loadingBox?.classList.remove('active');
         if (options?.type) {
             if (!response.ok) {
                 throw new ApplicationError(response.statusText, { code: response.status });

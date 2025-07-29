@@ -4,26 +4,74 @@
     "address": "Address",
     "account": "Account",
     "username": "Username",
-    "telephone": "Phone",
+    "telephone": "Phone Number",
     "password": "Password",
-    "verifyCode": "Code",
+    "verifyCode": "Verification Code",
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "exempt": "Data generated and acquired will be stored solely on the user's device.",
+    "exempt": "All data generated and obtained by this application will only be stored locally on the user's device",
     "bilibili": "Bilibili",
-    "wip": "Working in progress",
+    "wip": "This area is under construction",
     "refresh": "Refresh",
-    "unstable": "This feature is still unstable. Please use with caution.",
+    "unstable": "This feature is still unstable, please use with caution",
+    "history": {
+        "title": "Watch History",
+        "desc": "View your Bilibili watch history",
+        "tab": {
+            "all": "All History"
+        },
+        "empty": "No watch history",
+        "progress": "Progress",
+        "finished": "Finished",
+        "downloadCover": "Download Cover",
+        "addDownload": "Add Download",
+        "noMore": "No more items",
+        "daysAgo": "{days} days ago",
+        "hoursAgo": "{hours} hours ago",
+        "recentlyWatched": "Recently watched",
+        "coverDownloaded": "Cover downloaded successfully",
+        "addedToSearch": "Added to search page",
+        "noVideoId": "Unable to get video ID",
+        "search": {
+            "placeholder": "Search title or uploader..."
+        },
+        "filter": {
+            "moreFilters": "More Filters",
+            "duration": {
+                "title": "All Durations",
+                "all": "All Durations",
+                "under10": "Under 10 min",
+                "10to30": "10-30 min",
+                "30to60": "30-60 min",
+                "over60": "Over 60 min"
+            },
+            "time": {
+                "title": "All Time",
+                "all": "All Time",
+                "today": "Today",
+                "yesterday": "Yesterday",
+                "week": "This Week",
+                "custom": "Custom",
+                "startDate": "Start Date",
+                "endDate": "End Date",
+                "to": "to"
+            },
+            "apply": "Apply Filters",
+            "reset": "Reset",
+            "applied": "Filters applied",
+            "resetSuccess": "Filters reset"
+        }
+    },
     "default": {
         "dms": {
-            "6": "240P Smooth",
-            "16": "360P Fluent",
+            "6": "240P Speed",
+            "16": "360P Smooth",
             "32": "480P Clear",
             "48": "720P HD",
             "64": "720P HD",
             "80": "1080P HD",
-            "112": "1080P+ Bitrate",
-            "116": "1080P60 FPS",
+            "112": "1080P+ High Bitrate",
+            "116": "1080P60 High Frame Rate",
             "120": "4K Ultra HD",
             "125": "HDR True Color",
             "126": "Dolby Vision",
@@ -32,18 +80,13 @@
         "ads": {
             "30216": "64K",
             "30228": "128K",
-            "30232": "132K",
-            "30280": "192K",
-            "30380": "320K",
-            "30250": "Dolby Atmos",
-            "30251": "Hi-Res Lossless",
-            "30252": "Lossless FLAC"
+            "30250": "192K",
+            "30280": "320K"
         },
-        "cdc": {
-            "7": "AVC Encoding",
-            "12": "HEVC Encoding",
-            "13": "AV1 Encoding",
-            "-1": "Unknown"
+        "codecs": {
+            "7": "AVC",
+            "12": "HEVC",
+            "13": "AV1"
         },
         "fmt": {
             "0": "DASH Format",
@@ -51,23 +94,23 @@
             "2": "FLV Format"
         },
         "placeholders": {
-            "index": "Index (starting from 1)",
+            "index": "Index starting from 1",
             "title": "Title",
-            "upper": "Author Name",
-            "upperid": "Author ID (UID)",
-            "aid": "AV",
+            "upper": "Uploader Name",
+            "upperid": "Uploader ID UID",
+            "aid": "AV Number",
             "sid": "SID",
             "fid": "FID",
-            "bvid": "BV",
+            "bvid": "BV Number",
             "cid": "CID",
-            "epid": "EP",
-            "ssid": "SS",
+            "epid": "EP Number",
+            "ssid": "SS Number",
             "date_sec": "Date",
-            "ts_sec": "Timestamp (sec)",
-            "ts_ms": "Timestamp (ms)",
-            "dms": "Video Quality",
-            "cdc": "Codec Format",
-            "ads": "Audio Quality",
+            "ts_sec": "Timestamp seconds",
+            "ts_ms": "Timestamp milliseconds",
+            "dms": "Resolution/Quality",
+            "cdc": "Encoding Format",
+            "ads": "Bitrate/Audio Quality",
             "fmt": "Streaming Format"
         }
     },
@@ -75,5 +118,11 @@
         "cut": "Cut",
         "copy": "Copy",
         "paste": "Paste"
+    },
+    "sidebar": {
+        "home": "Home",
+        "download": "Downloads",
+        "settings": "Settings",
+        "user": "Profile"
     }
 }

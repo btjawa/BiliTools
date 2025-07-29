@@ -14,6 +14,54 @@
     "wip": "此处施工中",
     "refresh": "刷新",
     "unstable": "此功能尚不稳定，请谨慎使用",
+    "history": {
+        "title": "观看历史",
+        "desc": "查看你的B站观看记录",
+        "tab": {
+            "all": "全部历史"
+        },
+        "empty": "暂无观看记录",
+        "progress": "进度",
+        "finished": "已完成",
+        "downloadCover": "下载封面",
+        "addDownload": "添加下载",
+        "noMore": "没有更多了",
+        "daysAgo": "{days}天前",
+        "hoursAgo": "{hours}小时前",
+        "recentlyWatched": "刚刚观看",
+        "coverDownloaded": "封面下载成功",
+        "addedToSearch": "已添加到搜索页面",
+        "noVideoId": "无法获取视频ID",
+        "search": {
+            "placeholder": "搜索标题或UP主..."
+        },
+        "filter": {
+            "moreFilters": "更多筛选",
+            "duration": {
+                "title": "全部时长",
+                "all": "全部时长",
+                "under10": "10分钟以下",
+                "10to30": "10-30分钟",
+                "30to60": "30-60分钟",
+                "over60": "60分钟以上"
+            },
+            "time": {
+                "title": "全部时间",
+                "all": "全部时间",
+                "today": "今天",
+                "yesterday": "昨天",
+                "week": "近一周",
+                "custom": "自定义",
+                "startDate": "开始日期",
+                "endDate": "结束日期",
+                "to": "至"
+            },
+            "apply": "应用筛选",
+            "reset": "重置",
+            "applied": "筛选条件已应用",
+            "resetSuccess": "筛选条件已重置"
+        }
+    },
     "default": {
         "dms": {
             "6": "240P 极速",
@@ -32,18 +80,13 @@
         "ads": {
             "30216": "64K",
             "30228": "128K",
-            "30232": "132K",
-            "30280": "192K",
-            "30380": "320K",
-            "30250": "杜比全景声",
-            "30251": "Hi-Res无损",
-            "30252": "无损 FLAC"
+            "30250": "192K",
+            "30280": "320K"
         },
-        "cdc": {
-            "7": "AVC 编码",
-            "12": "HEVC 编码",
-            "13": "AV1 编码",
-            "-1": "未知"
+        "codecs": {
+            "7": "AVC",
+            "12": "HEVC",
+            "13": "AV1"
         },
         "fmt": {
             "0": "DASH 格式",
@@ -70,6 +113,12 @@
             "ads": "比特率/音质",
             "fmt": "串流格式"
         }
+    },
+    "sidebar": {
+        "home": "主页",
+        "download": "下载管理",
+        "settings": "设置",
+        "user": "个人信息"
     },
     "context_menu": {
         "cut": "剪切",

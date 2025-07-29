@@ -862,3 +862,40 @@ export interface SteinInfo {
     }[];
   };
 }
+
+// History API types
+export interface HistoryItem {
+  title: string;
+  long_title?: string;
+  cover: string;
+  author_name: string;
+  uri: string;
+  history: {
+    oid: number;
+    business: string;
+    page?: number;
+    bvid?: string;
+  };
+  duration: number;
+  progress: number;
+  show_title?: string;
+  view_at: number;
+}
+
+export interface HistoryAPIResponse {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    cursor: {
+      max: number;
+      view_at: number;
+      business: string;
+    };
+    tab: {
+      business: string;
+      name: string;
+    }[];
+    list: HistoryItem[];
+  };
+}

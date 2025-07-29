@@ -11,6 +11,7 @@ const router = createRouter({
     { path: '/', component: SearchPage },
     { path: '/down-page', component: DownPage },
     { path: '/setting-page', component: SettingPage },
+    { path: '/history', component: () => import('@/views/HistoryPage.vue') },
   ],
 });
 
