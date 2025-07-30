@@ -14,6 +14,60 @@
     "wip": "ここは工事中です",
     "refresh": "リフレッシュ",
     "unstable": "この機能はまだ安定していません。ご利用の際はご注意ください。",
+    "history": {
+        "title": "視聴履歴",
+        "desc": "あなたのBilibili視聴記録を見る",
+        "tab": {
+            "all": "全履歴"
+        },
+        "empty": "視聴記録がありません",
+        "progress": "進捗",
+        "finished": "完了",
+        "downloadCover": "カバーをダウンロード",
+        "addDownload": "ダウンロードに追加",
+        "noMore": "これ以上ありません",
+        "daysAgo": "{days}日前",
+        "hoursAgo": "{hours}時間前",
+        "recentlyWatched": "さっき視聴",
+        "coverDownloaded": "カバーのダウンロードに成功しました",
+        "addedToSearch": "検索ページに追加されました",
+        "noVideoId": "ビデオIDを取得できません",
+        "search": {
+            "placeholder": "タイトルやUP主を検索..."
+        },
+        "filter": {
+            "moreFilters": "詳細フィルター",
+            "duration": {
+                "title": "すべての時間",
+                "all": "すべての時間",
+                "under10": "10分未満",
+                "10to30": "10-30分",
+                "30to60": "30-60分",
+                "over60": "60分以上"
+            },
+            "time": {
+                "title": "すべての時間",
+                "all": "すべての時間",
+                "today": "今日",
+                "yesterday": "昨日",
+                "week": "過去1週間",
+                "custom": "カスタム",
+                "startDate": "開始日",
+                "endDate": "終了日",
+                "to": "から"
+            },
+            "apply": "適用",
+            "reset": "リセット",
+            "applied": "フィルターが適用されました",
+            "resetSuccess": "フィルターがリセットされました"
+        }
+    },
+    "sidebar": {
+        "home": "ホームページ",
+        "download": "ダウンロード管理",
+        "settings": "設定",
+        "user": "個人情報"
+    },
     "default": {
         "dms": {
             "6": "240P 高速",

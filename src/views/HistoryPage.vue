@@ -80,18 +80,24 @@
             <div v-if="selectedTimeRange === 'custom'" class="mt-3 space-y-2">
               <div class="flex flex-col gap-1">
                 <label class="text-xs text-[var(--desc-color)]">{{ $t('common.history.filter.time.startDate') }}</label>
-                <input type="date" 
+                <input type="text"
                        v-model="customStartDate"
                        class="text-sm border border-[var(--split-color)] rounded px-2 py-1 bg-[var(--button-color)] text-[var(--content-color)]"
-                       :max="customEndDate">
+                       :max="customEndDate"
+                       @focus="$event.target.type='date'"
+                       @blur="handleDateInputBlur"
+                       ref="customStartDateInput">
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-xs text-[var(--desc-color)]">{{ $t('common.history.filter.time.endDate') }}</label>
-                <input type="date" 
+                <input type="text"
                        v-model="customEndDate"
                        class="text-sm border border-[var(--split-color)] rounded px-2 py-1 bg-[var(--button-color)] text-[var(--content-color)]"
                        :min="customStartDate"
-                       :max="today">
+                       :max="today"
+                       @focus="$event.target.type='date'"
+                       @blur="handleDateInputBlur"
+                       ref="customEndDateInput">
               </div>
             </div>
           </div>
@@ -244,6 +250,8 @@ const selectedDuration = ref('all');
 const selectedTimeRange = ref('all');
 const customStartDate = ref('');
 const customEndDate = ref('');
+const customStartDateInput = ref<HTMLInputElement | null>(null);
+const customEndDateInput = ref<HTMLInputElement | null>(null);
 
 // Filter options with translation keys
 const durationOptions = [
@@ -374,7 +382,19 @@ function resetFilters() {
   selectedTimeRange.value = 'all';
   customStartDate.value = '';
   customEndDate.value = '';
+  if (customStartDateInput.value) customStartDateInput.value.type = 'text';
+  if (customEndDateInput.value) customEndDateInput.value.type = 'text';
   AppLog(t('common.history.filter.resetSuccess'), TYPE.INFO);
+}
+
+// Handle date input blur to format display value
+function handleDateInputBlur(event: FocusEvent) {
+  const input = event.target as HTMLInputElement;
+  if (input.value) {
+    input.type = 'text';
+    const date = parseLocalDate(input.value);
+    input.value = date.toLocaleDateString();
+  }
 }
 
 // Refresh history data
