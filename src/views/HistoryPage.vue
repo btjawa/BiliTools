@@ -135,8 +135,8 @@
 
       <div v-else class="p-4 space-y-3">
         <div v-for="item in filteredHistoryList" :key="item.history.oid" 
-             class="history-item group flex bg-[var(--block-color)] rounded-lg p-3 hover:bg-[var(--hover-color)] transition-colors cursor-pointer"
-             @click="playVideo(item)">
+             class="history-item group flex bg-[var(--block-color)] rounded-lg p-3 hover:bg-[var(--hover-color)] transition-colors"
+             @dblclick="playVideo(item)">
           
           <!-- Cover with duration overlay -->
           <div class="flex-shrink-0 relative">
@@ -160,11 +160,13 @@
           <div class="flex-1 min-w-0 flex flex-col justify-between">
             <!-- Title and metadata -->
             <div>
-              <h3 class="text-base font-medium line-clamp-2 mb-1 leading-5 text-[var(--content-color)]">
+              <h3 class="text-base font-medium line-clamp-2 mb-1 leading-5 text-[var(--content-color)] hover:text-[var(--primary-color)] cursor-text transition-colors select-text"
+                  @dblclick.stop="openVideo(item)">
                 {{ item.title }}
               </h3>
               <div class="flex items-center gap-2 text-sm text-[var(--desc-color)] mb-1">
-                <span class="hover:text-[var(--primary-color)] cursor-pointer transition-colors">
+                <span class="hover:text-[var(--primary-color)] cursor-text transition-colors select-text"
+                      @dblclick.stop="openAuthorSpace(item)">
                   {{ item.author_name }}
                 </span>
                 <span>•</span>
@@ -215,13 +217,14 @@
 import { ref, onMounted, nextTick, computed } from 'vue';
 import { save } from '@tauri-apps/plugin-dialog';
 import { useUserStore, useQueueStore } from '@/store';
-import { getHistory } from '@/services/data';
+import { getHistory, getMediaInfo } from '@/services/data';
 import { tryFetch, ApplicationError, getImageBlob } from '@/services/utils';
 import { TYPE } from 'vue-toastification';
 import { AppLog } from '@/services/utils';
 import * as Types from '@/types/data.d';
 import { useI18n } from 'vue-i18n';
 import { Empty } from '@/components';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 const { t } = useI18n();
 const user = useUserStore();
@@ -552,6 +555,61 @@ async function addToDownload(item: Types.HistoryItem) {
       AppLog(t('error.searchPageNotReady'), TYPE.WARNING);
     }
   } catch (err) {
+    new ApplicationError(err).handleError();
+  }
+}
+
+// Open video in browser
+async function openVideo(item: Types.HistoryItem) {
+  try {
+    console.log('openVideo called with item:', item);
+    if (!item.history.bvid && !item.history.oid) {
+      throw new Error('No video ID available');
+    }
+    
+    // Use BVID if available, otherwise use aid
+    const id = item.history.bvid || `av${item.history.oid}`;
+    const videoUrl = `https://www.bilibili.com/video/${id}`;
+    console.log('Opening video URL:', videoUrl);
+    
+    await openUrl(videoUrl);
+  } catch (err) {
+    console.error('openVideo error:', err);
+    new ApplicationError(err).handleError();
+  }
+}
+
+// Open author space in browser
+async function openAuthorSpace(item: Types.HistoryItem) {
+  try {
+    console.log('openAuthorSpace called with item:', item);
+    
+    // Try to get video info first to obtain accurate mid
+    if (item.history.bvid || item.history.oid) {
+      try {
+        const id = item.history.bvid || `av${item.history.oid}`;
+        console.log('Getting media info for ID:', id);
+        
+        const mediaInfo = await getMediaInfo(id, Types.MediaType.Video);
+        console.log('Media info retrieved:', mediaInfo.nfo.upper);
+        
+        if (mediaInfo.nfo.upper?.mid) {
+          const spaceUrl = `https://space.bilibili.com/${mediaInfo.nfo.upper.mid}`;
+          console.log('Opening author space URL:', spaceUrl);
+          await openUrl(spaceUrl);
+          return;
+        }
+      } catch (apiError) {
+        console.warn('API call failed, falling back to search:', apiError);
+      }
+    }
+    
+    // Fallback: search for the author name on bilibili
+    const searchUrl = `https://search.bilibili.com/upuser?keyword=${encodeURIComponent(item.author_name)}`;
+    console.log('Opening search URL:', searchUrl);
+    await openUrl(searchUrl);
+  } catch (err) {
+    console.error('openAuthorSpace error:', err);
     new ApplicationError(err).handleError();
   }
 }
