@@ -19,6 +19,18 @@
         </button>
       </div>
       
+      <!-- Refresh Button -->
+      <button @click="refresh" 
+              :disabled="refreshing"
+              class="flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-200"
+              :class="{ 
+                'text-[var(--primary-color)]': refreshing, 
+                'text-[var(--desc-color)] hover:text-[var(--content-color)]': !refreshing,
+                'opacity-60 cursor-not-allowed': refreshing 
+              }">
+        <i :class="['fa-solid fa-refresh transition-transform duration-500', { 'animate-spin': refreshing }]"></i>
+      </button>
+      
       <!-- Filter Control -->
       <button @click="filterExpanded = !filterExpanded" 
               class="flex items-center gap-2 text-[var(--primary-color)] hover:opacity-80 transition-opacity bg-[color:var(--block-color)] px-3 py-2 rounded-lg">
@@ -217,6 +229,7 @@ const queue = useQueueStore();
 
 const historyList = ref<Types.HistoryItem[]>([]);
 const loading = ref(false);
+const refreshing = ref(false);
 const hasMore = ref(true);
 const viewAt = ref<number | undefined>(undefined);
 const scrollContainer = ref<HTMLElement>();
@@ -359,6 +372,24 @@ function resetFilters() {
   customStartDate.value = '';
   customEndDate.value = '';
   AppLog(t('common.history.filter.resetSuccess'), TYPE.INFO);
+}
+
+// Refresh history data
+async function refresh() {
+  if (refreshing.value || !user.isLogin) return;
+  
+  refreshing.value = true;
+  try {
+    // Reset pagination state
+    historyList.value = [];
+    viewAt.value = undefined;
+    hasMore.value = true;
+    
+    // Load fresh data
+    await loadMore();
+  } finally {
+    refreshing.value = false;
+  }
 }
 
 // Load more history data
