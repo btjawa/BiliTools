@@ -4,19 +4,11 @@
 <h1>BiliTools - 哔哩哔哩工具箱</h1>
 
 <div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
-</a>
-<img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-</a>
+<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
+<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
 <a href="https://trendshift.io/repositories/13286" target="_blank">
