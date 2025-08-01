@@ -1,22 +1,15 @@
 export const QualityMap = {
-  dms: [
-    { id: 6 }, { id: 16 }, { id: 32 }, { id: 64 },
-    { id: 80 }, { id: 112 }, { id: 116 }, { id: 120 },
-    { id: 125 }, { id: 126 }, { id: 127 },
-  ],
-  ads: [
-    { id: 30216 }, { id: 30228 }, { id: 30232 }, { id: 30280 },
-    { id: 30250 }, { id: 30380 }, { id: 30251 }, { id: 30252 },
-  ],
-  cdc: [{ id: 7 }, { id: 12 }, { id: 13 }],
-  fmt: [{ id: 0 }, { id: 1 }, { id: 2 }]
+  res: [6, 16, 32, 64, 80, 112, 116, 120, 125, 126, 127],
+  abr: [30216, 30228, 30232, 30280, 30250, 30380, 30251, 30252],
+  enc: [7, 12, 13],
+  fmt: [StreamFormat.Dash, StreamFormat.Mp4, StreamFormat.Flv],
 }
 
 export interface CurrentSelect {
-  dms: number;
-  ads: number;
-  cdc: number;
-  fmt: number
+  res: number;
+  abr: number;
+  enc: number;
+  fmt: StreamFormat;
 };
 
 export const FilenamePlaceholders = [
@@ -76,22 +69,10 @@ export enum MediaType {
   Favorite = "favorite",
 }
 
-export enum StreamCodecType {
+export enum StreamFormat {
   Dash = "dash",
   Mp4 = "mp4",
   Flv = "flv",
-}
-
-export const StreamCodecMap: Record<number, StreamCodecType> = {
-  0: StreamCodecType.Dash,
-  1: StreamCodecType.Mp4,
-  2: StreamCodecType.Flv
-};
-
-export const ReverseStreamCodecMap: Record<StreamCodecType, number> = {
-  [StreamCodecType.Dash]: 0,
-  [StreamCodecType.Mp4]: 1,
-  [StreamCodecType.Flv]: 2
 }
 
 export interface PlayUrlResult {
@@ -121,8 +102,7 @@ export interface PlayUrlProvider {
   videoQualities?: number[];
   audio?: PlayUrlResult[];
   audioQualities?: number[];
-  codec: StreamCodecType;
-  codecid: number;
+  codec: StreamFormat;
 }
 
 export interface OthersProvider {
@@ -146,7 +126,7 @@ export interface MediaInfo {
       name: string;
       mid: number;
       avatar: string;
-    };
+    } | null;
     actors: {
       role: string;
       name: string;
@@ -175,6 +155,7 @@ export interface MediaInfo {
     desc: string;
     duration: number;
     pubtime: number; // sec timestamp
+    isTarget: boolean;
     type?: MediaType; // specific type
     aid?: number; // general video
     sid?: number; // music
@@ -346,7 +327,7 @@ export interface BangumiInfo {
     styles: string[];
     subtitle: string;
     title: string;
-    up_info: {
+    up_info?: {
       avatar: string;
       follower: number;
       is_follow: number;
@@ -438,7 +419,7 @@ export interface MusicUpperInfo {
   data: {
     uid: number;
     uname: string;
-    avatar: string;
+    avater: string;
     sign: string;
   }
 }

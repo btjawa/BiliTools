@@ -4,12 +4,12 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "minWidth": 1150,
-        "minHeight": 800,
+        "minWidth": 800,
+        "minHeight": 600,
         "title": "BiliTools",
         "label": "main",
-        "width": 1150,
-        "height": 800,
+        "width": 800,
+        "height": 600,
         "titleBarStyle": "Overlay",
         "transparent": true,
         "dragDropEnabled": false

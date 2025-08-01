@@ -1,4 +1,4 @@
-import { ApplicationError, tryFetch, getImageBlob } from "@/services/utils";
+import { ApplicationError, tryFetch, getBlob } from "@/services/utils";
 import { useAppStore, useUserStore } from "@/store";
 import { Channel } from "@tauri-apps/api/core";
 import { commands } from "@/services/backend";
@@ -22,11 +22,11 @@ export async function fetchUser() {
     }) as UserTypes.UserInfoResp;
     const userStat = await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as UserTypes.UserStatResp;
     user.$patch({
-        avatar: await getImageBlob(userInfo.data.face + '@100w_100h'),
+        avatar: await getBlob(userInfo.data.face + '@100w_100h'),
         name: userInfo.data.name, desc: userInfo.data.sign,
         mid: userInfo.data.mid, level: userInfo.data.level,
-        vipLabel: await getImageBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static),
-        topPhoto: await getImageBlob(userInfo.data.top_photo_v2.l_img + '@170h'),
+        vipLabel: await getBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static),
+        topPhoto: await getBlob(userInfo.data.top_photo_v2.l_img + '@170h'),
         stat: {
             coins: userInfo.data.coins,
             following: userStat.data.following,
@@ -122,10 +122,10 @@ export async function genQrcode(canvas: HTMLCanvasElement): Promise<string> {
     return body.data.qrcode_key;
 }
 
-export async function scanLogin(qrcode_key: string, onEvent: (event: { code: number }) => void): Promise<number> {
+export async function scanLogin(qrcode_key: string, onEvent: (code: number ) => void): Promise<number> {
     const event = new Channel<number>();
     event.onmessage = (code) => {
-        onEvent({ code });
+        onEvent(code);
     }
     const result = await commands.scanLogin(qrcode_key, event);
     if (result.status === 'error') throw result.error;

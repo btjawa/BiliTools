@@ -38,7 +38,9 @@
       "nsis": {
         "languages": [
           "SimpChinese",
-          "English"
+          "TradChinese",
+          "English",
+          "Japanese"
         ],
         "displayLanguageSelector": true
       }

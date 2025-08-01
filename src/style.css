@@ -6,13 +6,9 @@
 @tailwind utilities;
 
 @layer base {
-    h1, h2 {
-        @apply font-bold;
+    h1 {
+        @apply text-2xl font-semibold;
     }
-    h2 {
-        font-size: 20px;
-    }
-    
 }
 
 ::-webkit-scrollbar {
@@ -91,10 +87,11 @@ a {
 }
 
 hr {
-    background-color: var(--split-color);
-    border: none;
-    height: 1px;
-    margin: 8px 0;
+    @apply border-none h-px my-4 bg-[var(--split-color)]
+}
+
+img {
+    -webkit-user-drag: none;
 }
 
 button, input[type='text'], input[type='password'], input[type='number'] {
@@ -122,16 +119,37 @@ button, input[type='text'], input[type='password'], input[type='number'] {
     }
 }
 
+.tab {
+    @apply flex flex-col items-start gap-1;
+}
+
+.tab button {
+    @apply pr-0 w-48 flex items-center justify-end gap-2 bg-transparent;
+    @apply hover:bg-[color:var(--button-color)];
+    i {
+        @apply w-4;
+    }
+    label {
+        @apply w-[3px] rounded-md h-4 invisible;
+    }
+    &.active {
+        @apply bg-[color:var(--button-color)];
+        label {
+            @apply visible;
+        }
+    }
+}
+
 button {
     @apply hover:cursor-pointer;
 }
 
 i.question {
-    @apply hover:cursor-pointer hover:brightness-[85%] text-[color:var(--desc-color)] ml-2;
+    @apply hover:cursor-pointer hover:brightness-[85%] text-[color:var(--desc-color)];
 }
 
-button i + span, button span + i {
-    margin-left: 8px;
+i + span, span + i {
+    @apply ml-2;
 }
 
 .bcc-iconfont {
@@ -150,11 +168,7 @@ button i + span, button span + i {
     font-size: 14px;
     color: var(--desc-color);
     display: inline-block;
-}
-
-.dis-placeholder {
-    color: #c4c4c450;
-    pointer-events: none;
+    white-space: pre-wrap;
 }
 
 .text, .text * {

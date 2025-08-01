@@ -72,17 +72,17 @@ async init(secret: string) : Promise<Result<InitData, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null, TauriError>> {
+async initLogin(secret: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_size", { path, event }) };
+    return { status: "ok", data: await TAURI_INVOKE("init_login", { secret }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async cleanCache(path: string) : Promise<Result<null, TauriError>> {
+async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path }) };
+    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -104,9 +104,25 @@ async xmlToAss(secret: string, output: string, contents: number[]) : Promise<Res
     else return { status: "error", error: e  as any };
 }
 },
-async rwConfig(action: ConfigAction, settings: { [key in string]: JsonValue } | null, secret: string) : Promise<Result<null, TauriError>> {
+async newFolder(secret: string, path: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("rw_config", { action, settings, secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("new_folder", { secret, path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_size", { path, event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cleanCache(path: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -115,14 +131,6 @@ async rwConfig(action: ConfigAction, settings: { [key in string]: JsonValue } | 
 async setTheme(theme: Theme, modify: boolean) : Promise<Result<Theme, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_theme", { theme, modify }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async newFolder(secret: string, path: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("new_folder", { secret, path }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -168,12 +176,10 @@ async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise
 export const events = __makeEvents__<{
 headers: Headers,
 queueEvent: QueueEvent,
-settings: Settings,
 sidecarError: SidecarError
 }>({
 headers: "headers",
 queueEvent: "queue-event",
-settings: "settings",
 sidecarError: "sidecar-error"
 })
 
@@ -184,20 +190,21 @@ sidecarError: "sidecar-error"
 /** user-defined types **/
 
 export type ArchiveInfo = { title: string; desc: string; nfo: NfoInfo; pubtime: string; cover: string; ts: Timestamp; folder: string; filename: string }
-export type ConfigAction = "init" | "write"
 export type DownloadEvent = { status: "Started"; id: string; gid: string; taskType: TaskType } | { status: "Progress"; id: string; gid: string; contentLength: number; chunkLength: number } | { status: "Finished"; id: string; gid: string }
-export type Headers = ({ [key in string]: string }) & { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { version: string; hash: string; downloads: QueueInfo[] }
-export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
+export type Headers = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
+export type InitData = { version: string; hash: string; downloads: QueueInfo[]; config: Settings; paths: Paths }
+export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type NfoActor = { role: string; name: string }
-export type NfoInfo = { tags: string[]; thumbs: JsonValue; showtitle: string; premiered: string; upper: NfoUpper; actors: NfoActor[]; staff: string[] }
+export type NfoInfo = { tags: string[]; thumbs: JsonValue; showtitle: string; premiered: string; upper: NfoUpper | null; actors: NfoActor[]; staff: string[] }
 export type NfoUpper = { name: string; mid: number | null; avatar: string | null }
+export type Paths = { log: string; temp: string; webview: string; database: string }
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; tasks: Task[]; output: string; temp_dir: string; info: ArchiveInfo }
 export type QueueType = "waiting" | "doing" | "complete"
-export type Settings = { max_conc: number; temp_dir: string; down_dir: string; df_dms: number; df_ads: number; df_cdc: number; auto_check_update: boolean; auto_download: boolean; proxy: SettingsProxy; advanced: SettingsAdvanced; theme: Theme; language: string }
-export type SettingsAdvanced = { prefer_pb_danmaku: boolean; add_metadata: boolean; filename_format: string; folder_format: string }
-export type SettingsProxy = { addr: string; username: string; password: string }
+export type Settings = { add_metadata: boolean; auto_download: boolean; check_update: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; temp_dir: string; theme: Theme; protobuf_danmaku: boolean; proxy: SettingsProxy }
+export type SettingsDefault = { res: number; abr: number; enc: number }
+export type SettingsFormat = { filename: string; folder: string; favorite: string }
+export type SettingsProxy = { address: string; username: string; password: string }
 export type SidecarError = { name: string; error: string }
 export type Task = { urls: string[] | null; gid: string | null; taskType: TaskType; path: string | null }
 export type TaskType = "video" | "audio" | "merge" | "metadata"

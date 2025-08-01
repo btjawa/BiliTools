@@ -33,7 +33,7 @@
 
 💡 [Tauri v2](https://github.com/tauri-apps/tauri) をベースに開発され、ビリビリの様々なリソースの解析とダウンロードに対応しています。今後も [さらなる機能](https://github.com/users/btjawa/projects/4) の追加を予定しています。
 
-📖 ドキュメント・その他情報: [https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) (中国語のみ)
+📖 ドキュメント・その他情報: [https://btjawa.top/bilitools](https://btjawa.top/bilitools) (中国語のみ)
 
 > [!IMPORTANT] 
 > **本プロジェクトは [ビリビリ中国版](https://www.bilibili.com) を対象としています。[ビリビリ海外版](https://www.bilibili.tv) には対応していません。**<br>
@@ -90,14 +90,14 @@
 
 ## ⚡ 寄付のお願い
 
-本プロジェクトは 2k+ Stars を超えるご支持をいただいています。心より感謝いたします！
+本プロジェクトは 3k+ Stars を超えるご支持をいただいています。心より感謝いたします！
 
-現在、`v1.3.8` ~ `v1.4.0` のバージョンに向けて、様々な新機能改善の実装を進めています。
+現在、`v1.4.0` バージョンに向けて、様々な新機能改善の実装を進めています。
 
 もしこのプロジェクトが役に立ったと感じていただけたら、  
 ぜひコーヒー1杯分のご支援をいただけると、嬉しいです：
 
-- [Aifadian / 爱发电](https://afdian.com/a/BTJ_Shiroi)
+- [爱发电 (afdian)](https://afdian.com/a/BTJ_Shiroi)
 
 皆様からのご支援が、継続的な開発・改善の大きな原動力になります！
 

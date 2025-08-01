@@ -1,274 +1,196 @@
-<template><div>
-    <div v-if="user.isLogin" class="profile w-full absolute max-w-7xl bg-[color:var(--block-color)]">
-        <div class="profile__top_photo relative" :style="{ opacity: user.topPhoto ? 1 : 0 }">
-            <img :src=user.topPhoto draggable="false" class="w-full" />
+<template>
+<div class="flex h-fit w-fit m-auto p-0 bg-[var(--block-color)] rounded-lg" :class="{ 'flex-row': !user.isLogin }">
+<div v-if="user.isLogin" class="max-w-7xl">
+    <div class="relative">
+        <div class="absolute w-full h-full z-10 bg-gradient-to-b from-transparent to-black/50"></div>
+        <img class="z-0" :src="user.topPhoto"/>
+    </div>
+    <div class="flex p-6 gap-4 items-end">
+        <div class="relative w-fit">
+            <img class="rounded-full" :src="user.avatar">
+            <img class="absolute w-7 right-0 bottom-0" v-if="user.vipLabel" src="@/assets/img/user/big-vip.svg">
         </div>
-        <div class="profile__meta relative flex items-center mx-10">
-            <div class="avatar -translate-y-2.5 w-[104px] h-[104px] rounded-full">
-                <img :src="user.avatar" class="rounded-full" />
-                <img v-if="user.vipLabel" class="w-[30px] absolute right-0 bottom-0" src="/src/assets/img/profile/big-vip.svg" />
+        <div class="flex flex-col gap-2 self-center">
+            <div class="flex gap-2 items-center">
+                <h1 class="text-2xl font-bold">{{ user.name }}</h1>
+                <img class="h-5" v-if="user.vipLabel" :src="user.vipLabel">
             </div>
-            <div class="details absolute top-[10px] ml-[120px]">
-                <div class="mb-[6px] flex items-center gap-2">
-                    <h2>{{ user.name }}</h2>
-                    <img draggable="false" class="h-[14px]" :src="level" />
-                    <img draggable="false" class="h-5" v-if="user.vipLabel" :src="user.vipLabel" />
-                </div>
-                <span class="text-[var(--desc-color)] text-sm w-[530px] text">{{ user.desc }}</span>
+            <span class="text-sm">{{ user.desc }}</span>
+        </div>
+        <div class="flex gap-2 ml-auto">
+            <div v-for="[k, v] in Object.entries(user.stat)" class="flex flex-col text-sm text-center">
+                <span class="desc">{{ $t('user.stat.' + k) }}</span>
+                <span>{{ v }}</span>
             </div>
-            <div class="stat ml-auto mr-6 text">
-                <div class="stat__item" v-for="item in Object.keys(user.stat)">
-                    <span>{{ $t('user.stat.' + item) }}</span>
-                    <span>{{ (user.stat as any)[item] }}</span>
-                </div>
-            </div>
-            <button @click="tryLogin('exit')">{{ $t('user.exit') }}</button>
+        </div>
+        <button class="primary-color" @click="req('exit')">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>{{ $t('user.exit') }}</span>
+        </button>
+    </div>
+</div>
+<template v-else>
+<div class="flex flex-col items-center gap-4 m-16">
+    <h1>{{ $t('user.scan') }}</h1>
+    <div class="relative flex w-[160px] p-2 rounded-lg bg-white">
+        <img v-if="v.scanStatus === -1"
+            src="@/assets/img/user/loadTV.gif"
+            class="absolute m-[22px]"
+        />
+        <div v-if="v.scanStatus === 86038 || v.scanStatus === 86090" @click="req('scan')"
+            class="absolute flex flex-col items-center justify-center gap-2 w-36 h-36 bg-white cursor-pointer"
+        >
+            <i
+                class="fa-solid text-[var(--primary-color)] text-2xl"
+                :class="{ 'fa-arrow-rotate-right': v.scanStatus === 86038, 'fa-check': v.scanStatus === 86090 }"
+            ></i>
+            <span class="desc m-0">{{ $t('user.info.' + v.scanStatus) }}</span>
+        </div>
+        <canvas ref="qrcode" class="w-36 h-36"></canvas>
+    </div>
+    <span class="desc">{{ $t('user.getScan') }}</span>
+</div>
+<div class="flex flex-col items-center gap-4 mr-16">
+    <div class="flex gap-8 tabs">
+        <h1 @click="v.tab = 0" :class="{ 'active': !v.tab }">{{ $t('user.pwd') }}</h1>
+        <h1 @click="v.tab = 1" :class="{ 'active':  v.tab }">{{ $t('user.sms') }}</h1>
+    </div>
+    <div class="w-96 flex flex-col form">
+        <div class="flex">
+            <Dropdown v-if="v.tab" class="dropdown inline-block min-w-[52px]"
+                :drop="v.countries" v-model="v.cid"
+            />
+            <span v-else>{{ $t('user.account') }}</span>
+            <input
+                type="text" spellcheck="false"
+                :placeholder="$t('user.input', [v.tab ? $t('user.phone') : $t('user.account')])"
+                v-model="form[1]"
+            />
+            <button v-if="v.tab" class="h-5 bg-transparent p-0 ml-auto" @click="req('sendSms')">{{ $t('user.sendSms') }}</button>
+        </div>
+        <hr class="m-0" />
+        <div>
+            <span>{{ v.tab ? $t('user.code') : $t('user.password') }}</span>
+            <input
+                type="text" spellcheck="false"
+                :placeholder="$t('user.input', [v.tab ? $t('user.code') : $t('user.password')])"
+                v-model="form[2]"
+            />
         </div>
     </div>
-    <div v-else class="login flex relative border border-solid border-[var(--split-color)] rounded-lg">
-        <div class="h-[350px]">
-            <h3 class="mb-[26px]">{{ $t('user.scan.title') }}</h3>
-            <div class="relative box-content w-40 h-40 p-[5px] border border-solid border-[var(--desc-color)] rounded-lg bg-white">
-                <img src="/src/assets/img/login/loadTV.gif" class="absolute m-[30px] z-0" />
-                <canvas ref="loginQrcode" class="relative z-1"></canvas>
-                <div v-if="scanCode === 86038 || scanCode === 86090" @click="tryLogin('scan')"
-                    class="absolute flex w-[172px] h-[172px] z-2 bg-opacity-50 bg-black -top-px -left-px
-                    flex-col gap-2.5 justify-center items-center cursor-pointer rounded-md text-sm"
-                >
-                    <i :class="{'fa-solid': true, 'fa-arrow-rotate-right': scanCode === 86038, 'fa-check': scanCode === 86090}"
-                        class="w-14 h-14 p-4 text-[24px] bg-white text-[var(--primary-color)] rounded-full"
-                    ></i>
-                    <span class="whitespace-pre-wrap text-center text-[color:var(--dark-button-color)]">{{ $t('user.scan.' + scanCode) }}</span>
-                </div>
-            </div>
-            <i18n-t keypath="user.scan.desc" tag="span" class="desc mt-[18px]" scope="global">
-            <template v-slot:link>
-                <a @click="openUrl('https://app.bilibili.com')">{{ $t('user.scan.client') }}</a><br>
-            </template>
-            </i18n-t>
-        </div>
-        <div class="split h-[228px] mt-[51px] mx-[45px]"></div>
-        <div class="flex relative h-[290px] w-[400px] flex-col items-center">
-            <div class="others__tab flex mb-[26px] h-fit items-center hover:cursor-pointer">
-                <h3 @click="othersPage = 0" :class="othersPage !== 0 || 'active'">
-                    {{ $t('user.others.pwd') }}
-                </h3>
-                <div class="split h-5 mx-[21px]"></div>
-                <h3 @click="othersPage = 1" :class="othersPage !== 1 || 'active'">
-                    {{ $t('user.others.sms') }}
-                </h3>
-            </div>
-            <div class="others__page w-full">
-                <form class="rounded-lg border boredr-solid border-[var(--split-color)]">
-                    <div class="form_item border-b-[color:var(--split-color)] border-b border-solid">
-                        <span v-if="!othersPage">{{ $t('common.account') }}</span>
-                        <template v-else>
-                        <div class="w-[42px] relative cursor-pointer" @click="dropdownActive = !dropdownActive" ref="dropdownButton">
-                            +{{ cid }}
-                            <i class="fa-solid fa-triangle text-[10px] absolute -right-3 top-1.5 rotate-180"></i>
-                        </div>
-                        <Dropdown class="!absolute z-20 pointer-events-none translate-y-6"
-                            :drop="countryList.map(v => ({
-                                id: v.country_id, name: v.cname + ' +' + v.country_id
-                            }))" :emit="(v) => cid = v" :id="cid"
-                            :use-active="{ active: dropdownActive, close: () => dropdownActive = false, target: dropdownButton }"
-                        ></Dropdown>
-                        </template>
-                        <input v-model="tel"
-                            @input="tel=tel.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
-                            autocomplete="new-password" class="z-10" spellcheck="false"
-                            :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'account' : 'telephone'}`)])"
-                        />
-                        <template v-if="othersPage">
-                        <div class="split h-[22px] mx-[20px]"></div>
-                        <button type="button" @click="tryLogin('sendSms')"
-                            class="bg-[color:unset] p-0 h-fit leading-[22px]"
-                        >{{ $t('user.others.get', [$t('common.verifyCode')]) }}</button>
-                        </template>
-                    </div>
-                    <div class="form_item">
-                        <span>{{ othersPage ? $t('common.verifyCode') : $t('common.password') }}</span>
-                        <input v-model="pwd"
-                            @input="pwd=pwd.replace(othersPage ? /[^\d]/g : /\s+/g, '')"
-                            autocomplete="new-password" :type="othersPage ? undefined : 'password'" spellcheck="false"
-                            :placeholder="$t('user.others.pleaseInput', [$t(`common.${othersPage === 0 ? 'password' : 'verifyCode'}`)])"
-                        />
-                    </div>
-                </form>
-                <button @click="tryLogin(othersPage ? 'sms' : 'pwd')"
-                    class="mt-5 rounded-lg h-10 w-full hover:bg-[color:var(--primary-color)]"
-                >{{ $t('user.login') }}</button>
-            </div>
-            <div class="absolute bottom-2 text-sm">
-                <span class="desc">{{ $t('user.others.exempt') }}</span>
-                <i18n-t keypath="user.others.agree" tag="span" class="desc" scope="global">
-                <template v-slot:bilibili>
-                    <a @click="openUrl('https://www.bilibili.com')">{{ $t('common.bilibili') }}</a>
-                </template>
-                <template v-slot:licence>
-                    <a @click="openUrl('https://www.bilibili.com/protocal/licence.html')">{{ $t('user.others.licence') }}</a>
-                </template>
-                <template v-slot:privacy>
-                    <a @click="openUrl('https://www.bilibili.com/blackboard/privacy-pc.html')">{{ $t('user.others.privacy') }}</a>
-                </template>
-                </i18n-t>
-            </div>
-        </div>
-    </div>
-</div></template>
+    <button class="w-full h-10 mb-[17px] primary-color" @click="v.tab ? req('sms') : req('pwd')">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        <span>{{ $t('user.login') }}</span>
+    </button>
+    <span class="desc">{{ $t('user.agree', [$t('info.data')]) }}</span>
+</div>
+</template>
+</div>
+</template>
 
-<script setup lang="ts">
-import { computed, onActivated, onDeactivated, ref, watch } from 'vue';
-import { ApplicationError } from '@/services/utils';
+<script lang="ts" setup>
+import { onActivated, onDeactivated, reactive, ref } from 'vue';
 import { useUserStore } from '@/store';
 import { useRouter } from 'vue-router';
-import { commands } from '@/services/backend';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import * as login from '@/services/login';
 import Dropdown from '@/components/Dropdown.vue';
 
-const tel = ref(String());
-const pwd = ref(String());
-const captchaKey = ref(String());
-const scanCode = ref(0);
-const cid = ref(86);
-const othersPage = ref(0);
-const countryList = ref<{
-    id: number;
-    cname: string;
-    country_id: string;
-}[]>([]);
-
-const dropdownActive = ref(false);
-const loginQrcode = ref<HTMLCanvasElement>();
-const dropdownButton = ref<HTMLElement>();
-const router = useRouter();
-
-watch(othersPage, () => {
-    tel.value = String();
-    pwd.value = String();
-})
+import { ApplicationError } from '@/services/utils';
+import { commands } from '@/services/backend';
+import * as login from '@/services/login';
 
 const user = useUserStore();
-const level = computed(() => {
-    return new URL(`/src/assets/img/profile/level/level${user.level}.svg`, import.meta.url).href;
-});
+const router = useRouter();
 
-onActivated(() => !user.isLogin && tryLogin('init'));
-onDeactivated(commands.stopLogin);
+const qrcode = ref<HTMLCanvasElement>();
+const v = reactive({
+    cid: 0,
+    captchaKey: '',
+    countries: [] as { id: string; name: string }[],
+    scanStatus: -1,
+    tab: 0,
+})
 
-async function tryLogin(type: 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit' | 'init') {
+const form = reactive({ 1: '', 2: '' });
+
+async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
     try {
-        let code = -1;
-        switch(type) {
-            case 'scan': {
-                scanCode.value = 0;
-                if (!loginQrcode.value) return;
-                loginQrcode.value.height = 160;
-                const qrcodeKey = await login.genQrcode(loginQrcode.value);
-                code = await login.scanLogin(qrcodeKey, ({ code }) => { scanCode.value = code });
-                break;
-            };
-            case 'pwd': {
-                if (!tel.value || !pwd.value) return;
-                code = await login.pwdLogin(tel.value, pwd.value);
-                break;
-            };
-            case 'sms': {
-                if (!tel.value || !pwd.value || !captchaKey.value) return;
-                code = await login.smsLogin(cid.value, tel.value, pwd.value, captchaKey.value);
-                break;
-            };
-            case 'sendSms': {
-                if (!tel.value || !cid.value) return;
-                captchaKey.value = await login.sendSmsCode(cid.value, tel.value);
-                break;
-            }
-            case 'exit': {
-                code = await login.exitLogin();
-                break;
-            }
-            case 'init': {
-                tryLogin('scan');
-                cid.value = await login.getZoneCode();
-                countryList.value = await login.getCountryList();
-                break;
-            }
-        }
-        if (code === 0) {
-            router.push('/');
-            await login.fetchUser();
-        }
-    } catch (err) {
+    let status = -1;
+    switch (type) {
+    case 'init': {
+        req('scan');
+        v.cid = await login.getZoneCode();
+        v.countries = (await login.getCountryList()).map(v => ({
+            id: v.country_id, name: '+' + v.country_id
+        }));
+        break;
+    }
+    case 'scan': {
+        if (!qrcode.value) return;
+        v.scanStatus = -1;
+        qrcode.value.height = 144; // reset canvas
+        const key = await login.genQrcode(qrcode.value);
+        status = await login.scanLogin(key, (code) => v.scanStatus = code);
+        break;
+    }
+    case 'pwd': {
+        if (!form[1] || !form[2]) return;
+        status = await login.pwdLogin(form[1], form[2]);
+        break;
+    }
+    case 'sms': {
+        if (!form[1] || !form[2] || !v.captchaKey) return;
+        status = await login.smsLogin(v.cid, form[1], form[2], v.captchaKey);
+        break;
+    }
+    case 'sendSms': {
+        if (!form[1] || !v.cid) return;
+        v.captchaKey = await login.sendSmsCode(v.cid, form[1]);
+        break;
+    }
+    case 'exit': {
+        status = await login.exitLogin();
+        break;
+    }
+    }
+    if (status === 0) {
+        router.push('/');
+        await login.fetchUser();
+    }
+    } catch(err) {
         new ApplicationError(err).handleError();
     }
 }
+
+onActivated(() => !user.isLogin && req('init'));
+onDeactivated(commands.stopLogin);
 </script>
 
 <style lang="scss" scoped>
-.login {
-    padding: 52px 65px 29px 92px;
-    background-color: var(--section-color);
-    background-image: url("/src/assets/img/login/22_open.png"), url("/src/assets/img/login/33_open.png");
-    background-position: 0 100%, 100% 100%;
-    background-repeat: no-repeat, no-repeat;
-    background-size: 14%;
+h1 {
+    @apply text-lg;
+}
+:deep(.dropdown > button) {
+    @apply h-5 p-0 bg-transparent;
+}
+.tabs h1 {
+    @apply cursor-pointer;
+    &.active {
+        @apply text-[var(--primary-color)];
+    }
+}
+.form {
+    @apply rounded-lg border border-solid border-[var(--split-color)];
+    & > div {
+        @apply px-5 py-2.5;
+    }
+    span {
+        @apply text-sm mr-2.5;
+    }
+    input {
+        @apply h-5 bg-transparent;
+    }
 }
 .desc {
-    font-size: 13px;
-    text-align: center;
-    width: 100%;
-    margin-bottom: 0;
-}
-.split {
-    width: 1px;
-    background-color: var(--split-color);
-}
-h3 {
-    font-size: 18px;
-    text-align: center;
-}
-.others__tab h3.active {
-    color: var(--primary-color);
-}
-.others__page .form_item {
-    display: flex;
-    padding: 12px 20px;
-    font-size: 14px;
-    input {
-        @apply flex flex-1 h-fit leading-[22px] ml-5 p-[unset] bg-[color:unset];
-    }
-}
-.profile__top_photo:after {
-    @apply content-[""] absolute border-b-[#333] border-b-[1px] border-solid inset-0;
-    background: linear-gradient(
-        to bottom,
-        transparent 0,
-        rgba(0, 0, 0, 0.13) 25%,
-        rgba(0, 0, 0, 0.26) 50%,
-        rgba(0, 0, 0, 0.4) 75%,
-        rgba(0, 0, 0, 0.66) 100%
-    );
-}
-.profile__meta {
-    .avatar {
-        @apply bg-cover bg-clip-padding;
-        background-image: url("/src/assets/img/profile/default-avatar.jpg");
-        border: 2px solid var(--desc-color);
-    }
-    .details span {
-        @apply overflow-hidden text-ellipsis;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-    }
-    .stat .stat__item {
-        @apply text-xs inline-flex flex-col items-center mx-[5px];
-        span:first-child {
-            color: var(--desc-color);
-            margin-bottom: 5px;
-        }
-    }
+    @apply text-center;
 }
 </style>
