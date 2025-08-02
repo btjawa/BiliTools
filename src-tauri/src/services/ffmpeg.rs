@@ -12,7 +12,7 @@ use super::aria2c::{
     DownloadEvent,
 };
 
-use crate::{shared::{get_app_handle, get_ts, get_unique_path, init_client, process_err, CONFIG}, TauriError, TauriResult};
+use crate::{shared::{get_app_handle, get_ts, get_unique_path, init_client, process_err}, config, TauriError, TauriResult};
 
 macro_rules! svec {
     ( $( $x:expr ),* ) => {
@@ -174,7 +174,7 @@ async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: 
     let output = info.output.clone();
     let meta = &info.info;
     let nfo = &meta.nfo;
-    let add_metadata = { CONFIG.read().unwrap().advanced.add_metadata };
+    let add_metadata = config::read().add_metadata;
     let ext = output.extension().and_then(|v| v.to_str()).unwrap_or("");
     let mut args = svec![
         "-hide_banner", "-loglevel", "warning", "-nostats",
@@ -217,7 +217,7 @@ async fn get_metadata_args(info: &Arc<QueueInfo>, input: &PathBuf, stream_info: 
         }
         output_args.extend(svec![
             "-metadata", &format!("title={}", meta.title),
-            "-metadata", &format!("artist={}", nfo.upper.name),
+            "-metadata", &format!("artist={}", nfo.upper.as_ref().map_or("", |u| u.name.as_str())),
             "-metadata", &format!("description={}", meta.desc),
             "-metadata", &format!("genre={}", nfo.tags.join(", ")),
             "-metadata", &format!("creation_time={}", meta.pubtime)

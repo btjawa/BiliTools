@@ -1,0 +1,186 @@
+{
+    "bilibili": "哔哩哔哩",
+    "optional": "可选",
+    "contextMenu": {
+        "cut": "剪切",
+        "copy": "复制",
+        "paste": "粘贴"
+    },
+    "mediaType": {
+        "video": "视频",
+        "bangumi": "番剧",
+        "music": "音乐",
+        "musicList": "歌单",
+        "lesson": "课程",
+        "favorite": "收藏夹"
+    },
+    "format": {
+        "res": "分辨率",
+        "abr": "比特率",
+        "enc": "编码格式",
+        "fmt": "流媒体格式"
+    },
+    "quality": {
+        "res": {
+            "6": "240P 极速",
+            "16": "360P 流畅",
+            "32": "480P 标清",
+            "64": "720P 准高清",
+            "80": "1080P 高清",
+            "112": "1080P 高码率",
+            "116": "1080P 60帧",
+            "120": "4K 超高清",
+            "125": "HDR 真彩",
+            "126": "杜比视界",
+            "127": "8K 超高清"
+        },
+        "abr": {
+            "30216": "64K",
+            "30228": "128K",
+            "30232": "132K",
+            "30280": "192K",
+            "30380": "320K",
+            "30250": "杜比全景声",
+            "30251": "Hi-Res 无损",
+            "30252": "无损 FLAC"
+        },
+        "enc": {
+            "7": "AVC (H.264)",
+            "12": "HEVC (H.265)",
+            "13" :"AV1"
+        },
+        "fmt": {
+            "dash": "DASH 格式",
+            "mp4": "MP4 格式",
+            "flv": "FLV 格式"
+        }
+    },
+    "error": {
+        "risk": "触发风控，请进行验证",
+        "sidecar": "Sidecar {0} 的错误",
+        "checkUpdate": "请在 GitHub 检查最新更新",
+        "loginExpired": "登录状态已过期",
+        "invalidInput": "无法解析输入",
+        "selectLimit": "不建议一次选择超过 30 个选项"
+    },
+    "user": {
+        "input": "请输入{0}",
+        "account": "账号",
+        "password": "密码",
+        "phone": "手机号",
+        "code": "验证码",
+        "scan": "扫描二维码登录",
+        "getScan": "请使用哔哩哔哩客户端\n扫码登录或扫码下载APP",
+        "pwd": "密码登录",
+        "sms": "短信登录",
+        "sendSms": "获取验证码",
+        "login": "登录",
+        "info": {
+            "86038": "二维码已过期\n请点击刷新",
+            "86090": "扫码成功\n请在手机上确认"
+        },
+        "agree": "登录即代表你同意哔哩哔哩的用户协议与隐私政策\n{0}",
+        "stat": {
+            "following": "关注数",
+            "follower": "粉丝数",
+            "dynamic": "动态数",
+            "coins": "硬币数"
+        },
+        "exit": "退出登录"
+    },
+    "search": {
+        "input": "{0}链接/AV/BV/SS/EP/AU/AM/SID/FID号...",
+        "suggest": "今天想搜些什么呢~",
+        "autoDetect": "自动检测",
+        "general": "常规下载",
+        "package": "打包下载",
+        "selectAll": "全选",
+        "dash": {
+            "name": "关于 DASH / FLV / MP4",
+            "desc": "修改此处的选项前，请先阅读：{0}"
+        }
+    },
+    "down": {
+        "title": "下载",
+        "waiting": "等待中",
+        "doing": "进行中",
+        "complete": "已完成",
+        "empty": "此队列为空~"
+    },
+    "settings": {
+        "title": "设置",
+        "confirm": "确定删除吗？此操作不可撤销。",
+        "general": "通用",
+        "language": {
+            "name": "语言"
+        },
+        "theme": {
+            "name": "主题",
+            "light": "浅色",
+            "dark": "深色",
+            "auto": "遵循系统"
+        },
+        "storage": "存储",
+        "paths": {
+            "name": "路径",
+            "desc": "“临时文件” 存储未下载完毕的文件，经过处理后转移至 “输出文件”。",
+            "down_dir": "输出文件",
+            "temp_dir": "临时文件"
+        },
+        "cache": {
+            "name": "缓存",
+            "desc": "数据库存储配置、登录信息、下载记录等数据，建议定期备份。",
+            "log": "日志",
+            "temp": "临时文件",
+            "webview": "Webview 缓存",
+            "database": "数据库"
+        },
+        "download": "下载",
+        "default": {
+            "name": "默认参数",
+            "desc": "打包下载时将采用此处参数，若目标资源不支持此处选定的参数，则会使用其支持的最高参数。"
+        },
+        "auto_download": {
+            "name": "自动开始下载",
+            "desc": "若启用，则会在添加任务后自动开始下载。"
+        },
+        "max_conc": {
+            "name": "最大并发下载数",
+            "desc": "控制最大并发处理任务的数量。若该值较高，可能导致风控概率上升。"
+        },
+        "proxy": {
+            "name": "网络代理",
+            "desc": "暂仅支持 HTTP(S) 协议。",
+            "address": "地址",
+            "placeholder": "http(s)://server:port",
+            "username": "用户名",
+            "password": "密码"
+        },
+        "advanced": "高级",
+        "protobuf_danmaku": {
+            "name": "使用 ProtoBuf 接口下载弹幕",
+            "desc": "若启用，则可以获得目标资源几乎整个弹幕池的弹幕，但下载时间会显著变长。"
+        },
+        "add_metadata": {
+            "name": "自动嵌入元数据",
+            "desc": "若启用，则会在下载时将目标资源信息嵌入媒体文件，如标题、简介等。"
+        },
+        "format": {
+            "name": "命名格式",
+            "desc": "若目标资源不含此处的某一变量，则会使用 -1 替换该变量。",
+            "filename": "文件名格式",
+            "folder": "文件夹名格式"
+        }
+    },
+    "info": {
+        "title": "关于",
+        "changelog": "更新日志",
+        "checkUpdate": "检查更新",
+        "document": "文档",
+        "feedback": "反馈",
+        "donate": "赞助",
+        "paid": "此软件为公益免费项目。如果你付费购买了此软件，你可能被骗了。",
+        "star": "觉得好用的话，在 GitHub 给这个项目点个 Star 吧！",
+        "data": "该应用产生与获取的所有数据均仅存储于用户本地"
+    }
+}

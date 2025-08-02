@@ -1,8 +1,8 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 use std::{env, path::PathBuf, sync::Arc};
+use tauri::{async_runtime, Manager};
 use tauri_plugin_shell::ShellExt;
-use tauri::async_runtime;
 use serde::Serialize;
 use anyhow::anyhow;
 use specta::Type;
@@ -20,20 +20,31 @@ pub use crate::{
         ffmpeg,
     },
     storage::{
-        config::{self, rw_config},
+        config::{
+            self, config_write
+        },
         cookies,
         downloads,
     },
     shared,
-    config::ConfigAction,
     errors::{TauriResult, TauriError},
 };
+
+#[derive(Serialize, Type)]
+pub struct Paths {
+    log: PathBuf,
+    temp: PathBuf,
+    webview: PathBuf,
+    database: PathBuf,
+}
 
 #[derive(Serialize, Type)]
 pub struct InitData {
     version: String,
     hash: String,
     downloads: Vec<Arc<aria2c::QueueInfo>>,
+    config: Arc<config::Settings>,
+    paths: Paths,
 }
 
 #[tauri::command(async)]
@@ -115,7 +126,7 @@ pub async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> Ta
 #[specta::specta]
 pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, output: String, contents: Vec<u8>) -> TauriResult<()> {
     let ts = shared::get_ts(true);
-    let temp_dir = shared::CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools");
+    let temp_dir = config::read().temp_dir();
     let input = temp_dir.join(format!("{ts}.xml"));
     let tmp_output = temp_dir.join(format!("{ts}.ass"));
     write_binary(secret, input.to_string_lossy().into(), contents).await?;
@@ -171,12 +182,32 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     if secret != *shared::SECRET.read().unwrap() {
         return Err(anyhow!("403 Forbidden").into())
     }
-    rw_config(ConfigAction::Init, None, secret).await?;
+    let version = app.package_info().version.to_string();
+    let hash = env!("GIT_HASH").to_string();
+    let downloads = downloads::load().await?;
+    let config = config::read();
+    let path = app.path();
+    let paths = Paths {
+        log: path.app_log_dir()?,
+        temp: config::read().temp_dir(),
+        webview: match env::consts::OS {
+            "macos" => path.app_cache_dir()?.join("../WebKit/BiliTools/WebsiteData"),
+            "linux" => path.app_cache_dir()?.join("bilitools"),
+            _ => path.app_local_data_dir()?.join("EBWebView"), // windows
+        },
+        database: path.app_data_dir()?.join("Storage")
+    };
+    Ok(InitData { version, hash, downloads, config, paths })
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn init_login(secret: String) -> TauriResult<()> {
+    if secret != *shared::SECRET.read().unwrap() {
+        return Err(anyhow!("403 Forbidden").into())
+    }
     login::stop_login();
     login::get_extra_cookies().await?;
     shared::init_headers().await?;
-    let downloads = downloads::load().await?;
-    let hash = env!("GIT_HASH").to_string();
-    let version = app.package_info().version.to_string();
-    Ok(InitData { version, hash, downloads })
+    Ok(())
 }

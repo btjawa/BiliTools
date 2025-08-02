@@ -1,5 +1,5 @@
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry};
-use std::{collections::BTreeMap, env, path::PathBuf, sync::{Arc, RwLock}};
+use std::{collections::BTreeMap, path::PathBuf, sync::{Arc, RwLock}};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -13,8 +13,10 @@ use chrono::Utc;
 
 use crate::{
     storage::config::{
+        self,
         Settings,
-        SettingsAdvanced,
+        SettingsDefault,
+        SettingsFormat,
         SettingsProxy
     },
     storage::cookies,
@@ -23,13 +25,21 @@ use crate::{
 lazy_static! {
     pub static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
     pub static ref APP_HANDLE: Arc<OnceCell<AppHandle<Wry>>> = Arc::new(OnceCell::new());
-    pub static ref CONFIG: Arc<RwLock<Settings>> = Arc::new(RwLock::new(Settings {
-        temp_dir: env::temp_dir(),
+    pub static ref CONFIG: RwLock<Arc<Settings>> = RwLock::new(Arc::new(Settings {
+        add_metadata: true,
+        auto_download: false,
+        check_update: true,
+        default: SettingsDefault {
+            res: 80,
+            abr: 30280,
+            enc: 7
+        },
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
-        max_conc: 3,
-        df_dms: 80,
-        df_ads: 30280,
-        df_cdc: 7,
+        format: SettingsFormat {
+            filename: "".into(),
+            folder: "".into(),
+            favorite: "".into(),
+        },
         language: sys_locale::get_locale()
             .map(|c| {
                 let code = c.to_lowercase();
@@ -41,20 +51,15 @@ lazy_static! {
                     } else { "zh-CN".into() }
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
-        auto_check_update: true,
-        auto_download: false,
+        max_conc: 3,
+        temp_dir: get_app_handle().path().temp_dir().unwrap(),
         theme: Theme::Auto,
+        protobuf_danmaku: true,
         proxy: SettingsProxy {
-            addr: String::new(),
+            address: String::new(),
             username: String::new(),
             password: String::new()
         },
-        advanced: SettingsAdvanced {
-            prefer_pb_danmaku: true,
-            add_metadata: true,
-            filename_format: "{index}_{title}".into(),
-            folder_format: "{title}_{date_sec}".into()
-        }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
@@ -109,8 +114,6 @@ pub struct Headers {
     referer: String,
     #[serde(rename = "Origin")]
     origin: String,
-    #[serde(flatten)]
-    extra: BTreeMap<String, String>,
 }
 
 pub async fn init_headers() -> Result<BTreeMap<String, String>> {
@@ -137,7 +140,7 @@ pub async fn init_client_no_proxy() -> Result<Client> {
     init_client_inner(false).await
 }
 
-pub async fn init_client_inner(proxy: bool) -> Result<Client> {
+pub async fn init_client_inner(use_proxy: bool) -> Result<Client> {
     let mut headers = HeaderMap::new();
     for (key, value) in init_headers().await? {
         headers.insert(
@@ -145,13 +148,14 @@ pub async fn init_client_inner(proxy: bool) -> Result<Client> {
             HeaderValue::from_str(&value)?
         );
     }
-    let config = CONFIG.read().unwrap();
+    let proxy = &config::read().proxy;
     let client_builder = Client::builder()
         .default_headers(headers);
-    let client_builder = if !config.proxy.addr.is_empty() && proxy {
-        let proxy = Proxy::all(&config.proxy.addr)?
-            .basic_auth(&config.proxy.username, &config.proxy.password);
-        client_builder.proxy(proxy)
+    let client_builder = if !proxy.address.is_empty() && use_proxy {
+        client_builder.proxy(
+            Proxy::all(&proxy.address)?
+                .basic_auth(&proxy.username, &proxy.password)
+        )
     } else {
         client_builder.no_proxy()
     };
@@ -200,15 +204,18 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
 pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {
     use tauri::{utils::{config::WindowEffectsConfig, WindowEffect}, window::Color};
     use tauri_plugin_os::Version;
-    #[cfg(all(target_os = "windows", not(debug_assertions)))]
+    #[cfg(target_os = "windows")]
     window.with_webview(|webview| unsafe {
-        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings4;
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
         use windows::core::Interface;
         let core = webview.controller().CoreWebView2().unwrap();
-        let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings4>().unwrap();
+        let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings5>().unwrap();
+        #[cfg(not(debug_assertions))]
         settings.SetAreBrowserAcceleratorKeysEnabled(false).unwrap();
-        settings.SetIsGeneralAutofillEnabled(false).unwrap();
+        settings.SetAreDefaultContextMenusEnabled(false).unwrap();
         settings.SetIsPasswordAutosaveEnabled(false).unwrap();
+        settings.SetIsGeneralAutofillEnabled(false).unwrap();
+        settings.SetIsZoomControlEnabled(false).unwrap();
     })?;
     let set_default = || {
         let theme: tauri::Theme = theme.unwrap_or(Theme::Auto.into());

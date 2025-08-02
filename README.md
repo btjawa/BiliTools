@@ -4,19 +4,11 @@
 <h1>BiliTools - 哔哩哔哩工具箱</h1>
 
 <div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
-</a>
-<img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-</a>
+<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
+<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
 <a href="https://trendshift.io/repositories/13286" target="_blank">
@@ -30,7 +22,7 @@
 
 💡 基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，将会陆续支持 [更多功能](https://github.com/users/btjawa/projects/4)
 
-📖 文档 / 其他信息：[https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) 
+📖 文档 / 其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools) 
 
 > [!IMPORTANT] 
 > 本项目的所有 [声明](#声明)，仅适用于发布在 [Release](https://github.com/btjawa/BiliTools/releases/latest) 页的官方版本<br>
@@ -116,9 +108,9 @@
 
 ## ⚡ 赞助
 
-项目已达到 2k Stars，希望大家多多支持！
+项目已达到 3k+ Stars，希望大家多多支持！
 
-目前正在开发 `v1.3.8` ~ `v1.4.0`，届时会有大量更新
+目前正在开发 `v1.4.0` 正式版，届时会有大量更新
 
 如果你喜欢，并想助力这个项目，可以考虑请我喝杯咖啡~
 

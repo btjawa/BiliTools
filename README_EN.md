@@ -4,19 +4,11 @@
 <h1>BiliTools - A Bilibili Toolbox</h1>
 
 <div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
-</a>
-<img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-</a>
+<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
+<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
 <a href="https://trendshift.io/repositories/13286" target="_blank">
@@ -33,7 +25,7 @@
 
 💡 Powered by [Tauri v2](https://github.com/tauri-apps/tauri), BiliTools supports downloading & parsing various bilibili resources, with [more features](https://github.com/users/btjawa/projects/4) to come.
 
-📖 Document & Other info: [https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) (Chinese only)
+📖 Document & Other info: [https://btjawa.top/bilitools](https://btjawa.top/bilitools) (Chinese only)
 
 > [!IMPORTANT] 
 > **This project is built for [Bilibili China](https://www.bilibili.com). We do NOT support the [Bilibili Overseas](https://www.bilibili.tv).**<br>
@@ -90,13 +82,13 @@ If you are just a user:
 
 ## ⚡ Donate
 
-The project has reached 2k+ stars. Thank you for your support!
+The project has reached 3k+ stars. Thank you for your support!
 
-Currently we are working on version `v1.3.8` ~ `v1.4.0`, which will include many bug fixes & new features.
+Currently we are working on version `v1.4.0` Release, which will include many bug fixes & new features.
 
 If you found it helpful, consider buying me a coffee~
 
-- [Aifadian / 爱发电](https://afdian.com/a/BTJ_Shiroi)
+- [爱发电 (afdian)](https://afdian.com/a/BTJ_Shiroi)
 
 Your support will be a great motivation for me to keep improving!
 

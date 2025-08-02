@@ -1,0 +1,186 @@
+{
+    "bilibili": "Bilibili",
+    "optional": "Optional",
+    "contextMenu": {
+        "cut": "Cut",
+        "copy": "Copy",
+        "paste": "Paste"
+    },
+    "mediaType": {
+        "video": "Video",
+        "bangumi": "Bangumi",
+        "music": "Music",
+        "musicList": "Playlist",
+        "lesson": "Lesson",
+        "favorite": "Favorite"
+    },
+    "format": {
+        "res": "Video resolution",
+        "abr": "Audio bitrate",
+        "enc": "Encoding format",
+        "fmt": "Streaming Format"
+    },
+    "quality": {
+        "res": {
+            "6": "240P Fast",
+            "16": "360P Smooth",
+            "32": "480P Standard",
+            "64": "720P HD-ready",
+            "80": "1080P HD",
+            "112": "1080P High bitrate",
+            "116": "1080P 60FPS",
+            "120": "4K Ultra HD",
+            "125": "HDR TrueColor",
+            "126": "Dolby Vision",
+            "127": "8K Ultra HD"
+        },
+        "abr": {
+            "30216": "64K",
+            "30228": "128K",
+            "30232": "132K",
+            "30280": "192K",
+            "30380": "320K",
+            "30250": "Dolby Atmos",
+            "30251": "Hi-Res Lossless",
+            "30252": "Lossless FLAC"
+        },
+        "enc": {
+            "7": "AVC (H.264)",
+            "12": "HEVC (H.265)",
+            "13" :"AV1"
+        },
+        "fmt": {
+            "dash": "DASH Format",
+            "mp4": "MP4 Format",
+            "flv": "FLV Format"
+        }
+    },
+    "error": {
+        "risk": "Risk control has been triggered, please verify",
+        "sidecar": "Error from Sidecar {0}",
+        "checkUpdate": "Please check the latest updates on GitHub",
+        "loginExpired": "Login session has expired",
+        "invalidInput": "Could not parse the input",
+        "selectLimit": "Not recommend to select over 30 items at once"
+    },
+    "user": {
+        "input": "Please enter {0}",
+        "account": "Account",
+        "password": "Password",
+        "phone": "Phone",
+        "code": "Code",
+        "scan": "Scan QR Code",
+        "getScan": "Please use the Bilibili App\nto scan and login",
+        "pwd": "Password",
+        "sms": "SMS",
+        "sendSms": "Get Code",
+        "login": "Login",
+        "info": {
+            "86038": "QR code has expired\nPlease click to refresh",
+            "86090": "Scan successful\nPlease confirm on your phone"
+        },
+        "agree": "By logging in, you agree to Bilibili's User Agreement and Privacy Policy\n{0}",
+        "stat": {
+            "following": "Following",
+            "follower": "Followers",
+            "dynamic": "Dynamics",
+            "coins": "Coins"
+        },
+        "exit": "Log out"
+    },
+    "search": {
+        "input": "{0} link/AV/BV/SS/EP/AU/AM/SID/FID number...",
+        "suggest": "Looking for something today?",
+        "autoDetect": "Auto Detect",
+        "general": "General",
+        "package": "Package",
+        "selectAll": "Select All",
+        "dash": {
+            "name": "About \"DASH / MP4 / FLV\"",
+            "desc": "Please read {0} before modifying options here"
+        }
+    },
+    "down": {
+        "title": "Downloads",
+        "waiting": "Waiting",
+        "doing": "In Progress",
+        "complete": "Completed",
+        "empty": "This queue is empty~"
+    },
+    "settings": {
+        "title": "Settings",
+        "confirm": "Are you sure you want to delete? This action cannot be undone.",
+        "general": "General",
+        "language": {
+            "name": "Language"
+        },
+        "theme": {
+            "name": "Theme",
+            "light": "Light",
+            "dark": "Dark",
+            "auto": "Follow System"
+        },
+        "storage": "Storage",
+        "paths": {
+            "name": "Path",
+            "desc": "\"Temp Files\" stores incomplete downloads, and moved to \"Output Files\" after processing.",
+            "down_dir": "Output Files",
+            "temp_dir": "Temp Files"
+        },
+        "cache": {
+            "name": "Cache",
+            "desc": "\"Database\" stores config, login state, download history, etc. It's recommended to backup it frequently.",
+            "log": "Log",
+            "temp": "Temp Files",
+            "webview": "Webview Cache",
+            "database": "Database"
+        },
+        "download": "Download",
+        "default": {
+            "name": "Default Options",
+            "desc": "These options will be used for \"Package Download\". If the target resource lacks them, the highest available options will be used."
+        },
+        "auto_download": {
+            "name": "Auto Start Download",
+            "desc": "If enabled, download will start automatically after adding a task."
+        },
+        "max_conc": {
+            "name": "Max Concurrent Download",
+            "desc": "Controls the maximum numbers of tasks processed concurrently. A high value may increase risk of being flagged."
+        },
+        "proxy": {
+            "name": "Network Proxy",
+            "desc": "Currently only HTTP(S) are supported.",
+            "address": "Address",
+            "placeholder": "http(s)://server:port",
+            "username": "Username",
+            "password": "Password"
+        },
+        "advanced": "Advanced",
+        "protobuf_danmaku": {
+            "name": "Use Protobuf API for Danmaku",
+            "desc": "If enabled, it fetches nearly the full danmaku pool for the resource, but the process will take more time."
+        },
+        "add_metadata": {
+            "name": "Embed Metadata Automatically",
+            "desc": "If enabled, media info like Title and Description will be embedded into the file after download."
+        },
+        "format": {
+            "name": "Naming Format",
+            "desc": "If the target resource lacks a variable, it will be replaced with \"-1\".",
+            "filename": "Filename",
+            "folder": "Folder"
+        }
+    },
+    "info": {
+        "title": "About",
+        "changelog": "ChangeLog",
+        "checkUpdate": "Check for Updates",
+        "document": "Documentation",
+        "feedback": "Feedback",
+        "donate": "Donate",
+        "paid": "This is a freeware and also a public-benefit project. If you paid for it, you may have been scammed.",
+        "star": "If you find it useful, consider giving the project a Star on GitHub!",
+        "data": "All data generated and acquired will be stored locally on the user's device only."
+    }
+}

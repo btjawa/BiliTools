@@ -12,10 +12,13 @@ use tauri_specta::Event;
 use specta::Type;
 
 use crate::{
-    downloads, errors::TauriResult, ffmpeg, shared::{
+    downloads, config,
+    TauriError, TauriResult,
+    ffmpeg,
+    shared::{
         get_app_handle, get_unique_path, init_client_no_proxy, process_err, random_string,
-        SidecarError, CONFIG, READY, SECRET, USER_AGENT, WORKING_PATH
-    }, TauriError
+        SidecarError, READY, SECRET, USER_AGENT, WORKING_PATH
+    },
 };
 
 lazy_static! {
@@ -86,7 +89,7 @@ pub struct NfoInfo {
     pub thumbs: Value,
     pub showtitle: String,
     pub premiered: String,
-    pub upper: NfoUpper,
+    pub upper: Option<NfoUpper>,
     pub actors: Vec<NfoActor>,
     pub staff: Vec<String>,
 }
@@ -285,7 +288,7 @@ impl DownloadManager {
         self: Arc<Self>, 
         tx: Arc<mpsc::Sender<Result<Arc<QueueInfo>, TauriError>>>, 
     ) -> Result<()> {
-        let max_conc = CONFIG.read().unwrap().max_conc;
+        let max_conc = config::read().max_conc;
         let doing_len = QUEUE_MANAGER.get_len(QueueType::Doing).await;
         for _ in 0..(max_conc - doing_len) {
             let self_cloned = self.clone();
@@ -539,12 +542,13 @@ pub async fn push_back_queue(
     tasks: Vec<Task>,
     output: Option<String>,
 ) -> TauriResult<PathBuf> {
-    let temp_dir = { CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools") };
+    let config = config::read();
+    let temp_dir = config.temp_dir.join("com.btjawa.bilitools");
     fs::create_dir_all(&temp_dir).await.context("Failed to create app temp dir")?;
     let parent = if let Some(dir) = &output {
         PathBuf::from(dir)
     } else {
-        get_unique_path(CONFIG.read().unwrap().down_dir.join(&info.folder))
+        get_unique_path(config.down_dir.join(&info.folder))
     };
     let id = random_string(16);
     let dir_name = format!("{}_{}", &id, info.ts.millis);

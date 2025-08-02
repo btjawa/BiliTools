@@ -1,7 +1,6 @@
+use std::{collections::BTreeMap, sync::Arc};
 use anyhow::{anyhow, Context, Result};
 use serde::{Serialize, Deserialize};
-use std::collections::BTreeMap;
-use tauri_specta::Event;
 use std::path::PathBuf;
 use serde_json::Value;
 use specta::Type;
@@ -17,7 +16,7 @@ use sea_orm::{
 };
 
 use crate::{shared::{
-    get_app_handle, Theme, CONFIG, DATABASE_URL, SECRET
+    Theme, CONFIG, DATABASE_URL, SECRET
 }, TauriResult};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
@@ -28,48 +27,53 @@ pub struct Model {
     pub value: JsonValue,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
 pub struct Settings {
+    pub add_metadata: bool,
+    pub auto_download: bool,
+    pub check_update: bool,
+    pub default: SettingsDefault,
+    pub down_dir: PathBuf,
+    pub format: SettingsFormat,
+    pub language: String,
     pub max_conc: usize,
     pub temp_dir: PathBuf,
-    pub down_dir: PathBuf,
-    pub df_dms: usize,
-    pub df_ads: usize,
-    pub df_cdc: usize,
-    pub auto_check_update: bool,
-    pub auto_download: bool,
-    pub proxy: SettingsProxy,
-    pub advanced: SettingsAdvanced,
     pub theme: Theme,
-    pub language: String
+    pub protobuf_danmaku: bool,
+    pub proxy: SettingsProxy,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
+impl Settings {
+    pub fn temp_dir(&self) -> PathBuf {
+        self.temp_dir.join("com.btjawa.bilitools")
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
 pub struct SettingsProxy {
-    pub addr: String,
+    pub address: String,
     pub username: String,
     pub password: String
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type, Event)]
-pub struct SettingsAdvanced {
-    pub prefer_pb_danmaku: bool,
-    pub add_metadata: bool,
-    pub filename_format: String,
-    pub folder_format: String,
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+pub struct SettingsDefault {
+    pub res: usize,
+    pub abr: usize,
+    pub enc: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+pub struct SettingsFormat {
+    pub filename: String,
+    pub folder: String,
+    pub favorite: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
-#[serde(rename_all = "lowercase")]
-pub enum ConfigAction {
-    Init,
-    Write
-}
 
 pub async fn init() -> Result<()> {
     let db = Database::connect(&*DATABASE_URL)
@@ -80,6 +84,27 @@ pub async fn init() -> Result<()> {
         DbBackend::Sqlite, 
         stmt.to_string(SqliteQueryBuilder)
     )).await.context("Failed to init Config")?;
+    let local = load(&db).await?;
+    let map = serde_json::to_value(CONFIG.read().unwrap().clone())?
+        .as_object().cloned().unwrap();
+
+    let mut local: serde_json::Map<String, Value> = 
+        local.into_iter().map(|Model { name, value }| (name, value)).collect();
+
+    for (k, v) in map {
+        if !local.contains_key(&k) {
+            local.insert(k.clone(), v.clone());
+            insert(&db, k, v).await?;
+        } else if let (Value::Object(default), Value::Object(local)) = (v, local.get_mut(&k).unwrap()) {
+            for (k, v) in default {
+                if !local.contains_key(&k) {
+                    local.insert(k, v);
+                }
+            }
+            insert(&db, k, Value::Object(local.clone())).await?;
+        }
+    }
+    *CONFIG.write().unwrap() = serde_json::from_value(Value::Object(local))?;
     Ok(())
 }
 
@@ -99,58 +124,32 @@ pub async fn insert(db: &DatabaseConnection, name: String, value: JsonValue) -> 
     Ok(())
 }
 
+pub fn read() -> Arc<Settings> {
+    CONFIG.read().unwrap().clone()
+}
+
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn rw_config(action: ConfigAction, settings: Option<BTreeMap<String, Value>>, secret: String) -> TauriResult<()> {
+pub async fn config_write(settings: BTreeMap<String, Value>, secret: String) -> TauriResult<()> {
     if secret != *SECRET.read().unwrap() {
         return Err(anyhow!("403 Forbidden").into());
     }
     let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
-    match action {
-        ConfigAction::Init => {
-            let local = load(&db).await?;
-            let map = serde_json::to_value(&*CONFIG.read().unwrap())?
-                .as_object().cloned().unwrap();
+    let mut map = serde_json::to_value(CONFIG.read().unwrap().clone())?;
+    let keys = map.as_object().map(|f|
+        f.keys().cloned().collect::<Vec<String>>()
+    ).unwrap();
+    
+    let update = settings.into_iter().filter(|(k, _)| keys.contains(k))
+        .collect::<BTreeMap<_, _>>();
 
-            let mut local: serde_json::Map<String, Value> = 
-                local.into_iter().map(|Model { name, value }| (name, value)).collect();
-
-            for (k, v) in map {
-                if !local.contains_key(&k) {
-                    local.insert(k.clone(), v.clone());
-                    insert(&db, k, v).await?;
-                } else if let (Value::Object(default), Value::Object(local)) = (v, local.get_mut(&k).unwrap()) {
-                    for (k, v) in default {
-                        if !local.contains_key(&k) {
-                            local.insert(k, v);
-                        }
-                    }
-                    insert(&db, k, Value::Object(local.clone())).await?;
-                }
-            }
-            *CONFIG.write().unwrap() = serde_json::from_value(Value::Object(local))?;
-        },
-        ConfigAction::Write => {
-            let mut map = serde_json::to_value(&*CONFIG.read().unwrap())?;
-            let keys = map.as_object().map(|f|
-                f.keys().cloned().collect::<Vec<String>>()
-            ).unwrap();
-            
-            let update = settings.ok_or(anyhow!("No settings found for writing"))?
-                .into_iter().filter(|(k, _)| keys.contains(k))
-                .collect::<BTreeMap<_, _>>();
-
-            map.as_object_mut().unwrap().extend(update.clone());
-            for (k, v) in update {
-                insert(&db, k, v).await?;
-            }
-            *CONFIG.write().unwrap() = serde_json::from_value(map)?;
-        },
+    map.as_object_mut().unwrap().extend(update.clone());
+    for (k, v) in update {
+        insert(&db, k, v).await?;
     }
-    let config = CONFIG.read().unwrap();
-    config.emit(&get_app_handle())?;
+    *CONFIG.write().unwrap() = serde_json::from_value(map)?;
     #[cfg(debug_assertions)]
-    log::info!("CONFIG: \n{}", serde_json::to_string_pretty(&*config)?);
+    log::info!("CONFIG: \n{}", serde_json::to_string_pretty(&read())?);
     Ok(())
 }

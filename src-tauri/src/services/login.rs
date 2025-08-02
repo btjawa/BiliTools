@@ -195,13 +195,15 @@ fn get_uuid() -> String {
     )
 }
 
-pub async fn get_extra_cookies() -> Result<()> {
+#[tauri::command]
+#[specta::specta]
+pub async fn get_extra_cookies() -> TauriResult<()> {
     let client = init_client().await?;
     let html_resp = client
         .get("https://www.bilibili.com")
         .send().await?;
     if html_resp.status() != StatusCode::OK {
-        return Err(anyhow!("Error while fetching initial Cookies ({})", html_resp.status()));
+        return Err(anyhow!("Error while fetching initial Cookies ({})", html_resp.status()).into());
     }
     let cookies: Vec<String> = html_resp.headers().get_all(header::SET_COOKIE)
         .iter().flat_map(|h| h.to_str().ok())
@@ -219,7 +221,7 @@ pub async fn get_extra_cookies() -> Result<()> {
         .get("https://api.bilibili.com/x/frontend/finger/spi")
         .send().await?;
     if buvid_resp.status() != StatusCode::OK {
-        return Err(anyhow!("Error while fetching Buvid Cookies ({})", buvid_resp.status()));
+        return Err(anyhow!("Error while fetching Buvid Cookies ({})", buvid_resp.status()).into());
     }
     let buvid_body: BuvidResponse = buvid_resp.json()
         .await.context("Failed to decode Buvid response")?;

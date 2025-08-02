@@ -1,16 +1,16 @@
 <template>
-<div data-tauri-drag-region @contextmenu.prevent @dblclick="appWindow.toggleMaximize()"
+<div data-tauri-drag-region @dblclick="appWindow.toggleMaximize()"
 	class="titlebar h-[30px] w-[calc(100vw-61px)] bg-[color:transparent] absolute flex right-0 top-0"
 >
     <div v-if="osType() == 'windows'" class='relative z-[100] !visible ml-auto'>
-        <div class="titlebar-button translate-y-[-5px]" @click="appWindow.minimize()">
+        <div class="button translate-y-[-5px]" @click="appWindow.minimize()">
             <div class="!h-[1px]" :style='`mask-image:url("${icons.minimize}")`'></div>
         </div>
-        <div class="titlebar-button" @click="appWindow.toggleMaximize()">
+        <div class="button" @click="appWindow.toggleMaximize()">
             <div v-if="!maxed" :style='`mask-image:url("${icons.maximize_0}")`'></div>
             <div v-else :style='`mask-image:url("${icons.maximize_1}")`'></div>
         </div>
-        <div class="titlebar-button hover:!bg-[color:#c42b1c]" @click="appWindow.close()">
+        <div class="button hover:!bg-[color:#c42b1c]" @click="appWindow.close()">
             <div :style='`mask-image:url("${icons.close}")`'></div>
         </div>
     </div>
@@ -41,7 +41,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.titlebar-button {
+.button {
     @apply inline-flex justify-center items-center transition-all;
     @apply hover:bg-[color:var(--block-color)];
 	width: 45px;

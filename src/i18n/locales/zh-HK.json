@@ -1,0 +1,186 @@
+{
+    "bilibili": "嗶哩嗶哩",
+    "optional": "可選",
+    "contextMenu": {
+        "cut": "剪下",
+        "copy": "複製",
+        "paste": "貼上"
+    },
+    "mediaType": {
+        "video": "影片",
+        "bangumi": "番劇",
+        "music": "音樂",
+        "musicList": "歌單",
+        "lesson": "課程",
+        "favorite": "收藏夾"
+    },
+    "format": {
+        "res": "解像度",
+        "abr": "比特率",
+        "enc": "編碼格式",
+        "fmt": "串流格式"
+    },
+    "quality": {
+        "res": {
+            "6": "240P 極速",
+            "16": "360P 流暢",
+            "32": "480P 標清",
+            "64": "720P 准高清",
+            "80": "1080P 高清",
+            "112": "1080P 高碼率",
+            "116": "1080P 60幀",
+            "120": "4K 超高清",
+            "125": "HDR 真彩",
+            "126": "杜比視界",
+            "127": "8K 超高清"
+        },
+        "abr": {
+            "30216": "64K",
+            "30228": "128K",
+            "30232": "132K",
+            "30280": "192K",
+            "30380": "320K",
+            "30250": "杜比全景聲",
+            "30251": "Hi-Res 無損",
+            "30252": "無損 FLAC"
+        },
+        "enc": {
+            "7": "AVC (H.264)",
+            "12": "HEVC (H.265)",
+            "13" :"AV1"
+        },
+        "fmt": {
+            "dash": "DASH 格式",
+            "mp4": "MP4 格式",
+            "flv": "FLV 格式"
+        }
+    },
+    "error": {
+        "risk": "已觸發風控，請進行驗證",
+        "sidecar": "Sidecar {0} 發生錯誤",
+        "checkUpdate": "請到 GitHub 查看最新版本",
+        "loginExpired": "登入狀態已過期",
+        "invalidInput": "無法解析輸入內容",
+        "selectLimit": "不建議一次選取超過 30 個選項"
+    },
+    "user": {
+        "input": "請輸入{0}",
+        "account": "帳號",
+        "password": "密碼",
+        "phone": "手機號碼",
+        "code": "驗證碼",
+        "scan": "掃描二維碼登入",
+        "getScan": "請使用嗶哩嗶哩客戶端\n掃碼登入或下載 App",
+        "pwd": "密碼登入",
+        "sms": "短訊登入",
+        "sendSms": "獲取驗證碼",
+        "login": "登入",
+        "info": {
+            "86038": "二維碼已過期\n請點擊重新整理",
+            "86090": "掃碼成功\n請於手機上確認"
+        },
+        "agree": "登入即代表你同意嗶哩嗶哩的使用者協議與私隱政策\n{0}",
+        "stat": {
+            "following": "關注數",
+            "follower": "粉絲數",
+            "dynamic": "動態數",
+            "coins": "硬幣數"
+        },
+        "exit": "登出"
+    },
+    "search": {
+        "input": "{0}連結/AV/BV/SS/EP/AU/AM/SID/FID編號…",
+        "suggest": "今天想搜尋些甚麼呢～",
+        "autoDetect": "自動偵測",
+        "general": "常規下載",
+        "package": "打包下載",
+        "selectAll": "全選",
+        "dash": {
+            "name": "關於 DASH / FLV / MP4",
+            "desc": "修改此選項前，請先閱讀：{0}"
+        }
+    },
+    "down": {
+        "title": "下載",
+        "waiting": "等待中",
+        "doing": "處理中",
+        "complete": "已完成",
+        "empty": "佇列目前為空～"
+    },
+    "settings": {
+        "title": "設定",
+        "confirm": "確定要刪除嗎？此操作無法復原。",
+        "general": "一般",
+        "language": {
+            "name": "語言"
+        },
+        "theme": {
+            "name": "主題",
+            "light": "淺色",
+            "dark": "深色",
+            "auto": "跟隨系統"
+        },
+        "storage": "儲存",
+        "paths": {
+            "name": "路徑",
+            "desc": "「臨時檔案」會儲存未完成的檔案，處理完成後將轉移至「輸出檔案」。",
+            "down_dir": "輸出檔案",
+            "temp_dir": "臨時檔案"
+        },
+        "cache": {
+            "name": "快取",
+            "desc": "資料庫會儲存設定、登入資訊、下載紀錄等資料，建議定期備份。",
+            "log": "日誌",
+            "temp": "臨時檔案",
+            "webview": "Webview 快取",
+            "database": "資料庫"
+        },
+        "download": "下載",
+            "default": {
+            "name": "預設參數",
+            "desc": "進行打包下載時會使用此處設定。如目標資源不支援此參數，將改用其支援的最高選項。"
+        },
+        "auto_download": {
+            "name": "自動開始下載",
+            "desc": "啟用後，新增任務後會自動開始下載。"
+        },
+        "max_conc": {
+            "name": "最大並行下載數",
+            "desc": "控制同時執行的任務數量。若設定過高，可能會增加被風控的風險。"
+        },
+        "proxy": {
+            "name": "網絡代理",
+            "desc": "目前僅支援 HTTP(S) 協議。",
+            "address": "地址",
+            "placeholder": "http(s)://server:port",
+            "username": "用戶名稱",
+            "password": "密碼"
+        },
+        "advanced": "進階",
+        "protobuf_danmaku": {
+            "name": "使用 ProtoBuf 接口下載彈幕",
+            "desc": "啟用後可取得幾乎所有目標資源的彈幕，但會顯著增加下載時間。"
+        },
+        "add_metadata": {
+            "name": "自動嵌入中繼資料",
+            "desc": "啟用後會在下載時將標題、簡介等資訊嵌入至媒體檔案中。"
+        },
+        "format": {
+            "name": "命名格式",
+            "desc": "如目標資源不包含指定變數，將以「-1」替代。",
+            "filename": "檔案名稱格式",
+            "folder": "資料夾名稱格式"
+        }
+    },
+    "info": {
+        "title": "關於",
+        "changelog": "更新日誌",
+        "checkUpdate": "檢查更新",
+        "document": "文件",
+        "feedback": "回饋",
+        "donate": "贊助",
+        "paid": "本軟體為公益免費項目。若你曾付費購買，可能已遭詐騙。",
+        "star": "如果覺得好用，歡迎到 GitHub 為本項目點個 Star！",
+        "data": "此應用所產生與獲取的所有資料均僅儲存於用戶本機"
+    }
+}
