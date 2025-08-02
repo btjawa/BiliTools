@@ -14,7 +14,6 @@ export const locales = [
 export default createI18n({
     legacy: false,
     fallbackLocale: 'zh-CN',
-    locale: 'zh-CN', // DEV ONLY!!!
     messages: Object.fromEntries(
         locales.map(loc => [loc.id, loc.msg])
     )
