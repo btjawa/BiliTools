@@ -19,7 +19,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { useRouter } from 'vue-router';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, provide } from 'vue';
 
 import { checkRefresh, fetchUser, activateCookies } from '@/services/login';
 import { useAppStore, useQueueStore, useSettingsStore } from '@/store';
@@ -38,6 +38,7 @@ const settings = useSettingsStore();
 onMounted(async () => {
 	router.push('/');
 	setEventHook();
+	provide('page', page);
 	try {
 		const ready = await commands.ready();
 		if (ready.status === 'error') throw new ApplicationError(ready.error);
@@ -72,14 +73,6 @@ onMounted(async () => {
 	@apply flex flex-col relative justify-center items-center w-full h-full;
 	@apply text-[color:var(--content-color)] px-6 py-3 overflow-hidden;
 }
-.v-enter-active {
-	transition: opacity 0.3s ease;
-}
-.v-leave-active,
-.v-enter-from,
-.v-leave-to {
-	opacity: 0;
-}
 .loading {
 	@apply absolute w-8 h-8 top-0 right-0 m-6 opacity-0 z-[99] pointer-events-none;
 	@apply border-solid border-2 border-[color:var(--solid-block-color)] border-l-[color:var(--content-color)] rounded-full;
@@ -89,5 +82,21 @@ onMounted(async () => {
 @keyframes circle {
     0% { transform: rotate(0); }
     100% { transform: rotate(360deg); }
+}
+.v-enter-active {
+	transition: opacity 0.3s ease;
+}
+.v-leave-active,
+.v-enter-from,
+.v-leave-to {
+	opacity: 0;
+}
+.slide-enter-active,
+.slide-leave-active {
+	transition: transform 0.5s cubic-bezier(0,1,0.6,1), opacity 0.3s;
+}
+.slide-enter-from,
+.slide-leave-to {
+    @apply translate-y-8 opacity-0;
 }
 </style>

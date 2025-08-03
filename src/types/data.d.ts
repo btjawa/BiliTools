@@ -844,39 +844,58 @@ export interface SteinInfo {
   };
 }
 
-// History API types
+export interface HistoryInfo {
+  code: number;
+  message: number;
+  ttl: number;
+  data: {
+    cursor: HistoryCursor,
+    list: HistoryItem[],
+    tab: {
+      type: string;
+      name: string;
+    }[]
+  }
+}
+
+export interface HistoryCursor {
+  max: number;
+  view_at: number;
+  business: string;
+  ps: number;
+}
+
 export interface HistoryItem {
   title: string;
-  long_title?: string;
+  long_title: string;
   cover: string;
-  author_name: string;
+  covers: null;
   uri: string;
   history: {
     oid: number;
+    epid: number;
+    bvid: string;
+    page: number;
+    cid: number;
+    part: string;
     business: string;
-    page?: number;
-    bvid?: string;
+    dt: number;
   };
-  duration: number;
-  progress: number;
-  show_title?: string;
+  videos: number;
+  author_name: string;
+  author_face: string;
+  author_mid: number;
   view_at: number;
-}
-
-export interface HistoryAPIResponse {
-  code: number;
-  message: string;
-  ttl: number;
-  data: {
-    cursor: {
-      max: number;
-      view_at: number;
-      business: string;
-    };
-    tab: {
-      business: string;
-      name: string;
-    }[];
-    list: HistoryItem[];
-  };
+  progress: number;
+  badge: string;
+  show_title: string;
+  duration: number;
+  current: string;
+  total: number;
+  new_desc: string;
+  is_finish: number;
+  is_fav: number;
+  kid: number;
+  tag_name: string;
+  live_status: number;
 }

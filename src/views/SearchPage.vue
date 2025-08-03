@@ -16,7 +16,7 @@
 	<Transition>
 	<Empty
 		v-if="!v.listActive && !v.searching"
-		class="absolute" text="search.suggest"
+		class="absolute" :text="$t('search.suggest')"
 	/>
 	</Transition>
 	<Transition>
@@ -56,8 +56,7 @@ import { TYPE } from 'vue-toastification';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import * as log from '@tauri-apps/plugin-log';
 import { MediaInfo, MediaList, Popup } from '@/components/SearchPage';
-import Dropdown from '@/components/Dropdown.vue';
-import Empty from '@/components/Empty.vue';
+import { Dropdown, Empty } from '@/components';
 
 import { ApplicationError, AppLog, parseId } from '@/services/utils';
 import { useSettingsStore } from '@/store';

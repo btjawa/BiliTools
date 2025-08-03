@@ -1,6 +1,6 @@
 <template><div>
 <h1 class="w-full">
-    <i class="fa-gear" :class="settings.dynFa"></i>
+    <i :class="[settings.dynFa, 'fa-gear']"></i>
     <span>{{ $t('settings.title') }}</span>
     <i @click="openUrl('https://btjawa.top/bilitools#设置')"
         class="question fa-light fa-circle-question text-lg"

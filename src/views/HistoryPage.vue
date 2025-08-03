@@ -6,7 +6,7 @@
       <div class="search-bar flex-1 flex rounded-[26px] p-2.5 gap-2 bg-[color:var(--block-color)]">
         <input
           type="text" 
-          :placeholder="$t('common.history.search.placeholder')" 
+          :placeholder="$t('history.search.placeholder')" 
           v-model="searchKeyword" 
           class="w-full !rounded-2xl bg-transparent border-none outline-none text-[var(--content-color)]"
           autocomplete="off" 
@@ -34,7 +34,7 @@
       <!-- Filter Control -->
       <button @click="filterExpanded = !filterExpanded" 
               class="flex items-center gap-2 text-[var(--primary-color)] hover:opacity-80 transition-opacity bg-[color:var(--block-color)] px-3 py-2 rounded-lg">
-        <span>{{ $t('common.history.filter.moreFilters') }}</span>
+        <span>{{ $t('history.filter.moreFilters') }}</span>
         <i :class="['fa-solid', filterExpanded ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
       </button>
     </div>
@@ -47,7 +47,7 @@
         <div class="filter-content" :class="{ 'filter-content-visible': filterExpanded }">
           <!-- Duration Filter -->
           <div class="filter-group mb-4">
-            <h3 class="text-sm font-medium mb-2 text-[var(--content-color)]">{{ $t('common.history.filter.duration.title') }}</h3>
+            <h3 class="text-sm font-medium mb-2 text-[var(--content-color)]">{{ $t('history.filter.duration.title') }}</h3>
             <div class="flex flex-wrap gap-2">
               <button v-for="option in durationOptions" 
                       :key="option.value"
@@ -63,7 +63,7 @@
           
           <!-- Time Filter -->
           <div class="filter-group">
-            <h3 class="text-sm font-medium mb-2 text-[var(--content-color)]">{{ $t('common.history.filter.time.title') }}</h3>
+            <h3 class="text-sm font-medium mb-2 text-[var(--content-color)]">{{ $t('history.filter.time.title') }}</h3>
             <div class="flex flex-wrap gap-2 mb-3">
               <button v-for="option in timeOptions" 
                       :key="option.value"
@@ -79,7 +79,7 @@
             <!-- Custom Date Range -->
             <div v-if="selectedTimeRange === 'custom'" class="mt-3 space-y-2">
               <div class="flex flex-col gap-1">
-                <label class="text-xs text-[var(--desc-color)]">{{ $t('common.history.filter.time.startDate') }}</label>
+                <label class="text-xs text-[var(--desc-color)]">{{ $t('history.filter.time.startDate') }}</label>
                 <input type="text"
                        v-model="customStartDate"
                        class="text-sm border border-[var(--split-color)] rounded px-2 py-1 bg-[var(--button-color)] text-[var(--content-color)]"
@@ -89,7 +89,7 @@
                        ref="customStartDateInput">
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-xs text-[var(--desc-color)]">{{ $t('common.history.filter.time.endDate') }}</label>
+                <label class="text-xs text-[var(--desc-color)]">{{ $t('history.filter.time.endDate') }}</label>
                 <input type="text"
                        v-model="customEndDate"
                        class="text-sm border border-[var(--split-color)] rounded px-2 py-1 bg-[var(--button-color)] text-[var(--content-color)]"
@@ -107,12 +107,12 @@
             <button @click="applyFilters" 
                     class="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-[var(--primary-color)] text-white hover:opacity-80 transition-opacity">
               <i class="fa-solid fa-filter"></i>
-              <span>{{ $t('common.history.filter.apply') }}</span>
+              <span>{{ $t('history.filter.apply') }}</span>
             </button>
             <button @click="resetFilters"
                     class="flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-[var(--split-color)] bg-[var(--button-color)] text-[var(--content-color)] hover:brightness-150 transition-all">
               <i class="fa-solid fa-refresh"></i>
-              <span>{{ $t('common.history.filter.reset') }}</span>
+              <span>{{ $t('history.filter.reset') }}</span>
             </button>
           </div>
         </div>
@@ -127,16 +127,12 @@
     <div class="flex-1 overflow-auto min-h-0 pt-4" ref="scrollContainer" @scroll="handleScroll">
       <!-- Show empty state when not logged in -->
       <div v-if="!user.isLogin" class="flex justify-center items-center h-full">
-        <Empty text="downloads.empty" />
-      </div>
-      
-      <div v-else-if="loading && historyList.length === 0" class="flex justify-center items-center h-32">
-        <div class="loading-spinner"></div>
+        <Empty :text="$t('downloads.empty')" />
       </div>
       
       <div v-else-if="historyList.length === 0 && !loading" class="flex flex-col items-center justify-center h-32">
         <i class="fa-light fa-clock text-4xl text-[var(--desc-color)] mb-2"></i>
-        <p class="text-[var(--desc-color)]">{{ $t('common.history.empty') }}</p>
+        <p class="text-[var(--desc-color)]">{{ $t('history.empty') }}</p>
       </div>
 
       <div v-else class="p-4 space-y-3">
@@ -182,8 +178,8 @@
             
             <!-- Progress info if available -->
             <div v-if="item.progress > 0" class="text-xs text-[var(--desc-color)]">
-              {{ item.progress === -1 ? $t('common.history.finished') : 
-                 $t('common.history.progress') + ': ' + formatProgress(item.progress, item.duration) }}
+              {{ item.progress === -1 ? $t('history.finished') : 
+                 $t('history.progress') + ': ' + formatProgress(item.progress, item.duration) }}
             </div>
           </div>
 
@@ -192,27 +188,22 @@
             <div class="flex flex-col gap-2">
               <button @click.stop="downloadCover(item)" 
                       class="primary-color"
-                      :title="$t('common.history.downloadCover')">
+                      :title="$t('history.downloadCover')">
                 <i class="fa-solid fa-download"></i>
-                <span>{{ $t('common.history.downloadCover') }}</span>
+                <span>{{ $t('history.downloadCover') }}</span>
               </button>
               <button @click.stop="addToDownload(item)" 
-                      :title="$t('common.history.addDownload')">
+                      :title="$t('history.addDownload')">
                 <i class="fa-solid fa-plus"></i>
-                <span>{{ $t('common.history.addDownload') }}</span>
+                <span>{{ $t('history.addDownload') }}</span>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Loading more indicator -->
-        <div v-if="loading && historyList.length > 0" class="flex justify-center py-4">
-          <div class="loading-spinner"></div>
-        </div>
-
         <!-- No more data indicator -->
         <div v-if="!hasMore && historyList.length > 0" class="text-center py-4 text-[var(--desc-color)]">
-          {{ $t('common.history.noMore') }}
+          {{ $t('history.noMore') }}
         </div>
       </div>
     </div>
@@ -220,21 +211,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, onMounted, computed, nextTick, inject, Ref } from 'vue';
 import { save } from '@tauri-apps/plugin-dialog';
-import { useUserStore, useQueueStore } from '@/store';
+import { useUserStore } from '@/store';
 import { getHistory, getMediaInfo } from '@/services/data';
-import { tryFetch, ApplicationError, getImageBlob } from '@/services/utils';
+import { tryFetch, ApplicationError, getBlob } from '@/services/utils';
 import { TYPE } from 'vue-toastification';
 import { AppLog } from '@/services/utils';
 import * as Types from '@/types/data.d';
 import { useI18n } from 'vue-i18n';
 import { Empty } from '@/components';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import SearchPage from './SearchPage.vue';
 
 const { t } = useI18n();
 const user = useUserStore();
-const queue = useQueueStore();
+
+const page = inject<Ref<InstanceType<typeof SearchPage>>>('page');
+
 
 const historyList = ref<Types.HistoryItem[]>([]);
 const loading = ref(false);
@@ -255,19 +249,19 @@ const customEndDateInput = ref<HTMLInputElement | null>(null);
 
 // Filter options with translation keys
 const durationOptions = [
-  { labelKey: 'common.history.filter.duration.all', value: 'all' },
-  { labelKey: 'common.history.filter.duration.under10', value: '0-10' },
-  { labelKey: 'common.history.filter.duration.10to30', value: '10-30' },
-  { labelKey: 'common.history.filter.duration.30to60', value: '30-60' },
-  { labelKey: 'common.history.filter.duration.over60', value: '60+' }
+  { labelKey: 'history.filter.duration.all', value: 'all' },
+  { labelKey: 'history.filter.duration.under10', value: '0-10' },
+  { labelKey: 'history.filter.duration.10to30', value: '10-30' },
+  { labelKey: 'history.filter.duration.30to60', value: '30-60' },
+  { labelKey: 'history.filter.duration.over60', value: '60+' }
 ];
 
 const timeOptions = [
-  { labelKey: 'common.history.filter.time.all', value: 'all' },
-  { labelKey: 'common.history.filter.time.today', value: 'today' },
-  { labelKey: 'common.history.filter.time.yesterday', value: 'yesterday' },
-  { labelKey: 'common.history.filter.time.week', value: 'week' },
-  { labelKey: 'common.history.filter.time.custom', value: 'custom' }
+  { labelKey: 'history.filter.time.all', value: 'all' },
+  { labelKey: 'history.filter.time.today', value: 'today' },
+  { labelKey: 'history.filter.time.yesterday', value: 'yesterday' },
+  { labelKey: 'history.filter.time.week', value: 'week' },
+  { labelKey: 'history.filter.time.custom', value: 'custom' }
 ];
 
 // Get today's date for date input max
@@ -374,7 +368,7 @@ function selectTimeRange(value: string) {
 function applyFilters() {
   // Filters are applied automatically through computed property
   // This function can be extended to reload data from server with filters
-  AppLog(t('common.history.filter.applied'), TYPE.SUCCESS);
+  AppLog(t('history.filter.applied'), TYPE.SUCCESS);
 }
 
 function resetFilters() {
@@ -384,7 +378,7 @@ function resetFilters() {
   customEndDate.value = '';
   if (customStartDateInput.value) customStartDateInput.value.type = 'text';
   if (customEndDateInput.value) customEndDateInput.value.type = 'text';
-  AppLog(t('common.history.filter.resetSuccess'), TYPE.INFO);
+  AppLog(t('history.filter.resetSuccess'), TYPE.INFO);
 }
 
 // Handle date input blur to format display value
@@ -421,17 +415,13 @@ async function loadMore() {
   
   loading.value = true;
   try {
-    const response = await getHistory(20, viewAt.value);
-    if (response.code !== 0) {
-      throw new Error(response.message);
-    }
-    
-    const newItems = response.data.list;
+    const data = await getHistory(20, viewAt.value ?? 0);
+    const newItems = data.list;
     
     // Process images with getImageBlob to fix CORS issues
     for (const item of newItems) {
       try {
-        item.cover = await getImageBlob(item.cover);
+        item.cover = await getBlob(item.cover);
       } catch (err) {
         // Keep original URL if getImageBlob fails
         console.warn('Failed to process cover image:', err);
@@ -442,7 +432,7 @@ async function loadMore() {
     
     // Update cursor for next page
     if (newItems.length > 0) {
-      viewAt.value = response.data.cursor.view_at;
+      viewAt.value = data.cursor.view_at;
     } else {
       hasMore.value = false;
     }
@@ -493,7 +483,7 @@ async function downloadCover(item: Types.HistoryItem) {
       throw result.error;
     }
     
-    AppLog(t('common.history.coverDownloaded'), TYPE.SUCCESS);
+    AppLog(t('history.coverDownloaded'), TYPE.SUCCESS);
   } catch (err) {
     new ApplicationError(err).handleError();
   }
@@ -502,79 +492,20 @@ async function downloadCover(item: Types.HistoryItem) {
 // Add video to download queue
 async function addToDownload(item: Types.HistoryItem) {
   try {
-    if (!item.history.bvid && !item.history.oid) {
-      throw new Error(t('common.history.noVideoId'));
-    }
-    
     // Use BVID if available, otherwise use aid
     const id = item.history.bvid || `av${item.history.oid}`;
     
     // Navigate to search page and trigger search
     const router = await import('@/router');
     await router.default.push('/');
-    
-    // Wait for navigation to complete and retry search input setup
-    let attempts = 0;
-    const maxAttempts = 10;
-    const attemptInterval = 100; // ms
-    
-    const trySetupSearch = async (): Promise<boolean> => {
-      attempts++;
-      
-      // Wait for DOM to be ready
-      await new Promise(resolve => setTimeout(resolve, attemptInterval));
-      
-      // Find search input
-      const searchInput = document.querySelector('.search_input input') as HTMLInputElement;
-      
-      if (!searchInput) {
-        if (attempts < maxAttempts) {
-          return trySetupSearch();
-        }
-        return false;
-      }
-      
-      // Set the search value
-      searchInput.value = id;
-      
-      // Trigger input event to update Vue's reactive data
-      const inputEvent = new Event('input', { bubbles: true });
-      searchInput.dispatchEvent(inputEvent);
-      
-      // Also trigger change event for good measure
-      const changeEvent = new Event('change', { bubbles: true });
-      searchInput.dispatchEvent(changeEvent);
-      
-      // Wait a bit more for Vue to process the input
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Find and click search button
-      const searchButton = document.querySelector('.search_input button[class*="fa-search"]') as HTMLButtonElement;
-      if (searchButton) {
-        searchButton.click();
-        return true;
-      }
-      
-      // If button not found, try pressing Enter on the input
-      const enterEvent = new KeyboardEvent('keydown', { 
-        key: 'Enter', 
-        code: 'Enter', 
-        keyCode: 13,
-        bubbles: true 
-      });
-      searchInput.dispatchEvent(enterEvent);
-      
-      return true;
-    };
-    
-    const success = await trySetupSearch();
-    
-    if (success) {
-      AppLog(t('common.history.addedToSearch'), TYPE.SUCCESS);
-    } else {
-      AppLog(t('error.searchPageNotReady'), TYPE.WARNING);
-    }
-  } catch (err) {
+    requestAnimationFrame(() => {
+      nextTick(() => {
+        requestAnimationFrame(() => {
+          page?.value.search(id);
+        })
+      })
+    })
+  } catch (err) { 
     new ApplicationError(err).handleError();
   }
 }
@@ -660,13 +591,13 @@ function formatViewTime(timestamp: number): string {
   });
   
   if (viewDate.getTime() === today.getTime()) {
-    return `${t('common.history.filter.time.today')}${timeStr}`;
+    return `${t('history.filter.time.today')}${timeStr}`;
   } else if (viewDate.getTime() === yesterday.getTime()) {
-    return `${t('common.history.filter.time.yesterday')}${timeStr}`;
+    return `${t('history.filter.time.yesterday')}${timeStr}`;
   } else {
     const diffDays = Math.floor((today.getTime() - viewDate.getTime()) / (24 * 60 * 60 * 1000));
     if (diffDays < 7) {
-      return t('common.history.daysAgo', { days: diffDays });
+      return t('history.daysAgo', { days: diffDays });
     } else {
       return date.toLocaleDateString([], { 
         month: '2-digit', 
@@ -677,7 +608,7 @@ function formatViewTime(timestamp: number): string {
 }
 
 function formatProgress(progress: number, duration: number): string {
-  if (progress === -1) return t('common.history.finished');
+  if (progress === -1) return t('history.finished');
   const percentage = Math.round((progress / duration) * 100);
   return `${percentage}%`;
 }
@@ -747,10 +678,6 @@ function sanitizeFilename(filename: string): string {
   }
 }
 
-.loading-spinner {
-  @apply w-6 h-6 border-2 border-[var(--primary-color)] border-t-transparent rounded-full animate-spin;
-}
-
 .queue__tab h3 {
   transition: color .1s;
   @apply hover:text-[color:var(--primary-color)];
@@ -761,6 +688,7 @@ function sanitizeFilename(filename: string): string {
 
 .line-clamp-2 {
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;

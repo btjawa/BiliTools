@@ -639,21 +639,9 @@ export async function getSingleNfo(info: Types.MediaInfo, item: Types.MediaInfo[
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + xml;
 }
 
-// Get user watch history
-export async function getHistory(ps: number = 20, view_at?: number): Promise<Types.HistoryAPIResponse> {
-    const params: Record<string, string | number> = {
-        ps,
-        type: 'archive'
-    };
-    
-    if (view_at) {
-        params.view_at = view_at;
-    }
-    
-    const body = await tryFetch('https://api.bilibili.com/x/web-interface/history/cursor', {
-        auth: 'wbi',
-        params
-    });
-    
-    return body as Types.HistoryAPIResponse;
+export async function getHistory(ps: number, view_at: number) {
+    const params = { ps, view_at };
+    const response = await tryFetch('https://api.bilibili.com/x/web-interface/history/cursor', { params });
+    const body = response as Types.HistoryInfo;
+    return body.data;
 }

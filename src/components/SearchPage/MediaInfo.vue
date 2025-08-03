@@ -1,4 +1,4 @@
-<template><div class="flex w-full min-h-36 bg-[color:var(--block-color)] rounded-lg p-4 gap-4">
+<template><div class="flex w-full min-h-36 h-36 bg-[color:var(--block-color)] rounded-lg p-4 gap-4">
     <img :src="cover" class="object-cover rounded-lg" />
     <div class="flex w-full">
         <div class="text h-full w-full">

@@ -13,10 +13,10 @@
         <i :class="`fa-${isActive('/') ? 'solid' : 'light'}`" class="fa-magnifying-glass"></i>
     </li>
     </router-link>
-    <router-link to="/history" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/history') }" @click="navigate">
-            <i class="fa-history"></i>
-        </li>
+    <router-link to="/history-page" custom v-slot="{ navigate }">
+    <li :class="{ 'active': isActive('/history-page') }" @click="navigate">
+        <i :class="`fa-${isActive('/history-page') ? 'solid' : 'light'}`" class="fa-clock"></i>
+    </li>
     </router-link>
 	<router-link to="/down-page" custom v-slot="{ navigate }">
     <li :class="{ 'active': isActive('/down-page') }" @click="navigate">
@@ -66,15 +66,5 @@ li {
     &:hover, &.active {
         @apply text-[var(--primary-color)];
     }
-}
-.fa-history {
-    display: inline-block;
-    width: 1.25rem; // 20px
-    height: 1.25rem; // 20px
-    background-color: currentColor;
-    mask-image: url('@/assets/img/history.svg');
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-position: center;
 }
 </style>
