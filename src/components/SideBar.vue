@@ -13,6 +13,11 @@
         <i :class="`fa-${isActive('/') ? 'solid' : 'light'}`" class="fa-magnifying-glass"></i>
     </li>
     </router-link>
+    <router-link to="/history-page" custom v-slot="{ navigate }">
+    <li :class="{ 'active': isActive('/history-page') }" @click="navigate">
+        <i :class="`fa-${isActive('/history-page') ? 'solid' : 'light'}`" class="fa-clock"></i>
+    </li>
+    </router-link>
 	<router-link to="/down-page" custom v-slot="{ navigate }">
     <li :class="{ 'active': isActive('/down-page') }" @click="navigate">
         <i :class="`fa-${isActive('/down-page') ? 'solid' : 'light'}`" class="fa-download"></i>

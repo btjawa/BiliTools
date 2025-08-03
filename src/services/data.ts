@@ -638,3 +638,10 @@ export async function getSingleNfo(info: Types.MediaInfo, item: Types.MediaInfo[
     const xml = new XMLSerializer().serializeToString(doc);
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + xml;
 }
+
+export async function getHistory(ps: number, view_at: number) {
+    const params = { ps, view_at };
+    const response = await tryFetch('https://api.bilibili.com/x/web-interface/history/cursor', { params });
+    const body = response as Types.HistoryInfo;
+    return body.data;
+}

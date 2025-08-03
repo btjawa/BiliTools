@@ -1,12 +1,12 @@
 <template><div class="pb-0">
 <h1 class="w-full">
-    <i class="fa-download" :class="settings.dynFa"></i>
+    <i :class="[settings.dynFa, 'fa-download']"></i>
     <span>{{ $t('down.title') }}</span>
 </h1>
 <div class="flex w-full h-full mt-4">
     <Transition mode="out-in">
     <div class="flex flex-col flex-1 overflow-auto" :key="tab">
-        <Empty text="down.empty" />
+        <Empty :text="$t('down.empty')" />
     </div>
     </Transition>
     <div class="tab">
@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import Empty from '@/components/Empty.vue';
+import { Empty } from '@/components';
 import { useSettingsStore } from '@/store';
 
 const tabs = {

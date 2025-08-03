@@ -90,12 +90,4 @@ button {
         @apply border-[var(--primary-color)];
     }
 }
-.slide-enter-active,
-.slide-leave-active {
-	transition: transform 0.5s cubic-bezier(0,1,0.6,1), opacity 0.3s;
-}
-.slide-enter-from,
-.slide-leave-to {
-    @apply translate-y-8 opacity-0;
-}
 </style>
