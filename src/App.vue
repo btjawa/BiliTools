@@ -17,13 +17,14 @@
 
 <script setup lang="ts">
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+import { ref, onMounted, provide, watch, getCurrentInstance, reactive } from 'vue';
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { useRouter } from 'vue-router';
-import { ref, onMounted, provide } from 'vue';
 
 import { checkRefresh, fetchUser, activateCookies } from '@/services/login';
 import { useAppStore, useQueueStore, useSettingsStore } from '@/store';
-import { ApplicationError, setEventHook } from '@/services/utils';
+import { setEventHook } from '@/services/utils';
+import { AppError } from '@/services/error';
 import { commands } from '@/services/backend';
 
 const page = ref();
@@ -34,33 +35,38 @@ const router = useRouter();
 const app = useAppStore();
 const queue = useQueueStore();
 const settings = useSettingsStore();
+const context = getCurrentInstance()?.appContext!;
+
+watch(() => settings.isDark, (v) => {
+	const props = context.config.globalProperties;
+	if (!props.$fa) props.$fa = reactive<any>({});
+	props.$fa.weight = v ? 'fa-solid' : 'fa-light';
+	props.$fa.isDark = v;
+}, { immediate: true });
+
+context.app.config.errorHandler = e => new AppError(e, { name: 'AppError' }).handle();
 
 onMounted(async () => {
 	router.push('/');
 	setEventHook();
 	provide('page', page);
-	try {
-		const ready = await commands.ready();
-		if (ready.status === 'error') throw new ApplicationError(ready.error);
-		const secret = ready.data;
-		app.secret = secret;
-		const init = await commands.init(secret);
-		if (init.status === 'error') throw new ApplicationError(init.error);
-		const data = init.data;
-		const { downloads, config, ...initData } = init.data;
-		settings.$patch(config);
-		queue.$patch({ complete: data.downloads as any });
-		app.$patch({ ...initData });
-		const initLogin = await commands.initLogin(secret);
-		if (initLogin.status === 'error') throw new ApplicationError(initLogin.error); 
-		await checkRefresh();
-		await fetchUser();
-	} catch(err) {
-		new ApplicationError(err).handleError();
-	} finally {
-		await activateCookies().catch(e => new ApplicationError(e).handleError());
-		app.inited = true;
-	}
+	const ready = await commands.ready();
+	if (ready.status === 'error') throw new AppError(ready.error);
+	const secret = ready.data;
+	app.secret = secret;
+	const init = await commands.init(secret);
+	if (init.status === 'error') throw new AppError(init.error);
+	const data = init.data;
+	const { downloads, config, ...initData } = init.data;
+	settings.$patch(config);
+	queue.$patch({ complete: data.downloads as any });
+	app.$patch({ ...initData });
+	const initLogin = await commands.initLogin(secret);
+	if (initLogin.status === 'error') throw new AppError(initLogin.error);
+	await checkRefresh();
+	await fetchUser();
+	await activateCookies();
+	app.inited = true;
 })
 </script>
 

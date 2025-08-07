@@ -1,12 +1,13 @@
 import { defineStore } from "pinia";
 import { Settings } from "@/services/backend";
-import { ProxyConfig } from "@tauri-apps/plugin-http";
+import { computed, reactive, ref, toRefs } from "vue";
 
-export const useSettingsStore = defineStore('settings', {
-    state: (): Settings => ({
+export const useSettingsStore = defineStore('settings', () => {
+    const s = reactive<Settings>({
         add_metadata: true,
         auto_download: false,
         check_update: true,
+        clipboard: true,
         default: {
             res: Number(),
             abr: Number(),
@@ -21,33 +22,36 @@ export const useSettingsStore = defineStore('settings', {
         language: String(),
         max_conc: Number(),
         temp_dir: String(),
-        theme: 'dark',
+        theme: 'auto',
         protobuf_danmaku: true,
         proxy: {
             address: String(),
             username: String(),
             password: String(),
         }
-    }),
-    getters: {
-        isDark(s) { return s.theme === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : s.theme === 'dark' },
-        dynFa(): string {
-            return this.isDark ? 'fa-solid' : 'fa-light';
+    });
+
+    const isDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        isDark.value = e.matches;
+    });
+
+    const proxyUrl = computed(() => {
+        if (!s.proxy.address.length) return null;
+        const url = new URL(s.proxy.address);
+        url.username = s.proxy.username || '';
+        url.password = s.proxy.password || '';
+        return url.toString();
+    });
+
+    const proxyConfig = computed(() => ({
+        url: s.proxy.address || '*',
+        basicAuth: {
+            username: s.proxy.username,
+            password: s.proxy.password,
         },
-        proxyUrl: (s) => {
-            if (!s.proxy.address.length) return null;
-            const url = new URL(s.proxy.address);
-            url.username = s.proxy.username || '';
-            url.password = s.proxy.password || '';
-            return url.toString();
-        },
-        proxyConfig(): ProxyConfig { return {
-            url: this.proxy.address || '*',
-            basicAuth: {
-                username: this.proxy.username,
-                password: this.proxy.password,
-            },
-            noProxy: this.proxy.address ? undefined : '*',
-        }},
-    },
-});
+        noProxy: s.proxy.address ? undefined : '*',
+    }));
+
+    return { ...toRefs(s), isDark, proxyUrl, proxyConfig };
+})

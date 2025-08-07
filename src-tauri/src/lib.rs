@@ -26,8 +26,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         // Then register them (separated by a comma)
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            ready, init, init_login, config_write, write_binary, xml_to_ass, new_folder, // Essentials
-            get_size, clean_cache, set_theme, // Settings
+            ready, init, init_login, write_binary, xml_to_ass, new_folder, // Essentials
+            set_window, config_write, get_size, clean_cache, // Settings
             push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
         ])
         .events(collect_events![
@@ -84,7 +84,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             let window = app.get_webview_window("main").unwrap();
             #[cfg(debug_assertions)]
             window.open_devtools();
-            shared::set_window(window, None)?;
+            shared::set_window(window, shared::Theme::Auto).unwrap();
             shared::APP_HANDLE.set(app.app_handle().clone()).unwrap();
             async_runtime::spawn(async move {
                 use shared::process_err as err;

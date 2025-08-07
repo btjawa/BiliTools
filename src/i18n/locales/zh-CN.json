@@ -1,6 +1,9 @@
 {
     "bilibili": "哔哩哔哩",
     "optional": "可选",
+    "wip": "此处施工中~",
+    "page": "页数",
+    "empty": "无可用资源~",
     "contextMenu": {
         "cut": "剪切",
         "copy": "复制",
@@ -14,11 +17,44 @@
         "lesson": "课程",
         "favorite": "收藏夹"
     },
+    "popup": {
+        "misc": {
+            "name": "杂项",
+            "aiSummary": "AI 总结",
+            "subtitles": "字幕"
+        },
+        "nfo": {
+            "name": "NFO 元数据",
+            "album": "合集/剧集刮削",
+            "single": "单集刮削"
+        },
+        "danmaku": {
+            "name": "弹幕",
+            "live": "实时弹幕",
+            "history": "历史弹幕"
+        },
+        "thumb": {
+            "name": "图像",
+            "pic": "封面",
+            "cover": "封面",
+            "square_cover": "方形封面",
+            "ugc_season_cover": "合集封面",
+            "season_cover": "本季封面",
+            "season_horizontal_cover_1610": "本季海报 (16:10)",
+            "season_horizontal_cover_169": "本季海报 (16:9)"
+        },
+        "mediaType": {
+            "video": "无声视频",
+            "audio": "无画音频",
+            "audioVideo": "音视频"
+        }
+    },
     "format": {
         "res": "分辨率",
         "abr": "比特率",
         "enc": "编码格式",
-        "fmt": "流媒体格式"
+        "fmt": "流媒体格式",
+        "mediaType": "资源类型"
     },
     "quality": {
         "res": {
@@ -59,7 +95,6 @@
         "risk": "触发风控，请进行验证",
         "sidecar": "Sidecar {0} 的错误",
         "checkUpdate": "请在 GitHub 检查最新更新",
-        "loginExpired": "登录状态已过期",
         "invalidInput": "无法解析输入",
         "selectLimit": "不建议一次选择超过 30 个选项"
     },
@@ -93,18 +128,18 @@
         "suggest": "今天想搜些什么呢~",
         "autoDetect": "自动检测",
         "general": "常规下载",
-        "package": "打包下载",
+        "advanced": "高级下载",
         "selectAll": "全选",
+        "popupLint": "请点击所需资源的按钮，并选择对应参数",
+        "nextStep": "下一步",
         "dash": {
             "name": "关于 DASH / FLV / MP4",
-            "desc": "修改此处的选项前，请先阅读：{0}"
+            "desc": "请勿随意修改。若确实需要更改，请先阅读：{0}，并确保你了解自己正在做什么"
         }
     },
     "history": {
         "title": "历史记录",
-        "empty": "无历史记录~",
-        "refresh": "刷新",
-        "all": "综合"
+        "refresh": "刷新"
     },
     "down": {
         "title": "下载",
@@ -126,6 +161,13 @@
             "dark": "深色",
             "auto": "遵循系统"
         },
+        "clipboard" :{
+            "name": "监听剪贴板"
+        },
+        "notify": {
+            "name": "通知系统",
+            "desc": "若启用，则会在下载完毕时发送系统通知。"
+        },
         "storage": "存储",
         "paths": {
             "name": "路径",
@@ -144,7 +186,7 @@
         "download": "下载",
         "default": {
             "name": "默认参数",
-            "desc": "打包下载时将采用此处参数，若目标资源不支持此处选定的参数，则会使用其支持的最高参数。"
+            "desc": "下载时，将会优先使用此处参数。若目标资源不支持此处选定的参数，则会使用其支持的最高参数。"
         },
         "auto_download": {
             "name": "自动开始下载",
@@ -171,12 +213,7 @@
             "name": "自动嵌入元数据",
             "desc": "若启用，则会在下载时将目标资源信息嵌入媒体文件，如标题、简介等。"
         },
-        "format": {
-            "name": "命名格式",
-            "desc": "若目标资源不含此处的某一变量，则会使用 -1 替换该变量。",
-            "filename": "文件名格式",
-            "folder": "文件夹名格式"
-        }
+        "format": "命名格式"
     },
     "info": {
         "title": "关于",

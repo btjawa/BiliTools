@@ -1,7 +1,7 @@
 <template>
 <section>
     <h2>
-        <i :class="[settings.dynFa, 'fa-folder']"></i>
+        <i :class="[$fa.weight, 'fa-folder']"></i>
         <span>{{ $t('settings.paths.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.paths.desc') }}</span>
@@ -14,7 +14,7 @@
 <hr />
 <section>
     <h2>
-        <i :class="[settings.dynFa, 'fa-database']"></i>
+        <i :class="[$fa.weight, 'fa-database']"></i>
         <span>{{ $t('settings.cache.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.cache.desc') }}</span>

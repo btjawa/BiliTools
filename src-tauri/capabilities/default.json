@@ -33,6 +33,8 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [
+        { "url": "https://*.bilibili.com/*" },
+        { "url": "https://bilibili.com/*" },
         { "url": "https://github.com/*" },
         { "url": "https://btjawa.top/*" },
         { "url": "https://afdian.com/*" }

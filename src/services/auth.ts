@@ -1,8 +1,8 @@
-import { ApplicationError, tryFetch } from "@/services/utils";
 import { GeetestOptions, initGeetest } from '@/lib/geetest';
 import { useSettingsStore } from "@/store";
-import * as login from "@/types/login";
-import * as user from "@/types/user";
+import { tryFetch } from "./utils";
+import { AppError } from './error';
+import * as Types from "@/types/login";
 import md5 from "md5";
 
 declare global {
@@ -81,7 +81,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
         61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
         36, 20, 34, 44, 52
     ];
-    const body = await tryFetch('https://api.bilibili.com/x/web-interface/nav') as user.NavInfoResp;
+    const body = await tryFetch('https://api.bilibili.com/x/web-interface/nav') as Types.NavInfo;
     const { img_url, sub_url } = body.data.wbi_img;
     const imgKey = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
     const subKey = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
@@ -98,7 +98,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
     return query + '&w_rid=' + wbiSign;
 }
 
-export async function captcha(gt: string, challenge: string): Promise<login.Captcha> {
+export async function captcha(gt: string, challenge: string): Promise<Types.Captcha> {
     const lang = useSettingsStore().language;
     return new Promise(async (resolve, reject) => {
         initGeetest({
@@ -119,7 +119,7 @@ export async function captcha(gt: string, challenge: string): Promise<login.Capt
                 const seccode = result.geetest_seccode;
                 return resolve({ challenge, validate, seccode });
             }).onError(function (err) {
-                return reject(new ApplicationError(err.msg, { code: err.error_code }));
+                return reject(new AppError(err.msg, { code: err.error_code }));
             })
         });
     })

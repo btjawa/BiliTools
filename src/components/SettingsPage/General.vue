@@ -1,7 +1,7 @@
 <template>
 <section>
     <h3>
-        <i :class="[settings.dynFa, 'fa-earth-america']"></i>
+        <i :class="[$fa.weight, 'fa-earth-america']"></i>
         <span>{{ $t('settings.language.name') }}</span>
     </h3>
     <Dropdown
@@ -22,12 +22,27 @@
     />
 </section>
 <hr />
+<section>
+    <h3>
+        <i :class="[$fa.weight, 'fa-clipboard-check']"></i>
+        <span>{{ $t('settings.clipboard.name') }}</span>
+    </h3>
+    <Switch v-model="settings.clipboard"/>
+</section>
+<section>
+    <h3>
+        <i :class="[$fa.weight, 'fa-bell']"></i>
+        <span>{{ $t('settings.notify.name') }}</span>
+    </h3>
+    <Switch v-model="settings.notify"/>
+    <span class="desc">{{ $t('settings.notify.desc') }}</span>
+</section>
 </template>
 
 <script lang="ts" setup>
 import { locales } from '@/i18n';
 import { useSettingsStore } from '@/store';
-import Dropdown from '../Dropdown.vue';
+import { Dropdown, Switch } from '@/components';
 
 const settings = useSettingsStore();
 </script>

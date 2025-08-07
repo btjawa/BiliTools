@@ -94,7 +94,6 @@ import { useUserStore } from '@/store';
 import { useRouter } from 'vue-router';
 import Dropdown from '@/components/Dropdown.vue';
 
-import { ApplicationError } from '@/services/utils';
 import { commands } from '@/services/backend';
 import * as login from '@/services/login';
 
@@ -113,7 +112,6 @@ const v = reactive({
 const form = reactive({ 1: '', 2: '' });
 
 async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
-    try {
     let status = -1;
     switch (type) {
     case 'init': {
@@ -155,9 +153,6 @@ async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
     if (status === 0) {
         router.push('/');
         await login.fetchUser();
-    }
-    } catch(err) {
-        new ApplicationError(err).handleError();
     }
 }
 

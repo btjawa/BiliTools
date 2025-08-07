@@ -33,6 +33,7 @@ const options = [{
             const end = elm.selectionEnd ?? 0;
             elm.value = elm.value.slice(0, start) + text + elm.value.slice(end);
             elm.selectionStart = elm.selectionEnd = start + text.length;
+            elm.dispatchEvent(new Event('input'));
         }
     },
 }];

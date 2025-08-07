@@ -32,6 +32,7 @@ pub struct Settings {
     pub add_metadata: bool,
     pub auto_download: bool,
     pub check_update: bool,
+    pub clipboard: bool,
     pub default: SettingsDefault,
     pub down_dir: PathBuf,
     pub format: SettingsFormat,

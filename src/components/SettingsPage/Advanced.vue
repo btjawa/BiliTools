@@ -1,7 +1,7 @@
 <template>
 <section>
     <h3>
-        <i :class="[settings.dynFa, 'fa-subtitles']"></i>
+        <i :class="[$fa.weight, 'fa-subtitles']"></i>
         <span>{{ $t('settings.protobuf_danmaku.name') }}</span>
     </h3>
     <Switch v-model="settings.protobuf_danmaku"/>
@@ -9,7 +9,7 @@
 </section>
 <section>
     <h3>
-        <i :class="[settings.dynFa, 'fa-file-import']"></i>
+        <i :class="[$fa.weight, 'fa-file-import']"></i>
         <span>{{ $t('settings.add_metadata.name') }}</span>
     </h3>
     <Switch v-model="settings.add_metadata"/>

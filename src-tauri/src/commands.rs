@@ -24,9 +24,11 @@ pub use crate::{
             self, config_write
         },
         cookies,
-        downloads,
+        archive,
     },
-    shared,
+    shared::{
+        self, set_window
+    },
     errors::{TauriResult, TauriError},
 };
 
@@ -141,30 +143,6 @@ pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, output: String, c
     Ok(())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn set_theme(window: tauri::WebviewWindow, theme: shared::Theme, modify: bool) -> TauriResult<shared::Theme> {
-    use shared::Theme;
-    let new_theme = if modify {
-        match theme {
-            Theme::Auto => {
-                let theme: tauri::Theme = theme.into();
-                if theme == tauri::Theme::Dark {
-                    Theme::Light
-                } else {
-                    Theme::Dark
-                }
-            },
-            Theme::Dark => Theme::Light,
-            Theme::Light => Theme::Dark,
-        }
-    } else { theme };
-    let tauri_theme = new_theme.clone().into();
-    window.set_theme(Some(tauri_theme))?;
-    shared::set_window(window, Some(tauri_theme))?;
-    Ok(new_theme)
-}
-
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn ready() -> TauriResult<String> {
@@ -184,7 +162,7 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     }
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
-    let downloads = downloads::load().await?;
+    let downloads = archive::load().await?;
     let config = config::read();
     let path = app.path();
     let paths = Paths {

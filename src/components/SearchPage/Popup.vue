@@ -1,75 +1,236 @@
-<!-- ADD KEY FOR EACH V-FOR -->
-
 <template><Transition name="slide">
-<div class="popup flex flex-col gap-2 w-full h-full px-6 py-3 overflow-auto" v-if="v.active">
-    <button class="absolute right-4 top-4 rounded-full" @click="close">
-        <i class="fa-solid fa-close"></i>
-    </button>
-    <h2>テストですよ</h2>
-    <div class="flex gap-2 overflow-x-auto">
-    <button
-        v-for="id in new Set(v.playUrl.video?.map(v => v.id))"
-        :class="{ 'selected': v.select.res === id }"
-        @click="click('res', id)"
-    >
-        <i class="fa-solid fa-video"></i>
-        <span>{{ $t('quality.res.' + id) }}</span>
-    </button>
+<div class="popup flex flex-col w-full h-full px-6 py-3 overflow-auto" v-if="v.active">
+    <div class="absolute flex items-center right-4 top-4">
+        <i :class="[$fa.weight, 'fa-info-circle']"></i>
+        <span class="desc">{{ $t('search.popupLint') }}</span>
+        <button class="rounded-full ml-4" @click="close">
+            <i class="fa-solid fa-close"></i>
+        </button>
     </div>
-    <hr />
-    <div>
-        <h2>{{ $t('format.fmt') }}</h2>
-        <i18n-t keypath="search.dash.desc" tag="span" class="desc" scope="global">
+    <template v-for="(i, k) in extras">
+    <div v-if="i.data.length">
+        <h2>
+            <i :class="[$fa.weight, i.icon]"></i>
+            <span>{{ $t(`popup.${k}.name`) }}</span>
+        </h2>
+        <div class="flex gap-2 overflow-x-auto mt-2">
+            <template v-for="id in i.data" :key="id">
+            <button
+                :class="{ 'selected': selected(k, id) }"
+                @click="click(k, id)"
+            >{{ $t(`popup.${k}.${id}`) }}</button>
+            <Dropdown
+                v-if="id === 'subtitles'"
+                :drop="v.extras.misc.subtitles"
+                v-model="v.subtitle"
+            />
+            <VueDatePicker class="!w-40"
+                v-if="id === 'history'"
+                v-model="v.date"
+                format="yyyy-MM-dd"
+                :teleport="true"
+                :max-date="new Date()"
+                :locale="$i18n.locale"
+                :dark="$fa.isDark"
+                :ui="{
+                    input: '!text-sm',
+                    menu: '!text-sm',
+                }"
+            />
+            </template>
+        </div>
+        <hr />
+    </div>
+    </template>
+    <template v-for="(i, k) in quality">
+    <div v-if="i.data.size">
+        <h2>
+            <i :class="[$fa.weight, i.icon]"></i>
+            <span>{{ $t('format.' + k) }}</span>
+        </h2>
+        <i18n-t keypath="search.dash.desc" tag="span" class="desc" scope="global" v-if="k === 'fmt'">
             <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('search.dash.name') }}</a>
         </i18n-t>
+        <div class="flex gap-2 overflow-x-auto mt-2">
+            <button
+                v-for="id in i.data" :key="id"
+                :class="{ 'selected': v.select[k] === id }"
+                @click="qualityClick(k, id)"
+            >{{ $t(`quality.${k}.${id}`) }}</button>
+        </div>
+        <hr />
     </div>
-    <div class="flex gap-2 overflow-x-auto">
-    <button
-        v-for="id in Types.QualityMap.fmt"
-        :class="{ 'selected': v.select.fmt === id }"
-        @click="click('fmt', id)"
-    >
-        <i class="fa-solid fa-signal-stream"></i>
-        <span>{{ $t('quality.fmt.' + id) }}</span>
-    </button>
+    </template>
+    <div class="flex gap-2">
+        <template v-for="(i, k) in options" :key="k">
+        <button
+            v-if="i.data"
+            :class="{ 'selected': selected('media', k) }"
+            @click="click('media', k)"
+        >
+            <i :class="[$fa.weight, i.icon]"></i>
+            <span>{{ $t('popup.mediaType.' + k) }}</span>
+        </button>
+        </template>
+        <button class="ml-auto primary-color" @click="emit">
+            <i :class="[$fa.weight, 'fa-arrow-right']"></i>
+            <span>{{ $t('search.nextStep') }}</span>
+        </button>
     </div>
 </div>
 </Transition></template>
 
 <script lang="ts" setup>
-import { reactive } from 'vue';
-import * as Types from '@/types/data.d';
-import { getDefaultQuality } from '@/services/utils';
+import { computed, reactive } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import VueDatePicker from '@vuepic/vue-datepicker';
+
+import { getDefaultQuality } from '@/services/utils';
+import * as Types from '@/types/shared.d';
+import Dropdown from '../Dropdown.vue';
+
+const props = defineProps<{
+    fmt: (fmt: any) => any
+    emit: (select: Types.PopupSelect) => any
+}>();
 
 const v = reactive({
     active: false,
-    isPackage: false,
+    subtitle: String(),
+    date: String(),
     playUrl: {} as Types.PlayUrlProvider,
-    select: {} as Types.CurrentSelect
+    extras: {} as Types.ExtrasProvider,
+    select: {} as Types.PopupSelect,
 })
+
+const extras = computed(() => ({
+    misc: {
+        icon: 'fa-file-export',
+        data: [
+            ...v.extras.misc.aiSummary ? ['aiSummary'] : [],
+            ...v.extras.misc.subtitles.length ? ['subtitles'] : [],
+        ]
+    },
+    nfo: {
+        icon: 'fa-memo-circle-info',
+        data: v.extras.nfo ? ['album', 'single'] : []
+    },
+    danmaku: {
+        icon: 'fa-subtitles',
+        data: v.extras.danmaku
+    },
+    thumb: {
+        icon: 'fa-images',
+        data: v.extras.thumb,
+    }
+}));
+
+const quality = computed(() => ({
+    res: {
+        icon: 'fa-video',
+        data: new Set(v.playUrl.video?.map(v => v.id)),
+    },
+    enc: {
+        icon: 'fa-video-plus',
+        data: new Set(v.playUrl.video?.filter(i => i.id === v.select.res)?.map(v => v.codecid).filter(Boolean)) as Set<number>,
+    },
+    abr: {
+        icon: 'fa-volume',
+        data: new Set(v.playUrl.audio?.map(v => v.id)),
+    },
+    fmt: {
+        icon: 'fa-code-simple',
+        data: new Set(Types.QualityMap.fmt)
+    }
+}));
+
+const options = computed(() => ({
+    video: {
+        icon: 'fa-volume-slash',
+        data: v.playUrl.video?.length
+    },
+    audio: {
+        icon: 'fa-video-slash',
+        data: v.playUrl.audio?.length
+    },
+    audioVideo: {
+        icon: 'fa-video',
+        data: v.playUrl.video?.length && v.playUrl.audio?.length
+    }
+}));
 
 defineExpose({ init });
 
-async function init(playUrl: Types.PlayUrlProvider, isPackage: boolean, fmt: Types.StreamFormat) {
+async function init(playUrl: Types.PlayUrlProvider, extras: Types.ExtrasProvider) {
     v.active = true;
-    v.isPackage = isPackage;
     v.playUrl = playUrl;
-    v.select.res = getDefaultQuality(playUrl.videoQualities ?? [], 'res');
-    v.select.abr = getDefaultQuality(playUrl.audioQualities ?? [], 'abr');
-    v.select.enc = getDefaultQuality(
-        playUrl.video?.filter(n => n.id === v.select.res).map(v => v.codecid ?? -1) ?? [], 'enc'
-    )
-    v.select.fmt = fmt;
+    v.extras = extras;
+    (['res', 'abr', 'enc'] as const).forEach(i => {
+        v.select[i] = getDefaultQuality([...quality.value[i].data], i);
+    })
+    v.select.misc = {
+        aiSummary: false,
+        subtitles: false
+    }
+    v.select.nfo = {
+        album: false,
+        single: false,
+    }
+    v.select.danmaku = {
+        live: false,
+        history: false,
+    }
+    v.select.thumb = [];
+    v.select.fmt = playUrl.codec;
+    v.subtitle = v.extras.misc.subtitles[0]?.id ?? '';
+    v.date = new Intl.DateTimeFormat('en-CA').format(new Date());
+    v.select.media = {
+        video: false,
+        audio: false,
+        audioVideo: false,
+    }
 }
 
-function click<K extends keyof Types.CurrentSelect>(
+function emit() {
+    props.emit(v.select);
+    close();
+}
+
+function qualityClick<K extends keyof typeof quality.value>(
   key: K,
-  value: Types.CurrentSelect[K]
+  value: Types.PopupSelect[K]
 ) {
-  v.select[key] = value;
+    v.select[key] = value;
+    if (key === 'res') {
+        v.select.enc = getDefaultQuality([...quality.value.enc.data], 'enc');
+    } else if (key === 'fmt') {
+        props.fmt(value);
+        close();
+    }
 }
 
+function click(key: keyof typeof extras.value | 'media', id: string) {
+    const select = v.select[key] as any;
+    if (key === 'thumb') {
+        const i = select.indexOf(id);
+        return i === -1 ? select.push(id) : select.splice(i, 1);
+    }
+    if (key === 'danmaku' && id === 'history') {
+        return select[id] = select[id] ? false : v.date;
+    }
+    if (key === 'misc' && id === 'subtitles') {
+        return select[id] = select[id] ? false : v.subtitle;
+    }
+    select[id] = !select[id];
+}
+
+function selected(key: keyof typeof extras.value | 'media', id: string) {
+    if (key === 'thumb') {
+        return v.select.thumb?.includes(id)
+    } else {
+        return (v.select[key] as any)?.[id];
+    }
+}
 
 function close() {
     v.active = false;
@@ -81,7 +242,7 @@ function close() {
     @apply absolute inset-0 bg-[var(--solid-block-color)];
 }
 hr {
-    @apply my-2;
+    @apply my-2.5;
 }
 button {
     @apply flex-shrink-0;

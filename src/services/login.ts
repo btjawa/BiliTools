@@ -1,14 +1,14 @@
-import { ApplicationError, tryFetch, getBlob } from "@/services/utils";
 import { useAppStore, useUserStore } from "@/store";
 import { Channel } from "@tauri-apps/api/core";
-import { commands } from "@/services/backend";
+import { info } from "@tauri-apps/plugin-log";
 import qrcode from "qrcode-generator";
 import JSEncrypt from "jsencrypt";
-import i18n from "@/i18n";
-import * as LoginTypes from "@/types/login";
-import * as UserTypes from "@/types/user";
-import * as auth from "@/services/auth";
-import { info } from "@tauri-apps/plugin-log";
+
+import { tryFetch, getBlob } from "./utils";
+import { commands } from "./backend";
+import { AppError } from "./error";
+import * as auth from "./auth";
+import * as Types from "@/types/login";
 
 export async function fetchUser() {
     const user = useUserStore();
@@ -17,21 +17,21 @@ export async function fetchUser() {
         user.$reset();
         return;
     }
-    const userInfo = await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', {
+    const info = (await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', {
         auth: 'wbi', params: { mid }
-    }) as UserTypes.UserInfoResp;
-    const userStat = await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as UserTypes.UserStatResp;
+    }) as Types.UserInfo).data;
+    const stat = (await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as Types.UserStatResp).data;
     user.$patch({
-        avatar: await getBlob(userInfo.data.face + '@100w_100h'),
-        name: userInfo.data.name, desc: userInfo.data.sign,
-        mid: userInfo.data.mid, level: userInfo.data.level,
-        vipLabel: await getBlob(userInfo.data?.vip?.label?.img_label_uri_hans_static),
-        topPhoto: await getBlob(userInfo.data.top_photo_v2.l_img + '@170h'),
+        avatar: await getBlob(info.face + '@100w_100h'),
+        name: info.name, desc: info.sign,
+        mid: info.mid, level: info.level,
+        vipLabel: await getBlob(info.vip?.label?.img_label_uri_hans_static),
+        topPhoto: await getBlob(info.top_photo_v2.l_img + '@170h'),
         stat: {
-            coins: userInfo.data.coins,
-            following: userStat.data.following,
-            follower: userStat.data.follower,
-            dynamic: userStat.data.dynamic_count,
+            coins: info.coins,
+            following: stat.following,
+            follower: stat.follower,
+            dynamic: stat.dynamic_count,
         }
     });
 }
@@ -48,18 +48,18 @@ export async function activateCookies() {
 async function getCaptchaParams() {
     const body = await tryFetch('https://passport.bilibili.com/x/passport-login/captcha', {
         params: { source: 'main-fe-header' }
-    }) as LoginTypes.GenCaptchaResp;
+    }) as Types.CaptchaInfo;
     const { token, geetest: { gt = '', challenge = '' } = {} } = body.data;
     return { token, gt, challenge };
 }
 
 export async function getCountryList() {
-    const body = await tryFetch('https://passport.bilibili.com/web/generic/country/list') as LoginTypes.GetCountryListResp;
+    const body = await tryFetch('https://passport.bilibili.com/web/generic/country/list') as Types.CountryListInfo;
     return [...body?.data?.common, ...body?.data?.others];
 }
 
 export async function getZoneCode() {
-    const body = await tryFetch('https://api.bilibili.com/x/web-interface/zone') as LoginTypes.GetZoneResp;
+    const body = await tryFetch('https://api.bilibili.com/x/web-interface/zone') as Types.ZoneInfo;
     return body.data.country_code;
 }
 
@@ -71,31 +71,31 @@ export async function sendSmsCode(cid: number, tel: string): Promise<string> {
             cid: cid.toString(), tel, token,
             source: 'main-fe-header', ...captcha
         }
-    }) as LoginTypes.SendSmsCodeResp;
+    }) as Types.SendSmsInfo;
     return body?.data?.captcha_key;
 }
 
 export async function smsLogin(cid: number, tel: string, code: string, captcha_key: string): Promise<number> {
     const result = await commands.smsLogin(cid, tel, code, captcha_key);
-    if (result.status === 'error') throw result.error;
+    if (result.status === 'error') throw new AppError(result.error);
     return result.data;
 }
 
 export async function pwdLogin(username: string, pwd: string): Promise<number> {
     const { token, gt, challenge } = await getCaptchaParams();
-    const body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/key') as LoginTypes.GetPwdLoginKeyResp;
+    const body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/key') as Types.PwdLoginKeyInfo;
     const { hash, key } = body.data;
     const enc = new JSEncrypt();
     enc.setPublicKey(key);
     const encoded_pwd = enc.encrypt(hash + pwd) || "";
     const captcha = await auth.captcha(gt, challenge);
     const result = await commands.pwdLogin(username, encoded_pwd, token, captcha.challenge, captcha.validate, captcha.seccode);
-    if (result.status === 'error') throw result.error;
+    if (result.status === 'error') throw new AppError(result.error);
     return result.data;
 }
 
 export async function genQrcode(canvas: HTMLCanvasElement): Promise<string> {
-    const body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate') as LoginTypes.GenQrcodeResp;
+    const body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/qrcode/generate') as Types.QrcodeInfo;
     const options = {
         text: body.data.url,
         width: 160,
@@ -128,27 +128,20 @@ export async function scanLogin(qrcode_key: string, onEvent: (code: number ) => 
         onEvent(code);
     }
     const result = await commands.scanLogin(qrcode_key, event);
-    if (result.status === 'error') throw result.error;
+    if (result.status === 'error') throw new AppError(result.error);
     return result.data;
 }
 
 export async function exitLogin(): Promise<number> {
     const result = await commands.exit();
-    if (result.status === 'error') throw result.error;
+    if (result.status === 'error') throw new AppError(result.error);
     return result.data;
 }
 
 export async function checkRefresh(): Promise<number> {
-    const cookie_info_body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/cookie/info', {
-        handleError: false
-    }) as LoginTypes.CookieInfoResp;
+    const cookie_info_body = await tryFetch('https://passport.bilibili.com/x/passport-login/web/cookie/info') as Types.CookieInfo;
     console.log('Refresh status', cookie_info_body);
     info('Refresh status ' + JSON.stringify(cookie_info_body))
-    if (cookie_info_body?.code !== 0) {
-        throw new ApplicationError(
-            cookie_info_body?.message + (cookie_info_body?.code === -101 ? ' / ' + i18n.global.t('error.loginExpired') : ''),
-            { code: cookie_info_body?.code });
-    }
     if (!cookie_info_body.data.refresh) return 0;
     const correspondPath = await auth.correspondPath(cookie_info_body.data.timestamp);
     const refresh_csrf_body = await tryFetch('https://www.bilibili.com/correspond/1/' + correspondPath, { type: 'text' });
@@ -156,11 +149,11 @@ export async function checkRefresh(): Promise<number> {
     const doc = parser.parseFromString(refresh_csrf_body, 'text/html');
     const refresh_csrf = doc.getElementById('1-name')?.textContent?.trim();
     if (!refresh_csrf) {
-        throw "Failed to get refresh_csrf";
+        throw new AppError('Failed to get refresh_csrf');
     }
     console.log('Got refresh_csrf', refresh_csrf?.slice(0, 7))
     info('Got refresh_csrf ' + refresh_csrf?.slice(0, 7))
     const result = await commands.refreshCookie(refresh_csrf);
-    if (result.status === 'error') throw result.error;
+    if (result.status === 'error') throw new AppError(result.error);
     return result.data;
 }

@@ -1,7 +1,7 @@
 <template>
 <section>
     <h2>
-        <i :class="[settings.dynFa, 'fa-user']"></i>
+        <i :class="[$fa.weight, 'fa-user']"></i>
         <span>{{ $t('settings.default.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.default.desc') }}</span>
@@ -16,7 +16,7 @@
 <hr />
 <section>
     <h3>
-        <i :class="[settings.dynFa, 'fa-arrow-down-from-arc']"></i>
+        <i :class="[$fa.weight, 'fa-arrow-down-from-arc']"></i>
         <span>{{ $t('settings.auto_download.name') }}</span>
     </h3>
     <Switch v-model="settings.auto_download"/>
@@ -24,7 +24,7 @@
 </section>
 <section>
     <h3>
-        <i :class="[settings.dynFa, 'fa-angles-down']"></i>
+        <i :class="[$fa.weight, 'fa-angles-down']"></i>
         <span>{{ $t('settings.max_conc.name') }}</span>
     </h3>
     <Dropdown
@@ -36,7 +36,7 @@
 <hr />
 <section>
     <h2>
-        <i :class="[settings.dynFa, 'fa-globe']"></i>
+        <i :class="[$fa.weight, 'fa-globe']"></i>
         <span>{{ $t('settings.proxy.name') }}</span>
     </h2>
     <div v-for="v in proxys">
@@ -52,7 +52,7 @@
 <script lang="ts" setup>
 import { useSettingsStore } from '@/store';
 import { Dropdown, Switch } from '@/components';
-import { QualityMap } from '@/types/data.d';
+import { QualityMap } from '@/types/shared.d';
 
 const defaults = ['res', 'abr', 'enc'] as const;
 const proxys = ['address', 'username', 'password'] as const;

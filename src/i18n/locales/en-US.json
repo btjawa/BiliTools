@@ -1,6 +1,8 @@
 {
     "bilibili": "Bilibili",
     "optional": "Optional",
+    "wip": "Working in progress",
+    "page": "Page",
     "contextMenu": {
         "cut": "Cut",
         "copy": "Copy",
@@ -93,11 +95,11 @@
         "suggest": "Looking for something today?",
         "autoDetect": "Auto Detect",
         "general": "General",
-        "package": "Package",
+        "advanced": "Advanced",
         "selectAll": "Select All",
         "dash": {
-            "name": "About \"DASH / MP4 / FLV\"",
-            "desc": "Please read {0} before modifying options here"
+            "name": "关于 DASH / FLV / MP4",
+            "desc": "Do not modify this lightly. If you need to make changes, please read: {0} and make sure you understand what you're doing."
         }
     },
     "down": {
@@ -138,7 +140,7 @@
         "download": "Download",
         "default": {
             "name": "Default Options",
-            "desc": "These options will be used for \"Package Download\". If the target resource lacks them, the highest available options will be used."
+            "desc": "When downloading, these options will be used first. If the target resource lacks them, the highest available options will be used."
         },
         "auto_download": {
             "name": "Auto Start Download",

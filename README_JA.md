@@ -140,4 +140,4 @@
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- 著作権等に関するご連絡・削除依頼は、いつでも [お知らせ](mailto:2407356083@qq.com) ください。
+- 著作権等に関するご連絡・削除依頼は、いつでも [お知らせ](mailto:btj2407@gmail.com) ください。

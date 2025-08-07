@@ -4,10 +4,10 @@ use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
-use anyhow::{anyhow, Result};
 use tokio::sync::OnceCell;
 use tauri_specta::Event;
 use serde_json::Value;
+use anyhow::Result;
 use specta::Type;
 use chrono::Utc;
 
@@ -29,6 +29,7 @@ lazy_static! {
         add_metadata: true,
         auto_download: false,
         check_update: true,
+        clipboard: true,
         default: SettingsDefault {
             res: 80,
             abr: 30280,
@@ -81,19 +82,12 @@ pub enum Theme {
     Auto,
 }
 
-impl From<Theme> for tauri::Theme {
-    fn from(theme: Theme) -> Self {
-        match theme {
-            Theme::Light => tauri::Theme::Light,
-            Theme::Dark => tauri::Theme::Dark,
-            Theme::Auto => {
-                match dark_light::detect() {
-                    Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
-                    Ok(dark_light::Mode::Light) => tauri::Theme::Light,
-                    Ok(dark_light::Mode::Unspecified) => tauri::Theme::Light,
-                    Err(_) => tauri::Theme::Light,
-                }
-            },
+impl Theme {
+    pub fn as_tauri(&self) -> Option<tauri::Theme> {
+        match self {
+            Theme::Light => Some(tauri::Theme::Light),
+            Theme::Dark => Some(tauri::Theme::Dark),
+            Theme::Auto => None,
         }
     }
 }
@@ -201,7 +195,9 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     }.emit(&app).unwrap(); e
 }
 
-pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {
+#[tauri::command]
+#[specta::specta]
+pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriResult<()> {
     use tauri::{utils::{config::WindowEffectsConfig, WindowEffect}, window::Color};
     use tauri_plugin_os::Version;
     #[cfg(target_os = "windows")]
@@ -217,8 +213,15 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> 
         settings.SetIsGeneralAutofillEnabled(false).unwrap();
         settings.SetIsZoomControlEnabled(false).unwrap();
     })?;
+    window.set_theme(theme.as_tauri())?;
     let set_default = || {
-        let theme: tauri::Theme = theme.unwrap_or(Theme::Auto.into());
+        let theme = if theme == Theme::Auto {
+            match dark_light::detect() {
+                Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
+                Ok(dark_light::Mode::Light) => tauri::Theme::Light,
+                _ => tauri::Theme::Light,
+            }
+        } else { theme.as_tauri().unwrap() };
         window.set_background_color(Some(match theme {
             tauri::Theme::Dark => Color(32, 32, 32, 255),
             _ => Color(249, 249, 249, 255),
@@ -228,7 +231,7 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> 
     match tauri_plugin_os::platform() {
         "windows" => if let Version::Semantic(major, minor, patch) = tauri_plugin_os::version() {
             if major < 6 || (major == 6 && minor < 2) {
-                return Err(anyhow!("Unsupported Windows Version"));
+                panic!("Unsupported Windows Version");
             } else if major >= 10 {
                 if patch >= 22000 {
                     window.set_effects(WindowEffectsConfig {

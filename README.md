@@ -165,4 +165,4 @@
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- 如有侵权，可随时 [联系](mailto:2407356083@qq.com) 处理。
+- 如有侵权，可随时 [联系](mailto:btj2407@gmail.com) 处理。

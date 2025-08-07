@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "downloads")]
+#[sea_orm(table_name = "archive")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     name: String,
@@ -39,7 +39,7 @@ pub async fn init() -> Result<()> {
     db.execute(Statement::from_string(
         DbBackend::Sqlite, 
         stmt.to_string(SqliteQueryBuilder)
-    )).await.context("Failed to init Downloads")?;
+    )).await.context("Failed to init Archive")?;
     Ok(())
 }
 
@@ -68,7 +68,7 @@ pub async fn insert(info: Arc<QueueInfo>) -> Result<()> {
         value: Set((*info).clone())
     };
     db_info.insert(&db).await
-        .with_context(|| format!("Failed to insert Download: {}", name))?;
+        .with_context(|| format!("Failed to insert Archive: {}", name))?;
     Ok(())
 }
 
@@ -78,7 +78,7 @@ pub async fn delete(id: String) -> Result<()> {
     Entity::delete_many()
         .filter(Column::Name.eq(&id))
         .exec(&db).await
-        .with_context(|| format!("Failed to delete Download: {}", id))?;
+        .with_context(|| format!("Failed to delete Archive: {}", id))?;
 
     Ok(())
 }

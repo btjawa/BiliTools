@@ -1,6 +1,6 @@
 <template><div>
 <h1 class="w-full">
-    <i :class="[settings.dynFa, 'fa-gear']"></i>
+    <i :class="[$fa.weight, 'fa-gear']"></i>
     <span>{{ $t('settings.title') }}</span>
     <i @click="openUrl('https://btjawa.top/bilitools#设置')"
         class="question fa-light fa-circle-question text-lg"
@@ -23,19 +23,18 @@
 </div></template>
 <script setup lang="ts">
 import { ref, Transition } from 'vue';
-import { useSettingsStore } from '@/store';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
-import { General, Storage, Download, Advanced } from '@/components/SettingsPage';
+import { General, Storage, Download, Advanced, Format } from '@/components/SettingsPage';
 const list = {
     general: { icon: 'fa-sliders', comp: General },
     storage: { icon: 'fa-database', comp: Storage },
     download: { icon: 'fa-download', comp: Download },
     advanced: { icon: 'fa-flask-gear', comp: Advanced },
+    format: { icon: 'fa-file-signature', comp: Format },
 }
 
 const tab = ref<keyof typeof list>('general');
-const settings = useSettingsStore();
 </script>
 <style lang="scss" scoped>
 :deep(h3) {

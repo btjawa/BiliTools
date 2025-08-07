@@ -9,7 +9,7 @@
             class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
             @click="updateStein(story.edge_id)"
         >
-            <i :class="[settings.dynFa, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
+            <i :class="[$fa.weight, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
         </button>
     </div>
     </template>
@@ -40,11 +40,9 @@
 <!--  -->
 <script lang="ts" setup>
 import { RecycleScroller } from 'vue-virtual-scroller';
-import { useSettingsStore } from '@/store';
-import { MediaInfo } from '@/types/data';
+import { MediaInfo } from '@/types/shared.d';
 import { ref } from 'vue';
 
-const settings = useSettingsStore();
 const model = defineModel();
 const props = defineProps<{
     info: MediaInfo,

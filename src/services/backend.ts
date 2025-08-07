@@ -80,14 +80,6 @@ async initLogin(secret: string) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async writeBinary(secret: string, path: string, contents: number[]) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("write_binary", { secret, path, contents }) };
@@ -112,6 +104,22 @@ async newFolder(secret: string, path: string) : Promise<Result<null, TauriError>
     else return { status: "error", error: e  as any };
 }
 },
+async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_size", { path, event }) };
@@ -123,14 +131,6 @@ async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null,
 async cleanCache(path: string) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async setTheme(theme: Theme, modify: boolean) : Promise<Result<Theme, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_theme", { theme, modify }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -201,7 +201,7 @@ export type Paths = { log: string; temp: string; webview: string; database: stri
 export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
 export type QueueInfo = { id: string; tasks: Task[]; output: string; temp_dir: string; info: ArchiveInfo }
 export type QueueType = "waiting" | "doing" | "complete"
-export type Settings = { add_metadata: boolean; auto_download: boolean; check_update: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; temp_dir: string; theme: Theme; protobuf_danmaku: boolean; proxy: SettingsProxy }
+export type Settings = { add_metadata: boolean; auto_download: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; temp_dir: string; theme: Theme; protobuf_danmaku: boolean; proxy: SettingsProxy }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { filename: string; folder: string; favorite: string }
 export type SettingsProxy = { address: string; username: string; password: string }

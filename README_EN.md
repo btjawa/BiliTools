@@ -139,4 +139,4 @@ Your support will be a great motivation for me to keep improving!
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- If there is any infringement, feel free to [contact](mailto:2407356083@qq.com) us.
+- If there is any infringement, feel free to [contact](mailto:btj2407@gmail.com) us.

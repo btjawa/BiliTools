@@ -11,7 +11,7 @@
 				id, name: $t('mediaType.' + id)
 			}))]" v-model="v.mediaType"
 		/>
-		<button @click="search()" :class="[settings.dynFa, 'fa-search rounded-full']"></button>
+		<button @click="search()" :class="[$fa.weight, 'fa-search rounded-full']"></button>
     </div>
 	<Transition>
 	<Empty
@@ -27,44 +27,60 @@
 	/>
 	</Transition>
 	<Transition>
+	<Empty
+		v-if="!v.searching && v.listActive && !v.mediaInfo.list?.length"
+		class="absolute" :text="$t('empty')"
+	/>
+	</Transition>
+	<Transition>
 	<div class="flex flex-col flex-1 mt-3 w-full min-h-0" v-if="v.listActive">
 		<MediaInfo :info="v.mediaInfo" :open="openUrl" />
-		<div class="flex mt-3 gap-3 min-h-0">
+		<div class="flex mt-3 gap-3 flex-1 min-h-0">
+			<Transition name="slide">
 			<MediaList
 				class="w-full"
 				:info="v.mediaInfo"
 				:update-stein="updateStein"
 				v-model="v.checkboxs"
+				v-if="!v.searching && v.mediaInfo.list.length"
 			/>
-			<div class="flex flex-col gap-3 w-32">
+			</Transition>
+			<div class="flex flex-col gap-3 ml-auto w-32">
 				<button v-for="v in buttons" @click="v.action">
-					<i :class="[settings.dynFa, v.icon]"></i>
+					<i :class="[$fa.weight, v.icon]"></i>
 					<span>{{ $t(v.text) }}</span>
 				</button>
-				<input type="number" min="1" v-model="v.pageIndex" />
+				<template
+					v-if="v.mediaInfo.type === 'favorite' || v.mediaInfo.type === 'musicList'"
+				>
+					<span>{{ $t('page') }}</span>
+					<input type="number" min="1" v-model="v.pageIndex" />
+				</template>
 			</div>
 		</div>
 	</div>
 	</Transition>
-	<Popup ref="popup" />
+	<Popup ref="popup" :fmt="initPopup" :emit />
 </div></template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
-import { TYPE } from 'vue-toastification';
-
-import { openUrl } from '@tauri-apps/plugin-opener';
-import * as log from '@tauri-apps/plugin-log';
 import { MediaInfo, MediaList, Popup } from '@/components/SearchPage';
 import { Dropdown, Empty } from '@/components';
+import DownPage from './DownPage.vue';
 
-import { ApplicationError, AppLog, parseId } from '@/services/utils';
-import { useSettingsStore } from '@/store';
-import * as Types from '@/types/data.d';
-import * as data from '@/services/data';
+import { inject, reactive, Ref, ref, watch } from 'vue';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import * as log from '@tauri-apps/plugin-log';
+import { useRouter } from 'vue-router';
+import Bottleneck from 'bottleneck';
+
+import { useSettingsStore, useUserStore } from '@/store';
+import { AppLog, parseId, waitPage } from '@/services/utils';
+import { data, extras } from '@/services/media';
+import * as queue from '@/services/queue';
+import * as Types from '@/types/shared.d';
 import i18n from '@/i18n';
 
-const settings = useSettingsStore();
 const v = reactive({
 	mediaInfo: {} as Types.MediaInfo,
 	mediaType: 'auto' as Types.MediaType | 'auto',
@@ -78,11 +94,11 @@ const v = reactive({
 const buttons = [{
 	icon: 'fa-cloud-arrow-down',
 	text: 'search.general',
-	action: () => initPopup(false),
+	action: () => initPopup(),
 }, {
-	icon: 'fa-folder-plus',
-	text: 'search.package',
-	action: () => initPopup(true),
+	icon: 'fa-bolt',
+	text: 'search.advanced',
+	action: () => AppLog(i18n.global.t('wip'), 'info')
 }, {
 	icon: 'fa-check-double',
 	text: 'search.selectAll',
@@ -92,51 +108,55 @@ const buttons = [{
 }];
 
 const popup = ref<InstanceType<typeof Popup>>();
+const downPage = inject<Ref<InstanceType<typeof DownPage>>>('page');
+
+const router = useRouter()
+const user = useUserStore();
+const settings = useSettingsStore();
 
 watch(() => v.checkboxs, (a, b) => {
 	if (a.length > b.length && a.length > 30)
-	AppLog(i18n.global.t('error.selectLimit'), TYPE.WARNING);
+	AppLog(i18n.global.t('error.selectLimit'), 'warning');
 });
 
 watch(() => v.pageIndex, async (pn) => {
 	v.checkboxs = [0];
-	try {
-		const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
-		Object.assign(v.mediaInfo, result);
-	} catch(err) {
-		new ApplicationError(err).handleError();
-	}
+	v.searching = true;
+	const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
+	v.searching = false;
+	Object.assign(v.mediaInfo, result);
 })
 
 defineExpose({ search });
 async function search(overrideInput?: string) {
+	try {
 	const input = (overrideInput ?? v.searchInput).trim();
 	v.searchInput = input;
 	v.listActive = false;
 	v.searching = false;
-	v.checkboxs = [];
-	if (!input.length || /[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(input)) return;
+	v.checkboxs.length = 0;
+	v.pageIndex = 1;
+	if (!input.length) return;
 	v.searching = true;
-	try {
-		const query = v.mediaType === 'auto'
-			? await parseId(input)
-			: { id: input, type: v.mediaType };
-		log.info('Query: ' + JSON.stringify(query));
-		const info = await data.getMediaInfo(query.id, query.type);
-		const target = info.list.findIndex(v => v.isTarget);
-		v.checkboxs.push(target);
-		v.mediaInfo = info;
-		v.listActive = true;
-	} catch(err) {
-		new ApplicationError(err).handleError();
+	const query = v.mediaType === 'auto'
+		? await parseId(input)
+		: { id: input, type: v.mediaType };
+	log.info('Query: ' + JSON.stringify(query));
+	const info = await data.getMediaInfo(query.id, query.type);
+	const target = info.list.findIndex(v => v.isTarget);
+	v.checkboxs.push(target);
+	v.mediaInfo = info;
+	v.listActive = true;
+	} catch(e) { throw e }
+	finally {
+		v.searching = false;
 	}
-	v.searching = false;
 }
 
 async function updateStein(edge_id: number) {
 	const info = v.mediaInfo;
 	const stein = info.stein_gate!;
-	const stein_info = await data.getSteinInfo(info.id, stein.grapth_version, edge_id);
+	const stein_info = await extras.getSteinInfo(info.id, stein.grapth_version, edge_id);
 	v.mediaInfo.stein_gate = {
 		...stein, ...stein_info, edge_id: 1,
 		choices: stein_info.edges.questions[0].choices,
@@ -149,14 +169,36 @@ async function updateStein(edge_id: number) {
 	});
 }
 
-async function initPopup(isPackage: boolean, fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
-	try {
-		if (!v.checkboxs.length) return;
-		const info = v.mediaInfo.list[v.checkboxs[0]];
-		const playUrl = await data.getPlayUrl(info, v.mediaInfo.type, fmt);
-		popup.value?.init(playUrl, isPackage, playUrl.codec);
-	} catch(err) {
-		new ApplicationError(err).handleError();
-	}
+async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
+	if (!v.checkboxs.length) return;
+	const limiter = new Bottleneck({
+		maxConcurrent: settings.max_conc,
+	});
+	const tasks = v.checkboxs.map(i => limiter.schedule(async () => {
+		const info = v.mediaInfo.list[i];
+		if (!info.cid && info.aid) {
+			info.cid = await data.getCid(info.aid);
+		}
+	}));
+	await Promise.all(tasks);
+	const info = v.mediaInfo.list[v.checkboxs[0]];
+	const nfo = v.mediaInfo.nfo;
+	const type = info.type ?? v.mediaInfo.type;
+	popup.value?.init(await data.getPlayUrl(info, type, fmt), {
+		misc: {
+			aiSummary: type === 'video' && user.isLogin ? await extras.getAISummary(info, { check: true }) : false,
+			subtitles: type !== 'music' && user.isLogin ? (await extras.getSubtitle(info)).map(v => ({ id: v.lan, name: v.lan_doc })) : [],
+		},
+		nfo: true,
+		danmaku: type !== 'music' ? user.isLogin ? ['live', 'history'] : ['live'] : [],
+		thumb: nfo.thumbs.map(v => v.id)
+	});
+}
+
+async function emit(select: Types.PopupSelect) {
+	queue.submit(v.mediaInfo, select, v.checkboxs);
+	router.push('/down-page');
+	const page = await waitPage(downPage, 'tab');
+	page.value.tab = 'waiting';
 }
 </script>

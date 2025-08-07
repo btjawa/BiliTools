@@ -12,7 +12,7 @@ use tauri_specta::Event;
 use specta::Type;
 
 use crate::{
-    downloads, config,
+    archive, config,
     TauriError, TauriResult,
     ffmpeg,
     shared::{
@@ -298,7 +298,7 @@ impl DownloadManager {
                     fs::create_dir_all(&info.output.parent().unwrap())
                         .await.context("Failed to create output folder")?;
                     self_cloned.process(&info).await?;
-                    downloads::insert(info.clone()).await?;
+                    archive::insert(info.clone()).await?;
                     QUEUE_MANAGER.doing_to_complete(info.clone()).await?;
                     fs::remove_dir_all(&info.temp_dir).await?;
                     Ok::<Arc<QueueInfo>, TauriError>(info)
@@ -619,7 +619,7 @@ pub async fn process_queue(event: Channel<DownloadEvent>) -> TauriResult<()> {
 pub async fn remove_task(id: String, queue_type: QueueType, gid: Option<String>) -> TauriResult<()> {
     match queue_type {
         QueueType::Complete => {
-            downloads::delete(id.clone()).await?;
+            archive::delete(id.clone()).await?;
         },
         _ => {
             if let Some(gid) = gid {

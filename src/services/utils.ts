@@ -1,45 +1,19 @@
-import { Settings, TauriError, commands, events } from '@/services/backend';
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
-import { MediaInfo, MediaType, CurrentSelect } from '@/types/data.d';
+import { MediaType } from '@/types/shared.d';
+import { MutationType } from 'pinia';
+import { Ref, watch } from "vue";
+import i18n from '@/i18n';
+
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
-import * as auth from '@/services/auth';
-import StackTrace from "stacktrace-js";
-import i18n from '@/i18n';
-import { MutationType } from 'pinia';
 
-export class ApplicationError extends Error {
-    stackFrames?: StackTrace.StackFrame[];
-    constructor(input: unknown, options?: { code?: number | string, name?: string }) {
-        super();
-        if (input instanceof ApplicationError) return input;
-        else if (input instanceof Error) {
-            this.message = input.message;
-            this.name = input.name;
-            this.stack = input.stack;
-        } else if (typeof input === 'string') {
-            this.message = input + (options?.code ? ` (${options.code})` : '');
-        } else {
-            const err = input as TauriError;
-            if (!err.message) return;
-            this.message = err.message + (err.code ? ` (${err.code})` : '');
-        }
-        if (options?.name) this.name = options.name;
-        this.stackFrames = StackTrace.getSync();
-    }
-    async handleError() {
-        const stack = this.stackFrames?.map(f => {
-            const funcName = f.functionName ?? '<anonymous>';
-            const filename = f.fileName?.match(/https?:\/\/[^/]+(\/[^\s?#]*)/)?.[1] ?? '<anonymous>';
-            if (filename.startsWith('/node_modules')) return false;
-            return `    at ${funcName} (${filename}:${f.lineNumber}:${f.columnNumber})`;
-        }).filter(Boolean).join('\n');
-        AppLog(`${this.name}: ${this.message}\n` + stack, TYPE.ERROR);
-    }
-}
+import { Settings, commands, events } from './backend';
+import { AppError } from './error';
+import * as auth from './auth';
 
-export function AppLog(message: string, type?: TYPE) {
+export function AppLog(message: string, _type?: `${TYPE}`) {
+    const type = Object.values(TYPE).includes(_type as TYPE) ? (_type as TYPE) : TYPE.INFO;
     switch(type) {
         case TYPE.ERROR: {
             log.error(message);
@@ -51,7 +25,6 @@ export function AppLog(message: string, type?: TYPE) {
             console.warn(message);
             break;
         }
-        default:
         case TYPE.INFO:
         case TYPE.SUCCESS:
         case TYPE.DEFAULT: {
@@ -60,20 +33,18 @@ export function AppLog(message: string, type?: TYPE) {
             break;
         }
     }
-    (useToast())(message, {
-        type, timeout: 10000,
-    })
+    (useToast())(message, { type });
 }
 
 export function setEventHook() {
     const app = useAppStore();
     const queue = useQueueStore();
     const settings = useSettingsStore();
-    settings.$subscribe((mutation, state) => {
+    settings.$subscribe(async (mutation, state) => {
         if (mutation.type === MutationType.direct)
         commands.configWrite(state, app.secret);
         i18n.global.locale.value = state.language;
-        commands.setTheme(state.theme, false);
+        commands.setWindow(state.theme);
     });
     events.headers.listen(e => {
         app.headers = e.payload;
@@ -84,7 +55,7 @@ export function setEventHook() {
     })
     events.sidecarError.listen(e => {
         const err = e.payload;
-        new ApplicationError(i18n.global.t('error.sidecar', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handleError();
+        new AppError(i18n.global.t('error.sidecar', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handle();
     });
 }
 
@@ -137,7 +108,7 @@ export async function tryFetch(url: string, options?: {
         const response = await fetch(url.replace('http:', 'https:') + params, fetchOptions);
         if (options?.type) {
             if (!response.ok) {
-                throw new ApplicationError(response.statusText, { code: response.status });
+                throw new AppError(response.statusText, { code: response.status });
             }
             switch(options?.type) {
                 case 'text': return await response.text();
@@ -150,7 +121,7 @@ export async function tryFetch(url: string, options?: {
             body = await response.json();
         } catch(_) {
             if (options?.type === 'url') return response.url;
-            throw new ApplicationError(response.statusText, { code: response.status });
+            throw new AppError(response.statusText, { code: response.status });
         }
         if (body.code !== 0 && body.code) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
@@ -165,13 +136,13 @@ export async function tryFetch(url: string, options?: {
                 });
                 const captchaBody = await captchaResp.json();
                 if (captchaBody.code !== 0) {
-                    throw new ApplicationError(captchaBody.message, { code: captchaBody.code });
+                    throw new AppError(captchaBody.message, { code: captchaBody.code });
                 }
                 const { token, geetest: { gt = '', challenge = '' } } = captchaBody.data;
                 if (!token || !gt || !challenge) {
-                    throw new ApplicationError(body.message || body.msg, { code: body.code });
+                    throw new AppError(body.message || body.msg, { code: body.code });
                 }
-                AppLog(i18n.global.t('error.risk'), TYPE.WARNING);
+                AppLog(i18n.global.t('error.risk'), 'warning');
                 const captcha = await auth.captcha(gt, challenge);
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })
@@ -183,15 +154,14 @@ export async function tryFetch(url: string, options?: {
                 });
                 const validateBody = await validateResp.json();
                 if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
-                    throw new ApplicationError(validateBody.message, { code: validateBody.code });
+                    throw new AppError(validateBody.message, { code: validateBody.code });
                 }
                 grisk_id = validateBody.data.grisk_id;
                 await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
                 continue;
             } else {
-                console.error(body)
                 if (options?.handleError !== false) {
-                    throw new ApplicationError(body.message || body.msg, { code: body.code });
+                    throw new AppError(body.message || body.msg, { code: body.code });
                 }
             }
         }
@@ -209,7 +179,8 @@ export async function getBlob(url: string) {
 }
 
 export async function parseId(input: string) {
-    const err = i18n.global.t('error.invalidInput');
+    const err = new AppError(i18n.global.t('error.invalidInput'));
+    if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(input)) throw err;
     try {
         const url = new URL(input);
         const segs = url.pathname.split('/');
@@ -255,6 +226,25 @@ export async function parseId(input: string) {
     }
 }
 
+export function waitPage<T, K extends keyof T>(
+	component: Ref<T | undefined> | undefined, tag: K
+): Promise<Ref<T>> {
+	return new Promise((resolve) => {
+		if (!component) return;
+		watch(() => component.value?.[tag],
+			(v) => { if (v) resolve(component as Ref<T>) },
+			{ once: true }
+		);
+	});
+}
+
+export function randomString(len: number = 8) {
+    if (len <= 0 || len % 2) throw new Error ('Length must be a unsigned even int.');
+    const bytes = new Uint8Array(len / 2);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function debounce(fn: Function, wait: number) {
     let bouncing = false;
     return function(this: any, ...args: any[]) {
@@ -267,7 +257,7 @@ export function debounce(fn: Function, wait: number) {
     };
 }
 
-export function stat(num: number | string): string {
+export function stat(num: number | string) {
     const locale = useSettingsStore().language;
     if (typeof num == "string") return num;
     if (locale === 'zh-CN') {
@@ -289,7 +279,7 @@ export function stat(num: number | string): string {
     }
 }
 
-export function duration(num: number): string {
+export function duration(num: number) {
     const hs = Math.floor(num / 3600);
     const mins = Math.floor((num % 3600) / 60);
     const secs = Math.round(num % 60);
@@ -299,7 +289,7 @@ export function duration(num: number): string {
     return finalHs + finalMins + ':' + finalSecs;
 }
 
-export function timestamp(ts: number, options?: { file?: boolean }): string {
+export function timestamp(ts: number, options?: { file?: boolean }) {
     const date = new Date(ts);
     const formatter = new Intl.DateTimeFormat('zh-CN', {
         year: 'numeric', month: '2-digit', day: '2-digit',
@@ -310,11 +300,7 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
 }
 
-export function getFormat(data: { type: keyof Settings['format'], item: MediaInfo['list'][0], nfo: MediaInfo['nfo'], select?: CurrentSelect, index?: number }) {
-    
-}
-
-export function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number) {
     if (bytes < 1024 * 1024) {
         return (bytes / 1024).toFixed(2) + ' KB';
     } else if (bytes < 1024 * 1024 * 1024) {
@@ -324,35 +310,8 @@ export function formatBytes(bytes: number): string {
     }
 }
 
-export function getFileExtension(options: CurrentSelect) {
-    let videoExt = 'mp4';
-    let audioExt = 'aac';
-    if (options.dms > 120 || options.cdc > 7) {
-        videoExt = 'mkv';
-    }
-    if (options.ads >= 30250 && options.ads <= 30252 || options.ads === 30380) {
-        videoExt = 'mkv';
-    }
-    if (options.ads >= 30216 && options.ads <= 30232 || options.ads === 30280 || options.ads === 30380) {
-        audioExt = 'm4a';
-    }
-    if (options.ads === 30250) {
-        audioExt = 'eac3';
-    }
-    if (options.ads >= 30251 && options.ads <= 30252) {
-        audioExt = 'flac';
-    }
-    if (options.fmt === 2) {
-        videoExt = 'flv';
-    }
-    if (options.dms === 126) {
-        videoExt = 'mp4';
-    }
-    return options.dms >= 0 ? videoExt : audioExt;
-}
-
-export function getDefaultQuality(ids: number[], name: 'res' | 'abr' | 'enc') {
-    const quality = useSettingsStore().default;
+export function getDefaultQuality(ids: number[], name: 'res' | 'abr' | 'enc', _quality?: Settings['default']) {
+    const quality = _quality ?? useSettingsStore().default;
     return ids.includes(quality[name]) ? quality[name] : ids.sort((a, b) => b - a)[0];
 }
 
@@ -360,12 +319,11 @@ export function getRandomInRange(min: number, max: number) {
     return Math.floor(Math.random() * (max - min) + min);
 }
 
-export function getPublicImages(season: Record<string, any>, ext: 'png' | 'jpg') {
-    if (!season) return [];
-    return Object.entries(season)
-        .filter(([_, url]) =>
-            typeof url === 'string'
-            && url.endsWith(ext)
-        )
-        .map(([id, url]) => ({ id, url }));
+export function getPublicImages(data: Record<string, any> | undefined, prefix?: string) {
+    const images: { id: string; url: string }[] = [];
+    for (const [id, url] of Object.entries(data ?? {})) {
+        if (typeof url === 'string' && (url.endsWith('.jpg') || url.endsWith('.png')))
+        images.push({ id: prefix ? `${prefix}_${id}` : id, url });
+    }
+    return images;
 }
