@@ -75,21 +75,21 @@ If you are an user:
 
 ## 🧪 Features
 
-### Resource parsing
+### Resource Parsing
 
 | Function    | Status    | Annotation                      |
 |---------|---------|---------------------------|
-| Video    | ✅ Completed | <ul><li>Support playlists, interactive videos、bangumi, courses, and movies</li><li>Support DASH、MP4、FLV</li><li>Support 4K、8K、HDR、Dolby Vision</li></ul> |
-| Audio    | ✅ Completed | <ul><li>Support AVC、HEVC、AV1</li><li>Support Dolby、Hi-Res</li></ul> |
-| Music    | ✅ Completed | <ul><li>Support loseless FLAC、320Kbps musics / playlists</li></ul> |
-| Historical danmakus | ✅ Completed | <ul><li>ASS Subtitle format</li><li>ProtoBuf parsing</li></ul> |
-| Real-time Danmakus | ✅ Completed | <ul><li>ASS Subtitle format</li><li>XML andProtoBuf parsing</li></ul> |
-| Thumbnail    | ✅ Completed | Support bangumi and movie poster, and etc... |
-| Subtitle    | ✅ Completed | SRT format |
-| AI Conclusion  | ✅ Completed | Markdown format，**From Bilibili `AI assistant`**<br>*Thanks to Shanghai-Bilibili index-20231207 LLM for technical support.* |
+| Video    | ✅ Completed | <ul><li>Support playlists, interactive videos, bangumi, courses, and movies.</li><li>Support DASH, MP4, and FLV.</li><li>Support 4K, 8K, HDR, Dolby Vision.</li></ul> |
+| Audio    | ✅ Completed | <ul><li>Support AVC, HEVC, and AV1 codecs.</li><li>Support Dolby Atmos and Hi-Res.</li></ul> |
+| Music    | ✅ Completed | <ul><li>Support loseless FLAC、320Kbps musics / playlists.</li></ul> |
+| Historical danmakus | ✅ Completed | <ul><li>ASS subtitle format.</li><li>ProtoBuf parsing.</li></ul> |
+| Real-time danmakus | ✅ Completed | <ul><li>ASS subtitle format.</li><li>XML and ProtoBuf parsing.</li></ul> |
+| Thumbnail    | ✅ Completed | Support bangumi and movie posters, and etc... |
+| Subtitle    | ✅ Completed | SRT format. |
+| AI Conclusion  | ✅ Completed | Markdown format，**From Bilibili `AI assistant`**.<br>*Thanks to Shanghai-Bilibili index-20231207 LLM for technical support.* |
 | Favorate lists  | ✅ Completed | FID number parsing. |
-| Metadata  | ✅ Completed | Thumbnail, title, uploader, publish date, and TAGS |
-| NFO    | ⚠️ In-Progress | Priority adaption to `Emby` |
+| Metadata  | ✅ Completed | Thumbnail, title, uploader, publish date, and TAGS. |
+| NFO    | ⚠️ In-Progress | Priority adaption to `Emby`. |
 
 ### Login & Authentication
 
