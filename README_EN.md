@@ -49,7 +49,7 @@ Older systems are not supported.
 
 ### Windows
 
-Download `BiliTools_xxx_x64-setup.exe` then follow the installation guide.
+Download `BiliTools_xxx_x64-setup.exe`, then follow the installation guide.
 
 If it gets stuck at installing `WebView2`，you can install it manually from [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2).
 
@@ -64,18 +64,36 @@ Download `BiliTools_xxx_universal.dmg` then follow the installation guide.
 > [!TIP]
 > ### This project currently lacks active maintainers. To keep it going, we need your help!
 
-Everyone is welcome to contribute and help improve this project!
+Everyone is welcome to contribute and help improving this project!
 
-Please use [Contributing](./CONTRIBUTING.md) as reference~
+Please use [Contributing](./CONTRIBUTING.md) as a reference~
 
-If you are just a user:
+If you are an user:
 - Submit according to the *Issue 与 Discussion* section in [Contributing](./CONTRIBUTING.md).
 - **Note the difference between the purpose of Issues and Discussions**.
 - **Respect the work of others**.
 
 ## 🧪 Features
 
-> See Chinese README. Translations here are not done yet.
+### Resource parsing
+
+| Function    | Status    | Annotation                      |
+|---------|---------|---------------------------|
+| Video    | ✅ Completed | <ul><li>Support playlists, interactive videos、bangumi, courses, and movies</li><li>Support DASH、MP4、FLV</li><li>Support 4K、8K、HDR、Dolby Vision</li></ul> |
+| Audio    | ✅ Completed | <ul><li>Support AVC、HEVC、AV1</li><li>Support Dolby、Hi-Res</li></ul> |
+| Music    | ✅ Completed | <ul><li>Support loseless FLAC、320Kbps musics / playlists</li></ul> |
+| Historical danmakus | ✅ Completed | <ul><li>ASS Subtitle format</li><li>ProtoBuf parsing</li></ul> |
+| Real-time Danmakus | ✅ Completed | <ul><li>ASS Subtitle format</li><li>XML andProtoBuf parsing</li></ul> |
+| Thumbnail    | ✅ Completed | Support bangumi and movie poster, and etc... |
+| Subtitle    | ✅ Completed | SRT format |
+| AI Conclusion  | ✅ Completed | Markdown format，**From Bilibili `AI assistant`**<br>*Thanks to Shanghai-Bilibili index-20231207 LLM for technical support.* |
+| Favorate lists  | ✅ Completed | FID number parsing. |
+| Metadata  | ✅ Completed | Thumbnail, title, uploader, publish date, and TAGS |
+| NFO    | ⚠️ In-Progress | Priority adaption to `Emby` |
+
+### Login & Authentication
+
+> To be completed, see Chinese [README](./README.md#登录--验证相关) for its infomations.
 
 ## 🌎 Internationalization
 
@@ -108,13 +126,13 @@ Your support will be a great motivation for me to keep improving!
 
 <br />
 
-- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) Reference for API requesting
+- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) - Reference for API requesting
 
-- [aria2](https://github.com/aria2/aria2) For Multi-source & high-efficiency downloading
+- [aria2](https://github.com/aria2/aria2) - For Multi-source & high-efficiency downloading
 
-- [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) For muxing and media processing
+- [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) - For muxing and media processing
 
-- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) For convert raw XML Danmaku to ASS format
+- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) - For convert raw XML Danmaku to ASS format
 
 
 <a href="https://www.star-history.com/#btjawa/BiliTools&Date" alt="Star History Chart">
