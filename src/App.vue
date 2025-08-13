@@ -2,7 +2,6 @@
     <TitleBar />
     <div class="main" @contextmenu="contextMenu?.init">
 		<SideBar />
-		<Updater ref="updater" />
 		<ContextMenu ref="contextMenu" />
         <div class="loading"></div>
 		<router-view v-slot="{ Component }">
@@ -12,6 +11,7 @@
 			</keep-alive>
             </Transition>
         </router-view>
+		<Updater ref="updater" />
     </div>
 </template>
 
@@ -22,7 +22,7 @@ import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { useRouter } from 'vue-router';
 
 import { checkRefresh, fetchUser, activateCookies } from '@/services/login';
-import { useAppStore, useQueueStore, useSettingsStore } from '@/store';
+import { useAppStore, useSettingsStore } from '@/store';
 import { setEventHook } from '@/services/utils';
 import { AppError } from '@/services/error';
 import { commands } from '@/services/backend';
@@ -33,7 +33,6 @@ const updater = ref<InstanceType<typeof Updater>>();
 const router = useRouter();
 
 const app = useAppStore();
-const queue = useQueueStore();
 const settings = useSettingsStore();
 const context = getCurrentInstance()?.appContext!;
 
@@ -46,10 +45,12 @@ watch(() => settings.isDark, (v) => {
 
 context.app.config.errorHandler = e => new AppError(e, { name: 'AppError' }).handle();
 
+provide('page', page);
+provide('updater', updater);
+
 onMounted(async () => {
 	router.push('/');
 	setEventHook();
-	provide('page', page);
 	const ready = await commands.ready();
 	if (ready.status === 'error') throw new AppError(ready.error);
 	const secret = ready.data;
@@ -57,9 +58,8 @@ onMounted(async () => {
 	const init = await commands.init(secret);
 	if (init.status === 'error') throw new AppError(init.error);
 	const data = init.data;
-	const { downloads, config, ...initData } = init.data;
+	const { config, ...initData } = init.data;
 	settings.$patch(config);
-	queue.$patch({ complete: data.downloads as any });
 	app.$patch({ ...initData });
 	const initLogin = await commands.initLogin(secret);
 	if (initLogin.status === 'error') throw new AppError(initLogin.error);
@@ -72,17 +72,17 @@ onMounted(async () => {
 
 <style lang="scss">
 .main {
-	@apply absolute right-0 bottom-0 h-[calc(100vh_-_30px)];
+	@apply absolute right-0 bottom-0 h-[calc(100vh-30px)];
 	@apply flex w-full items-end bg-transparent overflow-visible;
 }
 .page {
 	@apply flex flex-col relative justify-center items-center w-full h-full;
-	@apply text-[color:var(--content-color)] px-6 py-3 overflow-hidden;
+	@apply text-[color:var(--content-color)] px-6 overflow-hidden;
 }
 .loading {
-	@apply absolute w-8 h-8 top-0 right-0 m-6 opacity-0 z-[99] pointer-events-none;
+	@apply absolute w-8 h-8 top-2 right-6 opacity-0 z-[99] pointer-events-none transition-opacity;
 	@apply border-solid border-2 border-[color:var(--solid-block-color)] border-l-[color:var(--content-color)] rounded-full;
-	@apply transition-opacity animate-[circle_infinite_0.75s_linear];
+	animation: circle infinite 0.75s linear;
 	&.active { opacity: 1 }
 }
 @keyframes circle {

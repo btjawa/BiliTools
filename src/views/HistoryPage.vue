@@ -1,9 +1,9 @@
-<template><div class="pb-0">
-<h1 class="w-full mb-auto">
+<template><div>
+<h1 class="w-full mt-1.5 mb-auto">
 	<i :class="[$fa.weight, 'fa-clock']"></i>
 	<span>{{ $t('history.title') }}</span>
 </h1>
-<div class="flex w-full h-full mt-4 flex-1 gap-3 min-h-0">
+<div class="flex w-full h-full mt-[22px] flex-1 gap-3 min-h-0">
 	<Transition name="slide">
 	<RecycleScroller
 		v-if="v.listActive" class="w-full"
@@ -14,13 +14,13 @@
             <Empty :text="$t('empty')" />
         </template>
 		<template v-slot="{ item }">
-            <div class="px-4 py-2 rounded-lg bg-[var(--block-color)] text-sm">
+            <div class="p-4 rounded-lg bg-[var(--block-color)] text-sm h-12">
                 <span>{{ item.title }}</span>
             </div>
         </template>
 	</RecycleScroller>
 	</Transition>
-	<div class="flex flex-col w-32 gap-2">
+	<div class="flex flex-col w-32 gap-2 ml-auto">
 		<div class="tab">
 		<button v-for="v in tabs" @click="tab = v.type" :class="{ 'active': tab === v.type }">
 			<span>{{ v.name }}</span>
@@ -43,6 +43,7 @@ import { RecycleScroller } from 'vue-virtual-scroller';
 import { getHistory } from '@/services/media/extras';
 import { HistoryInfo } from '@/types/media/extras.d';
 import Empty from '@/components/Empty.vue';
+import { AppError } from '@/services/error';
 
 const tab = ref('all');
 const v = reactive({
@@ -60,9 +61,13 @@ const tabs = computed(() => ([
 
 async function refresh() {
 	v.listActive = false;
-	v.info = await getHistory(v.info.cursor?.view_at ?? 0);
-	console.log(v.info)
-	v.listActive = true;
+	try {
+		v.info = await getHistory(v.info.cursor?.view_at ?? 0);
+	} catch(err) {
+		new AppError(err).handle()
+	} finally {
+		v.listActive = true;
+	}
 }
 
 onActivated(() => refresh());

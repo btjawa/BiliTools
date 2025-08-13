@@ -7,6 +7,37 @@ export const QualityMap = {
   fmt: [StreamFormat.Dash, StreamFormat.Mp4, StreamFormat.Flv],
 }
 
+export const FormatPlaceholders = {
+  basic: [
+    'showtitle',
+    'title',
+    'upper',
+    'upperid',
+    'pubtime',
+    'pubts',
+    'res',
+    'abr',
+    'enc',
+    'fmt',
+    'mediaType',
+    'taskType',
+  ] as const,
+  id: [
+    'aid',
+    'sid',
+    'fid',
+    'cid',
+    'bvid',
+    'epid',
+    'ssid',
+  ] as const,
+  down: [
+    'index',
+    'downtime',
+    'downts',
+  ] as const,
+}
+
 export interface PopupSelect {
   res: number;
   abr: number;
@@ -40,10 +71,17 @@ export interface Headers {
   [key: string]: string;
 }
 
-export enum Queue {
-  Waiting = "waiting",
-  Doing = "doing",
-  Complete = "complete",
+export enum TaskType {
+  AISummary = 'aiSummary',
+  Subtitles = 'subtitles',
+  AlbumNfo = 'albumNfo',
+  SingleNfo = 'singleNfo',
+  LiveDanmaku = 'liveDanmaku',
+  HistoryDanmaku = 'historyDanmaku',
+  Thumb = 'thumb',
+  Video = 'video',
+  Audio = 'audio',
+  AudioVideo = 'audioVideo',
 }
 
 export enum MediaType {

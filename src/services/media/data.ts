@@ -80,7 +80,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 favorite: data.stat.favorite,
                 share: data.stat.share,
             },
-            list: data.pages?.map((page, index) => ({
+            list: (data.pages.length > 1 ? data.pages?.map((page, index) => ({
                 title: page.part || data.title,
                 cover: data.pic,
                 desc: data.desc,
@@ -92,7 +92,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 type: Types.MediaType.Video,
                 isTarget: index === 0,
                 index
-            })) ?? data.ugc_season?.sections.find(v => v.type)?.episodes.map((episode, index) => ({
+            })) : data.ugc_season?.sections.find(v => v.type)?.episodes.map((episode, index) => ({
                 title: episode.title,
                 cover: episode.arc.pic,
                 desc: episode.arc.desc,
@@ -104,7 +104,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 type: Types.MediaType.Video,
                 isTarget: data.aid === episode.aid,
                 index
-            })) ?? [{
+            }))) ?? [{
                 title: data.title,
                 cover: data.pic,
                 desc: data.desc,

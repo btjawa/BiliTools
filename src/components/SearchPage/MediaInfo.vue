@@ -1,7 +1,7 @@
 <template><div class="flex w-full min-h-36 h-36 bg-[color:var(--block-color)] rounded-lg p-4 gap-4">
     <img :src="cover" class="object-cover rounded-lg" />
     <div class="text flex flex-col flex-1 min-w-0">
-        <h3 class="text-lg ellipsis">{{ info.nfo.showtitle }}</h3>
+        <h2 class="text-lg ellipsis">{{ info.nfo.showtitle }}</h2>
         <div class="text-xs flex flex-wrap gap-3 mt-1.5 text-[var(--desc-color)]">
             <template v-for="([key, value]) in Object.entries(info.stat)">
             <div class="flex flex-nowrap gap-1" v-if="value">
@@ -51,7 +51,7 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-h3 ~ span {
+h2 ~ span {
     @apply whitespace-pre-wrap;
     display: -webkit-box;
 }

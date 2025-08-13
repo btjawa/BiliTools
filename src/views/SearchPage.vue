@@ -1,4 +1,4 @@
-<template><div class="pb-0">
+<template><div>
     <div class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-[var(--block-color)]">
         <input
 			v-model="v.searchInput" class="w-full !rounded-2xl"
@@ -72,7 +72,7 @@ import { inject, reactive, Ref, ref, watch } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import * as log from '@tauri-apps/plugin-log';
 import { useRouter } from 'vue-router';
-import Bottleneck from 'bottleneck';
+import pLimit from 'p-limit';
 
 import { useSettingsStore, useUserStore } from '@/store';
 import { AppLog, parseId, waitPage } from '@/services/utils';
@@ -171,10 +171,8 @@ async function updateStein(edge_id: number) {
 
 async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 	if (!v.checkboxs.length) return;
-	const limiter = new Bottleneck({
-		maxConcurrent: settings.max_conc,
-	});
-	const tasks = v.checkboxs.map(i => limiter.schedule(async () => {
+	const limit = pLimit(settings.max_conc);
+	const tasks = v.checkboxs.map(i => limit(async () => {
 		const info = v.mediaInfo.list[i];
 		if (!info.cid && info.aid) {
 			info.cid = await data.getCid(info.aid);

@@ -10,7 +10,7 @@
             <img class="rounded-full" :src="user.avatar">
             <img class="absolute w-7 right-0 bottom-0" v-if="user.vipLabel" src="@/assets/img/user/big-vip.svg">
         </div>
-        <div class="flex flex-col gap-2 self-center">
+        <div class="flex flex-col gap-1 self-center">
             <div class="flex gap-2 items-center">
                 <h1 class="text-2xl font-bold">{{ user.name }}</h1>
                 <img class="h-5" v-if="user.vipLabel" :src="user.vipLabel">

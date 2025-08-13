@@ -27,6 +27,7 @@ lazy_static! {
     pub static ref APP_HANDLE: Arc<OnceCell<AppHandle<Wry>>> = Arc::new(OnceCell::new());
     pub static ref CONFIG: RwLock<Arc<Settings>> = RwLock::new(Arc::new(Settings {
         add_metadata: true,
+        auto_check_update: true,
         auto_download: false,
         check_update: true,
         clipboard: true,
@@ -37,8 +38,8 @@ lazy_static! {
         },
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
         format: SettingsFormat {
-            filename: "".into(),
-            folder: "".into(),
+            filename: "{title}".into(),
+            folder: "{index}_{mediaType}_{showtitle}".into(),
             favorite: "".into(),
         },
         language: sys_locale::get_locale()
@@ -53,6 +54,7 @@ lazy_static! {
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
         max_conc: 3,
+        notify: true,
         temp_dir: get_app_handle().path().temp_dir().unwrap(),
         theme: Theme::Auto,
         protobuf_danmaku: true,
@@ -120,9 +122,13 @@ pub async fn init_headers() -> Result<BTreeMap<String, String>> {
     map.insert("User-Agent".into(), USER_AGENT.into());
     map.insert("Referer".into(), "https://www.bilibili.com/".into());
     map.insert("Origin".into(), "https://www.bilibili.com".into());
+    let app = get_app_handle();
     let headers_value: Value = serde_json::to_value(&map)?;
     let headers: Headers = serde_json::from_value(headers_value)?;
-    headers.emit(&get_app_handle()).unwrap();
+    app.run_on_main_thread(move || {
+        let app = get_app_handle();
+        let _ = headers.emit(app);
+    })?;
     Ok(map)
 }
 
@@ -156,8 +162,8 @@ pub async fn init_client_inner(use_proxy: bool) -> Result<Client> {
     Ok(client_builder.build()?)
 }
 
-pub fn get_app_handle() -> AppHandle<Wry> {
-    APP_HANDLE.get().unwrap().clone()
+pub fn get_app_handle() -> &'static AppHandle<Wry> {
+    APP_HANDLE.get().unwrap()
 }
 
 pub fn get_ts(mills: bool) -> i64 {
@@ -192,7 +198,7 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     }
     SidecarError {
         name: name.into(), error: e.to_string(),
-    }.emit(&app).unwrap(); e
+    }.emit(app).unwrap(); e
 }
 
 #[tauri::command]

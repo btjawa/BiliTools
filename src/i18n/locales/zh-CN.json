@@ -1,8 +1,9 @@
 {
     "bilibili": "哔哩哔哩",
     "optional": "可选",
-    "wip": "此处施工中~",
     "page": "页数",
+    "reset": "重置",
+    "wip": "此处施工中~",
     "empty": "无可用资源~",
     "contextMenu": {
         "cut": "剪切",
@@ -17,7 +18,26 @@
         "lesson": "课程",
         "favorite": "收藏夹"
     },
+    "taskType": {
+        "aiSummary": "AI 总结",
+        "subtitles": "字幕",
+        "albumNfo": "合集/剧集刮削",
+        "singleNfo": "单集刮削",
+        "liveDanmaku": "实时弹幕",
+        "historyDanmaku": "历史弹幕",
+        "thumb": "图像",
+        "video": "视频",
+        "audio": "音频",
+        "audioVideo": "音视频"
+    },
     "popup": {
+        "abrHint": "可在 \"设置->高级\" 中修改音频文件使用的后缀格式",
+        "popupLint": "请点击所需资源的按钮，并选择对应参数",
+        "dashHint": {
+            "name": "关于 DASH / FLV / MP4",
+            "desc": "请勿随意修改。若确实需要更改，请先阅读：{0}，并确保你了解自己正在做什么"
+        },
+        "nextStep": "下一步",
         "misc": {
             "name": "杂项",
             "aiSummary": "AI 总结",
@@ -44,17 +64,34 @@
             "season_horizontal_cover_169": "本季海报 (16:9)"
         },
         "mediaType": {
-            "video": "无声视频",
-            "audio": "无画音频",
+            "video": "视频",
+            "audio": "音频",
             "audioVideo": "音视频"
         }
     },
     "format": {
+        "title": "分P/单集标题",
+        "showtitle": "视频/合集标题",
+        "upper": "UP主昵称",
+        "upperid": "UP主 UID",
+        "pubtime": "上传时间",
+        "pubts": "上传时间 (UNIX时间戳)",
         "res": "分辨率",
         "abr": "比特率",
         "enc": "编码格式",
         "fmt": "流媒体格式",
-        "mediaType": "资源类型"
+        "mediaType": "媒体类型",
+        "taskType": "资源名称",
+        "aid": "AV号",
+        "sid": "SID (音乐)",
+        "fid": "FID (收藏夹)",
+        "cid": "CID",
+        "bvid": "BV号",
+        "epid": "EP号",
+        "ssid": "SS号",
+        "index": "下载编号",
+        "downtime": "下载时间",
+        "downts": "下载时间 (UNIX时间戳)"
     },
     "quality": {
         "res": {
@@ -98,6 +135,13 @@
         "invalidInput": "无法解析输入",
         "selectLimit": "不建议一次选择超过 30 个选项"
     },
+    "updater": {
+        "title": "发现新版本！",
+        "latest": "已是最新版本",
+        "hint": "可在 \"设置->常规\" 中禁用 \"自动检查更新\"，但不建议这么做",
+        "install": "下载并安装",
+        "cancel": "跳过本次更新"
+    },
     "user": {
         "input": "请输入{0}",
         "account": "账号",
@@ -129,13 +173,7 @@
         "autoDetect": "自动检测",
         "general": "常规下载",
         "advanced": "高级下载",
-        "selectAll": "全选",
-        "popupLint": "请点击所需资源的按钮，并选择对应参数",
-        "nextStep": "下一步",
-        "dash": {
-            "name": "关于 DASH / FLV / MP4",
-            "desc": "请勿随意修改。若确实需要更改，请先阅读：{0}，并确保你了解自己正在做什么"
-        }
+        "selectAll": "全选"
     },
     "history": {
         "title": "历史记录",
@@ -167,6 +205,9 @@
         "notify": {
             "name": "通知系统",
             "desc": "若启用，则会在下载完毕时发送系统通知。"
+        },
+        "auto_check_update": {
+            "name": "自动检查更新"
         },
         "storage": "存储",
         "paths": {
@@ -213,7 +254,15 @@
             "name": "自动嵌入元数据",
             "desc": "若启用，则会在下载时将目标资源信息嵌入媒体文件，如标题、简介等。"
         },
-        "format": "命名格式"
+        "format": "命名格式",
+        "naming": {
+            "desc": "点击对应按钮以添加变量。若目标资源不含此处的某一变量，则会使用 -1 替换该变量。\n除时间格式外，请不要手动编辑占位符，以防无法正确检测并填充变量。",
+            "filename": "文件名格式",
+            "folder": "文件夹名格式",
+            "basic": "基本",
+            "id": "编号",
+            "down": "下载"
+        }
     },
     "info": {
         "title": "关于",
@@ -224,6 +273,7 @@
         "donate": "赞助",
         "paid": "此软件为公益免费项目。如果你付费购买了此软件，你可能被骗了。",
         "star": "觉得好用的话，在 GitHub 给这个项目点个 Star 吧！",
-        "data": "该应用产生与获取的所有数据均仅存储于用户本地"
+        "data": "该应用产生与获取的所有数据均仅存储于用户本地",
+        "others": "使用本应用时，请遵守相关法律法规及平台服务协议，开发者对不当使用所造成的任何后果概不负责。\n“哔哩哔哩” 及 “Bilibili” 是上海宽娱数码科技有限公司的注册商标或商标。\n本软件与哔哩哔哩无关，亦未获其授权。"
     }
 }

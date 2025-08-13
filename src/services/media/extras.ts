@@ -64,46 +64,8 @@ export async function getSubtitle(item: Types.MediaItem, options?: { name?: fals
 }
 
 export async function getSingleNfo(item: Types.MediaItem, nfo: Types.MediaNfo) {
-    let rootTag = 'movie';
-    switch (item.type) {
-        case Types.MediaType.Video: rootTag = 'movie'; break;
-        case Types.MediaType.Bangumi:
-        case Types.MediaType.Lesson: rootTag = 'episodedetails'; break;
-        default: throw new AppError('No NFO type for ' + item.type);
-    }
-    const doc = document.implementation.createDocument('', rootTag, null);
-    const root = doc.documentElement;
-    const append = (k: string, v: string | number, node?: Node) => {
-        const tag = doc.createElement(k);
-        tag.textContent = v.toString();
-        (node ?? root).appendChild(tag);
-        return tag;
-    }
-    append('title', item.title);
-    append('originaltitle', nfo.showtitle);
-    append('plot', item.desc);
-    for (const thumb of nfo.thumbs) {
-        append('thumb', thumb.url).setAttribute('preview', thumb.url);
-    }
-    append('runtime', Math.round(item.duration / 60));
-    append('premiered', timestamp(item.pubtime * 1000).split('\u0020')[0]);
-    if (nfo.upper) append('director', nfo.upper.name);
-    for (const tag of nfo.tags) {
-        append('genre', tag);
-        append('tag', tag);
-    }
-    for (const [i, v] of nfo.actors.entries()) {
-        const actor = append('actor', '');
-        append('name', v.name, actor);
-        append('role', v.role, actor);
-        append('order', i + 1, actor);
-    }
-    for (const staff of nfo.staff) {
-        append('credits', staff);
-    }
-    append('uniqueid', item.cid ?? item.epid ?? item.ssid ?? item.sid ?? 0);
-    const xml = new XMLSerializer().serializeToString(doc);
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + xml;
+    // 待重构
+    return String();
 }
 
 export async function getDanmaku(item: Types.MediaItem, date?: false | string) {

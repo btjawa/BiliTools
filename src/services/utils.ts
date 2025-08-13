@@ -1,4 +1,4 @@
-import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
+import { useSettingsStore, useAppStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
 import { MediaType } from '@/types/shared.d';
 import { MutationType } from 'pinia';
@@ -38,7 +38,6 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
 
 export function setEventHook() {
     const app = useAppStore();
-    const queue = useQueueStore();
     const settings = useSettingsStore();
     settings.$subscribe(async (mutation, state) => {
         if (mutation.type === MutationType.direct)
@@ -48,10 +47,6 @@ export function setEventHook() {
     });
     events.headers.listen(e => {
         app.headers = e.payload;
-    })
-    events.queueEvent.listen(e => {
-        const type = e.payload.type.toLowerCase() as keyof typeof queue.$state;
-        queue.$patch({ [type]: e.payload.data });
     })
     events.sidecarError.listen(e => {
         const err = e.payload;

@@ -151,7 +151,7 @@ pub fn stop_login() {
     LOGIN_POLLING.store(false, Ordering::SeqCst);
 }
 
-async fn get_bili_ticket() -> Result<String> {
+pub async fn get_bili_ticket() -> Result<()> {
     let client = init_client().await?;
     let ts = get_ts(false);
     let cookies = cookies::load().await?;
@@ -178,10 +178,12 @@ async fn get_bili_ticket() -> Result<String> {
     if bili_ticket_body.code != 0 || bili_ticket_body.data.is_none() {
         return Err(anyhow!(TauriError::new(bili_ticket_body.message, Some(bili_ticket_body.code))).into());
     }
-    Ok(bili_ticket_body.data.unwrap().ticket)
+    let bili_ticket = bili_ticket_body.data.unwrap().ticket;
+    cookies::insert(format!("bili_ticket={bili_ticket}")).await?;
+    Ok(())
 }
 
-fn get_uuid() -> String {
+pub async fn get_uuid() -> Result<()> {
     const DIGIT_MAP: [&str; 16] = ["1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","10"];
     let s = |length: usize| -> String {
         let mut rng = rand::rng();
@@ -189,15 +191,15 @@ fn get_uuid() -> String {
             .map(|_| DIGIT_MAP[rng.random_range(0..DIGIT_MAP.len())])
             .collect()
     };
-    format!(
+    let uuid = format!(
         "{}-{}-{}-{}-{}{:05}infoc",
         s(8), s(4), s(4), s(4), s(12), get_ts(true)
-    )
+    );
+    cookies::insert(format!("_uuid={uuid}")).await?;
+    Ok(())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn get_extra_cookies() -> TauriResult<()> {
+pub async fn get_buvid() -> Result<()> {
     let client = init_client().await?;
     let html_resp = client
         .get("https://www.bilibili.com")
@@ -232,10 +234,6 @@ pub async fn get_extra_cookies() -> TauriResult<()> {
         cookies::insert(format!("buvid3={}", buvid_body.data.b_3)).await?;
     }
     cookies::insert(format!("buvid4={}", buvid_body.data.b_4)).await?;
-
-    let bili_ticket = get_bili_ticket().await?;
-    cookies::insert(format!("bili_ticket={bili_ticket}")).await?;
-    cookies::insert(format!("_uuid={}", get_uuid())).await?;
     Ok(())
 }
 

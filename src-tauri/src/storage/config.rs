@@ -30,6 +30,7 @@ pub struct Model {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
 pub struct Settings {
     pub add_metadata: bool,
+    pub auto_check_update: bool,
     pub auto_download: bool,
     pub check_update: bool,
     pub clipboard: bool,
@@ -38,6 +39,7 @@ pub struct Settings {
     pub format: SettingsFormat,
     pub language: String,
     pub max_conc: usize,
+    pub notify: bool,
     pub temp_dir: PathBuf,
     pub theme: Theme,
     pub protobuf_danmaku: bool,

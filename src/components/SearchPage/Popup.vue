@@ -2,7 +2,7 @@
 <div class="popup flex flex-col w-full h-full px-6 py-3 overflow-auto" v-if="v.active">
     <div class="absolute flex items-center right-4 top-4">
         <i :class="[$fa.weight, 'fa-info-circle']"></i>
-        <span class="desc">{{ $t('search.popupLint') }}</span>
+        <span class="desc">{{ $t('popup.popupLint') }}</span>
         <button class="rounded-full ml-4" @click="close">
             <i class="fa-solid fa-close"></i>
         </button>
@@ -48,9 +48,10 @@
             <i :class="[$fa.weight, i.icon]"></i>
             <span>{{ $t('format.' + k) }}</span>
         </h2>
-        <i18n-t keypath="search.dash.desc" tag="span" class="desc" scope="global" v-if="k === 'fmt'">
-            <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('search.dash.name') }}</a>
+        <i18n-t keypath="popup.dashHint.desc" tag="span" class="desc" scope="global" v-if="k === 'fmt'">
+            <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('popup.dashHint.name') }}</a>
         </i18n-t>
+        <span v-if="k === 'abr'" class="desc">{{ $t('popup.abrHint') }}</span>
         <div class="flex gap-2 overflow-x-auto mt-2">
             <button
                 v-for="id in i.data" :key="id"
@@ -74,7 +75,7 @@
         </template>
         <button class="ml-auto primary-color" @click="emit">
             <i :class="[$fa.weight, 'fa-arrow-right']"></i>
-            <span>{{ $t('search.nextStep') }}</span>
+            <span>{{ $t('popup.nextStep') }}</span>
         </button>
     </div>
 </div>

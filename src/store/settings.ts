@@ -5,6 +5,7 @@ import { computed, reactive, ref, toRefs } from "vue";
 export const useSettingsStore = defineStore('settings', () => {
     const s = reactive<Settings>({
         add_metadata: true,
+        auto_check_update: false, // for watch() to take effet when enabled
         auto_download: false,
         check_update: true,
         clipboard: true,
@@ -21,6 +22,7 @@ export const useSettingsStore = defineStore('settings', () => {
         },
         language: String(),
         max_conc: Number(),
+        notify: true,
         temp_dir: String(),
         theme: 'auto',
         protobuf_danmaku: true,

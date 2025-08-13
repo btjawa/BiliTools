@@ -1,5 +1,5 @@
 <template><div>
-<h1 class="w-full">
+<h1 class="w-full my-1.5">
     <i :class="[$fa.weight, 'fa-gear']"></i>
     <span>{{ $t('settings.title') }}</span>
     <i @click="openUrl('https://btjawa.top/bilitools#设置')"
@@ -8,7 +8,7 @@
 </h1>
 <div class="flex w-full h-full mt-4 gap-4 min-h-0">
     <Transition mode="out-in">
-    <div class="flex flex-col flex-1 overflow-auto" :key="tab">
+    <div class="flex flex-col flex-1 overflow-auto pr-3" :key="tab">
         <component :is="list[tab].comp" :key="tab" />
     </div>
     </Transition>

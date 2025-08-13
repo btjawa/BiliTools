@@ -1,13 +1,12 @@
-name: 'publish'
+name: 'release'
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
 
 jobs:
-  publish-tauri:
+  release-tauri:
     permissions:
       contents: write
     strategy:
@@ -18,10 +17,11 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+            args: ''
+          # for Universal macOS builds (arm64 and x86_64)
           - platform: 'macos-latest'
-            args: '--target universal-apple-darwin' # for universal builds (macos arm64 and x86_64)
-          # - platform: 'ubuntu-22.04'
-          #   args: ''
+            args: '--target universal-apple-darwin'
           - platform: 'windows-latest'
             args: ''
 
@@ -38,23 +38,24 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-          targets: ${{ matrix.platform == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
       - name: install frontend dependencies
         run: npm install # change this to npm, pnpm or bun depending on which one you use.
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
+      - name: extract updatelog
+        id: updatelog
+        env:
+          TAG: ${{ github.ref_name }}
+        run: node scripts/updatelog.mjs "$TAG"
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -64,25 +65,10 @@ jobs:
         with:
           tagName: v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: 'BiliTools | v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          includeUpdaterJson: false
+          releaseBody: ${{ steps.updatelog.outputs.body }}
+          releaseDraft: true
           prerelease: false
+          includeUpdaterJson: true
           updaterJsonPreferNsis: true
+          updaterJsonKeepUniversal: true
           args: ${{ matrix.args }}
-
-  deploy-updater:
-    needs: publish-tauri
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
-          fetch-depth: 0
-
-      - name: install frontend dependencies
-        run: npm install # change this to npm, pnpm or bun depending on which one you use.
-
-      - name: Init and deploy install.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run updater

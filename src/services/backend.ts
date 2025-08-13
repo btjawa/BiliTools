@@ -80,30 +80,6 @@ async initLogin(secret: string) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async writeBinary(secret: string, path: string, contents: number[]) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("write_binary", { secret, path, contents }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async xmlToAss(secret: string, output: string, contents: number[]) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("xml_to_ass", { secret, output, contents }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async newFolder(secret: string, path: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("new_folder", { secret, path }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
@@ -136,33 +112,17 @@ async cleanCache(path: string) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async pushBackQueue(info: ArchiveInfo, tasks: Task[], output: string | null) : Promise<Result<string, TauriError>> {
+async submitTask(task: GeneralTask) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("push_back_queue", { info, tasks, output }) };
+    return { status: "ok", data: await TAURI_INVOKE("submit_task", { task }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async processQueue(event: TAURI_CHANNEL<DownloadEvent>) : Promise<Result<null, TauriError>> {
+async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[]) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async togglePause(pause: boolean, gid: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("toggle_pause", { pause, gid }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("remove_task", { id, queueType, gid }) };
+    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event, list }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -175,11 +135,9 @@ async removeTask(id: string, queueType: QueueType, gid: string | null) : Promise
 
 export const events = __makeEvents__<{
 headers: Headers,
-queueEvent: QueueEvent,
 sidecarError: SidecarError
 }>({
 headers: "headers",
-queueEvent: "queue-event",
 sidecarError: "sidecar-error"
 })
 
@@ -189,25 +147,34 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type ArchiveInfo = { title: string; desc: string; nfo: NfoInfo; pubtime: string; cover: string; ts: Timestamp; folder: string; filename: string }
-export type DownloadEvent = { status: "Started"; id: string; gid: string; taskType: TaskType } | { status: "Progress"; id: string; gid: string; contentLength: number; chunkLength: number } | { status: "Finished"; id: string; gid: string }
+export type ArchiveInfo = { item: MediaItem; type: string; nfo: MediaNfo }
+export type GeneralTask = { id: string; ts: number; index: number; state: TaskState; select: PopupSelect; info: ArchiveInfo; status: Progress[] }
 export type Headers = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { version: string; hash: string; downloads: QueueInfo[]; config: Settings; paths: Paths }
+export type InitData = { version: string; hash: string; config: Settings; paths: Paths }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
-export type NfoActor = { role: string; name: string }
-export type NfoInfo = { tags: string[]; thumbs: JsonValue; showtitle: string; premiered: string; upper: NfoUpper | null; actors: NfoActor[]; staff: string[] }
-export type NfoUpper = { name: string; mid: number | null; avatar: string | null }
+export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; index: number }
+export type MediaNfo = { tags: string[]; thumbs: MediaNfoThumb[]; showtitle: string; premiered: string; upper: MediaNfoUpper | null; actors: MediaNfoActor[]; staff: string[] }
+export type MediaNfoActor = { role: string; name: string }
+export type MediaNfoThumb = { id: string; url: string }
+export type MediaNfoUpper = { name: string; mid: number; avatar: string }
 export type Paths = { log: string; temp: string; webview: string; database: string }
-export type QueueEvent = { type: "Waiting"; data: QueueInfo[] } | { type: "Doing"; data: QueueInfo[] } | { type: "Complete"; data: QueueInfo[] }
-export type QueueInfo = { id: string; tasks: Task[]; output: string; temp_dir: string; info: ArchiveInfo }
-export type QueueType = "waiting" | "doing" | "complete"
-export type Settings = { add_metadata: boolean; auto_download: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; temp_dir: string; theme: Theme; protobuf_danmaku: boolean; proxy: SettingsProxy }
+export type PopupSelect = { res: number; abr: number; enc: number; fmt: StreamFormat; misc: PopupSelectMisc; nfo: PopupSelectNfo; danmaku: PopupSelectDanmaku; thumb: string[]; media: PopupSelectMedia }
+export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
+export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
+export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
+export type PopupSelectNfo = { album: boolean; single: boolean }
+export type ProcessEvent = { type: "request"; id: string; task: GeneralTask; status: Progress | null; namespace: RequestType } | { type: "progress"; id: string; contentLength: number; chunkLength: number } | { type: "error"; id: string; message: string; code: number | null }
+export type Progress = { parent: string; id: string; taskType: TaskType; contentLength: number; chunkLength: number }
+export type RequestType = "getPreInfo" | "getFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; protobuf_danmaku: boolean; proxy: SettingsProxy }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { filename: string; folder: string; favorite: string }
 export type SettingsProxy = { address: string; username: string; password: string }
 export type SidecarError = { name: string; error: string }
-export type Task = { urls: string[] | null; gid: string | null; taskType: TaskType; path: string | null }
-export type TaskType = "video" | "audio" | "merge" | "metadata"
+export type StreamFormat = "dash" | "mp4" | "flv"
+export type StringOrFalse = string | boolean
+export type TaskState = "waiting" | "doing" | "complete" | "paused" | "failed" | "cancelled"
+export type TaskType = "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
 export type TauriError = { code: number | null; message: string }
 export type Theme = 
 /**
@@ -222,7 +189,6 @@ export type Theme =
  * Auto theme.
  */
 "auto"
-export type Timestamp = { millis: number; string: string }
 
 /** tauri-specta globals **/
 

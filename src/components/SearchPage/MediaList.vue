@@ -15,8 +15,8 @@
     </template>
     <template v-slot="{ item, index }">
     <div
-        class="flex w-full items-center h-12 text-sm p-4 rounded-lg bg-[var(--block-color)]"
-        :class="{ 'border-2 border-solid border-[var(--primary-color)]': item.isTarget }"
+        class="flex w-full items-center h-12 text-sm p-4 rounded-lg bg-[var(--block-color)] border-2 border-solid border-transparent"
+        :class="{ '!border-[var(--primary-color)]': item.isTarget }"
     >
         <div class="checkbox">
             <input type="checkbox" :value="index" v-model="model"/>
@@ -39,7 +39,7 @@
 </template>
 <!--  -->
 <script lang="ts" setup>
-import { RecycleScroller } from 'vue-virtual-scroller';
+import { RecycleScroller, RecycleScrollerInstance } from 'vue-virtual-scroller';
 import { MediaInfo } from '@/types/shared.d';
 import { ref } from 'vue';
 
@@ -49,7 +49,7 @@ const props = defineProps<{
     updateStein: Function
 }>();
 
-const scrollList = ref<InstanceType<typeof RecycleScroller>>();
+const scrollList = ref<RecycleScrollerInstance>();
 
 function show(stein_gate: typeof props.info.stein_gate, index: number) {
 	const question = stein_gate?.choices?.[index];

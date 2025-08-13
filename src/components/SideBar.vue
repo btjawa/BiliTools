@@ -4,7 +4,7 @@
     :class="{ 'pt-[30px]': osType() === 'macos' }"
 >
     <li
-        v-for="v in list" @click="v.path === 'theme' ? setTheme() : $router.push(v.path)"
+        v-for="v in list" @click="click(v.path)"
         :class="{ 'active': $route.path === v.path, 'mt-auto': v.path === 'theme' }"
     >
         <img v-if="v.path === '/user-page'" class="w-9 h-9 rounded-full" :src="v.icon" />
@@ -13,12 +13,16 @@
 </ul></template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject, Ref } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useUserStore, useSettingsStore } from "@/store";
+import Updater from './Updater.vue';
+import router from '@/router';
 
 const user = useUserStore();
 const settings = useSettingsStore();
+
+const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
 
 const list = computed(() => ([
     { path: '/user-page', icon: user.getAvatar },
@@ -32,6 +36,12 @@ const list = computed(() => ([
 
 function setTheme() {
     settings.theme = settings.isDark ? 'light' : 'dark';
+}
+
+async function click(path: string) {
+    if (path === 'theme') return setTheme();
+    if (updater?.value.active) updater.value?.close();
+    router.push(path);
 }
 </script>
 

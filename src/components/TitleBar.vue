@@ -1,8 +1,8 @@
 <template>
 <div data-tauri-drag-region @dblclick="appWindow.toggleMaximize()"
-	class="titlebar h-[30px] w-[calc(100vw-61px)] bg-[color:transparent] absolute flex right-0 top-0"
+	class="titlebar absolute right-0 h-[30px] w-[calc(100vw-56px)] bg-transparent"
 >
-    <div v-if="osType() == 'windows'" class='relative z-[100] !visible ml-auto'>
+    <div v-if="osType() == 'windows'" class='relative z-[100] float-right'>
         <div class="button translate-y-[-5px]" @click="appWindow.minimize()">
             <div class="!h-[1px]" :style='`mask-image:url("${icons.minimize}")`'></div>
         </div>

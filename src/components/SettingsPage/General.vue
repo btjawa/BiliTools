@@ -37,6 +37,14 @@
     <Switch v-model="settings.notify"/>
     <span class="desc">{{ $t('settings.notify.desc') }}</span>
 </section>
+<hr />
+<section>
+    <h3>
+        <i :class="[$fa.weight, 'fa-up-from-line']"></i>
+        <span>{{ $t('settings.auto_check_update.name') }}</span>
+    </h3>
+    <Switch v-model="settings.auto_check_update"/>
+</section>
 </template>
 
 <script lang="ts" setup>

@@ -87,7 +87,7 @@ a {
 }
 
 hr {
-    @apply border-none h-px my-4 bg-[var(--split-color)]
+    @apply border-none h-px my-4 bg-[var(--split-color)] flex-shrink-0;
 }
 
 img {
@@ -169,6 +169,7 @@ i + span, span + i {
     color: var(--desc-color);
     display: inline-block;
     white-space: pre-wrap;
+    flex-shrink: 0;
 }
 
 .text, .text * {
@@ -181,7 +182,7 @@ i + span, span + i {
 }
 
 .Vue-Toastification__container {
-    transform: translateY(30px);
+    transform: translateY(10px) translateX(-4px);
     .Vue-Toastification__toast {
         display: flex;
         justify-content: center;

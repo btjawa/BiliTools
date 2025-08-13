@@ -1,5 +1,5 @@
 <template><div>
-<h1 class="w-full">
+<h1 class="w-full my-1.5">
     <i :class="[$fa.weight, 'fa-circle-info']"></i>
     <span>{{ $t('info.title') }}</span>
 </h1>
@@ -22,7 +22,7 @@
             @click="openUrl('https://github.com/btjawa/BiliTools/blob/master/CHANGELOG.md')"
         ><i :class="[$fa.weight, 'fa-memo']"></i><span>{{ $t('info.changelog') }}</span></button>
         <button class="primary-color"
-            @click=""
+            @click="updater?.check(true)"
         ><i :class="[$fa.weight, 'fa-clock-rotate-left']"></i><span>{{ $t('info.checkUpdate') }}</span></button>
     </div>
     <div class="flex gap-2">
@@ -39,24 +39,30 @@
             @click="openUrl('https://afdian.com/a/BTJ_Shiroi')"
         ><i :class="[$fa.weight, 'fa-thumbs-up']"></i><span>{{ $t('info.donate') }}</span></button>
     </div>
-    <div class="text-sm">
+    <div class="text-sm text">
         {{ $t('info.paid') }}<br>
         {{ $t('info.star') }}
     </div>
-    <div class="desc">
+    <div class="desc text">
         Copyright &copy; {{(new Date()).getFullYear()}} <a
             @click="openUrl('https://github.com/btjawa')"
         >btjawa</a>. Licensed under <a
             @click="openUrl('https://github.com/btjawa/BiliTools/blob/master/LICENSE')"
-        >GPL-3.0-or-later</a>.<br>
-        {{ $t('info.data') }}<br>
+        >GPL-3.0-or-later</a>.<br />
+        {{ $t('info.data') }}
+        <hr />
+        {{ $t('info.others') }}
     </div>
 </div>
 </div></template>
 
 <script lang="ts" setup>
+import Updater from '@/components/Updater.vue';
 import { useAppStore } from '@/store';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { inject, Ref } from 'vue';
+
+const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
 
 const app = useAppStore();
 </script>

@@ -1,4 +1,4 @@
-import { MediaInfo, MediaItem, MediaNfo, MediaType, PopupSelect } from "./shared";
+import { MediaInfo, MediaItem, MediaNfo, MediaType, PopupSelect, TaskType } from "./shared";
 
 export interface ArchiveInfo {
     item: MediaItem;
@@ -6,23 +6,22 @@ export interface ArchiveInfo {
     nfo: MediaNfo;
 }
 
+export type TaskState = 'waiting' | 'doing' | 'complete' | 'paused' | 'failed' | 'cancelled';
+
 export interface GeneralTask {
     id: string;
     ts: number;
     index: number;
+    state: TaskState;
     select: PopupSelect;
     info: ArchiveInfo;
-}
-
-export interface ProgressTask extends GeneralTask {
-    progress: {
-
-    }
+    status: Progress[];
 }
 
 interface Progress {
-    gid?: string,
-    disabled?: boolean,
+    parent: string,
+    id: string,
+    taskType: TaskType,
     contentLength: number,
     chunkLength: number,
 }

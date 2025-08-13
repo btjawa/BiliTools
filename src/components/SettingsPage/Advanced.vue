@@ -15,6 +15,7 @@
     <Switch v-model="settings.add_metadata"/>
     <span class="desc">{{ $t('settings.add_metadata.desc') }}</span>
 </section>
+选择音频后缀
 </template>
 
 <script lang="ts" setup>
