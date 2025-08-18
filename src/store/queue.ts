@@ -7,6 +7,7 @@ interface State {
     waiting: string[],
     doing: string[],
     complete: string[],
+    handled: string[],
 }
 
 export const useQueueStore = defineStore('queue', {
@@ -16,5 +17,6 @@ export const useQueueStore = defineStore('queue', {
         waiting: [],
         doing: [],
         complete: [],
+        handled: [],
     })
 });

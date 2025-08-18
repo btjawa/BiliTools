@@ -22,20 +22,28 @@
     />
 </section>
 <hr />
-<section>
+<section v-if="false"> <!-- temporarily inop -->
     <h3>
         <i :class="[$fa.weight, 'fa-clipboard-check']"></i>
         <span>{{ $t('settings.clipboard.name') }}</span>
     </h3>
     <Switch v-model="settings.clipboard"/>
 </section>
-<section>
+<section v-if="false"> <!-- temporarily inop -->
     <h3>
         <i :class="[$fa.weight, 'fa-bell']"></i>
         <span>{{ $t('settings.notify.name') }}</span>
     </h3>
     <Switch v-model="settings.notify"/>
     <span class="desc">{{ $t('settings.notify.desc') }}</span>
+</section>
+<section>
+    <h3>
+        <i :class="[$fa.weight, 'fa-arrow-down-from-arc']"></i>
+        <span>{{ $t('settings.auto_download.name') }}</span>
+    </h3>
+    <Switch v-model="settings.auto_download"/>
+    <span class="desc">{{ $t('settings.auto_download.desc') }}</span>
 </section>
 <hr />
 <section>

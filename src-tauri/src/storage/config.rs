@@ -41,6 +41,7 @@ pub struct Settings {
     pub language: String,
     pub max_conc: usize,
     pub notify: bool,
+    pub task_folder: bool,
     pub temp_dir: PathBuf,
     pub theme: Theme,
     pub proxy: SettingsProxy,

@@ -49,6 +49,7 @@ lazy_static! {
             }).unwrap_or_else(|| "en-US".into()),
         max_conc: 3,
         notify: true,
+        task_folder: true,
         temp_dir: get_app_handle().path().temp_dir().unwrap(),
         theme: Theme::Auto,
         proxy: SettingsProxy {

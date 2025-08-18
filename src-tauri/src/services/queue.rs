@@ -1,23 +1,22 @@
-use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, pin::Pin, sync::{atomic::AtomicBool, Arc}, time::Duration};
-use tauri_specta::Event;
-use tokio::{fs, sync::{broadcast::{self, Receiver}, mpsc, oneshot, RwLock, Semaphore}, time::timeout};
+use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, pin::Pin, sync::{atomic::AtomicBool, Arc}};
+use tokio::{fs, sync::{broadcast::{self, Receiver}, mpsc, oneshot, RwLock, Semaphore}};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::{async_runtime, http::StatusCode, ipc::Channel, Listener};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 use anyhow::{anyhow, Context, Result};
 use lazy_static::lazy_static;
-use serde_json::Value;
+use tauri_specta::Event;
 use specta::Type;
 
 use crate::{
     config,
     errors::{TauriError, TauriResult},
     services::{aria2c, ffmpeg},
-    shared::{get_app_handle, get_unique_path, init_client}
+    shared::{get_app_handle, get_unique_path, init_client}, storage::archive
 };
 
 lazy_static! {
-    static ref QUEUE_MANAGER: QueueManager = QueueManager::new();
+    pub static ref QUEUE_MANAGER: QueueManager = QueueManager::new();
     static ref GLOBAL_PAUSED: Arc<RwLock<AtomicBool>> = Arc::new(RwLock::new(AtomicBool::new(false)));
     static ref SCHEDULER_LIST: RwLock<Vec<Arc<Scheduler>>> = Default::default();
 }
@@ -92,17 +91,6 @@ pub struct PopupSelect {
     media: PopupSelectMedia,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(rename_all = "lowercase")]
-pub enum MediaType {
-    Video,
-    Bangumi,
-    Music,
-    MusicList,
-    Lesson,
-    Favorite,
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct MediaItem {
     title: String,
@@ -111,8 +99,7 @@ pub struct MediaItem {
     duration: usize,
     pubtime: usize, // sec timestamp
     #[serde(rename = "type")]
-    #[specta(type = String)]
-    media_type: MediaType,
+    media_type: String,
     #[specta(optional)]
     aid: Option<usize>,
     #[specta(optional)]
@@ -203,13 +190,12 @@ pub struct GeneralTask {
     pub select: Arc<PopupSelect>,
     pub item: Arc<MediaItem>,
     #[serde(rename = "type")]
-    #[specta(type = String)]
-    pub media_type: MediaType,
+    pub media_type: String,
     pub nfo: Arc<MediaNfo>,
     pub subtasks: Vec<Arc<SubTask>>
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum QueueType {
     Waiting,
@@ -224,11 +210,11 @@ pub struct QueueData {
     complete: VecDeque<Arc<String>>,
 }
 
-struct QueueManager {
-    tasks: RwLock<HashMap<Arc<String>, Arc<RwLock<GeneralTask>>>>,
-    waiting:  RwLock<VecDeque<Arc<String>>>,
-    doing:    RwLock<VecDeque<Arc<String>>>,
-    complete: RwLock<VecDeque<Arc<String>>>,
+pub struct QueueManager {
+    pub tasks: RwLock<HashMap<Arc<String>, Arc<RwLock<GeneralTask>>>>,
+    pub waiting:  RwLock<VecDeque<Arc<String>>>,
+    pub doing:    RwLock<VecDeque<Arc<String>>>,
+    pub complete: RwLock<VecDeque<Arc<String>>>,
 }
 
 impl QueueManager {
@@ -359,6 +345,8 @@ pub enum CtrlEvent {
 
 struct Scheduler {
     list: Vec<Arc<String>>,
+    folder: PathBuf,
+
     event: Arc<Channel<ProcessEvent>>,
     sem: RwLock<Semaphore>,
     max_conc: RwLock<usize>,
@@ -367,7 +355,7 @@ struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn new(list: Vec<Arc<String>>, event: Arc<Channel<ProcessEvent>>, max_conc: usize) -> Arc<Self> {
+    pub fn new(list: Vec<Arc<String>>, folder: PathBuf, event: Arc<Channel<ProcessEvent>>, max_conc: usize) -> Arc<Self> {
         let mut map = HashMap::new();
         for id in &list {
             map.entry(id.clone()).or_insert_with(|| {
@@ -375,7 +363,7 @@ impl Scheduler {
             });
         }
         Arc::new(Self {
-            list, event,
+            list, folder, event,
             sem: RwLock::new(Semaphore::new(max_conc)),
             max_conc: RwLock::new(max_conc),
             ctrls: RwLock::new(map)
@@ -459,6 +447,7 @@ impl Scheduler {
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum RequestAction {
+    GetStatus,
     RefreshNfo,
     RefreshUrls,
     GetFilename,
@@ -472,6 +461,7 @@ pub enum RequestAction {
 impl fmt::Display for RequestAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", match self {
+            RequestAction::GetStatus => "getStatus",
             RequestAction::RefreshNfo => "refreshNfo",
             RequestAction::RefreshUrls => "refreshUrls",
             RequestAction::GetFilename => "getFilename",
@@ -484,13 +474,13 @@ impl fmt::Display for RequestAction {
     }
 }
 
-async fn request_frontend<T: DeserializeOwned + std::fmt::Debug>(
+async fn request_frontend<T: DeserializeOwned + Send + 'static>(
     event: Arc<Channel<ProcessEvent>>,
     parent: Arc<String>,
     subtask: Option<Arc<String>>,
     action: RequestAction
 ) -> Result<Arc<T>> {
-    let (tx, rx) = oneshot::channel::<Result<Value>>();
+    let (tx, rx) = oneshot::channel::<Result<Option<T>>>();
     let app = get_app_handle();
     let id = if let Some(id) = &subtask {
         id
@@ -498,15 +488,17 @@ async fn request_frontend<T: DeserializeOwned + std::fmt::Debug>(
         &parent
     };
     app.once(format!("{action}_{id}"), move |event| {
-        let _ = tx.send(serde_json::from_str(event.payload()).context("Failed to Deserialize frontend response"));
+        let _ = tx.send(
+            serde_json::from_str::<Option<T>>(event.payload())
+            .context("Failed to deserialize frontend response")
+        );
     });
     event.send(ProcessEvent::Request { parent, subtask, action })?;
-    let data = timeout(Duration::from_secs(5), rx).await?
-        .context("Frontend response timeout")?
-        .context("No response from frontend")?;
+    let result = rx.await.context("No response from frontend")??;
 
-    let result: T = serde_json::from_value(data).context("Failed to Deserialize frontend response to struct")?;
-    Ok(Arc::new(result))
+    Ok(Arc::new(
+        result.ok_or(anyhow!("Error occurred from frontend"))?
+    ))
 }
 
 fn update_progress(event: Arc<Channel<ProcessEvent>>, parent: Arc<String>, id: Arc<String>) -> mpsc::Sender<(u64, u64)> {
@@ -596,6 +588,7 @@ async fn handle_ai_summary(
 async fn handle_nfo(
     ptask: ProgressTask,
     _rx: Receiver<CtrlEvent>,
+    folder: PathBuf,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
     let event = ptask.event;
@@ -609,8 +602,25 @@ async fn handle_nfo(
         event, parent, Some(id), RequestAction::GetNfo
     ).await?;
 
-    let output_file = get_unique_path(ptask.folder.join(format!("{}.nfo", &ptask.filename )));
+    let output_file = get_unique_path(if subtask.task_type == TaskType::AlbumNfo {
+        folder.join("tvshow.nfo")
+    } else {
+        ptask.folder.join(format!("{}.nfo", &ptask.filename ))
+    });
     fs::write(&output_file, &*nfo).await?;
+
+    if subtask.task_type == TaskType::AlbumNfo {
+        let client = init_client().await?;
+        let url = format!("{}@.jpg", ptask.task.nfo.thumbs[0].url);
+        let response = client
+            .get(&url)
+            .send().await?;
+        if response.status() != StatusCode::OK {
+            return Err(TauriError::new(format!("Error while fetching thumb {url}"), Some(response.status().as_u16() as isize)));
+        }
+        let bytes = response.bytes().await?;
+        fs::write(folder.join("poster.jpg"), &bytes).await?;
+    }
 
     status_tx.send((1, 1)).await?;
     Ok(())
@@ -626,7 +636,7 @@ async fn handle_danmaku(
     let id = subtask.id.clone();
     
     let status_tx = update_progress(event.clone(), parent.clone(), id.clone());
-    status_tx.send((1, 0)).await?;
+    status_tx.send((2, 1)).await?;
 
     let danmaku = request_frontend::<Vec<u8>>(
         event, parent, Some(id.clone()), RequestAction::GetDanmaku
@@ -645,7 +655,7 @@ async fn handle_danmaku(
 
     if !config::read().convert.danmaku {
         fs::copy(&xml, get_unique_path(PathBuf::from(format!("{output_file}.xml")))).await?;
-        status_tx.send((1, 1)).await?;
+        status_tx.send((2, 2)).await?;
         return Ok(()); 
     }
 
@@ -694,7 +704,7 @@ async fn handle_danmaku(
 
     fs::copy(&xml, get_unique_path(PathBuf::from(format!("{output_file}.ass")))).await?;
     fs::remove_file(&xml).await?;
-    status_tx.send((1, 1)).await?;
+    status_tx.send((2, 2)).await?;
     Ok(())
 }
 
@@ -893,7 +903,12 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
     } else {
         None
     };
-    let folder = Arc::new(get_unique_path(config::read().down_dir.join(&*guard.folder)));
+    let task_folder = config::read().task_folder;
+    let folder = Arc::new(if task_folder {
+        scheduler.folder.join(&*guard.folder)
+    } else {
+        scheduler.folder.clone()
+    });
     guard.folder = folder.clone();
 
     drop(task_snapshot);
@@ -925,6 +940,7 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
         };
         let video_clone = video_path.clone();
         let audio_clone = audio_path.clone();
+        let folder = scheduler.folder.clone();
         match subtask.task_type {
             TaskType::Video | TaskType::Audio => {
                 scheduler.try_join(&id, &sub_id, |rx| {
@@ -948,7 +964,7 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
             },
             TaskType::AlbumNfo | TaskType::SingleNfo => {
                 scheduler.try_join(&id, &sub_id, |rx| {
-                    Box::pin(async { handle_nfo(ptask, rx).await })
+                    Box::pin(async { handle_nfo(ptask, rx, folder).await })
                 }).await?;
             },
             TaskType::AiSummary => {
@@ -965,17 +981,24 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
     }
 
     QUEUE_MANAGER.move_task(&id, QueueType::Doing, QueueType::Complete).await;
-    event.send(ProcessEvent::TaskState { id, state: TaskState::Completed })?;
+    event.send(ProcessEvent::TaskState {
+        id: id.clone(),
+        state: TaskState::Completed
+    })?;
+
+    let status = request_frontend::<serde_json::Value>(event.clone(), id.clone(), None, RequestAction::GetStatus).await?;
+    archive::insert(task, status).await?;
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>) -> TauriResult<()> {
+pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>, showtitle: Arc<String>) -> TauriResult<()> {
     let event = Arc::new(event);
     let max_conc = config::read().max_conc;
+    let folder = get_unique_path(config::read().down_dir.join(&*showtitle));
     let scheduler = Scheduler::new(
-        list.clone(), event.clone(), max_conc
+        list.clone(), folder, event.clone(), max_conc
     );
     let mut guard = SCHEDULER_LIST.write().await;
     guard.push(scheduler.clone());
@@ -1032,13 +1055,13 @@ pub async fn task_event(event: CtrlEvent, id: Arc<String>) -> TauriResult<()> {
         },
         CtrlEvent::Cancel => {
             QUEUE_MANAGER.pop_task(&id).await;
+            archive::delete((&*id).clone()).await?;
         },
         _ => {
             let guard = SCHEDULER_LIST.read().await;
             let scheduler = guard.iter().find(|v| {
                 v.list.iter().any(|v| v.as_str() == id.as_str())
             }).ok_or(anyhow!("No scheduler for task {id} found"))?;
-            log::info!("{event:?}");
             scheduler.get_ctrl(&id).await.unwrap().send(event.clone())?;
             scheduler.event.send(ProcessEvent::TaskState {
                 id: id.clone(),

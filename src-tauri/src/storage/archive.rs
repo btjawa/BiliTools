@@ -1,6 +1,8 @@
 use serde::{Serialize, Deserialize};
 use anyhow::{Context, Result};
-use std::sync::Arc;
+use serde_json::{json, Value};
+use tokio::sync::RwLock;
+use std::{collections::HashMap, sync::Arc};
 
 use sea_orm::{
     Database, DbBackend, Schema, Set, Statement,
@@ -12,18 +14,21 @@ use sea_orm::{
 };
 
 use crate::{
-    aria2c::{
-        QueueInfo, QueueType, QUEUE_MANAGER
-    },
-    shared::DATABASE_URL
+    commands::queue::QUEUE_MANAGER, queue::GeneralTask, shared::DATABASE_URL
 };
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Data {
+    status: Arc<Value>,
+    task: Arc<GeneralTask>
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "archive")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     name: String,
-    value: QueueInfo,
+    value: Value,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -43,32 +48,44 @@ pub async fn init() -> Result<()> {
     Ok(())
 }
 
-pub async fn load() -> Result<Vec<Arc<QueueInfo>>> {
+pub async fn load() -> Result<(Vec<Arc<String>>, HashMap<Arc<String>, Arc<GeneralTask>>, HashMap<Arc<String>, Arc<Value>>)> {
     let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
-    let downloads = Entity::find().all(&db)
-        .await.context("Failed to load QueueInfo")?;
-    let infos: Vec<Arc<QueueInfo>> = downloads
-        .into_iter()
-        .map(|m| Arc::new(m.value))
-        .collect();
-    for info in &infos {
-        QUEUE_MANAGER.push_back(info.clone(), QueueType::Complete).await?;
+    let archives = Entity::find().all(&db)
+        .await.context("Failed to load archives")?;
+
+    let mut complete = vec![];
+    let mut tasks = HashMap::new();
+    let mut status = HashMap::new();
+    let mut tasks_guard = QUEUE_MANAGER.tasks.write().await;
+    let mut complete_guard = QUEUE_MANAGER.complete.write().await;
+
+    for archive in archives {
+        let data = serde_json::from_value::<Data>(archive.value)?;
+        let id = data.task.id.clone();
+        let task = data.task.clone();
+        complete.push(id.clone());
+        tasks.insert(id.clone(), data.task.clone());
+        status.insert(id.clone(), data.status);
+
+        complete_guard.push_back(id.clone());
+        tasks_guard.insert(id.clone(), Arc::new(RwLock::new((*task).clone())));
     }
-    QUEUE_MANAGER.update(QueueType::Complete).await;
-    Ok(infos)
+    Ok((complete, tasks, status))
 }
 
-pub async fn insert(info: Arc<QueueInfo>) -> Result<()> {
+pub async fn insert(task: Arc<GeneralTask>, status: Arc<Value>) -> Result<()> {
     let db = Database::connect(&*DATABASE_URL)
         .await.context("Failed to connect to the database")?;
-    let name = &info.clone().id;
+    let id = (&*task.id).clone();
     let db_info = ActiveModel {
-        name: Set(name.into()),
-        value: Set((*info).clone())
+        name: Set(id),
+        value: Set(json!(Data {
+            task,
+            status
+        }))
     };
-    db_info.insert(&db).await
-        .with_context(|| format!("Failed to insert Archive: {}", name))?;
+    db_info.insert(&db).await?;
     Ok(())
 }
 
@@ -77,8 +94,7 @@ pub async fn delete(id: String) -> Result<()> {
         .await.context("Failed to connect to the database")?;
     Entity::delete_many()
         .filter(Column::Name.eq(&id))
-        .exec(&db).await
-        .with_context(|| format!("Failed to delete Archive: {}", id))?;
+        .exec(&db).await?;
 
     Ok(())
 }

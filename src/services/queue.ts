@@ -1,5 +1,5 @@
 import { useQueueStore, useSettingsStore } from "@/store";
-import { getDefaultQuality, randomString, timestamp } from "./utils";
+import { filename, getDefaultQuality, randomString, timestamp } from "./utils";
 import { getMediaInfo, getPlayUrl } from "./media/data";
 import { AppError } from "./error";
 
@@ -100,9 +100,9 @@ async function handleThumbs(task: Types.GeneralTask) {
         url: v.url.replace('http:', 'https:')
     }));
 }
-async function handleNfo(task: Types.GeneralTask) {
-    const { select, item, nfo } = task;
-    return await extras.getNfo(item, nfo, select.nfo.album ? 'album' : 'nfo');
+async function handleNfo(task: Types.GeneralTask, subtask: Types.SubTask) {
+    const { item, nfo } = task;
+    return await extras.getNfo(item, nfo, subtask.type === 'albumNfo' ? 'album' : 'nfo');
 }
 async function handleSubtitle(task: Types.GeneralTask) {
     const { select, item } = task;
@@ -148,15 +148,16 @@ function buildPaths(task: Types.GeneralTask, key: 'folder' | 'filename', subtask
             default: return -1;
         }
     }
-    return settings.format[key]
-        .replace(/\{(\w+)\}/g, (_, k) => (replace(k) ?? -1).toString())
-        .replace(/[\/\\:*?"<>|]/g, "_");
+    return filename(settings.format[key]
+        .replace(/\{(\w+)\}/g, (_, k) => (replace(k) ?? -1).toString()));
 }
 
 async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, subtask?: Types.SubTask) {
-    if (type === 'refreshNfo') {
+    if (type === 'getStatus') {
+        return useQueueStore().status[task.id];
+    } else if (type === 'refreshNfo') {
         const item = task.item;
-        const id = item.sid ?? item.aid ?? item.epid ?? item.ssid;
+        const id = item.epid ?? item.ssid ?? item.sid ?? item.aid;
         if (!id) throw new AppError('No sid or aid or epid or ssid found');
         const info = await getMediaInfo(id.toString(), item.type);
         return info.nfo;
@@ -166,7 +167,8 @@ async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, 
         if (!subtask) throw new AppError('No subtask for building paths found');
         return buildPaths(task, 'filename', subtask);
     } else if (type === 'getNfo') {
-        return await handleNfo(task);
+        if (!subtask) throw new AppError('No subtask for handling nfo found');
+        return await handleNfo(task, subtask);
     } else if (type === 'getThumbs') {
         return await handleThumbs(task);
     } else if (type === 'getDanmaku') {
@@ -186,7 +188,12 @@ async function handleEvent(event: backend.ProcessEvent) {
     if (type === 'request') {
         const task = queue.tasks[event.parent];
         const subtask = task.subtasks.find(v => v.id === event.subtask);
-        const result = await handleTask(task, event.action, subtask);
+        let result = null as any;
+        try {
+            result = await handleTask(task, event.action, subtask);
+        } catch(e) {
+            new AppError(e).handle();
+        }
         app.emit(`${event.action}_${event.subtask ?? event.parent}`, result);
     } else if (type === 'progress') {
         const target = queue.status[event.parent]?.subtasks.find(v => v.id === event.id);
@@ -206,7 +213,11 @@ export async function processQueue() {
         const queue = useQueueStore();
         const event = new Channel<backend.ProcessEvent>();
         event.onmessage = handleEvent;
-        const result = await backend.commands.processQueue(event, queue.waiting);
+        const handled = new Set(queue.handled);
+        const list = queue.waiting.filter(v => !handled.has(v))
+        queue.handled = [...handled, ...list];
+        const showtitle = `${queue.tasks[list[0]].nfo.showtitle}_${timestamp(Date.now(), { file: true })}`;
+        const result = await backend.commands.processQueue(event, list, showtitle);
         if (result.status === 'error') throw new AppError(result.error);
     } catch(err) {
         new AppError(err).handle();
@@ -216,12 +227,14 @@ export async function processQueue() {
 function selectToSubTasks(id: string, select: Types.PopupSelect) {
     const tasks: Types.SubTask[] = [];
     let index = 0;
-    const push = (type: Types.TaskType) =>
+    const push = (type: Types.TaskType) => {
         tasks.push({
-            index: index++,
+            index,
             id: id + randomString(8),
             type
         });
+        if (type !== 'albumNfo') index++; // prevent albumNfo from occupying index
+    }
     if (select.media.video || select.media.audioVideo) push(Types.TaskType.Video);
     if (select.media.audio || select.media.audioVideo) push(Types.TaskType.Audio);
     if (select.media.audioVideo) push(Types.TaskType.AudioVideo);

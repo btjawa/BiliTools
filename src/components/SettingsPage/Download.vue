@@ -16,11 +16,11 @@
 <hr />
 <section>
     <h3>
-        <i :class="[$fa.weight, 'fa-arrow-down-from-arc']"></i>
-        <span>{{ $t('settings.auto_download.name') }}</span>
+        <i :class="[$fa.weight, 'fa-folders']"></i>
+        <span>{{ $t('settings.task_folder.name') }}</span>
     </h3>
-    <Switch v-model="settings.auto_download"/>
-    <span class="desc">{{ $t('settings.auto_download.desc') }}</span>
+    <Switch v-model="settings.task_folder"/>
+    <span class="desc">{{ $t('settings.task_folder.desc') }}</span>
 </section>
 <section>
     <h3>

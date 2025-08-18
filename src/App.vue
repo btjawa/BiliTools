@@ -22,7 +22,7 @@ import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { useRouter } from 'vue-router';
 
 import { checkRefresh, fetchUser, activateCookies } from '@/services/login';
-import { useAppStore, useSettingsStore } from '@/store';
+import { useAppStore, useQueueStore, useSettingsStore } from '@/store';
 import { setEventHook } from '@/services/utils';
 import { AppError } from '@/services/error';
 import { commands } from '@/services/backend';
@@ -32,8 +32,9 @@ const contextMenu = ref<InstanceType<typeof ContextMenu>>();
 const updater = ref<InstanceType<typeof Updater>>();
 const router = useRouter();
 
-const app = useAppStore();
 const settings = useSettingsStore();
+const queue = useQueueStore();
+const app = useAppStore();
 const context = getCurrentInstance()?.appContext!;
 
 watch(() => settings.isDark, (v) => {
@@ -51,18 +52,26 @@ provide('updater', updater);
 onMounted(async () => {
 	router.push('/');
 	setEventHook();
+
 	const ready = await commands.ready();
 	if (ready.status === 'error') throw new AppError(ready.error);
 	const secret = ready.data;
 	app.secret = secret;
+
 	const init = await commands.init(secret);
 	if (init.status === 'error') throw new AppError(init.error);
-	const data = init.data;
-	const { config, ...initData } = init.data;
+	const { config, complete, tasks, status, ...initData } = init.data;
 	settings.$patch(config);
+	queue.$patch(v => {
+		v.complete = complete;
+		v.tasks = tasks as any;
+		v.status = status as any;
+	});
 	app.$patch({ ...initData });
+
 	const initLogin = await commands.initLogin(secret);
 	if (initLogin.status === 'error') throw new AppError(initLogin.error);
+
 	await checkRefresh();
 	await fetchUser();
 	await activateCookies();

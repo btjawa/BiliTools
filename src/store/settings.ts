@@ -24,6 +24,7 @@ export const useSettingsStore = defineStore('settings', () => {
         language: String(),
         max_conc: Number(),
         notify: true,
+        task_folder: true,
         temp_dir: String(),
         theme: 'auto',
         proxy: {

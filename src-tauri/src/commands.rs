@@ -1,12 +1,14 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-use std::{env, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
+use serde_json::Value;
 use tauri::{async_runtime, Manager};
 use serde::Serialize;
 use anyhow::anyhow;
 use specta::Type;
 use tokio::fs;
 
+use crate::commands::queue::GeneralTask;
 // Re-export for lib.rs to register commands
 pub use crate::{
     services::{
@@ -23,6 +25,7 @@ pub use crate::{
             self, config_write
         },
         cookies,
+        archive,
     },
     shared::{
         self, set_window
@@ -42,7 +45,9 @@ pub struct Paths {
 pub struct InitData {
     version: String,
     hash: String,
-    // downloads: Vec<Arc<aria2c::QueueInfo>>,
+    complete: Vec<Arc<String>>,
+    tasks: HashMap<Arc<String>, Arc<GeneralTask>>,
+    status: HashMap<Arc<String>, Arc<Value>>,
     config: Arc<config::Settings>,
     paths: Paths,
 }
@@ -113,7 +118,7 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     }
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
-    // let archives = archive::load().await?;
+    let (complete, tasks, status) = archive::load().await?;
     let config = config::read();
     let path = app.path();
     let paths = Paths {
@@ -126,7 +131,7 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
         },
         database: path.app_data_dir()?.join("Storage")
     };
-    Ok(InitData { version, hash, config, paths })
+    Ok(InitData { version, hash, complete, tasks, status, config, paths })
 }
 
 #[tauri::command(async)]

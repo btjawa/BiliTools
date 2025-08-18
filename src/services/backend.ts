@@ -120,9 +120,9 @@ async submitTask(task: GeneralTask) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[]) : Promise<Result<null, TauriError>> {
+async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[], showtitle: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event, list }) };
+    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event, list, showtitle }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -168,7 +168,7 @@ sidecarError: "sidecar-error"
 export type CtrlEvent = "pause" | "resume" | "cancel" | "openfolder"
 export type GeneralTask = { id: string; ts: number; index: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo; subtasks: SubTask[] }
 export type Headers = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { version: string; hash: string; config: Settings; paths: Paths }
+export type InitData = { version: string; hash: string; complete: string[]; tasks: Partial<{ [key in string]: GeneralTask }>; status: Partial<{ [key in string]: JsonValue }>; config: Settings; paths: Paths }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; index: number }
 export type MediaNfo = { tags: string[]; thumbs: MediaNfoThumb[]; showtitle: string; premiered: string; upper: MediaNfoUpper | null; actors: MediaNfoActor[]; staff: string[] }
@@ -183,8 +183,8 @@ export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
 export type ProcessEvent = { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "progress"; parent: string; id: string; content: number; chunk: number } | { type: "taskState"; id: string; state: TaskState } | { type: "error"; id: string; message: string; code: number | null }
 export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
-export type RequestAction = "refreshNfo" | "refreshUrls" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
-export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; proxy: SettingsProxy; convert: SettingsConvert }
+export type RequestAction = "getStatus" | "refreshNfo" | "refreshUrls" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; task_folder: boolean; temp_dir: string; theme: Theme; proxy: SettingsProxy; convert: SettingsConvert }
 export type SettingsConvert = { danmaku: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { filename: string; folder: string; favorite: string }

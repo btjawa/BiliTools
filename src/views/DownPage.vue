@@ -45,12 +45,16 @@
                         {{ $t('taskType.historyDanmaku') }}
                         <gap />
                     </template>
+                    <template v-if="item.select.thumb.length">
+                        {{ $t('popup.thumb.name') }}
+                    </template>
                     <template v-if="item.select.misc.subtitles">
                         {{ item.select.misc.subtitles }}
                         <gap />
                     </template>
-                    <template v-if="item.select.thumb.length">
-                        {{ $t('popup.thumb.name') }}
+                    <template v-if="item.select.misc.aiSummary">
+                        {{ $t('taskType.aiSummary') }}
+                        <gap />
                     </template>
                     </div>
                     <div class="flex gap-1 flex-shrink-0 items-center">
@@ -89,7 +93,7 @@
         </button>
         </div>
         <button
-            v-if="queue.waiting.length"
+            v-if="queue.waiting.some(v => !queue.handled.includes(v))"
             @click="processQueue(); tab = 'doing'"
             class="ml-auto w-fit primary-color"
         >

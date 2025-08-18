@@ -1,8 +1,10 @@
 {
     "bilibili": "Bilibili",
     "optional": "Optional",
-    "wip": "Working in progress",
     "page": "Page",
+    "reset": "Reset",
+    "wip": "Work in progress~",
+    "empty": "No available resources~",
     "contextMenu": {
         "cut": "Cut",
         "copy": "Copy",
@@ -13,23 +15,93 @@
         "bangumi": "Bangumi",
         "music": "Music",
         "musicList": "Playlist",
-        "lesson": "Lesson",
-        "favorite": "Favorite"
+        "lesson": "Course",
+        "favorite": "Favorites"
+    },
+    "taskType": {
+        "aiSummary": "AI Summary",
+        "subtitles": "Subtitles",
+        "albumNfo": "Series/Album Metadata",
+        "singleNfo": "Episode Metadata",
+        "liveDanmaku": "Live Danmaku",
+        "historyDanmaku": "History Danmaku",
+        "thumb": "Thumbnail",
+        "video": "Video",
+        "audio": "Audio",
+        "audioVideo": "Audio + Video"
+    },
+    "popup": {
+        "least": "Please select at least one resource",
+        "abrHint": "You can change MP3 conversion in \"Settings → Advanced → Conversion Policy\"",
+        "popupLint": "Click on the resource button and choose its parameters",
+        "dashHint": {
+            "name": "About DASH / FLV / MP4",
+            "desc": "Do not modify this casually. If you really need to, please read {0} first and make sure you know what you are doing."
+        },
+        "nextStep": "Next",
+        "misc": {
+            "name": "Misc",
+            "aiSummary": "AI Summary",
+            "subtitles": "Subtitles"
+        },
+        "nfo": {
+            "name": "NFO Metadata",
+            "album": "Series/Album Metadata",
+            "single": "Episode Metadata"
+        },
+        "danmaku": {
+            "name": "Danmaku",
+            "live": "Live Danmaku",
+            "history": "History Danmaku"
+        },
+        "thumb": {
+            "name": "Thumbnails",
+            "pic": "Cover",
+            "cover": "Cover",
+            "square_cover": "Square Cover",
+            "ugc_season_cover": "Series Cover",
+            "season_cover": "Season Cover",
+            "season_horizontal_cover_1610": "Season Poster (16:10)",
+            "season_horizontal_cover_169": "Season Poster (16:9)"
+        },
+        "mediaType": {
+            "video": "Video",
+            "audio": "Audio",
+            "audioVideo": "Audio + Video"
+        }
     },
     "format": {
-        "res": "Video resolution",
-        "abr": "Audio bitrate",
-        "enc": "Encoding format",
-        "fmt": "Streaming Format"
+        "title": "Part/Episode Title",
+        "showtitle": "Video/Series Title",
+        "upper": "Uploader Nickname",
+        "upperid": "Uploader UID",
+        "pubtime": "Upload Time",
+        "pubts": "Upload Time (UNIX Timestamp)",
+        "res": "Resolution",
+        "abr": "Bitrate",
+        "enc": "Encoding Format",
+        "fmt": "Streaming Format",
+        "mediaType": "Media Type",
+        "taskType": "Resource Name",
+        "aid": "AV ID",
+        "sid": "SID (Music)",
+        "fid": "FID (Favorites)",
+        "cid": "CID",
+        "bvid": "BV ID",
+        "epid": "EP ID",
+        "ssid": "SS ID",
+        "index": "Download Index",
+        "downtime": "Download Time",
+        "downts": "Download Time (UNIX Timestamp)"
     },
     "quality": {
         "res": {
             "6": "240P Fast",
             "16": "360P Smooth",
-            "32": "480P Standard",
+            "32": "480P SD",
             "64": "720P HD-ready",
             "80": "1080P HD",
-            "112": "1080P High bitrate",
+            "112": "1080P High Bitrate",
             "116": "1080P 60FPS",
             "120": "4K Ultra HD",
             "125": "HDR TrueColor",
@@ -49,7 +121,7 @@
         "enc": {
             "7": "AVC (H.264)",
             "12": "HEVC (H.265)",
-            "13" :"AV1"
+            "13": "AV1"
         },
         "fmt": {
             "dash": "DASH Format",
@@ -58,60 +130,67 @@
         }
     },
     "error": {
-        "risk": "Risk control has been triggered, please verify",
-        "sidecar": "Error from Sidecar {0}",
-        "checkUpdate": "Please check the latest updates on GitHub",
-        "loginExpired": "Login session has expired",
-        "invalidInput": "Could not parse the input",
-        "selectLimit": "Not recommend to select over 30 items at once"
+        "risk": "Risk control triggered, please verify",
+        "sidecar": "Sidecar {0} Error",
+        "checkUpdate": "Check the latest updates on GitHub",
+        "invalidInput": "Failed to parse input",
+        "selectLimit": "It is not recommended to select more than 30 items at once"
+    },
+    "updater": {
+        "title": "New version available!",
+        "latest": "Already the latest version",
+        "hint": "You can disable \"Auto Check Updates\" in \"Settings → General\", but it is not recommended",
+        "install": "Download & Install",
+        "cancel": "Skip this update"
     },
     "user": {
         "input": "Please enter {0}",
         "account": "Account",
         "password": "Password",
-        "phone": "Phone",
-        "code": "Code",
-        "scan": "Scan QR Code",
-        "getScan": "Please use the Bilibili App\nto scan and login",
-        "pwd": "Password",
-        "sms": "SMS",
+        "phone": "Phone Number",
+        "code": "Verification Code",
+        "scan": "Scan QR Code to login",
+        "getScan": "Use the Bilibili App\nto scan and log in",
+        "pwd": "Password Login",
+        "sms": "SMS Login",
         "sendSms": "Get Code",
         "login": "Login",
         "info": {
-            "86038": "QR code has expired\nPlease click to refresh",
-            "86090": "Scan successful\nPlease confirm on your phone"
+            "86038": "QR code expired\nClick to refresh",
+            "86090": "Scan successful\nConfirm on your phone"
         },
         "agree": "By logging in, you agree to Bilibili's User Agreement and Privacy Policy\n{0}",
         "stat": {
             "following": "Following",
             "follower": "Followers",
-            "dynamic": "Dynamics",
+            "dynamic": "Posts",
             "coins": "Coins"
         },
-        "exit": "Log out"
+        "exit": "Log Out"
     },
     "search": {
-        "input": "{0} link/AV/BV/SS/EP/AU/AM/SID/FID number...",
-        "suggest": "Looking for something today?",
+        "input": "{0} link / AV / BV / SS / EP / AU / AM / SID / FID ...",
+        "suggest": "What would you like to search today?",
         "autoDetect": "Auto Detect",
-        "general": "General",
-        "advanced": "Advanced",
-        "selectAll": "Select All",
-        "dash": {
-            "name": "关于 DASH / FLV / MP4",
-            "desc": "Do not modify this lightly. If you need to make changes, please read: {0} and make sure you understand what you're doing."
-        }
+        "general": "General Download",
+        "advanced": "Advanced Download",
+        "selectAll": "Select All"
+    },
+    "history": {
+        "title": "History",
+        "refresh": "Refresh"
     },
     "down": {
         "title": "Downloads",
         "waiting": "Waiting",
         "doing": "In Progress",
         "complete": "Completed",
-        "empty": "This queue is empty~"
+        "empty": "This queue is empty~",
+        "processQueue": "Click to start downloads"
     },
     "settings": {
         "title": "Settings",
-        "confirm": "Are you sure you want to delete? This action cannot be undone.",
+        "confirm": "Are you sure you want to delete this? This action cannot be undone.",
         "general": "General",
         "language": {
             "name": "Language"
@@ -122,17 +201,31 @@
             "dark": "Dark",
             "auto": "Follow System"
         },
+        "clipboard": {
+            "name": "Clipboard Monitor"
+        },
+        "notify": {
+            "name": "Notification",
+            "desc": "If enabled, a system notification will be sent when a download finishes."
+        },
+        "auto_download": {
+            "name": "Auto Start Download",
+            "desc": "If enabled, downloads start automatically after adding tasks."
+        },
+        "auto_check_update": {
+            "name": "Auto Check Updates"
+        },
         "storage": "Storage",
         "paths": {
-            "name": "Path",
-            "desc": "\"Temp Files\" stores incomplete downloads, and moved to \"Output Files\" after processing.",
+            "name": "Paths",
+            "desc": "\"Temp Files\" hold incomplete downloads, which are moved to \"Output Files\" after processing.",
             "down_dir": "Output Files",
             "temp_dir": "Temp Files"
         },
         "cache": {
             "name": "Cache",
-            "desc": "\"Database\" stores config, login state, download history, etc. It's recommended to backup it frequently.",
-            "log": "Log",
+            "desc": "The database stores settings, login info, download records, etc. Regular backups are recommended.",
+            "log": "Logs",
             "temp": "Temp Files",
             "webview": "Webview Cache",
             "database": "Database"
@@ -140,49 +233,64 @@
         "download": "Download",
         "default": {
             "name": "Default Options",
-            "desc": "When downloading, these options will be used first. If the target resource lacks them, the highest available options will be used."
+            "desc": "These will be used first during download. If not supported, the highest available option will be used."
         },
-        "auto_download": {
-            "name": "Auto Start Download",
-            "desc": "If enabled, download will start automatically after adding a task."
+        "task_folder": {
+            "name": "Create Separate Folders for Tasks",
+            "desc": "If enabled, each task will be stored in its own folder."
         },
         "max_conc": {
-            "name": "Max Concurrent Download",
-            "desc": "Controls the maximum numbers of tasks processed concurrently. A high value may increase risk of being flagged."
+            "name": "Max Concurrent Downloads",
+            "desc": "Controls how many tasks run at once. Higher values may increase risk of being flagged."
         },
         "proxy": {
             "name": "Network Proxy",
-            "desc": "Currently only HTTP(S) are supported.",
+            "desc": "Only HTTP(S) is currently supported.",
             "address": "Address",
             "placeholder": "http(s)://server:port",
             "username": "Username",
             "password": "Password"
         },
         "advanced": "Advanced",
-        "protobuf_danmaku": {
-            "name": "Use Protobuf API for Danmaku",
-            "desc": "If enabled, it fetches nearly the full danmaku pool for the resource, but the process will take more time."
-        },
         "add_metadata": {
             "name": "Embed Metadata Automatically",
-            "desc": "If enabled, media info like Title and Description will be embedded into the file after download."
+            "desc": "If enabled, title, description, and other info will be embedded into media files."
         },
-        "format": {
-            "name": "Naming Format",
-            "desc": "If the target resource lacks a variable, it will be replaced with \"-1\".",
-            "filename": "Filename",
-            "folder": "Folder"
+        "block_pcdn": {
+            "name": "Try Blocking PCDN",
+            "desc": "If enabled, higher-quality links will be used instead of PCDN."
+        },
+        "convert": {
+            "name": "Conversion Policy",
+            "danmaku": {
+                "name": "Convert XML Danmaku to ASS",
+                "desc": "If enabled, XML danmaku will be converted to ASS format via DanmakuFactory."
+            },
+            "mp3": {
+                "name": "Convert Audio to MP3",
+                "desc": "If enabled, audio will be forcibly converted to MP3. Video+Audio unaffected."
+            }
+        },
+        "format": "Naming Format",
+        "naming": {
+            "desc": "Click the buttons to insert variables. If missing, \"-1\" will be used.\nDo not edit placeholders manually (except for time format).",
+            "filename": "Filename Format",
+            "folder": "Folder Name Format",
+            "basic": "Basic",
+            "id": "ID",
+            "down": "Download"
         }
     },
     "info": {
         "title": "About",
-        "changelog": "ChangeLog",
+        "changelog": "Changelog",
         "checkUpdate": "Check for Updates",
         "document": "Documentation",
         "feedback": "Feedback",
         "donate": "Donate",
-        "paid": "This is a freeware and also a public-benefit project. If you paid for it, you may have been scammed.",
-        "star": "If you find it useful, consider giving the project a Star on GitHub!",
-        "data": "All data generated and acquired will be stored locally on the user's device only."
+        "paid": "This software is a free, public-benefit project. If you paid for it, you may have been scammed.",
+        "star": "If you find this useful, please give the project a Star on GitHub!",
+        "data": "All generated and fetched data is stored locally on your device only.",
+        "others": "When using this app, follow all applicable laws and platform terms of service. The developers are not responsible for misuse.\n“Bilibili” is a registered trademark of Shanghai Kuanyu Digital Technology Co., Ltd.\nThis software is not affiliated with or endorsed by Bilibili."
     }
 }

@@ -51,7 +51,7 @@
         <i18n-t keypath="popup.dashHint.desc" tag="span" class="desc" scope="global" v-if="k === 'fmt'">
             <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('popup.dashHint.name') }}</a>
         </i18n-t>
-        <span v-if="k === 'abr'" class="desc">{{ $t('popup.abrHint') }}</span>
+        <!-- <span v-if="k === 'abr'" class="desc">{{ $t('popup.abrHint') }}</span> -->
         <div class="flex gap-2 overflow-x-auto mt-2">
             <button
                 v-for="id in i.data" :key="id"
@@ -146,6 +146,10 @@ const quality = computed(() => ({
 }));
 
 const options = computed(() => ({
+    audioVideo: { // #81
+        icon: 'fa-video',
+        data: v.playUrl.video?.length && v.playUrl.audio?.length
+    },
     video: {
         icon: 'fa-volume-slash',
         data: v.playUrl.video?.length
@@ -153,10 +157,6 @@ const options = computed(() => ({
     audio: {
         icon: 'fa-video-slash',
         data: v.playUrl.audio?.length
-    },
-    audioVideo: {
-        icon: 'fa-video',
-        data: v.playUrl.video?.length && v.playUrl.audio?.length
     }
 }));
 
@@ -167,7 +167,7 @@ async function init(playUrl: Types.PlayUrlProvider, extras: Types.ExtrasProvider
     v.playUrl = playUrl;
     v.extras = extras;
     (['res', 'abr', 'enc'] as const).forEach(i => {
-        v.select[i] = getDefaultQuality([...quality.value[i].data], i);
+        v.select[i] = getDefaultQuality([...quality.value[i].data], i) ?? 0;
     })
     v.select.misc = {
         aiSummary: false,

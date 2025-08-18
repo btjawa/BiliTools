@@ -63,46 +63,65 @@ export async function getSubtitle(item: Types.MediaItem, options?: { name?: fals
 }
 
 export async function getNfo(item: Types.MediaItem, nfo: Types.MediaNfo, type: 'album' | 'nfo') {
-    let rootTag = 'movie';
-    switch (item.type) {
-        case Types.MediaType.Video: rootTag = 'movie'; break;
-        case Types.MediaType.Bangumi:
-        case Types.MediaType.Lesson: rootTag = 'episodedetails'; break;
-        default: throw 'No NFO type for ' + item.type;
-    }
-    const doc = document.implementation.createDocument('', rootTag, null);
+    const mode = type === 'album' ? 'album'
+        : (item.type === 'video' ? 'movie'
+            : (item.type === 'bangumi' || item.type === 'lesson')
+                ? 'episodedetails' : 'movie'
+        );
+    const doc = document.implementation.createDocument('', mode, null);
     const root = doc.documentElement;
-    const append = (k: string, v: string | number, node?: Node) => {
-        const tag = doc.createElement(k);
-        tag.textContent = v.toString();
-        (node ?? root).appendChild(tag);
-        return tag;
+    const add = (k: string, v?: string | number | null, node: Node = root) => {
+        const el = doc.createElement(k);
+        el.textContent = String(v);
+        node.appendChild(el);
+        return el;
+    };
+    const addAttr = (el: Element, attrs: Record<string, string | number | boolean>) => {
+        for (const [k, v] of Object.entries(attrs)) {
+            el.setAttribute(k, String(v));
+        }
+    };
+    if (mode === 'album') {
+        add('title', nfo.showtitle);
+    } else if (mode === 'movie'){
+        add('title', item.title);
+        add('originaltitle', nfo.showtitle);
+    } else {
+        add('title', item.title);
     }
-    append('title', item.title);
-    append('originaltitle', nfo.showtitle);
-    append('plot', item.desc);
-    for (const thumb of nfo.thumbs) {
-        append('thumb', thumb.url).setAttribute('preview', thumb.url);
+    let aiSummary = '';
+    try {
+        aiSummary = new TextDecoder().decode(await getAISummary(item)) + '\n';
+    } catch(_) {}
+    add('plot', aiSummary + item.desc);
+    if (mode === 'album') {
+        const el = add('thumb', 'poster.jpg');
+        addAttr(el, { preview: 'poster.jpg' });
+    } else nfo.thumbs.forEach(v => {
+        const el = add('thumb', v.url);
+        addAttr(el, { preview: v.url });
+    })
+    add('runtime', Math.round(item.duration / 60));
+    add('premiered', timestamp(item.pubtime * 1000).split('\u0020')[0]);
+    if (nfo.upper?.name) {
+        add('director', nfo.upper.name);
     }
-    append('runtime', Math.round(item.duration / 60));
-    append('premiered', timestamp(item.pubtime * 1000).split('\u0020')[0]);
-    if (nfo.upper) {
-        append('director', nfo.upper.name);
-    }
-    for (const tag of nfo.tags) {
-        append('genre', tag);
-        append('tag', tag);
-    }
-    for (const [i, v] of nfo.actors.entries()) {
-        const actor = append('actor', '');
-        append('name', v.name, actor);
-        append('role', v.role, actor);
-        append('order', i + 1, actor);
-    }
-    for (const staff of nfo.staff) {
-        append('credits', staff);
-    }
-    append('uniqueid', item.cid ?? item.epid ?? item.ssid ?? item.sid ?? 0);
+    new Set(nfo.tags ?? []).forEach(v => {
+        add('genre', v);
+        add('tag', v);
+    });
+    Array.from(nfo.actors.entries()).forEach(([i, v]) => {
+        const node = add('actor', '');
+        add('name', v.name, node);
+        add('role', v.role, node);
+        add('order', i + 1, node);
+    })
+    nfo.staff.forEach(v => {
+        add('credits', v)
+    });
+    (['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid'] as const).forEach(v => {
+        if (item[v]) add('bili:' + v, item[v]);
+    })
     const xml = new XMLSerializer().serializeToString(doc);
     return new TextEncoder().encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + xml);
 }

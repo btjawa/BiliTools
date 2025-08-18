@@ -242,6 +242,10 @@ export function waitPage<T, K extends keyof T>(
 	});
 }
 
+export function filename(input: string) {
+    return input.replace(/[\/\\:*?"<>|]/g, "_");
+}
+
 export function randomString(len: number = 8) {
     if (len <= 0 || len % 2) throw new Error ('Length must be a unsigned even int.');
     const bytes = new Uint8Array(len / 2);

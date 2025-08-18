@@ -1,22 +1,22 @@
-use std::{net::{SocketAddr, TcpListener}, path::PathBuf, sync::{Arc, RwLock}, time::Duration};
 use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
 use tauri::{async_runtime::{self, Receiver}, http::StatusCode, Manager};
+use std::{net::TcpListener, path::PathBuf, sync::Arc, time::Duration};
+use tokio::{fs, sync::{mpsc::Sender, RwLock}, time::sleep};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tokio::{fs, sync::mpsc::Sender, time::sleep};
 use anyhow::{anyhow, Context, Result};
-use tauri_plugin_http::reqwest;
+use tauri_plugin_http::reqwest::{self, Client};
 use serde_json::{json, Value};
 use lazy_static::lazy_static;
 use tauri_specta::Event;
 
 use crate::{
     config, errors::TauriError, shared::{
-        get_app_handle, get_ts, init_client_no_proxy, SidecarError, READY, SECRET, USER_AGENT, WORKING_PATH
+        get_app_handle, get_ts, SidecarError, SECRET, USER_AGENT, WORKING_PATH
     }, TauriResult
 };
 
 lazy_static! {
-    static ref ARIA2C_PORT: Arc<RwLock<u16>> = Arc::new(RwLock::new(0));
+    static ref ARIA2_RPC: Arc<RwLock<Aria2Rpc>> = Arc::new(RwLock::new(Aria2Rpc::new()));
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,23 +26,15 @@ struct Aria2Error {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Aria2General {
+struct Aria2Resp<T> {
     id: String,
     jsonrpc: String,
-    result: Option<String>,
-    error: Option<Aria2Error>
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Aria2TellStatus {
-    id: String,
-    jsonrpc: String,
-    result: Option<Aria2TellStatusResult>,
+    result: Option<T>,
     error: Option<Aria2Error>
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct Aria2TellStatusResult {
+struct Aria2TellStatus {
     gid: String,
     status: String,
     #[serde(rename = "totalLength")]
@@ -72,6 +64,69 @@ struct Aria2TellStatusResult {
     error_message: Option<String>
 }
 
+#[derive(Clone)]
+struct Aria2Inner {
+    client: Client,
+    endpoint: String,
+    secret: String,
+}
+
+struct Aria2Rpc {
+    inner: RwLock<Option<Aria2Inner>>
+}
+
+impl Aria2Rpc {
+    pub fn new() -> Self {
+        Self { inner: RwLock::new(None) }
+    }
+    pub async fn update(&self, port: u16, secret: String) -> Result<()> {
+        let client = Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(1))
+            .connect_timeout(Duration::from_secs(1))
+            .pool_max_idle_per_host(2)
+            .pool_idle_timeout(Duration::from_secs(10))
+            .tcp_keepalive(Duration::from_secs(30))
+            .http1_only()
+            .build()?;
+        let endpoint = format!("http://127.0.0.1:{port}/jsonrpc");
+        *self.inner.write().await = Some(Aria2Inner {
+            client, endpoint, secret
+        });
+        Ok(())
+    }
+    pub async fn request<T: DeserializeOwned + std::fmt::Debug>(
+        &self,
+        action: &str,
+        mut params: Vec<Value>
+    ) -> TauriResult<T> {
+        let inner = self.inner.read().await.clone().ok_or_else(|| anyhow!("Aria2 RPC not ready"))?;
+        params.insert(0, Value::String(format!("token:{}", inner.secret)));
+        let payload = json!({
+            "jsonrpc": "2.0",
+            "id": "1",
+            "method": format!("aria2.{action}"),
+            "params": params,
+        });
+        let response = inner.client
+            .post(&inner.endpoint)
+            .json(&payload).send().await?;
+
+        if response.status() != StatusCode::OK {
+            return Err(TauriError::new("Error while fetching Aria2 RPC Response", Some(response.status().as_u16() as isize)));
+        }
+
+        let body: Aria2Resp<T> = response.json().await
+            .context("Failed to decode aria2c JsonRPC response")?;
+
+        if let Some(e) = body.error {
+            return Err(TauriError::new(e.message, Some(e.code)));
+        }
+
+        body.result.ok_or(anyhow!("Failed to get result in Aria2 RPC Response").into())
+    }
+}
+
 async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEvent>) {
     use process_alive::{State, Pid};
     let app = get_app_handle();
@@ -94,17 +149,11 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
         )
     ]);
     let _ = app.shell().command(cmd.0).args(cmd.1).spawn();
-    let stderr = Arc::new(tokio::sync::RwLock::new(String::new()));
+    let client = ARIA2_RPC.read().await;
+    let stderr = Arc::new(RwLock::new(String::new()));
     let stderr_clone = stderr.clone();
     async_runtime::spawn(async move {
         loop {
-            if *READY.read().unwrap() {
-                sleep(Duration::from_secs(3)).await;
-            } else {
-                while !*READY.read().unwrap() {
-                    sleep(Duration::from_millis(250)).await;
-                }
-            }
             let mut lock = stderr_clone.write().await;
             if lock.len() > 0 {
                 SidecarError {
@@ -118,7 +167,7 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
                     name: name.clone(), error: format!("Process {name} ({pid}) is dead")
                 }.emit(app).unwrap();
             }
-            if let Err(e) = post_aria2c::<Value>("getGlobalStat", vec![]).await {
+            if let Err(e) = client.request::<Value>("getGlobalStat", vec![]).await {
                 SidecarError {
                     name: name.clone(), error: e.message
                 }.emit(app).unwrap();
@@ -136,31 +185,37 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
     }
 }
 
-pub fn init() -> Result<()> {
-    let port = (6800..65535)
-        .find_map(|p| TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], p))).ok())
-        .ok_or(anyhow!("No free port found"))?.local_addr()?.port();
-    *ARIA2C_PORT.write().unwrap() = port;
+pub async fn init() -> Result<()> {
+    let secret = SECRET.read().unwrap().clone();
+    let l = TcpListener::bind(("127.0.0.1", 0))?;
+    let port = l.local_addr()?.port();
+    log::info!("Found a free port for aria2c: {port}");
+    drop(l);
+
+    ARIA2_RPC.read().await.update(port, secret.clone()).await?;
+
     let app = get_app_handle();
     let session_file = WORKING_PATH.join("aria2.session");
     if !session_file.exists() {
-        std::fs::write(&session_file, [])
-            .context("Failed to write session_file")?;
+        fs::write(&session_file, []).await.context("Failed to write session_file")?;
     }
     let session_file = session_file.to_string_lossy();
+
     let log_file = app.path().app_log_dir()?.join("aria2.log");
     let log_file = log_file.to_string_lossy();
     let (mut rx, child) = app.shell().sidecar("aria2c")?
     .args([
         "--enable-rpc".into(),
-        // "--log-level=warn".into(),
+        "--rpc-listen-all=false".into(),
+        "--disable-ipv6=true".into(),
+        "--log-level=warn".into(),
         "--referer=https://www.bilibili.com/".into(),
         "--header=Origin: https://www.bilibili.com".into(),
         format!("--input-file={session_file}"),
         format!("--save-session={session_file}"),
         format!("--user-agent={USER_AGENT}"),
         format!("--rpc-listen-port={port}"),
-        format!("--rpc-secret={}", &SECRET.read().unwrap()),
+        format!("--rpc-secret={secret}"),
         format!("--log={log_file}"),
     ]).spawn()?;
     async_runtime::spawn(async move {
@@ -169,56 +224,18 @@ pub fn init() -> Result<()> {
     Ok(())
 }
 
-pub async fn post_aria2c<T: DeserializeOwned + std::fmt::Debug>(
-    action: &str,
-    params: Vec<Value>
-) -> TauriResult<T> {
-    let client = init_client_no_proxy().await?;
-    let mut params_vec = vec![Value::String(format!("token:{}", *SECRET.read().unwrap()))];
-    params_vec.extend(params);
-    let payload = json!({
-        "jsonrpc": "2.0",
-        "method": format!("aria2.{action}"),
-        "id": "1",
-        "params": params_vec
-    });
-    let response = client
-        .post(format!("http://127.0.0.1:{}/jsonrpc", ARIA2C_PORT.read().unwrap()))
-        .timeout(Duration::from_millis(3000))
-        .json(&payload).send().await?;
-    if response.status() != StatusCode::OK {
-        return Err(anyhow!("Error while fetching aria2c JsonRPC Response ({})", response.status()).into());
-    }
-    let body: Value = response.json().await
-        .context("Failed to decode aria2c JsonRPC response")?;
-
-    let result: T = serde_json::from_value(body)
-        .context("Failed to deserialize response to struct")?;
-
-    Ok(result)
-}
-
 pub async fn cancel(gid: Arc<String>) -> TauriResult<()> {
-    let body = post_aria2c::<Aria2General>("forceRemove", vec![json!(gid)]).await?;
-    if let Some(e) = body.error {
-        return Err(TauriError::new(e.message, Some(e.code)));
-    }
+    ARIA2_RPC.read().await.request::<Value>("forceRemove", vec![json!(gid)]).await?;
     Ok(())
 }
 
 pub async fn pause(gid: Arc<String>) -> TauriResult<()> {
-    let body = post_aria2c::<Aria2General>("pause", vec![json!(gid)]).await?;
-    if let Some(e) = body.error {
-        return Err(TauriError::new(e.message, Some(e.code)));
-    }
+    ARIA2_RPC.read().await.request::<Value>("pause", vec![json!(gid)]).await?;
     Ok(())
 }
 
 pub async fn resume(gid: Arc<String>) -> TauriResult<()> {
-    let body = post_aria2c::<Aria2General>("unpause", vec![json!(gid)]).await?;
-    if let Some(e) = body.error {
-        return Err(TauriError::new(e.message, Some(e.code)));
-    }
+    ARIA2_RPC.read().await.request::<Value>("unpause", vec![json!(gid)]).await?;
     Ok(())
 }
 
@@ -266,33 +283,25 @@ pub async fn download(gid: Arc<String>, tx: Sender<(u64, u64)>, urls: Vec<String
             "gid": gid,
         })
     ];
-
-    let body = post_aria2c::<Aria2General>("addUri", params).await?;
-    if let Some(e) = body.error {
-        return Err(TauriError::new(e.message, Some(e.code)));
-    }
+    let client = ARIA2_RPC.read().await;
+    client.request::<Value>("addUri", params).await?;
     loop {
-        let body = post_aria2c::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await?;
-        if let Some(e) = body.error {
-            return Err(TauriError::new(e.message, Some(e.code)));
+        let data = client.request::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await?;
+        if let Some(code) = data.error_code {
+            let code = code.parse::<isize>()?;
+            if code != 0 {
+                return Err(TauriError::new(
+                    data.error_message.unwrap_or(String::new()),
+                    Some(code)
+                ));
+            }
         }
-        if let Some(data) = body.result {
-            if let Some(code) = data.error_code {
-                let code = code.parse::<isize>()?;
-                if code != 0 {
-                    return Err(TauriError::new(
-                        data.error_message.unwrap_or(String::new()),
-                        Some(code)
-                    ));
-                }
-            }
-            tx.send((
-                data.total_length.parse::<u64>()?,
-                data.completed_length.parse::<u64>()?
-            )).await?;
-            if data.status.as_str() == "complete" {
-                break;
-            }
+        tx.send((
+            data.total_length.parse::<u64>()?,
+            data.completed_length.parse::<u64>()?
+        )).await?;
+        if data.status.as_str() == "complete" {
+            break;
         }
         sleep(Duration::from_millis(100)).await;
     }

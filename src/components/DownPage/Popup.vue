@@ -20,15 +20,13 @@
 
 <script lang="ts" setup>
 import { TaskStatus } from '@/types/shared';
-import { ref, Transition, watch } from 'vue';
+import { ref, Transition } from 'vue';
 import ProgressBar from '../ProgressBar.vue';
 
 defineExpose({ init });
 
 const active = ref(false);
 const status = ref<TaskStatus>();
-
-watch(() => status.value?.subtasks, (v) => console.log(v))
 
 function init(stat: TaskStatus) {
     active.value = true;
