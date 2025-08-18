@@ -185,3 +185,34 @@ export interface MediaInfo {
   },
   list: MediaItem[]
 }
+
+type TaskState = 'pending' | 'active' | 'completed' | 'paused' | 'cancelled' | 'failed';
+
+export interface TaskStatus {
+  id: string,
+  state: TaskState;
+  subtasks: {
+    id: string,
+    type: TaskType,
+    chunk: number,
+    content: number,
+  }[],
+}
+
+export interface SubTask {
+  id: string,
+  index: number,
+  type: TaskType,
+}
+
+export interface GeneralTask {
+  id: string;
+  ts: number;
+  index: number;
+  folder: string;
+  select: PopupSelect;
+  item: MediaItem;
+  type: MediaType;
+  nfo: MediaNfo;
+  subtasks: SubTask[];
+}

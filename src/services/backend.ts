@@ -127,6 +127,22 @@ async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[]) : Promise
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async taskEvent(event: CtrlEvent, id: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("task_event", { event, id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateMaxConc(maxConc: number) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_max_conc", { maxConc }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -135,9 +151,11 @@ async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[]) : Promise
 
 export const events = __makeEvents__<{
 headers: Headers,
+queueData: QueueData,
 sidecarError: SidecarError
 }>({
 headers: "headers",
+queueData: "queue-data",
 sidecarError: "sidecar-error"
 })
 
@@ -147,8 +165,8 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type ArchiveInfo = { item: MediaItem; type: string; nfo: MediaNfo }
-export type GeneralTask = { id: string; ts: number; index: number; state: TaskState; select: PopupSelect; info: ArchiveInfo; status: Progress[] }
+export type CtrlEvent = "pause" | "resume" | "cancel" | "openfolder"
+export type GeneralTask = { id: string; ts: number; index: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo; subtasks: SubTask[] }
 export type Headers = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { version: string; hash: string; config: Settings; paths: Paths }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
@@ -163,17 +181,19 @@ export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
 export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
 export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
-export type ProcessEvent = { type: "request"; id: string; task: GeneralTask; status: Progress | null; namespace: RequestType } | { type: "progress"; id: string; contentLength: number; chunkLength: number } | { type: "error"; id: string; message: string; code: number | null }
-export type Progress = { parent: string; id: string; taskType: TaskType; contentLength: number; chunkLength: number }
-export type RequestType = "getPreInfo" | "getFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
-export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; protobuf_danmaku: boolean; proxy: SettingsProxy }
+export type ProcessEvent = { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "progress"; parent: string; id: string; content: number; chunk: number } | { type: "taskState"; id: string; state: TaskState } | { type: "error"; id: string; message: string; code: number | null }
+export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
+export type RequestAction = "refreshNfo" | "refreshUrls" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; proxy: SettingsProxy; convert: SettingsConvert }
+export type SettingsConvert = { danmaku: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { filename: string; folder: string; favorite: string }
 export type SettingsProxy = { address: string; username: string; password: string }
 export type SidecarError = { name: string; error: string }
 export type StreamFormat = "dash" | "mp4" | "flv"
 export type StringOrFalse = string | boolean
-export type TaskState = "waiting" | "doing" | "complete" | "paused" | "failed" | "cancelled"
+export type SubTask = { id: string; index: number; type: TaskType }
+export type TaskState = "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
 export type TaskType = "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
 export type TauriError = { code: number | null; message: string }
 export type Theme = 

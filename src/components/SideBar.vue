@@ -1,7 +1,7 @@
 <template>
 <ul @contextmenu.prevent
-	class="flex flex-col py-4 px-2.5 gap-3 h-screen bg-[var(--block-color)]"
-    :class="{ 'pt-[30px]': osType() === 'macos' }"
+	class="flex flex-col py-4 px-2.5 gap-3 h-screen "
+    :class="[osType() === 'macos' ? 'pt-[36px]' : 'bg-[var(--block-color)]']"
 >
     <li
         v-for="v in list" @click="click(v.path)"
@@ -18,6 +18,8 @@ import { type as osType } from '@tauri-apps/plugin-os';
 import { useUserStore, useSettingsStore } from "@/store";
 import Updater from './Updater.vue';
 import router from '@/router';
+import { AppLog } from '@/services/utils';
+import i18n from '@/i18n';
 
 const user = useUserStore();
 const settings = useSettingsStore();
@@ -39,6 +41,10 @@ function setTheme() {
 }
 
 async function click(path: string) {
+    // temporarily INOP
+    if (path === '/history-page') {
+        return AppLog(i18n.global.t('wip'), 'info')
+    }
     if (path === 'theme') return setTheme();
     if (updater?.value.active) updater.value?.close();
     router.push(path);

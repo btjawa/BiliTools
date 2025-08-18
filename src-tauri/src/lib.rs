@@ -27,11 +27,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
             ready, init, init_login, set_window, config_write, get_size, clean_cache, // Essentials
-            // push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
-            submit_task, process_queue // Queue
+            submit_task, process_queue, task_event, update_max_conc // Queue
         ])
         .events(collect_events![
-            shared::Headers, shared::SidecarError
+            shared::Headers, shared::SidecarError, queue::QueueData
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

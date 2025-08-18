@@ -204,6 +204,9 @@ i + span, span + i {
 markdown-style {
     @apply !bg-transparent;
     ul {
-        @apply list-disc;
+        @apply !list-disc;
+    }
+    a {
+        @apply !text-[var(--primary-color)];
     }
 }

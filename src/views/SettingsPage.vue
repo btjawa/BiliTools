@@ -38,7 +38,7 @@ const tab = ref<keyof typeof list>('general');
 </script>
 <style lang="scss" scoped>
 :deep(h3) {
-    @apply min-w-64 inline-block;
+    @apply min-w-32 mr-4 inline-block;
     & + button {
         @apply my-2;
     }

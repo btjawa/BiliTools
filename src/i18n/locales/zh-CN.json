@@ -31,6 +31,7 @@
         "audioVideo": "音视频"
     },
     "popup": {
+        "least": "请选择至少一项资源",
         "abrHint": "可在 \"设置->高级\" 中修改音频文件使用的后缀格式",
         "popupLint": "请点击所需资源的按钮，并选择对应参数",
         "dashHint": {
@@ -184,7 +185,8 @@
         "waiting": "等待中",
         "doing": "进行中",
         "complete": "已完成",
-        "empty": "此队列为空~"
+        "empty": "此队列为空~",
+        "processQueue": "点击以开始下载"
     },
     "settings": {
         "title": "设置",
@@ -246,13 +248,24 @@
             "password": "密码"
         },
         "advanced": "高级",
-        "protobuf_danmaku": {
-            "name": "使用 ProtoBuf 接口下载弹幕",
-            "desc": "若启用，则可以获得目标资源几乎整个弹幕池的弹幕，但下载时间会显著变长。"
-        },
         "add_metadata": {
             "name": "自动嵌入元数据",
             "desc": "若启用，则会在下载时将目标资源信息嵌入媒体文件，如标题、简介等。"
+        },
+        "block_pcdn": {
+            "name": "尝试屏蔽 PCDN",
+            "desc": "若启用，则会在下载时尝试使用质量更高的链接而非 PCDN。"
+        },
+        "convert": {
+            "name": "转换策略",
+            "danmaku": {
+                "name": "将 XML 弹幕转换为 ASS 字幕",
+                "desc": "若启用，则会在下载弹幕时调用 DanmakuFactory 将 XML 转换为 ASS 格式。"
+            },
+            "mp3": {
+                "name": "将音频转换为 MP3 格式",
+                "desc": "若启用，则会强制转换音频为 MP3 格式。音视频不受影响。"
+            }
         },
         "format": "命名格式",
         "naming": {

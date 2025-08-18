@@ -25,7 +25,7 @@ const ToastOptions: PluginOptions = {
     closeButton: "button",
     closeOnClick: false,
     icon: true,
-    timeout: import.meta.env.DEV ? false : 10000,
+    timeout: 5000,
 }
 
 window.onerror = (_, __, ___, ____, error) => {

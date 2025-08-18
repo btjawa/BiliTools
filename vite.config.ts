@@ -9,7 +9,13 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue(), viteCompression()],
+  plugins: [vue({
+    template: {
+      compilerOptions: {
+        isCustomElement: tag => tag === 'markdown-style' || tag === 'gap'
+      }
+    }
+  }), viteCompression()],
 
   resolve: {
     alias: { '@': '/src' }

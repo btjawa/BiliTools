@@ -7,6 +7,7 @@ export const useSettingsStore = defineStore('settings', () => {
         add_metadata: true,
         auto_check_update: false, // for watch() to take effet when enabled
         auto_download: false,
+        block_pcdn: true,
         check_update: true,
         clipboard: true,
         default: {
@@ -25,11 +26,14 @@ export const useSettingsStore = defineStore('settings', () => {
         notify: true,
         temp_dir: String(),
         theme: 'auto',
-        protobuf_danmaku: true,
         proxy: {
             address: String(),
             username: String(),
             password: String(),
+        },
+        convert: {
+            danmaku: true,
+            mp3: false,
         }
     });
 

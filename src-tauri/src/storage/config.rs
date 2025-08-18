@@ -32,6 +32,7 @@ pub struct Settings {
     pub add_metadata: bool,
     pub auto_check_update: bool,
     pub auto_download: bool,
+    pub block_pcdn: bool,
     pub check_update: bool,
     pub clipboard: bool,
     pub default: SettingsDefault,
@@ -42,8 +43,8 @@ pub struct Settings {
     pub notify: bool,
     pub temp_dir: PathBuf,
     pub theme: Theme,
-    pub protobuf_danmaku: bool,
     pub proxy: SettingsProxy,
+    pub convert: SettingsConvert,
 }
 
 impl Settings {
@@ -72,6 +73,13 @@ pub struct SettingsFormat {
     pub folder: String,
     pub favorite: String,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+pub struct SettingsConvert {
+    pub danmaku: bool,
+    pub mp3: bool,
+}
+
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}

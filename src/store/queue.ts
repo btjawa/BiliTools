@@ -1,16 +1,18 @@
 import { defineStore } from "pinia";
-import { GeneralTask } from "@/types/queue.d";
+import { GeneralTask, TaskStatus } from "@/types/shared.d";
 
 interface State {
-    tasks: GeneralTask[]
+    tasks: Record<string, GeneralTask>
+    status: Record<string, TaskStatus>,
     waiting: string[],
     doing: string[],
-    complete: string[]
+    complete: string[],
 }
 
 export const useQueueStore = defineStore('queue', {
     state: (): State => ({
-        tasks: [],
+        tasks: {},
+        status: {},
         waiting: [],
         doing: [],
         complete: [],

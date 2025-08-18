@@ -8,8 +8,8 @@
         "minHeight": 600,
         "title": "BiliTools",
         "label": "main",
-        "width": 800,
-        "height": 600,
+        "width": 960,
+        "height": 680,
         "titleBarStyle": "Overlay",
         "transparent": true,
         "dragDropEnabled": false

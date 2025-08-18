@@ -14,7 +14,7 @@ pub use crate::{
             self, stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie
         },
         queue::{
-            self, submit_task, process_queue
+            self, submit_task, process_queue, task_event, update_max_conc
         },
         ffmpeg,
     },

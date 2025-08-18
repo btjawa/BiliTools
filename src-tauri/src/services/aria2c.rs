@@ -11,7 +11,7 @@ use tauri_specta::Event;
 
 use crate::{
     config, errors::TauriError, shared::{
-        get_app_handle, get_ts, init_client_no_proxy, process_err, SidecarError, READY, SECRET, USER_AGENT, WORKING_PATH
+        get_app_handle, get_ts, init_client_no_proxy, SidecarError, READY, SECRET, USER_AGENT, WORKING_PATH
     }, TauriResult
 };
 
@@ -150,10 +150,10 @@ pub fn init() -> Result<()> {
     let session_file = session_file.to_string_lossy();
     let log_file = app.path().app_log_dir()?.join("aria2.log");
     let log_file = log_file.to_string_lossy();
-    let (mut rx, child) = app.shell().sidecar("aria2c").map_err(|e| process_err(e, "aria2c"))?
+    let (mut rx, child) = app.shell().sidecar("aria2c")?
     .args([
         "--enable-rpc".into(),
-        "--log-level=warn".into(),
+        // "--log-level=warn".into(),
         "--referer=https://www.bilibili.com/".into(),
         "--header=Origin: https://www.bilibili.com".into(),
         format!("--input-file={session_file}"),
@@ -162,7 +162,7 @@ pub fn init() -> Result<()> {
         format!("--rpc-listen-port={port}"),
         format!("--rpc-secret={}", &SECRET.read().unwrap()),
         format!("--log={log_file}"),
-    ]).spawn().map_err(|e| process_err(e, "aria2c"))?;
+    ]).spawn()?;
     async_runtime::spawn(async move {
         daemon("aria2c".into(), &child, &mut rx).await;
     });

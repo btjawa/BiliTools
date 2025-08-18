@@ -8,13 +8,10 @@
     >
         <i :class="[$fa.weight, 'fa-close']"></i>
     </button>
-    <div v-for="v in status" class="flex w-full gap-4 items-center">
-        <span class="flex-shrink-0 min-w-28">{{ $t('taskType.' + v.taskType) }}</span>
-        <span class="w-16">{{ ((v.chunkLength / v.contentLength || 0) * 100).toFixed(2) }}%</span>
-        <ProgressBar :progress="(v.chunkLength / v.contentLength || 0) * 100" />
-        <button>
-            <i :class="[$fa.weight, 'fa-folder-open']"></i>
-        </button>
+    <div v-for="v of status?.subtasks" class="flex w-full gap-4 items-center">
+        <span class="flex-shrink-0 min-w-28">{{ $t('taskType.' + v.type) }}</span>
+        <span class="w-16">{{ ((v.chunk / v.content || 0) * 100).toFixed(2) }}%</span>
+        <ProgressBar :progress="(v.chunk / v.content || 0) * 100" />
     </div>
 </div>
 </Transition>
@@ -22,17 +19,18 @@
 </template>
 
 <script lang="ts" setup>
-import { Progress } from '@/types/queue.d';
-import { ref, Transition } from 'vue';
+import { TaskStatus } from '@/types/shared';
+import { ref, Transition, watch } from 'vue';
 import ProgressBar from '../ProgressBar.vue';
 
 defineExpose({ init });
 
 const active = ref(false);
-const status = ref<Progress[]>([]);
+const status = ref<TaskStatus>();
 
-function init(stat: Progress[]) {
-    console.log(stat)
+watch(() => status.value?.subtasks, (v) => console.log(v))
+
+function init(stat: TaskStatus) {
     active.value = true;
     status.value = stat;
 }

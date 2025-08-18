@@ -11,16 +11,9 @@ use anyhow::Result;
 use specta::Type;
 use chrono::Utc;
 
-use crate::{
-    storage::config::{
-        self,
-        Settings,
-        SettingsDefault,
-        SettingsFormat,
-        SettingsProxy
-    },
-    storage::cookies,
-};
+use crate::storage::{config::{
+        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsProxy
+    }, cookies};
 
 lazy_static! {
     pub static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
@@ -29,6 +22,7 @@ lazy_static! {
         add_metadata: true,
         auto_check_update: true,
         auto_download: false,
+        block_pcdn: true,
         check_update: true,
         clipboard: true,
         default: SettingsDefault {
@@ -57,12 +51,15 @@ lazy_static! {
         notify: true,
         temp_dir: get_app_handle().path().temp_dir().unwrap(),
         theme: Theme::Auto,
-        protobuf_danmaku: true,
         proxy: SettingsProxy {
             address: String::new(),
             username: String::new(),
             password: String::new()
         },
+        convert: SettingsConvert {
+            danmaku: true,
+            mp3: false,
+        }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
     pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
@@ -196,6 +193,7 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     while !*READY.read().unwrap() {
         std::thread::sleep(std::time::Duration::from_millis(250));
     }
+    log::error!("{name}: {}", e.to_string());
     SidecarError {
         name: name.into(), error: e.to_string(),
     }.emit(app).unwrap(); e
