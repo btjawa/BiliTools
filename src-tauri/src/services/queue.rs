@@ -80,9 +80,12 @@ impl PopupSelectMedia {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct PopupSelect {
-    res: usize,
-    abr: usize,
-    enc: usize,
+    #[specta(optional)]
+    res: Option<usize>,
+    #[specta(optional)]
+    abr: Option<usize>,
+    #[specta(optional)]
+    enc: Option<usize>,
     fmt: StreamFormat,
     misc: PopupSelectMisc,
     nfo: PopupSelectNfo,
@@ -770,7 +773,8 @@ async fn handle_merge(
     let status_tx = update_progress(event, parent, id.clone());
     let (cancel_tx, cancel_rx) = oneshot::channel();
 
-    let ext = get_ext(subtask.task_type.clone(), ptask.task.select.abr);
+    let abr = ptask.task.select.abr.unwrap_or(0);
+    let ext = get_ext(subtask.task_type.clone(), abr);
     
     let mut merge = Box::pin(ffmpeg::merge(id.clone(), ext, status_tx, cancel_rx, video.clone(), audio.clone()));
     let path = loop { tokio::select! {
@@ -839,7 +843,8 @@ async fn handle_media(
         }
     } }?;
 
-    let ext = get_ext(subtask.task_type.clone(), ptask.task.select.abr);
+    let abr = ptask.task.select.abr.unwrap_or(0);
+    let ext = get_ext(subtask.task_type.clone(), abr);
     let output_file = get_unique_path(ptask.folder.join(format!("{}.{}", &ptask.filename, ext )));
 
     fs::copy(&path, &output_file).await?;

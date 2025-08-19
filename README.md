@@ -43,9 +43,11 @@
  
 ### macOS
 
-下载 `BiliTools_xxx_universal.dmg` 并进行安装
+对于 Intel 芯片，下载 `BiliTools_xxx_x64.dmg` 并进行安装
 
-**一般**不建议单独下载对应架构的镜像，参考 [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137)
+对于 M 系列芯片 / Apple Sillicon，下载 `BiliTools_xxx_aarch64.dmg` 并进行安装
+
+你可能需要将该软件列入白名单，具体流程参见：[打开来自未知开发者的 Mac App](https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac)
 
 ## 🚀 参与贡献
 

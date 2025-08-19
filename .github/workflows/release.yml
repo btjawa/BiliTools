@@ -17,11 +17,11 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
-            args: ''
+          # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+          #   args: ''
           # for Universal macOS builds (arm64 and x86_64)
-          - platform: 'macos-latest'
-            args: '--target universal-apple-darwin'
+          # - platform: 'macos-latest'
+          #   args: '--target universal-apple-darwin'
           - platform: 'windows-latest'
             args: ''
 
@@ -53,9 +53,7 @@ jobs:
 
       - name: extract updatelog
         id: updatelog
-        env:
-          TAG: ${{ github.ref_name }}
-        run: node scripts/updatelog.mjs "$TAG"
+        run: node scripts/updatelog.mjs ${{ github.ref_name }}
 
       - uses: tauri-apps/tauri-action@v0
         env:

@@ -47,9 +47,11 @@ If it gets stuck at installing `WebView2`，you can install it manually from [Mi
 
 ### macOS
 
-Download `BiliTools_xxx_universal.dmg` then follow the installation guide.
+For Intel chips, download `BiliTools_xxx_x64.dmg` then follow the installation guide.
 
-**Generally**, it is not recommended to use the arch-specific images. See [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137).
+For M series chips / Apple Sillion, download `BiliTools_xxx_aarch64.dmg` then follow the installation guide.
+
+You may need to whitelist this app. For detailed steps, see: [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)
 
 ## 🚀 Contributing
 

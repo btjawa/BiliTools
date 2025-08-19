@@ -172,8 +172,8 @@
         "input": "{0}リンク/AV/BV/SS/EP/AU/AM/SID/FID 番号...",
         "suggest": "今日は何を検索しますか？",
         "autoDetect": "自動検出",
-        "general": "通常ダウンロード",
-        "advanced": "詳細ダウンロード",
+        "general": "通常",
+        "advanced": "詳細",
         "selectAll": "すべて選択"
     },
     "history": {

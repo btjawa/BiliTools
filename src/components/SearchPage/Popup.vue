@@ -167,7 +167,7 @@ async function init(playUrl: Types.PlayUrlProvider, extras: Types.ExtrasProvider
     v.playUrl = playUrl;
     v.extras = extras;
     (['res', 'abr', 'enc'] as const).forEach(i => {
-        v.select[i] = getDefaultQuality([...quality.value[i].data], i) ?? 0;
+        v.select[i] = getDefaultQuality([...quality.value[i].data], i);
     })
     v.select.misc = {
         aiSummary: false,

@@ -8,7 +8,7 @@ import i18n from '@/i18n';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 
-import { Settings, commands, events } from './backend';
+import { commands, events } from './backend';
 import { AppError } from './error';
 import * as auth from './auth';
 
@@ -318,8 +318,9 @@ export function formatBytes(bytes: number) {
     }
 }
 
-export function getDefaultQuality(ids: number[], name: 'res' | 'abr' | 'enc', _quality?: Settings['default']) {
+export function getDefaultQuality(ids: number[], name: 'res' | 'abr' | 'enc', _quality?: { res?: number; abr?: number; enc?: number }) {
     const quality = _quality ?? useSettingsStore().default;
+    if (!quality[name]) return undefined;
     return ids.includes(quality[name]) ? quality[name] : ids.sort((a, b) => b - a)[0];
 }
 

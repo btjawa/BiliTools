@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.4.0-2] - 2025-08-19
+
+Update STORAGE_VERSION to 7
+
+大规模 UI / UX 重构，重构几乎所有交互逻辑<br>
+完全重写下载任务推送逻辑，更加稳定<br>
+整合多选下载、打包下载至常规下载<br>
+重写错误提交逻辑<br>
+
+从该版本开始，不再提供 universal 版本
+
+## 更新
+
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 重写所有语言的翻译
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 添加 “关于” 页面
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 重构任务并发逻辑
+- [`4fde227`](https://github.com/btjawa/BiliTools/commit/4fde227a819d86cb3824bb287536a70584d5ad5b) 使用自建更新源
+- [`4fde227`](https://github.com/btjawa/BiliTools/commit/4fde227a819d86cb3824bb287536a70584d5ad5b) [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 重构任务处理与队列推送逻辑
+- [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 重构前端任务同步逻辑
+- [`d6db8b5`](https://github.com/btjawa/BiliTools/commit/d6db8b5809880e551fc883416e44748be3cb07fd) 重构已完成任务存档逻辑
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 缩小默认窗口大小 ([#96](https://github.com/btjawa/BiliTools/issues/96), [#83](https://github.com/btjawa/BiliTools/issues/83))
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 整合多选下载、打包下载与常规下载 ([#87](https://github.com/btjawa/BiliTools/issues/87), [#80](https://github.com/btjawa/BiliTools/issues/80), [#81](https://github.com/btjawa/BiliTools/issues/81))
+- [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 支持解析 XML 格式弹幕 ([#118](https://github.com/btjawa/BiliTools/issues/118))
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 支持屏蔽 PCDN ([#77](https://github.com/btjawa/BiliTools/issues/77))
+- [`4fde227`](https://github.com/btjawa/BiliTools/commit/4fde227a819d86cb3824bb287536a70584d5ad5b) 支持视频发布日期变量（[#68](https://github.com/btjawa/BiliTools/issues/68)）
+- [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 为 macOS 分发包增加签名 ([#103](https://github.com/btjawa/BiliTools/issues/103), [#91](https://github.com/btjawa/BiliTools/issues/91), [#26](https://github.com/btjawa/BiliTools/issues/26))
+
+## 修复
+
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 修复 `uname` 字段不存在问题 ([#82](https://github.com/btjawa/BiliTools/issues/82), [#94](https://github.com/btjawa/BiliTools/issues/94), [#113](https://github.com/btjawa/BiliTools/issues/113), [#117](https://github.com/btjawa/BiliTools/issues/117))
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 修复合集中无法解析分P问题 ([#108](https://github.com/btjawa/BiliTools/issues/108))
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 修复收藏夹缺少 `cid` 参数问题 ([#106](https://github.com/btjawa/BiliTools/issues/106))
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 修复下载任务推送错误处理问题 ([#86](https://github.com/btjawa/BiliTools/issues/86))
+- [`d6db8b5`](https://github.com/btjawa/BiliTools/commit/d6db8b5809880e551fc883416e44748be3cb07fd) 修复 NFO 参数问题 ([#89](https://github.com/btjawa/BiliTools/issues/89), [#78](https://github.com/btjawa/BiliTools/issues/78))
+- [`d6db8b5`](https://github.com/btjawa/BiliTools/commit/d6db8b5809880e551fc883416e44748be3cb07fd) Aria2c JSONRPC 调用重构 ([#100](https://github.com/btjawa/BiliTools/issues/100))
+- [`d6db8b5`](https://github.com/btjawa/BiliTools/commit/d6db8b5809880e551fc883416e44748be3cb07fd) 修复部分机器上的监听端口与地址问题 ([#111](https://github.com/btjawa/BiliTools/issues/111), [#93](https://github.com/btjawa/BiliTools/issues/93))
+
 ## [1.4.0-1] - 2025-06-19
 
 ## 修复

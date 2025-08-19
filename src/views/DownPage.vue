@@ -26,15 +26,17 @@
                         v-if="item.select.media.video || item.select.media.audioVideo"
                         v-for="k in (['res', 'enc'] as const)"
                     >
+                    <template v-if="item.select[k]">
                         {{ $t(`quality.${k}.${item.select[k]}`) }}
                         <gap />
                     </template>
-                    <template v-if="item.select.media.audio || item.select.media.audioVideo">
-						{{ $t(`quality.abr.${item.select['abr']}`) }}
+                    </template>
+                    <template v-if="(item.select.media.audio || item.select.media.audioVideo) && item.select.abr">
+						{{ $t(`quality.abr.${item.select.abr}`) }}
                         <gap />
                     </template>
-                    <template v-if="Object.entries(item.select.media).some(([_, k]) => k)">
-                        {{ $t(`quality.fmt.${item.select['fmt']}`) }}
+                    <template v-if="Object.entries(item.select.media).some(([_, k]) => k) && item.select.fmt">
+                        {{ $t(`quality.fmt.${item.select.fmt}`) }}
                         <gap />
                     </template>
                     <template v-if="item.select.danmaku.live">

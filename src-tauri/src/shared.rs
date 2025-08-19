@@ -32,8 +32,8 @@ lazy_static! {
         },
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
         format: SettingsFormat {
-            filename: "{title}".into(),
-            folder: "{index}_{mediaType}_{showtitle}".into(),
+            filename: "{index}_{taskType}_{title}".into(),
+            folder: "{index}_{mediaType}_{title}".into(),
             favorite: "".into(),
         },
         language: sys_locale::get_locale()

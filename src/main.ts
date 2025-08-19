@@ -28,6 +28,19 @@ const ToastOptions: PluginOptions = {
     timeout: 5000,
 }
 
+if (!import.meta.env.DEV) {
+    const url = new URL('/node_modules/source-map-support/browser-source-map-support.js', import.meta.url).href;
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = () => {
+        const install = document.createElement('script')
+        install.textContent = 'sourceMapSupport.install();';
+        document.body.appendChild(install);
+    };
+    document.body.appendChild(script);
+}
+
+
 window.onerror = (_, __, ___, ____, error) => {
     new AppError(error, { name: 'WindowError' }).handle()
 };

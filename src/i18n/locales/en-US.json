@@ -169,11 +169,11 @@
         "exit": "Log Out"
     },
     "search": {
-        "input": "{0} link / AV / BV / SS / EP / AU / AM / SID / FID ...",
+        "input": "{0} link/AV/BV/SS/EP/AU/AM/SID/FID ...",
         "suggest": "What would you like to search today?",
         "autoDetect": "Auto Detect",
-        "general": "General Download",
-        "advanced": "Advanced Download",
+        "general": "General",
+        "advanced": "Advanced",
         "selectAll": "Select All"
     },
     "history": {

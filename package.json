@@ -1,6 +1,6 @@
 {
   "name": "bilitools",
-  "version": "1.4.0-1",
+  "version": "1.4.0-2",
   "description": "A cross-platform bilibili toolbox",
   "homepage": "https://github.com/btjawa/BiliTools#readme",
   "bugs": {
@@ -17,11 +17,10 @@
     "build": "vue-tsc --noEmit && vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "updater": "node scripts/updater.mjs"
+    "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.7.0",
+    "@tauri-apps/api": "2.7.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.0",
     "@tauri-apps/plugin-dialog": "^2.3.2",
     "@tauri-apps/plugin-http": "^2.5.1",
@@ -33,13 +32,13 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "@vuepic/vue-datepicker": "^11.0.2",
     "@wcj/markdown-style": "^1.1.2",
-    "jsencrypt": "^3.3.2",
-    "marked": "^16.1.1",
+    "jsencrypt": "^3.5.4",
+    "marked": "^16.2.0",
     "md5": "^2.3.0",
-    "p-limit": "^6.2.0",
+    "p-limit": "^7.0.0",
     "pako": "^2.1.0",
     "pinia": "^3.0.3",
-    "qrcode-generator": "^2.0.2",
+    "qrcode-generator": "^2.0.4",
     "source-map-support": "^0.5.21",
     "stacktrace-js": "^2.0.2",
     "vue": "3.5.18",
@@ -49,16 +48,16 @@
     "vue-virtual-scroller": "^2.0.0-beta.8"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.7.1",
+    "@tauri-apps/cli": "2.7.0",
     "@types/md5": "^2.3.5",
-    "@types/pako": "^2.0.3",
+    "@types/pako": "^2.0.4",
     "autoprefixer": "^10.4.21",
     "pbjs": "^0.0.14",
     "postcss": "^8.5.6",
-    "sass": "^1.89.2",
+    "sass": "^1.90.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.2",
-    "vite": "^7.0.6",
+    "vite": "^7.1.2",
     "vite-plugin-compression": "^0.5.1",
     "vue-tsc": "^3.0.5"
   }

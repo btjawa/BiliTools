@@ -39,9 +39,9 @@ export const FormatPlaceholders = {
 }
 
 export interface PopupSelect {
-  res: number;
-  abr: number;
-  enc: number;
+  res?: number;
+  abr?: number;
+  enc?: number;
   fmt: StreamFormat;
   misc: {
     aiSummary: boolean;

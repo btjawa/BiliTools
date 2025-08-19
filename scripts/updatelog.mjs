@@ -14,7 +14,7 @@ if (!fs.existsSync(file)) {
     process.exit(1);
 }
 
-const targetTag = process.argv[2] ?? null;
+const targetTag = (process.argv[2]?.slice(1)) ?? null;
 
 const content = fs.readFileSync(file, { encoding: 'utf-8' }).split('\n');
 let tag = null;

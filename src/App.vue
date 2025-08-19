@@ -1,6 +1,6 @@
 <template>
     <TitleBar />
-    <div class="main" @contextmenu="contextMenu?.init">
+    <div class="main" @contextmenu.prevent="contextMenu?.init">
 		<SideBar />
 		<ContextMenu ref="contextMenu" />
         <div class="loading"></div>
