@@ -51,7 +51,7 @@
         <i18n-t keypath="popup.dashHint.desc" tag="span" class="desc" scope="global" v-if="k === 'fmt'">
             <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('popup.dashHint.name') }}</a>
         </i18n-t>
-        <!-- <span v-if="k === 'abr'" class="desc">{{ $t('popup.abrHint') }}</span> -->
+        <span v-if="k === 'abr'" class="desc">{{ $t('popup.abrHint') }}</span>
         <div class="flex gap-2 overflow-x-auto mt-2">
             <button
                 v-for="id in i.data" :key="id"

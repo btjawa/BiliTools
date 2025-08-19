@@ -32,7 +32,7 @@ lazy_static! {
         },
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
         format: SettingsFormat {
-            filename: "{index}_{taskType}_{title}".into(),
+            filename: "{taskType}_{title}".into(),
             folder: "{index}_{mediaType}_{title}".into(),
             favorite: "".into(),
         },

@@ -201,7 +201,6 @@ export interface TaskStatus {
 
 export interface SubTask {
   id: string,
-  index: number,
   type: TaskType,
 }
 

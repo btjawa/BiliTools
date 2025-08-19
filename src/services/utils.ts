@@ -33,7 +33,10 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
             break;
         }
     }
-    (useToast())(message, { type });
+    (useToast())(message, {
+        type,
+        timeout: type === TYPE.WARNING || type === TYPE.ERROR ? 10000 : 3000
+    });
 }
 
 export function setEventHook() {

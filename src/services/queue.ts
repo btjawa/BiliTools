@@ -134,7 +134,7 @@ function buildPaths(task: Types.GeneralTask, key: 'folder' | 'filename', subtask
             case 'enc': return i18n.global.t('quality.enc.' + select.enc);
             case 'fmt': return i18n.global.t('quality.fmt.' + select.fmt);
             case 'mediaType': return i18n.global.t('mediaType.' + (key === 'folder' ? type : item.type));
-            case 'taskType': return i18n.global.t('taskType.' + subtask?.type);
+            case 'taskType': return subtask ? i18n.global.t('taskType.' + subtask.type) : '{taskType}';
             case 'aid': return item.aid;
             case 'sid': return item.sid;
             case 'fid': return item.fid;
@@ -142,7 +142,7 @@ function buildPaths(task: Types.GeneralTask, key: 'folder' | 'filename', subtask
             case 'bvid': return item.bvid;
             case 'epid': return item.epid;
             case 'ssid': return item.ssid;
-            case 'index': return ((key === 'folder' ? task : subtask)?.index ?? 0) + 1;
+            case 'index': return task.index;
             case 'downtime': return timestamp(task.ts, { file: true });
             case 'downts': return task.ts;
             default: return -1;
@@ -226,14 +226,11 @@ export async function processQueue() {
 
 function selectToSubTasks(id: string, select: Types.PopupSelect) {
     const tasks: Types.SubTask[] = [];
-    let index = 0;
     const push = (type: Types.TaskType) => {
         tasks.push({
-            index,
             id: id + randomString(8),
             type
         });
-        if (type !== 'albumNfo') index++; // prevent albumNfo from occupying index
     }
     if (select.media.video || select.media.audioVideo) push(Types.TaskType.Video);
     if (select.media.audio || select.media.audioVideo) push(Types.TaskType.Audio);
@@ -254,12 +251,12 @@ function selectToSubTasks(id: string, select: Types.PopupSelect) {
 export async function submit(info: Types.MediaInfo, select: Types.PopupSelect, checkboxs: number[]) {
     const queue = useQueueStore();
     const settings = useSettingsStore();
-    for (const [index, v] of checkboxs.entries()) {
+    for (const v of checkboxs) {
         const id = randomString(8);
         const task: Types.GeneralTask = {
             id,
             ts: Math.floor(Date.now() / 1000),
-            index,
+            index: queue.waiting.length + queue.complete.length,
             folder: String(),
             select: select,
             item: info.list[v],

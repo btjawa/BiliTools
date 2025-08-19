@@ -1,5 +1,6 @@
 use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, pin::Pin, sync::{atomic::AtomicBool, Arc}};
-use tokio::{fs, sync::{broadcast::{self, Receiver}, mpsc, oneshot, RwLock, Semaphore}};
+use notify_rust::Notification;
+use tokio::{fs, sync::{broadcast::{self, Receiver}, mpsc, oneshot, OnceCell, RwLock, Semaphore}};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::{async_runtime, http::StatusCode, ipc::Channel, Listener};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
@@ -179,7 +180,6 @@ pub enum TaskType {
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SubTask {
     pub id: Arc<String>,
-    pub index: usize,
     #[serde(rename = "type")]
     pub task_type: TaskType,
 }
@@ -390,7 +390,7 @@ impl Scheduler {
         parent: &Arc<String>,
         id: &Arc<String>,
         func: F,
-    ) -> TauriResult<()>
+    ) -> Result<()>
     where
         F: FnOnce(Receiver<CtrlEvent>) -> Pin<Box<dyn Future<Output = TauriResult<()>> + Send>> + Send + 'static,
     {
@@ -436,10 +436,15 @@ impl Scheduler {
         } };
 
         if cancelled {
-            Err(anyhow!("Task {id} cancelled").into())
+            return Err(anyhow!("Task {id} cancelled"));
         } else {
-            result.unwrap_or(Ok(()))
+            let _ = result.unwrap_or(Ok(())).map_err(|e| self.event.send(ProcessEvent::Error {
+                id: id.clone(),
+                message: e.message,
+                code: e.code,
+            }));
         }
+        Ok(())
     }
 
     pub async fn get_ctrl(&self, id: &Arc<String>) -> Option<broadcast::Sender<CtrlEvent>> {
@@ -605,11 +610,11 @@ async fn handle_nfo(
         event, parent, Some(id), RequestAction::GetNfo
     ).await?;
 
-    let output_file = get_unique_path(if subtask.task_type == TaskType::AlbumNfo {
+    let output_file = if subtask.task_type == TaskType::AlbumNfo {
         folder.join("tvshow.nfo")
     } else {
         ptask.folder.join(format!("{}.nfo", &ptask.filename ))
-    });
+    };
     fs::write(&output_file, &*nfo).await?;
 
     if subtask.task_type == TaskType::AlbumNfo {
@@ -759,28 +764,27 @@ async fn handle_thumbs(
 async fn handle_merge(
     ptask: ProgressTask,
     mut rx: Receiver<CtrlEvent>,
-    video_path: Arc<RwLock<Option<PathBuf>>>,
-    audio_path: Arc<RwLock<Option<PathBuf>>>,
+    video_path: Arc<OnceCell<PathBuf>>,
+    audio_path: Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
     let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
-    let video = video_path.read().await.clone().ok_or(anyhow!("No path for video found"))?;
-    let audio = audio_path.read().await.clone().ok_or(anyhow!("No path for audio found"))?;
+    let video = video_path.get().ok_or(anyhow!("No path for video found"))?;
+    let audio = audio_path.get().ok_or(anyhow!("No path for audio found"))?;
 
-    let status_tx = update_progress(event, parent, id.clone());
+    let status_tx = Arc::new(update_progress(event, parent, id.clone()));
     let (cancel_tx, cancel_rx) = oneshot::channel();
 
     let abr = ptask.task.select.abr.unwrap_or(0);
     let ext = get_ext(subtask.task_type.clone(), abr);
     
-    let mut merge = Box::pin(ffmpeg::merge(id.clone(), ext, status_tx, cancel_rx, video.clone(), audio.clone()));
+    let mut merge = Box::pin(ffmpeg::merge(id.clone(), ext, status_tx, cancel_rx, video, audio));
     let path = loop { tokio::select! {
         res = &mut merge => break res,
         Ok(CtrlEvent::Cancel) = rx.recv() => {
-            // TODO: Clean
             let _ = cancel_tx.send(());
             return Ok(());
         }
@@ -791,23 +795,20 @@ async fn handle_merge(
     fs::copy(&path, output_file).await?;
     fs::remove_file(path).await?;
 
-    if !ptask.task.select.media.video {
-        fs::remove_file(video).await?;
-    }
-    if !ptask.task.select.media.audio {
-        fs::remove_file(audio).await?;
-    }
+    fs::remove_file(video).await?;
+    fs::remove_file(audio).await?;
     Ok(())
 }
 
 async fn handle_media(
     ptask: ProgressTask,
     mut rx: Receiver<CtrlEvent>,
-    video_path: Arc<RwLock<Option<PathBuf>>>,
-    audio_path: Arc<RwLock<Option<PathBuf>>>,
+    video_path: Arc<OnceCell<PathBuf>>,
+    audio_path: Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
     let event = ptask.event;
+    let select = ptask.task.select.clone();
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -823,9 +824,9 @@ async fn handle_media(
         return Err(anyhow!("No urls found").into());
     };
 
-    let status_tx = update_progress(event, parent, id.clone());
+    let status_tx = Arc::new(update_progress(event, parent, id.clone()));
     
-    let mut download = Box::pin(aria2c::download(id.clone(), status_tx, urls));
+    let mut download = Box::pin(aria2c::download(id.clone(), status_tx.clone(), urls));
     let path = loop { tokio::select! {
         res = &mut download => break res,
         msg = rx.recv() => match msg {
@@ -845,20 +846,30 @@ async fn handle_media(
 
     let abr = ptask.task.select.abr.unwrap_or(0);
     let ext = get_ext(subtask.task_type.clone(), abr);
-    let output_file = get_unique_path(ptask.folder.join(format!("{}.{}", &ptask.filename, ext )));
 
-    fs::copy(&path, &output_file).await?;
-    fs::remove_file(path).await?;
+    let output = ptask.folder.join(&*ptask.filename);
 
-    let mut guard = if subtask.task_type == TaskType::Video {
-        video_path.write().await
+    let target = if subtask.task_type == TaskType::Video {
+        fs::copy(&path, &output.with_extension(ext)).await?;
+        video_path
     } else if subtask.task_type == TaskType::Audio {
-        audio_path.write().await
+        let converted = ffmpeg::convert_audio(id, ext, status_tx.clone(), &path).await?;
+        fs::copy(
+            &converted,
+            &output.with_extension(
+                converted.extension().ok_or(anyhow!("No audio extension found"))?
+            )
+        ).await?;
+        audio_path
     } else {
         return Err(anyhow!("No path for type {:?} found", &subtask.task_type).into());
     };
-    
-    *guard = Some(output_file);
+
+    if !select.media.audio_video {
+        fs::remove_file(path).await?;
+    } else {
+        target.set(path)?;
+    }
     Ok(())
 }
 
@@ -922,8 +933,8 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
     let task = Arc::new(task.read().await.clone());
     fs::create_dir_all(&*folder).await.context("Failed to create output folder")?;
 
-    let video_path: Arc<RwLock<Option<PathBuf>>> = Arc::new(RwLock::new(None));
-    let audio_path: Arc<RwLock<Option<PathBuf>>> = Arc::new(RwLock::new(None));
+    let video_path = Arc::new(OnceCell::new());
+    let audio_path = Arc::new(OnceCell::new());
 
     for subtask in task.subtasks.iter() {
         let sub_id = subtask.id.clone();
@@ -943,9 +954,9 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
             folder: folder.clone(),
             filename,
         };
+        let folder = scheduler.folder.clone();
         let video_clone = video_path.clone();
         let audio_clone = audio_path.clone();
-        let folder = scheduler.folder.clone();
         match subtask.task_type {
             TaskType::Video | TaskType::Audio => {
                 scheduler.try_join(&id, &sub_id, |rx| {
@@ -981,7 +992,7 @@ async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) 
                 scheduler.try_join(&id, &sub_id, |rx| {
                     Box::pin(async { handle_subtitle(ptask, rx).await })
                 }).await?;
-            }
+            },
         }
     }
 
@@ -1019,7 +1030,11 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
             let task = QUEUE_MANAGER.move_task(&id, QueueType::Waiting, QueueType::Doing).await.unwrap();
             match handle_task(scheduler, task.clone()).await {
                 Ok(_) => if config::read().notify {
-                    // TODO: Notification
+                    Notification::new()
+                        .app_id("com.btjawa.bilitools")
+                        .summary("BiliTools")
+                        .body("This has nothing to do with emails.\nIt should not go away until you acknowledge it.")
+                        .show().unwrap();
                 },
                 Err(e) => {
                     log::error!("task {} failed: {e:#}", id.clone());

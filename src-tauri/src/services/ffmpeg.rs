@@ -59,7 +59,7 @@ async fn get_duration(path: &PathBuf) -> Result<u64> {
     )
 }
 
-pub async fn merge(id: Arc<String>, ext: &str, tx: Sender<(u64, u64)>, mut cancel: oneshot::Receiver<()>, video_path: PathBuf, audio_path: PathBuf) -> TauriResult<PathBuf> {
+pub async fn merge(id: Arc<String>, ext: &str, tx: Arc<Sender<(u64, u64)>>, mut cancel: oneshot::Receiver<()>, video_path: &PathBuf, audio_path: &PathBuf) -> TauriResult<PathBuf> {
     let app = get_app_handle();
     let temp_root = config::read().temp_dir().join(format!("{id}_{}", get_ts(true)));
     fs::create_dir_all(&temp_root).await?;
@@ -67,16 +67,24 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: Sender<(u64, u64)>, mut cance
     let output = temp_root.join(format!("{id}.{ext}"));
     let duration = get_duration(&video_path).await?;
 
-    let (mut _rx, child) = app.shell().sidecar("ffmpeg")?
-        .args([
-            "-hide_banner", "-nostats", "-loglevel", "warning",
-            "-i", video_path.to_str().unwrap(),
-            "-i", audio_path.to_str().unwrap(),
-            "-c", "copy", "-shortest",
-            "-progress", "pipe:1",
-            output.to_str().unwrap(), "-y",
-        ]).spawn()?;
+    let mut args = vec![
+        "-hide_banner", "-nostats", "-loglevel", "warning",
+        "-i", video_path.to_str().unwrap(),
+        "-i", audio_path.to_str().unwrap(),
+        "-c", "copy", "-shortest",
+    ];
 
+    if ext == "mp4" {
+        args.push("-movflags");
+        args.push("+faststart");
+    }
+
+    args.extend_from_slice(&[
+        "-progress", "pipe:1",
+        output.to_str().unwrap(), "-y"
+    ]);
+
+    let (mut _rx, child) = app.shell().sidecar("ffmpeg")?.args(args).spawn()?;
     let mut child = Some(child);
     let mut monitor = Box::pin(monitor(duration, _rx, tx));
     tokio::select! {
@@ -85,14 +93,48 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: Sender<(u64, u64)>, mut cance
             c.kill()?;
         }
     };
-
     Ok(output)
 }
 
-// pub async fn convert(id: Arc<String>, tx: Sender<(u64, u64)>, mut cancel: oneshot::Receiver<()>, path: PathBuf) -> TauriResult<PathBuf> {
-// }
+pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, u64)>>, input: &PathBuf) -> TauriResult<PathBuf> {
+    let app = get_app_handle();
+    let temp_root = config::read().temp_dir().join(format!("{id}_{}", get_ts(true)));
+    fs::create_dir_all(&temp_root).await?;
 
-async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Sender<(u64, u64)>) -> TauriResult<()> {
+    let duration = get_duration(&input).await?;
+
+    let mut args = vec![
+        "-hide_banner", "-nostats", "-loglevel", "warning",
+        "-i", input.to_str().unwrap(), "-map", "0:a:0", "-vn"
+    ];
+    
+    if config::read().convert.mp3 {
+        args.extend_from_slice(&[
+            "-c:a", "libmp3lame", "-q:a", "2", "-id3v2_version", "3"
+        ]);
+        ext = "mp3";
+    } else {
+        args.extend_from_slice(&["-c", "copy"]);
+        if ext == "m4a" {
+            args.extend_from_slice(&[
+                "-bsf:a", "aac_adtstoasc", "-movflags", "+faststart", "-f", "mp4"
+            ]);
+        }
+    }
+
+    let output = temp_root.join(format!("{id}.{ext}"));
+
+    args.extend_from_slice(&[
+        "-map_metadata", "0", "-progress", "pipe:1",
+        output.to_str().unwrap(), "-y"
+    ]);
+
+    let (mut _rx, _) = app.shell().sidecar("ffmpeg")?.args(args).spawn()?;
+    monitor(duration, _rx, tx).await?;
+    Ok(output)
+}
+
+async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Arc<Sender<(u64, u64)>>) -> TauriResult<()> {
     let mut stderr: Vec<String> = vec![];
     while let Some(msg) = rx.recv().await {
         match msg {

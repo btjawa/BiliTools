@@ -545,6 +545,7 @@ dependencies = [
  "lazy_static",
  "log",
  "notifica",
+ "notify-rust 4.11.7",
  "process_alive",
  "rand 0.9.2",
  "regex",
@@ -2881,6 +2882,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mac-notification-sys"
+version = "0.6.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "119c8490084af61b44c9eda9d626475847a186737c0378c85e32d77c33a01cd4"
+dependencies = [
+ "cc",
+ "objc2 0.6.2",
+ "objc2-foundation 0.3.1",
+ "time",
+]
+
+[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3076,8 +3089,8 @@ version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4e81fcdf9755383979b66adf525a66a8f621b55882a820552b201839b0ce3f7"
 dependencies = [
- "mac-notification-sys",
- "notify-rust",
+ "mac-notification-sys 0.3.0",
+ "notify-rust 3.6.3",
  "winrt",
 ]
 
@@ -3088,7 +3101,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8da29142be3f71b2165a6b3991c26045b674edbf04cdfc42f323094fc3e4b5a"
 dependencies = [
  "dbus",
- "mac-notification-sys",
+ "mac-notification-sys 0.3.0",
+]
+
+[[package]]
+name = "notify-rust"
+version = "4.11.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6442248665a5aa2514e794af3b39661a8e73033b1cc5e59899e1276117ee4400"
+dependencies = [
+ "futures-lite",
+ "log",
+ "mac-notification-sys 0.6.6",
+ "serde",
+ "tauri-winrt-notification",
+ "zbus",
 ]
 
 [[package]]
@@ -6163,6 +6190,18 @@ checksum = "fd21509dd1fa9bd355dc29894a6ff10635880732396aa38c0066c1e6c1ab8074"
 dependencies = [
  "embed-resource",
  "toml 0.9.5",
+]
+
+[[package]]
+name = "tauri-winrt-notification"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b1e66e07de489fe43a46678dd0b8df65e0c973909df1b60ba33874e297ba9b9"
+dependencies = [
+ "quick-xml 0.37.5",
+ "thiserror 2.0.15",
+ "windows",
+ "windows-version",
 ]
 
 [[package]]

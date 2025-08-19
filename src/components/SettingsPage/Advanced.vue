@@ -34,8 +34,6 @@ import { useSettingsStore } from '@/store';
 import Switch from '../Switch.vue';
 
 const settings = useSettingsStore();
-// const convertList = ['danmaku', 'mp3'] as const;
-// temporarily inop
-const convertList = ['danmaku'] as const;
+const convertList = ['danmaku', 'mp3'] as const;
 
 </script>

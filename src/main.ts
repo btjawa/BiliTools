@@ -25,7 +25,6 @@ const ToastOptions: PluginOptions = {
     closeButton: "button",
     closeOnClick: false,
     icon: true,
-    timeout: 5000,
 }
 
 if (!import.meta.env.DEV) {

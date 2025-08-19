@@ -34,7 +34,7 @@ const settings = useSettingsStore();
 const placeholders = {
     folder: {
         basic: p.basic.filter(v => v !== 'title' && v !== 'taskType'),
-        down: p.down.filter(v => v !== 'index')
+        down: p.down
     },
     filename: { ...p }
 }

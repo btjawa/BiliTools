@@ -265,7 +265,7 @@ async fn check_breakpoint(
     Ok(None)
 }
 
-pub async fn download(gid: Arc<String>, tx: Sender<(u64, u64)>, urls: Vec<String>) -> TauriResult<PathBuf> {
+pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<String>) -> TauriResult<PathBuf> {
     let temp_root = config::read().temp_dir();
     let temp_dir = format!("{gid}_{}", get_ts(true));
     let dir = check_breakpoint(&temp_root, &temp_dir).await?
