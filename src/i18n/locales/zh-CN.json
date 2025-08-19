@@ -1,0 +1,296 @@
+{
+    "bilibili": "哔哩哔哩",
+    "optional": "可选",
+    "page": "页数",
+    "reset": "重置",
+    "wip": "此处施工中~",
+    "empty": "无可用资源~",
+    "contextMenu": {
+        "cut": "剪切",
+        "copy": "复制",
+        "paste": "粘贴"
+    },
+    "mediaType": {
+        "video": "视频",
+        "bangumi": "番剧",
+        "music": "音乐",
+        "musicList": "歌单",
+        "lesson": "课程",
+        "favorite": "收藏夹"
+    },
+    "taskType": {
+        "aiSummary": "AI 总结",
+        "subtitles": "字幕",
+        "albumNfo": "合集/剧集刮削",
+        "singleNfo": "单集刮削",
+        "liveDanmaku": "实时弹幕",
+        "historyDanmaku": "历史弹幕",
+        "thumb": "图像",
+        "video": "视频",
+        "audio": "音频",
+        "audioVideo": "音视频"
+    },
+    "popup": {
+        "least": "请选择至少一项资源",
+        "abrHint": "可在 \"设置->高级->转换策略\" 修改是否转换为 MP3 格式",
+        "popupLint": "请点击所需资源的按钮，并选择对应参数",
+        "dashHint": {
+            "name": "关于 DASH / FLV / MP4",
+            "desc": "请勿随意修改。若确实需要更改，请先阅读：{0}，并确保你了解自己正在做什么"
+        },
+        "nextStep": "下一步",
+        "misc": {
+            "name": "杂项",
+            "aiSummary": "AI 总结",
+            "subtitles": "字幕"
+        },
+        "nfo": {
+            "name": "NFO 元数据",
+            "album": "合集/剧集刮削",
+            "single": "单集刮削"
+        },
+        "danmaku": {
+            "name": "弹幕",
+            "live": "实时弹幕",
+            "history": "历史弹幕"
+        },
+        "thumb": {
+            "name": "图像",
+            "pic": "封面",
+            "cover": "封面",
+            "square_cover": "方形封面",
+            "ugc_season_cover": "合集封面",
+            "season_cover": "本季封面",
+            "season_horizontal_cover_1610": "本季海报 (16:10)",
+            "season_horizontal_cover_169": "本季海报 (16:9)"
+        },
+        "mediaType": {
+            "video": "视频",
+            "audio": "音频",
+            "audioVideo": "音视频"
+        }
+    },
+    "format": {
+        "title": "分P/单集标题",
+        "showtitle": "视频/合集标题",
+        "upper": "UP主昵称",
+        "upperid": "UP主 UID",
+        "pubtime": "上传时间",
+        "pubts": "上传时间 (UNIX时间戳)",
+        "res": "分辨率",
+        "abr": "比特率",
+        "enc": "编码格式",
+        "fmt": "流媒体格式",
+        "mediaType": "媒体类型",
+        "taskType": "资源名称",
+        "aid": "AV号",
+        "sid": "SID (音乐)",
+        "fid": "FID (收藏夹)",
+        "cid": "CID",
+        "bvid": "BV号",
+        "epid": "EP号",
+        "ssid": "SS号",
+        "index": "下载编号",
+        "downtime": "下载时间",
+        "downts": "下载时间 (UNIX时间戳)"
+    },
+    "quality": {
+        "res": {
+            "6": "240P 极速",
+            "16": "360P 流畅",
+            "32": "480P 标清",
+            "64": "720P 准高清",
+            "80": "1080P 高清",
+            "112": "1080P 高码率",
+            "116": "1080P 60帧",
+            "120": "4K 超高清",
+            "125": "HDR 真彩",
+            "126": "杜比视界",
+            "127": "8K 超高清"
+        },
+        "abr": {
+            "30216": "64K",
+            "30228": "128K",
+            "30232": "132K",
+            "30280": "192K",
+            "30380": "320K",
+            "30250": "杜比全景声",
+            "30251": "Hi-Res 无损",
+            "30252": "无损 FLAC"
+        },
+        "enc": {
+            "7": "AVC (H.264)",
+            "12": "HEVC (H.265)",
+            "13" :"AV1"
+        },
+        "fmt": {
+            "dash": "DASH 格式",
+            "mp4": "MP4 格式",
+            "flv": "FLV 格式"
+        }
+    },
+    "error": {
+        "risk": "触发风控，请进行验证",
+        "sidecar": "Sidecar {0} 的错误",
+        "checkUpdate": "请在 GitHub 检查最新更新",
+        "invalidInput": "无法解析输入",
+        "selectLimit": "不建议一次选择超过 30 个选项"
+    },
+    "updater": {
+        "title": "发现新版本！",
+        "latest": "已是最新版本",
+        "hint": "可在 \"设置->常规\" 中禁用 \"自动检查更新\"，但不建议这么做",
+        "install": "下载并安装",
+        "cancel": "跳过本次更新"
+    },
+    "user": {
+        "input": "请输入{0}",
+        "account": "账号",
+        "password": "密码",
+        "phone": "手机号",
+        "code": "验证码",
+        "scan": "扫描二维码登录",
+        "getScan": "请使用哔哩哔哩客户端\n扫码登录或扫码下载APP",
+        "pwd": "密码登录",
+        "sms": "短信登录",
+        "sendSms": "获取验证码",
+        "login": "登录",
+        "info": {
+            "86038": "二维码已过期\n请点击刷新",
+            "86090": "扫码成功\n请在手机上确认"
+        },
+        "agree": "登录即代表你同意哔哩哔哩的用户协议与隐私政策\n{0}",
+        "stat": {
+            "following": "关注数",
+            "follower": "粉丝数",
+            "dynamic": "动态数",
+            "coins": "硬币数"
+        },
+        "exit": "退出登录"
+    },
+    "search": {
+        "input": "{0}链接/AV/BV/SS/EP/AU/AM/SID/FID号...",
+        "suggest": "今天想搜些什么呢~",
+        "autoDetect": "自动检测",
+        "general": "常规下载",
+        "advanced": "高级下载",
+        "selectAll": "全选"
+    },
+    "history": {
+        "title": "历史记录",
+        "refresh": "刷新"
+    },
+    "down": {
+        "title": "下载",
+        "waiting": "等待中",
+        "doing": "进行中",
+        "complete": "已完成",
+        "empty": "此队列为空~",
+        "processQueue": "点击以开始下载"
+    },
+    "settings": {
+        "title": "设置",
+        "confirm": "确定删除吗？此操作不可撤销。",
+        "general": "通用",
+        "language": {
+            "name": "语言"
+        },
+        "theme": {
+            "name": "主题",
+            "light": "浅色",
+            "dark": "深色",
+            "auto": "遵循系统"
+        },
+        "clipboard" :{
+            "name": "监听剪贴板"
+        },
+        "notify": {
+            "name": "通知系统",
+            "desc": "若启用，则会在下载完毕时发送系统通知。"
+        },
+        "auto_download": {
+            "name": "自动开始下载",
+            "desc": "若启用，则会在添加任务后自动开始下载。"
+        },
+        "auto_check_update": {
+            "name": "自动检查更新"
+        },
+        "storage": "存储",
+        "paths": {
+            "name": "路径",
+            "desc": "“临时文件” 存储未下载完毕的文件，经过处理后转移至 “输出文件”。",
+            "down_dir": "输出文件",
+            "temp_dir": "临时文件"
+        },
+        "cache": {
+            "name": "缓存",
+            "desc": "数据库存储配置、登录信息、下载记录等数据，建议定期备份。",
+            "log": "日志",
+            "temp": "临时文件",
+            "webview": "Webview 缓存",
+            "database": "数据库"
+        },
+        "download": "下载",
+        "default": {
+            "name": "默认参数",
+            "desc": "下载时，将会优先使用此处参数。若目标资源不支持此处选定的参数，则会使用其支持的最高参数。"
+        },
+        "task_folder": {
+            "name": "为各个任务单独创建文件夹",
+            "desc": "若启用，则会在下载时为每个任务单独创建文件夹存放文件。"
+        },
+        "max_conc": {
+            "name": "最大并发下载数",
+            "desc": "控制最大并发处理任务的数量。若该值较高，可能导致风控概率上升。"
+        },
+        "proxy": {
+            "name": "网络代理",
+            "desc": "暂仅支持 HTTP(S) 协议。",
+            "address": "地址",
+            "placeholder": "http(s)://server:port",
+            "username": "用户名",
+            "password": "密码"
+        },
+        "advanced": "高级",
+        "add_metadata": {
+            "name": "自动嵌入元数据",
+            "desc": "若启用，则会在下载时将目标资源信息嵌入媒体文件，如标题、简介等。"
+        },
+        "block_pcdn": {
+            "name": "尝试屏蔽 PCDN",
+            "desc": "若启用，则会在下载时尝试使用质量更高的链接而非 PCDN。"
+        },
+        "convert": {
+            "name": "转换策略",
+            "danmaku": {
+                "name": "将 XML 弹幕转换为 ASS 字幕",
+                "desc": "若启用，则会在下载弹幕时调用 DanmakuFactory 将 XML 转换为 ASS 格式。"
+            },
+            "mp3": {
+                "name": "将音频转换为 MP3 格式",
+                "desc": "若启用，则会强制转换音频为 MP3 格式。音视频不受影响。"
+            }
+        },
+        "format": "命名格式",
+        "naming": {
+            "desc": "点击对应按钮以添加变量。若目标资源不含此处的某一变量，则会使用 -1 替换该变量。\n除时间格式外，请不要手动编辑占位符，以防无法正确检测并填充变量。",
+            "filename": "文件名格式",
+            "folder": "文件夹名格式",
+            "basic": "基本",
+            "id": "编号",
+            "down": "下载"
+        }
+    },
+    "info": {
+        "title": "关于",
+        "changelog": "更新日志",
+        "checkUpdate": "检查更新",
+        "document": "文档",
+        "feedback": "反馈",
+        "donate": "赞助",
+        "paid": "此软件为公益免费项目。如果你付费购买了此软件，你可能被骗了。",
+        "star": "觉得好用的话，在 GitHub 给这个项目点个 Star 吧！",
+        "data": "该应用产生与获取的所有数据均仅存储于用户本地",
+        "others": "使用本应用时，请遵守相关法律法规及平台服务协议，开发者对不当使用所造成的任何后果概不负责。\n“哔哩哔哩” 及 “Bilibili” 是上海宽娱数码科技有限公司的注册商标或商标。\n本软件与哔哩哔哩无关，亦未获其授权。"
+    }
+}

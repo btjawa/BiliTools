@@ -4,19 +4,11 @@
 <h1>BiliTools - ビリビリツールボックス</h1>
 
 <div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
-</a>
-<img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-</a>
+<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
+<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
 <a href="https://trendshift.io/repositories/13286" target="_blank">
@@ -33,7 +25,7 @@
 
 💡 [Tauri v2](https://github.com/tauri-apps/tauri) をベースに開発され、ビリビリの様々なリソースの解析とダウンロードに対応しています。今後も [さらなる機能](https://github.com/users/btjawa/projects/4) の追加を予定しています。
 
-📖 ドキュメント・その他情報: [https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) (中国語のみ)
+📖 ドキュメント・その他情報: [https://btjawa.top/bilitools](https://btjawa.top/bilitools) (中国語のみ)
 
 > [!IMPORTANT] 
 > **本プロジェクトは [ビリビリ中国版](https://www.bilibili.com) を対象としています。[ビリビリ海外版](https://www.bilibili.tv) には対応していません。**<br>
@@ -55,9 +47,11 @@
 
 ### macOS
 
-`BiliTools_xxx_universal.dmg`　をダウンロードしてインストールしてください。
+Intel チップの場合、`BiliTools_xxx_x64.dmg`　をダウンロードしてインストールしてください。
 
-**一般的に**、特定アーキテクチャ専用のイメージをダウンロードすることは推奨されません。詳しくは [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137) をご参照ください。
+M シリーズチップ / Apple Silicon の場合、`BiliTools_xxx_aarch64.dmg`　をダウンロードしてインストールしてください。
+
+このソフトをホワイトリストに追加する必要があるかもしれません。手順については以下を参照してください：[開発元が不明なMacアプリを開く](https://support.apple.com/ja-jp/guide/mac-help/mh40616/mac)
 
 ## 🚀 貢献
 
@@ -81,6 +75,8 @@
 
 **簡体字中国語 (zh-CN)** をメインの開発言語としており、他言語の翻訳元にもなっています。
 
+日本語の場合、翻訳の約 30% は AI によって行われています。
+
 | コード          | 対応状況    |
 |----------------|-------------|
 | zh-CN          | ✅ 対応済み |
@@ -90,14 +86,14 @@
 
 ## ⚡ 寄付のお願い
 
-本プロジェクトは 2k+ Stars を超えるご支持をいただいています。心より感謝いたします！
+本プロジェクトは 3k+ Stars を超えるご支持をいただいています。心より感謝いたします！
 
-現在、`v1.3.8` ~ `v1.4.0` のバージョンに向けて、様々な新機能改善の実装を進めています。
+現在、`v1.4.0` バージョンに向けて、様々な新機能改善の実装を進めています。
 
 もしこのプロジェクトが役に立ったと感じていただけたら、  
 ぜひコーヒー1杯分のご支援をいただけると、嬉しいです：
 
-- [Aifadian / 爱发电](https://afdian.com/a/BTJ_Shiroi)
+- [爱发电 (afdian)](https://afdian.com/a/BTJ_Shiroi)
 
 皆様からのご支援が、継続的な開発・改善の大きな原動力になります！
 
@@ -148,4 +144,4 @@
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- 著作権等に関するご連絡・削除依頼は、いつでも [お知らせ](mailto:2407356083@qq.com) ください。
+- 著作権等に関するご連絡・削除依頼は、いつでも [お知らせ](mailto:btj2407@gmail.com) ください。

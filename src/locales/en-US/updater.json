@@ -1,7 +1,0 @@
-{
-    "title": "Version Update",
-    "current": "Current version: {0}",
-    "disableUpdate": "You can disable \"Auto Check\" in \"Settings -> About -> Update\", but it's not recommended",
-    "download": "Download Update",
-    "install": "Install Update"
-}

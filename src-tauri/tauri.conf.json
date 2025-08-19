@@ -1,6 +1,6 @@
 {
   "productName": "BiliTools",
-  "version": "1.4.0-1",
+  "version": "1.4.0-2",
   "identifier": "com.btjawa.bilitools",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -17,10 +17,9 @@
   "bundle": {
     "active": true,
     "category": "Utility",
-    "copyright": "Copyright © 2024 btjawa",
+    "copyright": "Copyright © 2025 btjawa",
     "targets": "all",
     "shortDescription": "A cross-platform bilibili toolbox",
-    "createUpdaterArtifacts": "v1Compatible",
     "license": "GPL-3.0-or-later",
     "icon": [
       "icons/32x32.png",
@@ -31,6 +30,7 @@
       "icons/icon.ico",
       "icons/icon.png"
     ],
+    "createUpdaterArtifacts": true,
     "windows": {
       "wix": {
         "language": "zh-CN"
@@ -38,10 +38,15 @@
       "nsis": {
         "languages": [
           "SimpChinese",
-          "English"
+          "TradChinese",
+          "English",
+          "Japanese"
         ],
         "displayLanguageSelector": true
       }
+    },
+    "macOS": {
+      "signingIdentity": "-"
     },
     "resources": {
       "resources/COPYING.aria2c": "COPYING.aria2c",
@@ -61,10 +66,8 @@
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQTUzQTQ3NDY3RUZEMjgKUldRby9YNUdSenFsN3JJYklTL0g5RUd2QkhUWklqQUxydVZXdFA4c25ZazI0YjJIbTFFM0JiNjkK",
       "endpoints": [
-        "https://ghproxy.net/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://github.moeyy.xyz/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://ghfast.top/https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json",
-        "https://raw.githubusercontent.com/btjawa/BiliTools/master/install.json"
+        "https://api.btjawa.top/v1/latest/bilitools",
+        "https://github.com/btjawa/BiliTools/releases/latest/download/latest.json"
       ]
     }
   }

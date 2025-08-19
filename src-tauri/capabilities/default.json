@@ -28,11 +28,17 @@
     "opener:allow-open-url",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "/**" }]
+      "allow": [{ "path": "**/*" }]
     },
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "*://*" }]
+      "allow": [
+        { "url": "https://*.bilibili.com/*" },
+        { "url": "https://bilibili.com/*" },
+        { "url": "https://github.com/*" },
+        { "url": "https://btjawa.top/*" },
+        { "url": "https://afdian.com/*" }
+      ]
     },
     "dialog:allow-open",
     "dialog:allow-save",
@@ -48,10 +54,10 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "*://*.bilibili.com/*" },
-        { "url": "*://*.hdslb.com/*" },
-        { "url": "*://*.biliimg.com/*" },
-        { "url": "*://*.b23.tv/*" }
+        { "url": "https://*.bilibili.com/*" },
+        { "url": "https://*.hdslb.com/*" },
+        { "url": "https://*.biliimg.com/*" },
+        { "url": "https://*.b23.tv/*" }
       ]
     },
     "updater:allow-check",

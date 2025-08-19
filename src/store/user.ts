@@ -19,7 +19,7 @@ export const useUserStore = defineStore('user', {
     getters: {
         isLogin: (s) => !!s.mid,
         getAvatar(s): string {
-            return this.isLogin ? s.avatar : new URL('@/assets/img/profile/default-avatar.jpg', import.meta.url).href;
+            return this.isLogin ? s.avatar : new URL('@/assets/img/user/default-avatar.jpg', import.meta.url).href;
         }
     }
 });

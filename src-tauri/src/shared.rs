@@ -1,35 +1,41 @@
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry};
-use std::{collections::BTreeMap, env, path::PathBuf, sync::{Arc, RwLock}};
+use std::{collections::BTreeMap, path::PathBuf, sync::{Arc, RwLock}};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
-use anyhow::{anyhow, Result};
 use tokio::sync::OnceCell;
 use tauri_specta::Event;
 use serde_json::Value;
+use anyhow::Result;
 use specta::Type;
 use chrono::Utc;
 
-use crate::{
-    storage::config::{
-        Settings,
-        SettingsAdvanced,
-        SettingsProxy
-    },
-    storage::cookies,
-};
+use crate::storage::{config::{
+        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsProxy
+    }, cookies};
 
 lazy_static! {
     pub static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
     pub static ref APP_HANDLE: Arc<OnceCell<AppHandle<Wry>>> = Arc::new(OnceCell::new());
-    pub static ref CONFIG: Arc<RwLock<Settings>> = Arc::new(RwLock::new(Settings {
-        temp_dir: env::temp_dir(),
+    pub static ref CONFIG: RwLock<Arc<Settings>> = RwLock::new(Arc::new(Settings {
+        add_metadata: true,
+        auto_check_update: true,
+        auto_download: false,
+        block_pcdn: true,
+        check_update: true,
+        clipboard: true,
+        default: SettingsDefault {
+            res: 80,
+            abr: 30280,
+            enc: 7
+        },
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
-        max_conc: 3,
-        df_dms: 80,
-        df_ads: 30280,
-        df_cdc: 7,
+        format: SettingsFormat {
+            filename: "{index}_{taskType}_{title}".into(),
+            folder: "{index}_{mediaType}_{title}".into(),
+            favorite: "".into(),
+        },
         language: sys_locale::get_locale()
             .map(|c| {
                 let code = c.to_lowercase();
@@ -41,19 +47,19 @@ lazy_static! {
                     } else { "zh-CN".into() }
                 } else { c }
             }).unwrap_or_else(|| "en-US".into()),
-        auto_check_update: true,
-        auto_download: false,
+        max_conc: 3,
+        notify: true,
+        task_folder: true,
+        temp_dir: get_app_handle().path().temp_dir().unwrap(),
         theme: Theme::Auto,
         proxy: SettingsProxy {
-            addr: String::new(),
+            address: String::new(),
             username: String::new(),
             password: String::new()
         },
-        advanced: SettingsAdvanced {
-            prefer_pb_danmaku: true,
-            add_metadata: true,
-            filename_format: "{index}_{title}".into(),
-            folder_format: "{title}_{date_sec}".into()
+        convert: SettingsConvert {
+            danmaku: true,
+            mp3: false,
         }
     }));
     pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
@@ -76,19 +82,12 @@ pub enum Theme {
     Auto,
 }
 
-impl From<Theme> for tauri::Theme {
-    fn from(theme: Theme) -> Self {
-        match theme {
-            Theme::Light => tauri::Theme::Light,
-            Theme::Dark => tauri::Theme::Dark,
-            Theme::Auto => {
-                match dark_light::detect() {
-                    Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
-                    Ok(dark_light::Mode::Light) => tauri::Theme::Light,
-                    Ok(dark_light::Mode::Unspecified) => tauri::Theme::Light,
-                    Err(_) => tauri::Theme::Light,
-                }
-            },
+impl Theme {
+    pub fn as_tauri(&self) -> Option<tauri::Theme> {
+        match self {
+            Theme::Light => Some(tauri::Theme::Light),
+            Theme::Dark => Some(tauri::Theme::Dark),
+            Theme::Auto => None,
         }
     }
 }
@@ -109,8 +108,6 @@ pub struct Headers {
     referer: String,
     #[serde(rename = "Origin")]
     origin: String,
-    #[serde(flatten)]
-    extra: BTreeMap<String, String>,
 }
 
 pub async fn init_headers() -> Result<BTreeMap<String, String>> {
@@ -123,9 +120,13 @@ pub async fn init_headers() -> Result<BTreeMap<String, String>> {
     map.insert("User-Agent".into(), USER_AGENT.into());
     map.insert("Referer".into(), "https://www.bilibili.com/".into());
     map.insert("Origin".into(), "https://www.bilibili.com".into());
+    let app = get_app_handle();
     let headers_value: Value = serde_json::to_value(&map)?;
     let headers: Headers = serde_json::from_value(headers_value)?;
-    headers.emit(&get_app_handle()).unwrap();
+    app.run_on_main_thread(move || {
+        let app = get_app_handle();
+        let _ = headers.emit(app);
+    })?;
     Ok(map)
 }
 
@@ -137,7 +138,7 @@ pub async fn init_client_no_proxy() -> Result<Client> {
     init_client_inner(false).await
 }
 
-pub async fn init_client_inner(proxy: bool) -> Result<Client> {
+pub async fn init_client_inner(use_proxy: bool) -> Result<Client> {
     let mut headers = HeaderMap::new();
     for (key, value) in init_headers().await? {
         headers.insert(
@@ -145,21 +146,22 @@ pub async fn init_client_inner(proxy: bool) -> Result<Client> {
             HeaderValue::from_str(&value)?
         );
     }
-    let config = CONFIG.read().unwrap();
+    let proxy = &config::read().proxy;
     let client_builder = Client::builder()
         .default_headers(headers);
-    let client_builder = if !config.proxy.addr.is_empty() && proxy {
-        let proxy = Proxy::all(&config.proxy.addr)?
-            .basic_auth(&config.proxy.username, &config.proxy.password);
-        client_builder.proxy(proxy)
+    let client_builder = if !proxy.address.is_empty() && use_proxy {
+        client_builder.proxy(
+            Proxy::all(&proxy.address)?
+                .basic_auth(&proxy.username, &proxy.password)
+        )
     } else {
         client_builder.no_proxy()
     };
     Ok(client_builder.build()?)
 }
 
-pub fn get_app_handle() -> AppHandle<Wry> {
-    APP_HANDLE.get().unwrap().clone()
+pub fn get_app_handle() -> &'static AppHandle<Wry> {
+    APP_HANDLE.get().unwrap()
 }
 
 pub fn get_ts(mills: bool) -> i64 {
@@ -192,26 +194,39 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     while !*READY.read().unwrap() {
         std::thread::sleep(std::time::Duration::from_millis(250));
     }
+    log::error!("{name}: {}", e.to_string());
     SidecarError {
         name: name.into(), error: e.to_string(),
-    }.emit(&app).unwrap(); e
+    }.emit(app).unwrap(); e
 }
 
-pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> Result<()> {
+#[tauri::command]
+#[specta::specta]
+pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriResult<()> {
     use tauri::{utils::{config::WindowEffectsConfig, WindowEffect}, window::Color};
     use tauri_plugin_os::Version;
-    #[cfg(all(target_os = "windows", not(debug_assertions)))]
+    #[cfg(target_os = "windows")]
     window.with_webview(|webview| unsafe {
-        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings4;
+        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
         use windows::core::Interface;
         let core = webview.controller().CoreWebView2().unwrap();
-        let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings4>().unwrap();
+        let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings5>().unwrap();
+        #[cfg(not(debug_assertions))]
         settings.SetAreBrowserAcceleratorKeysEnabled(false).unwrap();
-        settings.SetIsGeneralAutofillEnabled(false).unwrap();
+        settings.SetAreDefaultContextMenusEnabled(false).unwrap();
         settings.SetIsPasswordAutosaveEnabled(false).unwrap();
+        settings.SetIsGeneralAutofillEnabled(false).unwrap();
+        settings.SetIsZoomControlEnabled(false).unwrap();
     })?;
+    window.set_theme(theme.as_tauri())?;
     let set_default = || {
-        let theme: tauri::Theme = theme.unwrap_or(Theme::Auto.into());
+        let theme = if theme == Theme::Auto {
+            match dark_light::detect() {
+                Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
+                Ok(dark_light::Mode::Light) => tauri::Theme::Light,
+                _ => tauri::Theme::Light,
+            }
+        } else { theme.as_tauri().unwrap() };
         window.set_background_color(Some(match theme {
             tauri::Theme::Dark => Color(32, 32, 32, 255),
             _ => Color(249, 249, 249, 255),
@@ -221,7 +236,7 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Option<tauri::Theme>) -> 
     match tauri_plugin_os::platform() {
         "windows" => if let Version::Semantic(major, minor, patch) = tauri_plugin_os::version() {
             if major < 6 || (major == 6 && minor < 2) {
-                return Err(anyhow!("Unsupported Windows Version"));
+                panic!("Unsupported Windows Version");
             } else if major >= 10 {
                 if patch >= 22000 {
                     window.set_effects(WindowEffectsConfig {

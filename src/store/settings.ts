@@ -1,67 +1,64 @@
 import { defineStore } from "pinia";
-import { commands, Settings } from "@/services/backend";
-import { useAppStore } from "./app";
-import { ProxyConfig } from "@tauri-apps/plugin-http";
+import { Settings } from "@/services/backend";
+import { computed, reactive, ref, toRefs } from "vue";
 
-export const useSettingsStore = defineStore('settings', {
-    state: (): Settings => ({
-        down_dir: String(),
-        temp_dir: String(),
-        max_conc: Number(),
-        df_dms: Number(),
-        df_ads: Number(),
-        df_cdc: Number(),
-        language: String(),
-        theme: 'dark',
-        auto_check_update: false,
+export const useSettingsStore = defineStore('settings', () => {
+    const s = reactive<Settings>({
+        add_metadata: true,
+        auto_check_update: false, // for watch() to take effet when enabled
         auto_download: false,
+        block_pcdn: true,
+        check_update: true,
+        clipboard: true,
+        default: {
+            res: Number(),
+            abr: Number(),
+            enc: Number(),
+        },
+        down_dir: String(),
+        format: {
+            filename: String(),
+            folder: String(),
+            favorite: String(),
+        },
+        language: String(),
+        max_conc: Number(),
+        notify: true,
+        task_folder: true,
+        temp_dir: String(),
+        theme: 'auto',
         proxy: {
-            addr: String(),
+            address: String(),
             username: String(),
             password: String(),
         },
-        advanced: {
-            prefer_pb_danmaku: true,
-            add_metadata: true,
-            filename_format: String(),
-            folder_format: String(),
+        convert: {
+            danmaku: true,
+            mp3: false,
         }
-    }),
-    getters: {
-        isDark(s) { return s.theme === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : s.theme === 'dark' },
-        dynFa(): string {
-            return this.isDark ? 'fa-solid' : 'fa-light';
+    });
+
+    const isDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        isDark.value = e.matches;
+    });
+
+    const proxyUrl = computed(() => {
+        if (!s.proxy.address.length) return null;
+        const url = new URL(s.proxy.address);
+        url.username = s.proxy.username || '';
+        url.password = s.proxy.password || '';
+        return url.toString();
+    });
+
+    const proxyConfig = computed(() => ({
+        url: s.proxy.address || '*',
+        basicAuth: {
+            username: s.proxy.username,
+            password: s.proxy.password,
         },
-        proxyUrl: (s) => {
-            if (!s.proxy.addr.length) return null;
-            const url = new URL(s.proxy.addr);
-            url.username = s.proxy.username || '';
-            url.password = s.proxy.password || '';
-            return url.toString();
-        },
-        proxyConfig(): ProxyConfig { return {
-            url: this.proxy.addr || '*',
-            basicAuth: {
-                username: this.proxy.username,
-                password: this.proxy.password,
-            },
-            noProxy: this.proxy.addr ? undefined : '*',
-        }},
-    },
-    actions: {
-        value(key: string) {
-            return key.split('.').reduce((acc, part) => acc?.[part], this.$state as any);
-        },
-        async updateNest(key: string, value: string | number | Object) {
-            const keys = key.split('.');
-            let current = this.$state as any;
-            for (let i = 0; i < keys.length - 1; i++) {
-                current = current[keys[i]];
-            }
-            current[keys[keys.length - 1]] = value;
-            const secret = useAppStore().secret;
-            const result = await commands.rwConfig('write', { [keys[0]]: (this.$state as any)[keys[0]] }, secret);
-            if (result.status === 'error') throw result.error;
-        },
-    }
-});
+        noProxy: s.proxy.address ? undefined : '*',
+    }));
+
+    return { ...toRefs(s), isDark, proxyUrl, proxyConfig };
+})

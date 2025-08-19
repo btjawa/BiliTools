@@ -8,11 +8,11 @@ import autoprefixer from 'autoprefixer';
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [vue({
     template: {
       compilerOptions: {
-        isCustomElement: tag => tag === 'markdown-style'
+        isCustomElement: tag => tag === 'markdown-style' || tag === 'gap'
       }
     }
   }), viteCompression()],
@@ -52,4 +52,4 @@ export default defineConfig(async () => ({
     sourcemap: true,
     target: 'ESNext',
   }
-}));
+});

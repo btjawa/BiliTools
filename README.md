@@ -4,19 +4,11 @@
 <h1>BiliTools - 哔哩哔哩工具箱</h1>
 
 <div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
-</a>
-<img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-</a>
+<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
+<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
 <a href="https://trendshift.io/repositories/13286" target="_blank">
@@ -30,7 +22,7 @@
 
 💡 基于 [Tauri v2](https://github.com/tauri-apps/tauri) 构建，支持下载解析哔哩哔哩各类资源，将会陆续支持 [更多功能](https://github.com/users/btjawa/projects/4)
 
-📖 文档 / 其他信息：[https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) 
+📖 文档 / 其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools) 
 
 > [!IMPORTANT] 
 > 本项目的所有 [声明](#声明)，仅适用于发布在 [Release](https://github.com/btjawa/BiliTools/releases/latest) 页的官方版本<br>
@@ -51,9 +43,11 @@
  
 ### macOS
 
-下载 `BiliTools_xxx_universal.dmg` 并进行安装
+对于 Intel 芯片，下载 `BiliTools_xxx_x64.dmg` 并进行安装
 
-**一般**不建议单独下载对应架构的镜像，参考 [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137)
+对于 M 系列芯片 / Apple Sillicon，下载 `BiliTools_xxx_aarch64.dmg` 并进行安装
+
+你可能需要将该软件列入白名单，具体流程参见：[打开来自未知开发者的 Mac App](https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac)
 
 ## 🚀 参与贡献
 
@@ -116,9 +110,9 @@
 
 ## ⚡ 赞助
 
-项目已达到 2k Stars，希望大家多多支持！
+项目已达到 3k+ Stars，希望大家多多支持！
 
-目前正在开发 `v1.3.8` ~ `v1.4.0`，届时会有大量更新
+目前正在开发 `v1.4.0` 正式版，届时会有大量更新
 
 如果你喜欢，并想助力这个项目，可以考虑请我喝杯咖啡~
 
@@ -162,15 +156,19 @@
 
 ## 声明
 
-- 本项目遵守 [GPL-3.0-or-later](/LICENSE) 开源协议，免费开源，任何形式的二次分发必须 **继续开源、遵守相同协议、保留原作者及版权信息**。
-- 本项目因其特殊性，使用者需 **自行承担相关风险**，项目作者对任何因 **不当使用、滥用等** 所造成的任何后果 **概不负责**。
+本项目遵守 [GPL-3.0-or-later](/LICENSE) 开源协议，免费开源，任何形式的二次分发必须 **继续开源、遵守相同协议、保留原作者及版权信息**。
 
-- 本项目旨在学习与研究技术，**使用需遵守相关法律法规，切勿滥用**。
-- 本项目仅请求已获访问权限的在线资源，无绕过校验、破解付费资源等等行为。
+- 本项目旨在学习与研究技术，使用者需 **自行承担相关风险**，项目作者对任何因 **不当使用、滥用等** 所造成的任何后果 **概不负责**。
+- 使用本项目时应遵守相关法律法规及平台服务协议，不得将其用于任何违法、侵权或恶意用途。
+- 本项目仅访问用户已获权限的在线资源，不会绕过身份验证机制、破解付费资源或实施其他非法行为。
 - 本项目产生与获取的所有数据将使用 `SQLite` 格式明文存储于用户本地：
 
 > Windows: `%AppData%\com.btjawa.bilitools`<br>
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- 如有侵权，可随时 [联系](mailto:2407356083@qq.com) 处理。
+- “哔哩哔哩” 及 “Bilibili”名称、LOGO及相关图形是上海宽娱数码科技有限公司的注册商标或商标。
+- 本软件与哔哩哔哩及其关联公司无任何隶属、合作或授权关系。
+- 本软件中引用的哔哩哔哩相关名称及标识仅用于功能说明与识别目的，不构成对该商标或品牌的背书或授权。
+- 使用本软件获取的内容，其版权归原权利人所有，请遵守相关法律法规及平台服务协议。
+- 如有侵权，可随时 [联系](mailto:btj2407@gmail.com) 处理。

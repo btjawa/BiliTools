@@ -1,220 +1,255 @@
-<template><div class="popup absolute flex items-center w-full h-full" :class="{ active }">
-<div class="container flex flex-col relative h-fit p-4 rounded-xl">
-  <button class="absolute right-4 top-4 rounded-full w-8 h-8 p-0 z-30" @click="close">
-    <i class="fa-solid fa-close"></i>
-  </button>
-  <div class="overflow-auto">
-  <template v-for="(item, key) in provider.options" class="relative">
-  <div v-if="item.data.length">
-    <h3>{{ $t(item.title ?? `home.class.${key}`) }}</h3>
-    <i18n-t keypath="home.dash.desc" tag="span" class="desc" scope="global" v-if="key === 'fmt'">
-      <template v-slot:title>
-        <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('home.dash.title') }}</a>
-      </template>
-    </i18n-t>
-    <div class="flex gap-1 mt-2 items-center overflow-x-auto overflow-y-hidden">
-      <button v-for="btn in item.data"
-        :class="{
-          'selected': select[key as keyof CurrentSelect] === btn,
-          'line-through desc': (key === 'fmt' && btn /* non-dash */) || btn.id === 'albumNfo' /* wip */,
-          'whitespace-nowrap': 1
-        }"
-        @click="handleClick(key, btn?.id ?? btn)">
-          <i :class="[settings.dynFa, btn?.icon ?? item.icon]"></i>
-          <span>{{ $t(item.getText?.(key, btn?.id ?? btn) ?? `home.label.${btn?.id}`) }}</span>
-      </button>
-      <VueDatePicker v-if="key === 'danmaku' && item.data.find(i => i.id === 'historyDanmaku')"
-        v-model="date" :dark="settings.isDark"
-        model-type="format" format="yyyy-MM-dd"
-        id="historyDanmakuDate" />
-      <Dropdown v-if="key === 'others' && item.data.find(i => i.id === 'subtitles')"
-        :drop="provider.others.subtitles.map(v => ({
-          id: v.lan, name: v.lan_doc + `(${v.lan})`
-        }))" :emit="(v) => subtitle = v"
-        :id="subtitle" :icon="'fa-earth-americas'"
-      ></Dropdown>
+<template><Transition name="slide">
+<div class="popup flex flex-col w-full h-full px-6 py-3 overflow-auto" v-if="v.active">
+    <div class="absolute flex items-center right-4 top-4">
+        <i :class="[$fa.weight, 'fa-info-circle']"></i>
+        <span class="desc">{{ $t('popup.popupLint') }}</span>
+        <button class="rounded-full ml-4" @click="close">
+            <i class="fa-solid fa-close"></i>
+        </button>
     </div>
-    <hr />
-  </div></template></div>
-  <div class="flex gap-1 float-left">
-    <button v-for="(icon, key) in provider.buttons" class="primary-color" @click="confirm(key)">
-      <i :class="[settings.dynFa, icon]"></i>
-      <span>{{ $t(`home.button.${key}`) }}</span>
-    </button>
-  </div>
-</div></div></template>
+    <template v-for="(i, k) in extras">
+    <div v-if="i.data.length">
+        <h2>
+            <i :class="[$fa.weight, i.icon]"></i>
+            <span>{{ $t(`popup.${k}.name`) }}</span>
+        </h2>
+        <div class="flex gap-2 overflow-x-auto mt-2">
+            <template v-for="id in i.data" :key="id">
+            <button
+                :class="{ 'selected': selected(k, id) }"
+                @click="click(k, id)"
+            >{{ $t(`popup.${k}.${id}`) }}</button>
+            <Dropdown
+                v-if="id === 'subtitles'"
+                :drop="v.extras.misc.subtitles"
+                v-model="v.subtitle"
+            />
+            <VueDatePicker class="!w-40"
+                v-if="id === 'history'"
+                v-model="v.date"
+                format="yyyy-MM-dd"
+                :teleport="true"
+                :max-date="new Date()"
+                :locale="$i18n.locale"
+                :dark="$fa.isDark"
+                :ui="{
+                    input: '!text-sm',
+                    menu: '!text-sm',
+                }"
+            />
+            </template>
+        </div>
+        <hr />
+    </div>
+    </template>
+    <template v-for="(i, k) in quality">
+    <div v-if="i.data.size">
+        <h2>
+            <i :class="[$fa.weight, i.icon]"></i>
+            <span>{{ $t('format.' + k) }}</span>
+        </h2>
+        <i18n-t keypath="popup.dashHint.desc" tag="span" class="desc" scope="global" v-if="k === 'fmt'">
+            <a @click="openUrl('https://btjawa.top/bilitools#关于-DASH-FLV-MP4')">{{ $t('popup.dashHint.name') }}</a>
+        </i18n-t>
+        <!-- <span v-if="k === 'abr'" class="desc">{{ $t('popup.abrHint') }}</span> -->
+        <div class="flex gap-2 overflow-x-auto mt-2">
+            <button
+                v-for="id in i.data" :key="id"
+                :class="{ 'selected': v.select[k] === id }"
+                @click="qualityClick(k, id)"
+            >{{ $t(`quality.${k}.${id}`) }}</button>
+        </div>
+        <hr />
+    </div>
+    </template>
+    <div class="flex gap-2">
+        <template v-for="(i, k) in options" :key="k">
+        <button
+            v-if="i.data"
+            :class="{ 'selected': selected('media', k) }"
+            @click="click('media', k)"
+        >
+            <i :class="[$fa.weight, i.icon]"></i>
+            <span>{{ $t('popup.mediaType.' + k) }}</span>
+        </button>
+        </template>
+        <button class="ml-auto primary-color" @click="emit">
+            <i :class="[$fa.weight, 'fa-arrow-right']"></i>
+            <span>{{ $t('popup.nextStep') }}</span>
+        </button>
+    </div>
+</div>
+</Transition></template>
 
-<script setup lang="ts">
+<script lang="ts" setup>
+import { computed, reactive } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { ref, reactive } from 'vue';
-import { useSettingsStore } from '@/store';
-import { QualityMap, PlayUrlProvider, OthersProvider, StreamCodecType, StreamCodecMap, CurrentSelect } from '@/types/data.d';
+import VueDatePicker from '@vuepic/vue-datepicker';
+
+import { getDefaultQuality } from '@/services/utils';
+import * as Types from '@/types/shared.d';
 import Dropdown from '../Dropdown.vue';
 
 const props = defineProps<{
-  process: (select: CurrentSelect, ref: { key: string, data: any }, options?: { multi?: boolean }) => void,
-  codecChange: (codec: StreamCodecType, others?: OthersProvider, multi?: boolean) => void
+    fmt: (fmt: any) => any
+    emit: (select: Types.PopupSelect) => any
 }>();
 
-const settings = useSettingsStore();
-
-const active = ref(false);
-const select = ref<CurrentSelect>({ dms: -1, cdc: -1, ads: -1, fmt: -1 });
-const subtitle = ref(String());
-const date = ref(new Intl.DateTimeFormat('en-CA').format(new Date()));
-
-const provider = reactive({
-  playUrl: {} as PlayUrlProvider,
-  others: {} as OthersProvider,
-  options: {} as Record<string, { data: any[], icon?: string; title?: string; getText?: Function }>,
-  buttons: {} as Record<string, string>
+const v = reactive({
+    active: false,
+    subtitle: String(),
+    date: String(),
+    playUrl: {} as Types.PlayUrlProvider,
+    extras: {} as Types.ExtrasProvider,
+    select: {} as Types.PopupSelect,
 })
 
-const isMulti = ref(false);
-
-defineExpose({ init });
-function init(playUrl: PlayUrlProvider, others: OthersProvider, multi?: boolean) {
-  select.value = { dms: -1, cdc: -1, ads: -1, fmt: -1 };
-  subtitle.value = String();
-  date.value = new Intl.DateTimeFormat('en-CA').format(new Date());
-  for (const v in provider) (provider as any)[v] = {};
-  isMulti.value = multi ?? false;
-  provider.playUrl = playUrl;
-  provider.others = others;
-  select.value.dms = getDefault(playUrl.videoQualities ?? [], 'df_dms');
-  select.value.ads = getDefault(playUrl.audioQualities ?? [], 'df_ads');
-  select.value.cdc = getDefault(
-    playUrl.video?.filter(v => v.id === select.value.dms).map(v => v.codecid ?? -1) ?? [],
-    'df_cdc'
-  );
-  select.value.fmt = playUrl.codecid;
-  subtitle.value = others.subtitles?.[0]?.lan;
-  provider.options = {
+const extras = computed(() => ({
+    misc: {
+        icon: 'fa-file-export',
+        data: [
+            ...v.extras.misc.aiSummary ? ['aiSummary'] : [],
+            ...v.extras.misc.subtitles.length ? ['subtitles'] : [],
+        ]
+    },
     nfo: {
-      data: [
-        { id: 'albumNfo', icon: 'fa-memo-circle-info' },
-        { id: 'singleNfo', icon: 'fa-file-circle-info' },
-      ],
+        icon: 'fa-memo-circle-info',
+        data: v.extras.nfo ? ['album', 'single'] : []
     },
     danmaku: {
-      data: others?.danmaku ? [
-        { id: 'liveDanmaku', icon: 'fa-clock' },
-        { id: 'historyDanmaku', icon: 'fa-clock-rotate-left' }
-      ] : [],
+        icon: 'fa-subtitles',
+        data: v.extras.danmaku
     },
-    covers: {
-      data: others.covers.map(id => ({ id, icon: 'fa-image' })),
-      getText: (_: any, id: any) => id,
+    thumb: {
+        icon: 'fa-images',
+        data: v.extras.thumb,
+    }
+}));
+
+const quality = computed(() => ({
+    res: {
+        icon: 'fa-video',
+        data: new Set(v.playUrl.video?.map(v => v.id)),
     },
-    others: {
-      data: [
-        ...(others.aiSummary ? [{ id: 'aiSummary', icon: 'fa-microchip-ai' }] : []),
-        ...(others.subtitles?.length ? [{ id: 'subtitles', icon: 'fa-closed-captioning' }] : [])
-      ],
+    enc: {
+        icon: 'fa-video-plus',
+        data: new Set(v.playUrl.video?.filter(i => i.id === v.select.res)?.map(v => v.codecid).filter(Boolean)) as Set<number>,
     },
-    dms: {
-      data: playUrl.videoQualities ?? [],
-      icon: 'fa-video',
-      title: 'common.default.placeholders.dms',
-      getText: (key: any, id: any) => `common.default.${key}.${id}`,
-    },
-    cdc: {
-      data: playUrl.video?.filter(v => v.id === select.value.dms).map(v => v.codecid).filter(Boolean) ?? [],
-      icon: 'fa-code',
-      title: 'common.default.placeholders.cdc',
-      getText: (key: any, id: any) => `common.default.${key}.${id}`,
-    },
-    ads: {
-      data: playUrl.audioQualities ?? [],
-      icon: 'fa-volume-high',
-      title: 'common.default.placeholders.ads',
-      getText: (key: any, id: any) => `common.default.${key}.${id}`,
+    abr: {
+        icon: 'fa-volume',
+        data: new Set(v.playUrl.audio?.map(v => v.id)),
     },
     fmt: {
-      data: QualityMap.fmt.map(v => v.id),
-      icon: 'fa-code-simple',
-      title: 'common.default.placeholders.fmt',
-      getText: (key: any, id: any) => `common.default.${key}.${id}`,
+        icon: 'fa-code-simple',
+        data: new Set(Types.QualityMap.fmt)
+    }
+}));
+
+const options = computed(() => ({
+    audioVideo: { // #81
+        icon: 'fa-video',
+        data: v.playUrl.video?.length && v.playUrl.audio?.length
     },
-  }
-  provider.buttons = {
-    ...(playUrl.video && { video: 'fa-video' }),
-    ...(playUrl.audio && { audio: 'fa-volume-high' }),
-    ...(playUrl.video && playUrl.audio && { audioVideo: 'fa-video-plus' }),
-  }
-  active.value = true;
+    video: {
+        icon: 'fa-volume-slash',
+        data: v.playUrl.video?.length
+    },
+    audio: {
+        icon: 'fa-video-slash',
+        data: v.playUrl.audio?.length
+    }
+}));
+
+defineExpose({ init });
+
+async function init(playUrl: Types.PlayUrlProvider, extras: Types.ExtrasProvider) {
+    v.active = true;
+    v.playUrl = playUrl;
+    v.extras = extras;
+    (['res', 'abr', 'enc'] as const).forEach(i => {
+        v.select[i] = getDefaultQuality([...quality.value[i].data], i);
+    })
+    v.select.misc = {
+        aiSummary: false,
+        subtitles: false
+    }
+    v.select.nfo = {
+        album: false,
+        single: false,
+    }
+    v.select.danmaku = {
+        live: false,
+        history: false,
+    }
+    v.select.thumb = [];
+    v.select.fmt = playUrl.codec;
+    v.subtitle = v.extras.misc.subtitles[0]?.id ?? '';
+    v.date = new Intl.DateTimeFormat('en-CA').format(new Date());
+    v.select.media = {
+        video: false,
+        audio: false,
+        audioVideo: false,
+    }
 }
 
-function handleClick(key: string, id: any) {
-  if (['nfo', 'danmaku', 'covers', 'others'].includes(key)) {
-    const ref = { key, data: null as any };
-    if (key !== 'covers') ref.key = id;
-    if (id === 'subtitles') ref.data = subtitle.value;
-    if (id === 'historyDanmaku') ref.data = date.value;
-    if (key === 'covers') ref.data = id;
-    props.process(select.value, ref, { multi: isMulti.value });
-    return close();
-  }
-  select.value[key as keyof CurrentSelect] = id;
-  if (key === 'dms') {
-    const cdc = provider.playUrl.video?.filter(v => v.id === id).map(v => v.codecid ?? -1).filter(Boolean) ?? [];
-    provider.options['cdc'].data = cdc;
-    select.value.cdc = getDefault(cdc, 'df_cdc');
-  }
-  if (key === 'fmt') {
-    props.codecChange(StreamCodecMap[id], provider.others, isMulti.value);
+function emit() {
+    props.emit(v.select);
     close();
-  }
 }
 
-function confirm(key: string) {
-  const ref = { key, data: 'queue' };
-  props.process(select.value, ref, { multi: isMulti.value });
-  close();
+function qualityClick<K extends keyof typeof quality.value>(
+  key: K,
+  value: Types.PopupSelect[K]
+) {
+    v.select[key] = value;
+    if (key === 'res') {
+        v.select.enc = getDefaultQuality([...quality.value.enc.data], 'enc');
+    } else if (key === 'fmt') {
+        props.fmt(value);
+        close();
+    }
 }
 
-function getDefault(ids: number[], name: 'df_dms' | 'df_cdc' | 'df_ads') {
-  return ids.includes(settings[name]) ? settings[name] : ids.sort((a, b) => b - a)[0];
+function click(key: keyof typeof extras.value | 'media', id: string) {
+    const select = v.select[key] as any;
+    if (key === 'thumb') {
+        const i = select.indexOf(id);
+        return i === -1 ? select.push(id) : select.splice(i, 1);
+    }
+    if (key === 'danmaku' && id === 'history') {
+        return select[id] = select[id] ? false : v.date;
+    }
+    if (key === 'misc' && id === 'subtitles') {
+        return select[id] = select[id] ? false : v.subtitle;
+    }
+    select[id] = !select[id];
+}
+
+function selected(key: keyof typeof extras.value | 'media', id: string) {
+    if (key === 'thumb') {
+        return v.select.thumb?.includes(id)
+    } else {
+        return (v.select[key] as any)?.[id];
+    }
 }
 
 function close() {
-  active.value = false;
+    v.active = false;
 }
 </script>
 
 <style lang="scss" scoped>
 .popup {
-  @apply bg-opacity-50 bg-black opacity-0 px-[135px] py-[50px];
-  @apply transition-opacity pointer-events-none;
-  &.active {
-    @apply opacity-100 pointer-events-auto;
-    & > div {
-      @apply translate-y-0;
-    }
-  }
+    @apply absolute inset-0 bg-[var(--solid-block-color)];
 }
-
-.container {
-  @apply bg-[color:var(--solid-block-color)] max-h-full transform translate-y-8;
-  transition: transform .5s cubic-bezier(0,1,.6,1);
-  button {
-    border: 2px solid transparent;
+hr {
+    @apply my-2.5;
+}
+button {
+    @apply flex-shrink-0;
+    @apply border-2 border-solid border-transparent;
     &.selected {
-      border: 2px solid var(--primary-color)
+        @apply border-[var(--primary-color)];
     }
-  }
-  hr {
-    @apply my-[15px];
-  }
-}
-
-#historyDanmakuDate {
-  @apply max-w-40;
-  .dp__input {
-    @apply text-sm;
-  }
-  .dp__menu_inner + div {
-    display: none;
-  }
 }
 </style>

@@ -1,65 +1,60 @@
 <template>
 <ul @contextmenu.prevent
-	class="sidebar absolute flex flex-col py-2.5 px-2.5 w-[61px] h-screen bottom-0 bg-transparent transition-opacity" ref="$el"
+	class="flex flex-col py-4 px-2.5 gap-3 h-screen "
+    :class="[osType() === 'macos' ? 'pt-[36px]' : 'bg-[var(--block-color)]']"
 >
-    <router-link to="/user-page" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/user-page') }" class="cursor-pointer" @click="navigate">
-            <img class="w-9 h-9 rounded-[50%]" :src="user.getAvatar" raggable="false" />
-        </li>
-    </router-link>
-    <router-link to="/" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/') }" @click="navigate">
-            <i :class="`fa-${isActive('/') ? 'solid' : 'light'}`" class="fa-magnifying-glass"></i>
-        </li>
-    </router-link>
-	<router-link to="/down-page" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/down-page') }" @click="navigate">
-            <i :class="`fa-${isActive('/down-page') ? 'solid' : 'light'}`" class="fa-download"></i>
-        </li>
-    </router-link>
-    <li class="sidebar-item !mt-auto" @click="setTheme">
-        <i class="fa-solid fa-moon-over-sun"></i>
+    <li
+        v-for="v in list" @click="click(v.path)"
+        :class="{ 'active': $route.path === v.path, 'mt-auto': v.path === 'theme' }"
+    >
+        <img v-if="v.path === '/user-page'" class="w-9 h-9 rounded-full" :src="v.icon" />
+        <i v-else :class="[$route.path === v.path ? 'fa-solid' : 'fa-light', v.icon]"></i>
     </li>
-    <router-link to="/setting-page" custom v-slot="{ navigate }">
-        <li :class="{ 'active': isActive('/setting-page') }" @click="navigate">
-            <i :class="`fa-${isActive('/setting-page') ? 'solid' : 'light'}`" class="fa-gear"></i>
-        </li>
-    </router-link>
 </ul></template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { computed, inject, Ref } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
-import { ApplicationError } from '@/services/utils';
-import { useUserStore, useSettingsStore, useAppStore } from "@/store";
-import { commands } from '@/services/backend';
-import { useRoute } from 'vue-router';
+import { useUserStore, useSettingsStore } from "@/store";
+import Updater from './Updater.vue';
+import router from '@/router';
+import { AppLog } from '@/services/utils';
+import i18n from '@/i18n';
 
 const user = useUserStore();
+const settings = useSettingsStore();
 
-const $el = ref<HTMLElement>();
-const isActive = computed(() => {
-    return (path: string) => useRoute().path == path;
-});
+const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
 
-onMounted(() => osType() === 'macos' && $el.value && ($el.value.style.paddingTop = '30px'))
+const list = computed(() => ([
+    { path: '/user-page', icon: user.getAvatar },
+    { path: '/', icon: 'fa-magnifying-glass' },
+    { path: '/history-page', icon: 'fa-clock' },
+    { path: '/down-page', icon: 'fa-download' },
+    { path: 'theme', icon: 'fa-solid fa-moon-over-sun' },
+    { path: '/settings-page', icon: 'fa-gear' },
+    { path: '/info-page', icon: 'fa-circle-info' },
+]));
 
-async function setTheme() {
-    try {
-        const newTheme = await commands.setTheme(useSettingsStore().theme, true);
-        if (newTheme.status === 'error') throw newTheme.error;
-        const result = await commands.rwConfig('write', { theme: newTheme.data }, useAppStore().secret);
-        if (result.status === 'error') throw result.error;
-    } catch(err) {
-        new ApplicationError(err).handleError();
+function setTheme() {
+    settings.theme = settings.isDark ? 'light' : 'dark';
+}
+
+async function click(path: string) {
+    // temporarily INOP
+    if (path === '/history-page') {
+        return AppLog(i18n.global.t('wip'), 'info')
     }
+    if (path === 'theme') return setTheme();
+    if (updater?.value.active) updater.value?.close();
+    router.push(path);
 }
 </script>
 
 <style scoped lang="scss">
 li {
-	@apply relative flex items-center justify-center flex-col my-1.5;
-    @apply w-10 h-10 text-[var(--desc-color)] transition-colors text-xl;
+	@apply relative flex items-center justify-center flex-col w-9 h-9;
+    @apply text-[var(--desc-color)] transition-colors text-xl cursor-pointer;
     &:hover, &.active {
         @apply text-[var(--primary-color)];
     }

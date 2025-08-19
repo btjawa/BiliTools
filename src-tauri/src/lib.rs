@@ -26,11 +26,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         // Then register them (separated by a comma)
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            ready, init, get_size, clean_cache, write_binary, xml_to_ass, rw_config, set_theme, new_folder, // Essentials
-            push_back_queue, process_queue, toggle_pause, remove_task // Aria2c
+            ready, init, init_login, set_window, config_write, get_size, clean_cache, // Essentials
+            submit_task, process_queue, task_event, update_max_conc // Queue
         ])
         .events(collect_events![
-            config::Settings, shared::Headers, shared::SidecarError, services::aria2c::QueueEvent
+            shared::Headers, shared::SidecarError, queue::QueueData
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -61,29 +61,29 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(log_builder.build())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             let windows = app.webview_windows();
             windows.values().next().expect("Sorry, no window found")
             .set_focus().expect("Can't Bring Window to Focus");
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
-            const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
-            log::info!("BiliTools v{}", VERSION.unwrap_or("unknown"));
+            let version = &app.package_info().version;
+            log::info!("BiliTools v{}", version);
             builder.mount_events(app);
             let window = app.get_webview_window("main").unwrap();
             #[cfg(debug_assertions)]
             window.open_devtools();
-            shared::set_window(window, None)?;
+            shared::set_window(window, shared::Theme::Auto).unwrap();
             shared::APP_HANDLE.set(app.app_handle().clone()).unwrap();
             async_runtime::spawn(async move {
                 use shared::process_err as err;

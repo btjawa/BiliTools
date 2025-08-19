@@ -1,33 +1,20 @@
 import { createI18n } from "vue-i18n";
-
-export async function loadLanguage() {
-    const modules = import.meta.glob('../locales/*/*.json');
-    const messages: Record<string, any> = {};
-    for (const path in modules) {
-        if (path.includes('locales/index.json')) {
-            continue;
-        }
-        const parts = path.split('/');
-        const code = parts[2];
-        if (!messages[code]) {
-            messages[code] = {};
-        }
-        const module = await modules[path]() as { default: Record<string, any> };
-        messages[code][parts[3].split('.')[0]] = module.default;
-    }
-    return messages;
-}
+import zhCN from './locales/zh-CN.json';
+import zhHK from './locales/zh-HK.json';
+import enUS from './locales/en-US.json';
+import jaJP from './locales/ja-JP.json';
 
 export const locales = [
-    { "id": "zh-CN", "name": "简体中文 🇨🇳" },
-    { "id": "zh-HK", "name": "繁體中文 🇭🇰" },
-    { "id": "en-US", "name": "English 🇺🇸" },
-    { "id": "ja-JP", "name": "日本語 🇯🇵" }
+    { id: 'zh-CN', name: '简体中文 🇨🇳', msg: zhCN },
+    { id: 'zh-HK', name: '繁體中文 🇭🇰', msg: zhHK },
+    { id: 'en-US', name: 'English 🇺🇸', msg: enUS },
+    { id: 'ja-JP', name: '日本語 🇯🇵', msg: jaJP }
 ]
 
 export default createI18n({
     legacy: false,
-    locale: window.navigator.language,
     fallbackLocale: 'zh-CN',
-    messages: await loadLanguage()
+    messages: Object.fromEntries(
+        locales.map(loc => [loc.id, loc.msg])
+    )
 });

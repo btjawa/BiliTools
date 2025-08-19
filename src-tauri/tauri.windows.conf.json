@@ -2,12 +2,12 @@
   "app": {
     "windows": [
       {
-        "minWidth": 1150,
-        "minHeight": 800,
+        "minWidth": 960,
+        "minHeight": 680,
         "title": "BiliTools",
         "label": "main",
-        "width": 1150,
-        "height": 800,
+        "width": 960,
+        "height": 680,
         "transparent": true,
         "decorations": false,
         "backgroundColor": "#00000000",

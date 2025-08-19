@@ -14,5 +14,11 @@ export const useAppStore = defineStore('app', {
             webview: Number(),
             database: Number(),
         },
+        paths: {
+            log: String(),
+            temp: String(),
+            webview: String(),
+            database: String(),
+        }
     })
 });

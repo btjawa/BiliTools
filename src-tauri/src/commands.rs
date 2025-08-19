@@ -1,39 +1,55 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-use std::{env, path::PathBuf, sync::Arc};
-use tauri_plugin_shell::ShellExt;
-use tauri::async_runtime;
+use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
+use serde_json::Value;
+use tauri::{async_runtime, Manager};
 use serde::Serialize;
 use anyhow::anyhow;
 use specta::Type;
 use tokio::fs;
 
+use crate::commands::queue::GeneralTask;
 // Re-export for lib.rs to register commands
 pub use crate::{
     services::{
         login::{
             self, stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie
         },
-        aria2c::{
-            self, push_back_queue, process_queue, toggle_pause, remove_task
+        queue::{
+            self, submit_task, process_queue, task_event, update_max_conc
         },
         ffmpeg,
     },
     storage::{
-        config::{self, rw_config},
+        config::{
+            self, config_write
+        },
         cookies,
-        downloads,
+        archive,
     },
-    shared,
-    config::ConfigAction,
+    shared::{
+        self, set_window
+    },
     errors::{TauriResult, TauriError},
 };
+
+#[derive(Serialize, Type)]
+pub struct Paths {
+    log: PathBuf,
+    temp: PathBuf,
+    webview: PathBuf,
+    database: PathBuf,
+}
 
 #[derive(Serialize, Type)]
 pub struct InitData {
     version: String,
     hash: String,
-    downloads: Vec<Arc<aria2c::QueueInfo>>,
+    complete: Vec<Arc<String>>,
+    tasks: HashMap<Arc<String>, Arc<GeneralTask>>,
+    status: HashMap<Arc<String>, Arc<Value>>,
+    config: Arc<config::Settings>,
+    paths: Paths,
 }
 
 #[tauri::command(async)]
@@ -64,17 +80,6 @@ pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriRes
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn new_folder(secret: String, path: String) -> TauriResult<()> {
-    if secret != *shared::SECRET.read().unwrap() {
-        return Err(anyhow!("403 Forbidden").into())
-    }
-    let path = PathBuf::from(path);
-    fs::create_dir_all(path).await?;
-    Ok(())
-}
-
-#[tauri::command(async)]
-#[specta::specta]
 pub async fn clean_cache(path: String) -> TauriResult<()> {
     if path.ends_with("Storage") {
         let _ = fs::remove_file(&path).await;
@@ -96,66 +101,6 @@ pub async fn clean_cache(path: String) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn write_binary(secret: String, path: String, contents: Vec<u8>) -> TauriResult<()> {
-    if secret != *shared::SECRET.read().unwrap() {
-        return Err(anyhow!("403 Forbidden").into())
-    }
-    fs::create_dir_all(PathBuf::from(&path).parent().unwrap()).await?;
-    let mut _path = PathBuf::from(path);
-    if _path.exists() {
-        if let (Some(stem), Some(ext)) = (_path.file_stem(), _path.extension()) {
-            _path.set_file_name(format!("{}_1.{}", stem.to_string_lossy(), ext.to_string_lossy()));
-        }
-    }
-    fs::write(&_path, contents).await?;
-    Ok(())
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn xml_to_ass(app: tauri::AppHandle, secret: String, output: String, contents: Vec<u8>) -> TauriResult<()> {
-    let ts = shared::get_ts(true);
-    let temp_dir = shared::CONFIG.read().unwrap().temp_dir.join("com.btjawa.bilitools");
-    let input = temp_dir.join(format!("{ts}.xml"));
-    let tmp_output = temp_dir.join(format!("{ts}.ass"));
-    write_binary(secret, input.to_string_lossy().into(), contents).await?;
-    let result = app.shell().sidecar("DanmakuFactory")?
-        .args(["-i", input.to_str().unwrap(), "-o", tmp_output.to_str().unwrap()])
-        .output().await?;
-
-    log::info!("STDOUT:\n{}", String::from_utf8_lossy(&result.stdout));
-    log::info!("STDERR:\n{}", String::from_utf8_lossy(&result.stderr));
-    fs::copy(tmp_output, output).await?;
-    fs::remove_file(input).await?;
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn set_theme(window: tauri::WebviewWindow, theme: shared::Theme, modify: bool) -> TauriResult<shared::Theme> {
-    use shared::Theme;
-    let new_theme = if modify {
-        match theme {
-            Theme::Auto => {
-                let theme: tauri::Theme = theme.into();
-                if theme == tauri::Theme::Dark {
-                    Theme::Light
-                } else {
-                    Theme::Dark
-                }
-            },
-            Theme::Dark => Theme::Light,
-            Theme::Light => Theme::Dark,
-        }
-    } else { theme };
-    let tauri_theme = new_theme.clone().into();
-    window.set_theme(Some(tauri_theme))?;
-    shared::set_window(window, Some(tauri_theme))?;
-    Ok(new_theme)
-}
-
-#[tauri::command(async)]
-#[specta::specta]
 pub async fn ready() -> TauriResult<String> {
     #[cfg(not(debug_assertions))]
     if *shared::READY.read().unwrap() {
@@ -171,12 +116,34 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     if secret != *shared::SECRET.read().unwrap() {
         return Err(anyhow!("403 Forbidden").into())
     }
-    rw_config(ConfigAction::Init, None, secret).await?;
-    login::stop_login();
-    login::get_extra_cookies().await?;
-    shared::init_headers().await?;
-    let downloads = downloads::load().await?;
-    let hash = env!("GIT_HASH").to_string();
     let version = app.package_info().version.to_string();
-    Ok(InitData { version, hash, downloads })
+    let hash = env!("GIT_HASH").to_string();
+    let (complete, tasks, status) = archive::load().await?;
+    let config = config::read();
+    let path = app.path();
+    let paths = Paths {
+        log: path.app_log_dir()?,
+        temp: config::read().temp_dir(),
+        webview: match env::consts::OS {
+            "macos" => path.app_cache_dir()?.join("../WebKit/BiliTools/WebsiteData"),
+            "linux" => path.app_cache_dir()?.join("bilitools"),
+            _ => path.app_local_data_dir()?.join("EBWebView"), // windows
+        },
+        database: path.app_data_dir()?.join("Storage")
+    };
+    Ok(InitData { version, hash, complete, tasks, status, config, paths })
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn init_login(secret: String) -> TauriResult<()> {
+    if secret != *shared::SECRET.read().unwrap() {
+        return Err(anyhow!("403 Forbidden").into())
+    }
+    login::stop_login();
+    login::get_buvid().await?;
+    login::get_bili_ticket().await?;
+    login::get_uuid().await?;
+    shared::init_headers().await?;
+    Ok(())
 }

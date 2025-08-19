@@ -1,44 +1,19 @@
-import { TauriError, commands, events } from '@/services/backend';
 import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
-import { MediaInfo, MediaType, CurrentSelect } from '@/types/data.d';
-import { fetch } from '@tauri-apps/plugin-http';
-import * as log from '@tauri-apps/plugin-log';
-import * as auth from '@/services/auth';
-import StackTrace from "stacktrace-js";
+import { MediaType } from '@/types/shared.d';
+import { MutationType } from 'pinia';
+import { Ref, watch } from "vue";
 import i18n from '@/i18n';
 
-export class ApplicationError extends Error {
-    stackFrames?: StackTrace.StackFrame[];
-    constructor(input: unknown, options?: { code?: number | string, name?: string }) {
-        super();
-        if (input instanceof ApplicationError) return input;
-        else if (input instanceof Error) {
-            this.message = input.message;
-            this.name = input.name;
-            this.stack = input.stack;
-        } else if (typeof input === 'string') {
-            this.message = input + (options?.code ? ` (${options.code})` : '');
-        } else {
-            const err = input as TauriError;
-            if (!err.message) return;
-            this.message = err.message + (err.code ? ` (${err.code})` : '');
-        }
-        if (options?.name) this.name = options.name;
-        this.stackFrames = StackTrace.getSync();
-    }
-    async handleError() {
-        const stack = this.stackFrames?.map(f => {
-            const funcName = f.functionName ?? '<anonymous>';
-            const filename = f.fileName?.match(/https?:\/\/[^/]+(\/[^\s?#]*)/)?.[1] ?? '<anonymous>';
-            if (filename.startsWith('/node_modules')) return false;
-            return `    at ${funcName} (${filename}:${f.lineNumber}:${f.columnNumber})`;
-        }).filter(Boolean).join('\n');
-        AppLog(`${this.name}: ${this.message}\n` + stack, TYPE.ERROR);
-    }
-}
+import { fetch } from '@tauri-apps/plugin-http';
+import * as log from '@tauri-apps/plugin-log';
 
-export function AppLog(message: string, type?: TYPE) {
+import { commands, events } from './backend';
+import { AppError } from './error';
+import * as auth from './auth';
+
+export function AppLog(message: string, _type?: `${TYPE}`) {
+    const type = Object.values(TYPE).includes(_type as TYPE) ? (_type as TYPE) : TYPE.INFO;
     switch(type) {
         case TYPE.ERROR: {
             log.error(message);
@@ -50,7 +25,6 @@ export function AppLog(message: string, type?: TYPE) {
             console.warn(message);
             break;
         }
-        default:
         case TYPE.INFO:
         case TYPE.SUCCESS:
         case TYPE.DEFAULT: {
@@ -59,34 +33,37 @@ export function AppLog(message: string, type?: TYPE) {
             break;
         }
     }
-    (useToast())(message, {
-        type, timeout: 10000,
-    })
+    (useToast())(message, { type });
 }
 
 export function setEventHook() {
     const app = useAppStore();
+    const settings = useSettingsStore();
     const queue = useQueueStore();
+    settings.$subscribe(async (mutation, state) => {
+        if (mutation.type === MutationType.direct)
+        commands.configWrite(state, app.secret);
+        i18n.global.locale.value = state.language;
+        commands.setWindow(state.theme);
+    });
     events.headers.listen(e => {
         app.headers = e.payload;
-    })
-    events.settings.listen(async e => {
-        const settings = useSettingsStore();
-        settings.$patch(e.payload);
-		await commands.setTheme(e.payload.theme, false);
-        i18n.global.locale.value = settings.language;
     });
-    events.queueEvent.listen(e => {
-        const type = e.payload.type.toLowerCase() as keyof typeof queue.$state;
-        queue.$patch({ [type]: e.payload.data });
+    events.queueData.listen(e => {
+        const payload = e.payload;
+        queue.$patch(v => {
+            v.waiting = payload.waiting;
+            v.doing = payload.doing;
+            v.complete = payload.complete;
+        });
     })
     events.sidecarError.listen(e => {
         const err = e.payload;
-        new ApplicationError(i18n.global.t('error.errorProvider', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handleError();
+        new AppError(i18n.global.t('error.sidecar', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handle();
     });
 }
 
-export async function tryFetch(url: string | URL, options?: {
+export async function tryFetch(url: string, options?: {
     auth?: 'wbi',
     params?: Record<string, string | number | Object>,
     post?: {
@@ -98,6 +75,7 @@ export async function tryFetch(url: string | URL, options?: {
     handleError?: boolean
 }) {
     let grisk_id: string = '';
+    const loadingBox = document.querySelector('.loading');
     for (let i = 0; i < (options?.times ?? 3); i++) {
         try {
         const rawParams = {
@@ -113,7 +91,7 @@ export async function tryFetch(url: string | URL, options?: {
         const settings = useSettingsStore();
         const app = useAppStore();
         const fetchOptions = {
-            headers: app.headers,
+            headers: app.headers as Record<string, string>,
             proxy: { all: settings.proxyConfig },
             method: 'GET',
             body: undefined as string | undefined
@@ -130,13 +108,11 @@ export async function tryFetch(url: string | URL, options?: {
                 fetchOptions.body = JSON.stringify(options.post.body);
             }
         }
-        const loadingBox = document.querySelector('.loading');
         loadingBox?.classList.add('active');
-        const response = await fetch(url + params, fetchOptions);
-        loadingBox?.classList.remove('active');
+        const response = await fetch(url.replace('http:', 'https:') + params, fetchOptions);
         if (options?.type) {
             if (!response.ok) {
-                throw new ApplicationError(response.statusText, { code: response.status });
+                throw new AppError(response.statusText, { code: response.status });
             }
             switch(options?.type) {
                 case 'text': return await response.text();
@@ -149,7 +125,7 @@ export async function tryFetch(url: string | URL, options?: {
             body = await response.json();
         } catch(_) {
             if (options?.type === 'url') return response.url;
-            throw new ApplicationError(response.statusText, { code: response.status });
+            throw new AppError(response.statusText, { code: response.status });
         }
         if (body.code !== 0 && body.code) {
             if (body.code === -352 && body.data.v_voucher && i < (options?.times ?? 3)) {
@@ -164,13 +140,13 @@ export async function tryFetch(url: string | URL, options?: {
                 });
                 const captchaBody = await captchaResp.json();
                 if (captchaBody.code !== 0) {
-                    throw new ApplicationError(captchaBody.message, { code: captchaBody.code });
+                    throw new AppError(captchaBody.message, { code: captchaBody.code });
                 }
                 const { token, geetest: { gt = '', challenge = '' } } = captchaBody.data;
                 if (!token || !gt || !challenge) {
-                    throw new ApplicationError(body.message || body.msg, { code: body.code });
+                    throw new AppError(body.message || body.msg, { code: body.code });
                 }
-                AppLog(i18n.global.t('error.risk'));
+                AppLog(i18n.global.t('error.risk'), 'warning');
                 const captcha = await auth.captcha(gt, challenge);
                 const validateParams = new URLSearchParams({
                     token, ...captcha, ...(csrf && { csrf })
@@ -182,30 +158,38 @@ export async function tryFetch(url: string | URL, options?: {
                 });
                 const validateBody = await validateResp.json();
                 if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
-                    throw new ApplicationError(validateBody.message, { code: validateBody.code });
+                    throw new AppError(validateBody.message, { code: validateBody.code });
                 }
                 grisk_id = validateBody.data.grisk_id;
                 await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
                 continue;
             } else {
-                console.error(body)
                 if (options?.handleError !== false) {
-                    throw new ApplicationError(body.message || body.msg, { code: body.code });
+                    throw new AppError(body.message || body.msg, { code: body.code });
                 }
             }
         }
         return body;
         } catch(e) { throw e }
+        finally {
+            loadingBox?.classList.remove('active');
+        }
     }
 }
 
+export async function getBlob(url: string) {
+    const blob = await tryFetch(url, { type: 'blob' })
+    return URL.createObjectURL(blob);
+}
+
 export async function parseId(input: string) {
-    const err = i18n.global.t('error.invalidInput');
+    const err = new AppError(i18n.global.t('error.invalidInput'));
+    if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(input)) throw err;
     try {
         const url = new URL(input);
         const segs = url.pathname.split('/');
         if (url.hostname === 'b23.tv') {
-            return await parseId(await tryFetch(url, { type: 'url' }));
+            return await parseId(await tryFetch(input, { type: 'url' }));
         } else if (!url.hostname.endsWith('bilibili.com')) throw err;
         let match;
         if (segs[2] === 'favlist') {
@@ -231,7 +215,7 @@ export async function parseId(input: string) {
         throw err;
     } catch(_) { // NOT URL
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
-            throw new ApplicationError(err);
+            throw err;
         }
         const map = {
             'av': MediaType.Video,
@@ -246,6 +230,29 @@ export async function parseId(input: string) {
     }
 }
 
+export function waitPage<T, K extends keyof T>(
+	component: Ref<T | undefined> | undefined, tag: K
+): Promise<Ref<T>> {
+	return new Promise((resolve) => {
+		if (!component) return;
+		watch(() => component.value?.[tag],
+			(v) => { if (v) resolve(component as Ref<T>) },
+			{ once: true }
+		);
+	});
+}
+
+export function filename(input: string) {
+    return input.replace(/[\/\\:*?"<>|]/g, "_");
+}
+
+export function randomString(len: number = 8) {
+    if (len <= 0 || len % 2) throw new Error ('Length must be a unsigned even int.');
+    const bytes = new Uint8Array(len / 2);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function debounce(fn: Function, wait: number) {
     let bouncing = false;
     return function(this: any, ...args: any[]) {
@@ -258,7 +265,7 @@ export function debounce(fn: Function, wait: number) {
     };
 }
 
-export function stat(num: number | string): string {
+export function stat(num: number | string) {
     const locale = useSettingsStore().language;
     if (typeof num == "string") return num;
     if (locale === 'zh-CN') {
@@ -269,8 +276,7 @@ export function stat(num: number | string): string {
         } else {
             return num.toString();
         }
-    }
-    if (locale === 'en-US') {
+    } else {
         if (num >= 1000000) {
             return (num / 1000000).toFixed(1) + 'M';
         } else if (num >= 1000) {
@@ -279,21 +285,9 @@ export function stat(num: number | string): string {
             return num.toString();
         }
     }
-    if (locale === 'ja-JP') {
-        if (num >= 100000000) {
-            return (num / 100000000).toFixed(1) + '億';
-        } else if (num >= 10000) {
-            return (num / 10000).toFixed(1) + '万';
-        } else {
-            return num.toString();
-        }
-    }
-    return num.toString();
 }
 
-export function duration(n: number|string, type: string): string {
-    if (typeof n === "string") return n;
-    const num = parseFloat(type === "bangumi" ? Math.round(n / 1000).toString() : n.toString());
+export function duration(num: number) {
     const hs = Math.floor(num / 3600);
     const mins = Math.floor((num % 3600) / 60);
     const secs = Math.round(num % 60);
@@ -303,7 +297,7 @@ export function duration(n: number|string, type: string): string {
     return finalHs + finalMins + ':' + finalSecs;
 }
 
-export function timestamp(ts: number, options?: { file?: boolean }): string {
+export function timestamp(ts: number, options?: { file?: boolean }) {
     const date = new Date(ts);
     const formatter = new Intl.DateTimeFormat('zh-CN', {
         year: 'numeric', month: '2-digit', day: '2-digit',
@@ -314,31 +308,7 @@ export function timestamp(ts: number, options?: { file?: boolean }): string {
     return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
 }
 
-export function getFormat(data: { isFolder?: boolean, item: MediaInfo['list'][0], nfo: MediaInfo['nfo'], select?: CurrentSelect, index?: number }) {
-    const { isFolder, item, nfo, select, index } = data;
-    const format = useSettingsStore().advanced[`${isFolder ? 'folder' : 'filename'}_format`];
-    const quality = (k: string, v: number) => {
-        return v === -1 ? -1 : i18n.global.t(`common.default.${k}.${v}`)
-    }
-    return format.replace(/{(\w+)}/g, (_, key) => {
-        switch (key) {
-            case 'title': return isFolder ? nfo.showtitle : item.title;
-            case 'index': return index;
-            case 'upper': return nfo.upper.name;
-            case 'upperid': return nfo.upper.mid;
-            case 'date_sec': return timestamp(Date.now(), { file: true });
-            case 'ts_sec': return Math.floor(Date.now() / 1000);
-            case 'ts_ms': return Date.now();
-            case 'dms': return quality('dms', select?.dms ?? -1);
-            case 'cdc': return quality('cdc', select?.cdc ?? -1);
-            case 'ads': return quality('ads', select?.ads ?? -1);
-            case 'fmt': return quality('fmt', select?.fmt ?? -1);
-            default: return (item as any)?.[key] ?? -1;
-        }
-    }).replace(/[\\/:*?"<>|]/g, '_');
-}
-
-export function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number) {
     if (bytes < 1024 * 1024) {
         return (bytes / 1024).toFixed(2) + ' KB';
     } else if (bytes < 1024 * 1024 * 1024) {
@@ -348,48 +318,21 @@ export function formatBytes(bytes: number): string {
     }
 }
 
-export function getFileExtension(options: CurrentSelect) {
-    let videoExt = 'mp4';
-    let audioExt = 'aac';
-    if (options.dms > 120 || options.cdc > 7) {
-        videoExt = 'mkv';
-    }
-    if (options.ads >= 30250 && options.ads <= 30252 || options.ads === 30380) {
-        videoExt = 'mkv';
-    }
-    if (options.ads >= 30216 && options.ads <= 30232 || options.ads === 30280 || options.ads === 30380) {
-        audioExt = 'm4a';
-    }
-    if (options.ads === 30250) {
-        audioExt = 'eac3';
-    }
-    if (options.ads >= 30251 && options.ads <= 30252) {
-        audioExt = 'flac';
-    }
-    if (options.fmt === 2) {
-        videoExt = 'flv';
-    }
-    if (options.dms === 126) {
-        videoExt = 'mp4';
-    }
-    return options.dms >= 0 ? videoExt : audioExt;
+export function getDefaultQuality(ids: number[], name: 'res' | 'abr' | 'enc', _quality?: { res?: number; abr?: number; enc?: number }) {
+    const quality = _quality ?? useSettingsStore().default;
+    if (!quality[name]) return undefined;
+    return ids.includes(quality[name]) ? quality[name] : ids.sort((a, b) => b - a)[0];
 }
 
 export function getRandomInRange(min: number, max: number) {
     return Math.floor(Math.random() * (max - min) + min);
 }
 
-export async function getImageBlob(url: string | URL) {
-    const blob = await tryFetch(url, { type: 'blob' })
-    return URL.createObjectURL(blob);
-}
-
-export function getPublicImages(season: Record<string, any>, ext: 'png' | 'jpg') {
-    if (!season) return [];
-    return Object.entries(season)
-        .filter(([_, url]) =>
-            typeof url === 'string'
-            && url.endsWith(ext)
-        )
-        .map(([id, url]) => ({ id, url }));
+export function getPublicImages(data: Record<string, any> | undefined, prefix?: string) {
+    const images: { id: string; url: string }[] = [];
+    for (const [id, url] of Object.entries(data ?? {})) {
+        if (typeof url === 'string' && (url.endsWith('.jpg') || url.endsWith('.png')))
+        images.push({ id: prefix ? `${prefix}_${id}` : id, url });
+    }
+    return images;
 }

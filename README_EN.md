@@ -4,19 +4,11 @@
 <h1>BiliTools - A Bilibili Toolbox</h1>
 
 <div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank">
-    <img src="https://img.shields.io/github/stars/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank">
-    <img src="https://img.shields.io/github/forks/btjawa/BiliTools" />
-</a>
-<img src="https://img.shields.io/github/last-commit/btjawa/BiliTools" />
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/btjawa/BiliTools" />
-</a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank">
-    <img src="https://img.shields.io/github/v/release/btjawa/BiliTools" />
-</a>
+<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
+<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
+<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
 <a href="https://trendshift.io/repositories/13286" target="_blank">
@@ -33,7 +25,7 @@
 
 💡 Powered by [Tauri v2](https://github.com/tauri-apps/tauri), BiliTools supports downloading & parsing various bilibili resources, with [more features](https://github.com/users/btjawa/projects/4) to come.
 
-📖 Document & Other info: [https://www.btjawa.top/bilitools](https://www.btjawa.top/bilitools) (Chinese only)
+📖 Document & Other info: [https://btjawa.top/bilitools](https://btjawa.top/bilitools) (Chinese only)
 
 > [!IMPORTANT] 
 > **This project is built for [Bilibili China](https://www.bilibili.com). We do NOT support the [Bilibili Overseas](https://www.bilibili.tv).**<br>
@@ -55,9 +47,11 @@ If it gets stuck at installing `WebView2`，you can install it manually from [Mi
 
 ### macOS
 
-Download `BiliTools_xxx_universal.dmg` then follow the installation guide.
+For Intel chips, download `BiliTools_xxx_x64.dmg` then follow the installation guide.
 
-**Generally**, it is not recommended to use the arch-specific images. See [#26](https://github.com/btjawa/BiliTools/issues/26#issuecomment-2785410137).
+For M series chips / Apple Sillion, download `BiliTools_xxx_aarch64.dmg` then follow the installation guide.
+
+You may need to whitelist this app. For detailed steps, see: [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)
 
 ## 🚀 Contributing
 
@@ -108,13 +102,13 @@ If you are an user:
 
 ## ⚡ Donate
 
-The project has reached 2k+ stars. Thank you for your support!
+The project has reached 3k+ stars. Thank you for your support!
 
-Currently we are working on version `v1.3.8` ~ `v1.4.0`, which will include many bug fixes & new features.
+Currently we are working on version `v1.4.0` Release, which will include many bug fixes & new features.
 
 If you found it helpful, consider buying me a coffee~
 
-- [Aifadian / 爱发电](https://afdian.com/a/BTJ_Shiroi)
+- [爱发电 (afdian)](https://afdian.com/a/BTJ_Shiroi)
 
 Your support will be a great motivation for me to keep improving!
 
@@ -165,4 +159,4 @@ Your support will be a great motivation for me to keep improving!
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- If there is any infringement, feel free to [contact](mailto:2407356083@qq.com) us.
+- If there is any infringement, feel free to [contact](mailto:btj2407@gmail.com) us.
