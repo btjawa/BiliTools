@@ -144,7 +144,7 @@ async function search(overrideInput?: string) {
 	log.info('Query: ' + JSON.stringify(query));
 	const info = await data.getMediaInfo(query.id, query.type);
 	const target = info.list.findIndex(v => v.isTarget);
-	v.checkboxs.push(target);
+	if (target >= 0) v.checkboxs.push(target);
 	v.mediaInfo = info;
 	v.listActive = true;
 	} catch(e) { throw e }
