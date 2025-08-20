@@ -1,4 +1,4 @@
-import { tryFetch, timestamp, getPublicImages } from "../utils";
+import { tryFetch, getPublicImages } from "../utils";
 import { getSteinInfo, getPlayerInfo } from "./extras";
 import { useUserStore } from "@/store";
 import { AppError } from "../error";
@@ -62,7 +62,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                     ...getPublicImages(data.ugc_season, 'ugc_season'),
                 ],
                 showtitle: data.ugc_season?.title ?? data.title,
-                premiered: timestamp(data.pubdate * 1000),
+                premiered: data.pubdate,
                 upper: {
                     name: data.owner.name,
                     mid: data.owner.mid,
@@ -132,7 +132,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                     ...getPublicImages(season, 'season')
                 ],
                 showtitle: data.season_title,
-                premiered: data.publish.pub_time.split(' ')[0],
+                premiered: data.episodes[0].pub_time,
                 upper: data.up_info ? {
                     name: data.up_info.uname,
                     mid: data.up_info.mid,
@@ -182,7 +182,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                     ...data.brief.img.map((v, i) => ({ id: 'brief' + (i+1), url: v.url }))
                 ],
                 showtitle: data.title,
-                premiered: timestamp(data.episodes[0].release_date * 1000),
+                premiered: data.episodes[0].release_date,
                 upper: {
                     avatar: data.up_info.avatar,
                     name: data.up_info.uname,
@@ -224,7 +224,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 tags: (tagsResp as Resps.MusicTagsInfo).data.map(v => v.info),
                 thumbs: getPublicImages(data),
                 showtitle: data.title,
-                premiered: timestamp(data.passtime * 1000),
+                premiered: data.passtime,
                 upper: {
                     name: upper.uname,
                     mid: upper.uid,
@@ -267,7 +267,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 tags: [],
                 thumbs: getPublicImages(data),
                 showtitle: data.title,
-                premiered: timestamp(data.ctime * 1000),
+                premiered: data.ctime * 1000,
                 upper: {
                     name: data.uname,
                     mid: data.uid,
@@ -312,7 +312,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 tags: [],
                 thumbs: getPublicImages(info),
                 showtitle: info.title,
-                premiered: timestamp(info.ctime * 1000),
+                premiered: info.ctime * 1000,
                 upper: {
                     avatar: info.upper.face,
                     name: info.upper.name,

@@ -29,7 +29,7 @@
     </h3>
     <Switch v-model="settings.clipboard"/>
 </section>
-<section v-if="false"> <!-- temporarily inop -->
+<section>
     <h3>
         <i :class="[$fa.weight, 'fa-bell']"></i>
         <span>{{ $t('settings.notify.name') }}</span>

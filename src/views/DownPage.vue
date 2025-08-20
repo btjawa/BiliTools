@@ -108,9 +108,9 @@
 </div></template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { Empty, ProgressBar } from '@/components';
-import { useQueueStore, useSettingsStore } from '@/store';
+import { useQueueStore } from '@/store';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import { timestamp } from '@/services/utils';
 import { Popup } from '@/components/DownPage';
@@ -137,9 +137,6 @@ const queueData = computed(() => (queue[tab.value].length ? queue[tab.value] : [
 const tab = ref<Key>('waiting');
 const queue = useQueueStore();
 const popup = ref<InstanceType<typeof Popup>>();
-const settings = useSettingsStore();
-
-watch(() => settings.max_conc, (v) => backend.commands.updateMaxConc(v))
 
 defineExpose({ tab });
 

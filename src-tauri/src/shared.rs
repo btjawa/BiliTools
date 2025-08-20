@@ -32,9 +32,9 @@ lazy_static! {
         },
         down_dir: get_app_handle().path().desktop_dir().unwrap(),
         format: SettingsFormat {
-            filename: "{taskType}_{title}".into(),
-            folder: "{index}_{mediaType}_{title}".into(),
-            favorite: "".into(),
+            series: "{container} - {showtitle} ({downtime:YYYY-MM-DD_HH-mm-ss})".into(),
+            item: "({index}) {mediaType} - {title}".into(),
+            file: "{taskType} - {title}".into(),
         },
         language: sys_locale::get_locale()
             .map(|c| {

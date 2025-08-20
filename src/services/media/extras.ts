@@ -102,7 +102,7 @@ export async function getNfo(item: Types.MediaItem, nfo: Types.MediaNfo, type: '
         addAttr(el, { preview: v.url });
     })
     add('runtime', Math.round(item.duration / 60));
-    add('premiered', timestamp(item.pubtime * 1000).split('\u0020')[0]);
+    add('premiered', timestamp(item.pubtime * 1000, 'Asia/Shanghai').split('\u0020')[0]);
     if (nfo.upper?.name) {
         add('director', nfo.upper.name);
     }

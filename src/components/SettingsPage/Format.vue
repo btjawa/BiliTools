@@ -1,42 +1,67 @@
 <template>
 <section>
-<h2>
-    <i :class="[$fa.weight, 'fa-file-signature']"></i>
-    <span>{{ $t('settings.format') }}</span>
-</h2>
-<span class="desc">{{ $t('settings.naming.desc') }}</span>
+    <h3>
+        <i :class="[$fa.weight, 'fa-folders']"></i>
+        <span>{{ $t('settings.task_folder.name') }}</span>
+    </h3>
+    <Switch v-model="settings.task_folder"/>
+    <span class="desc">{{ $t('settings.task_folder.desc') }}</span>
 </section>
 <hr />
-<template v-for="(val, key) in placeholders">
-    <section>
+<section>
     <h2>
-        <i :class="[$fa.weight, key === 'folder' ? 'fa-folder' : 'fa-file']"></i>
-        <span>{{ $t('settings.naming.' + key) }}</span>
+        <i :class="[$fa.weight, 'fa-file-signature']"></i>
+        <span>{{ $t('settings.naming.name') }}</span>
     </h2>
-    <div v-for="(v, k) in val">
-        <h2>{{ $t('settings.naming.' + k) }}</h2>
+    <i18n-t keypath="settings.naming.desc" tag="span" scope="global" class="desc text">
+        <template #format>
+            <a>{var:&lt;ISO8601&gt;}</a>
+        </template>
+        <template #example>
+            <a>{pubtime:YYYY-MM-DD_HH-mm-ss}</a>
+        </template>
+        <template #link>
+            <a @click="openUrl('https://btjawa.top/bilitools#时间格式')">{{ $t('settings.naming.timeDoc') }}</a>
+        </template>
+    </i18n-t>
+    <template v-for="(val, key) in placeholders">
+        <div>
+            <i :class="[$fa.weight, val.icon]"></i>
+            <span>{{ $t('settings.naming.' + key) }}</span>
+        </div>
+        <template v-for="(v, k) in val.data">
+        <div>{{ $t('settings.naming.' + k) }}</div>
         <div class="flex flex-wrap gap-2 w-full">
             <button v-for="i in v" @click="click(i, key)">{{ $t('format.' + i) }}</button>
         </div>
-    </div>
-    <input type="text" spellcheck="false" v-model="settings.format[key]" />
-    </section>
-    <hr />
-</template>
+        </template>
+        <input type="text" spellcheck="false" v-model="settings.format[key]" />
+        <hr />
+    </template>
+</section>
 </template>
 
 <script lang="ts" setup>
 import { useSettingsStore } from '@/store';
-import { FormatPlaceholders as p } from '@/types/shared.d';
+import { NamingTemplates as v } from '@/types/shared.d';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import Switch from '../Switch.vue';
 
 const settings = useSettingsStore();
 
 const placeholders = {
-    folder: {
-        basic: p.basic.filter(v => v !== 'title' && v !== 'taskType'),
-        down: p.down
+    series: {
+        icon: 'fa-folder-bookmark',
+        data: v.series,
     },
-    filename: { ...p }
+    item: {
+        icon: 'fa-folder-closed',
+        data: v.item,
+    },
+    file: {
+        icon: 'fa-files',
+        data: v.file,
+    }
 }
 
 function click(v: string, k: keyof typeof settings.format) {

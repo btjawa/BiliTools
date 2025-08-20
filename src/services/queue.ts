@@ -1,5 +1,5 @@
 import { useQueueStore, useSettingsStore } from "@/store";
-import { filename, getDefaultQuality, randomString, timestamp } from "./utils";
+import { getDefaultQuality, randomString } from "./utils";
 import { getMediaInfo, getPlayUrl } from "./media/data";
 import { AppError } from "./error";
 
@@ -82,11 +82,11 @@ async function handleMedia(task: Types.GeneralTask) {
         videoUrls = urlFilter(videoUrls);
         audioUrls = urlFilter(audioUrls);
     }
-    const folder = buildPaths(task, 'folder');
-
     task.select = select;
-    task.folder = folder;
-    return { videoUrls, audioUrls, select, folder };
+    return {
+        videoUrls, audioUrls, select,
+        folder: buildPaths('item', task),
+    };
 }
 
 async function handleDanmaku(task: Types.GeneralTask, subtask: Types.SubTask) {
@@ -113,43 +113,58 @@ async function handleAISummary(task: Types.GeneralTask) {
     return await extras.getAISummary(item);
 }
 
-function buildPaths(task: Types.GeneralTask, key: 'folder' | 'filename', subtask?: Types.SubTask) {
-    const { select, item, type, nfo } = task;
-    const settings = useSettingsStore();
-    const placeholders = [
-        ...Types.FormatPlaceholders.basic,
-        ...Types.FormatPlaceholders.id,
-        ...Types.FormatPlaceholders.down,
-    ]
-    const replace = (k: typeof placeholders[number]) => {
-        switch (k) {
-            case 'showtitle': return nfo.showtitle;
-            case 'title': return item.title;
-            case 'upper': return nfo.upper?.name;
-            case 'upperid': return nfo.upper?.mid;
-            case 'pubtime': return nfo.premiered;
-            case 'pubts': return item.pubtime;
-            case 'res': return i18n.global.t('quality.res.' + select.res);
-            case 'abr': return i18n.global.t('quality.abr.' + select.abr);
-            case 'enc': return i18n.global.t('quality.enc.' + select.enc);
-            case 'fmt': return i18n.global.t('quality.fmt.' + select.fmt);
-            case 'mediaType': return i18n.global.t('mediaType.' + (key === 'folder' ? type : item.type));
-            case 'taskType': return subtask ? i18n.global.t('taskType.' + subtask.type) : '{taskType}';
-            case 'aid': return item.aid;
-            case 'sid': return item.sid;
-            case 'fid': return item.fid;
-            case 'cid': return item.cid;
-            case 'bvid': return item.bvid;
-            case 'epid': return item.epid;
-            case 'ssid': return item.ssid;
-            case 'index': return task.index;
-            case 'downtime': return timestamp(task.ts, { file: true });
-            case 'downts': return task.ts;
-            default: return -1;
-        }
+function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.GeneralTask, subtask?: Types.SubTask) {
+    const template = useSettingsStore().format[scope];
+    const ctx = new Set(Object.values(Types.NamingTemplates[scope]).flat());
+
+    const { select, item, nfo } = task;
+    const t = i18n.global.t;
+    const data = {
+        showtitle: nfo.showtitle,
+        title: item.title,
+        container: t('mediaType.' + task.type),
+        mediaType: t('mediaType.' + item.type),
+        taskType: subtask ? t('taskType.' + subtask?.type) : undefined,
+        pubtime: nfo?.premiered ?? item?.pubtime,
+        upper: nfo.upper?.name,
+        upperid: nfo.upper?.mid,
+        aid: item?.aid,
+        sid: item?.sid,
+        fid: item?.fid,
+        cid: item?.cid,
+        bvid: item?.bvid,
+        epid: item?.epid,
+        ssid: item?.ssid,
+        res: select?.res ? t('quality.res.' + select.res) : undefined,
+        abr: select?.abr ? t('quality.abr.' + select.abr) : undefined,
+        enc: select?.enc ? t('quality.enc.' + select.enc) : undefined,
+        fmt: select?.fmt ? t('quality.fmt.' + select.fmt) : undefined,
+        index: task.index + 1,
+        downtime: task.ts,
     }
-    return filename(settings.format[key]
-        .replace(/\{(\w+)\}/g, (_, k) => (replace(k) ?? -1).toString()));
+
+    return template.replace(/\{([^{}]+)\}/g, (full, inner) => {
+        const result = (inner as string).split(':');
+        const k = result?.[0]?.trim();
+        const v = result?.[1]?.trim();
+        if (!ctx.has(k)) return full;
+        if (k === 'pubtime' || k === 'downtime') {
+            const t = new Date(data[k] * 1000);
+            const pattern = v ?? 'YYYY-MM-DD_HH-mm-ss';
+            if (pattern.toLowerCase() === 'ts') return String(data[k]);
+            return pattern
+                .replace(/YYYY/g, String(t.getFullYear()))
+                .replace(/MM/g, String(t.getMonth() + 1).padStart(2, '0'))
+                .replace(/DD/g, String(t.getDate()).padStart(2, '0'))
+                .replace(/HH/g, String(t.getHours()).padStart(2, '0'))
+                .replace(/mm/g, String(t.getMinutes()).padStart(2, '0'))
+                .replace(/ss/g, String(t.getSeconds()).padStart(2, '0'))
+        } else {
+            return String(data[k as keyof typeof data] ?? '');
+        }
+    })
+        .replace(/[\x00-\x1F\x7F]/g, "_")
+        .replace(/[\/\\:*?"<>|]/g, "_");
 }
 
 async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, subtask?: Types.SubTask) {
@@ -163,9 +178,12 @@ async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, 
         return info.nfo;
     } else if (type === 'refreshUrls') {
         return await handleMedia(task);
-    } else if (type === 'getFilename') {
-        if (!subtask) throw new AppError('No subtask for building paths found');
-        return buildPaths(task, 'filename', subtask);
+    } else if (type === 'refreshFolder') {
+        return buildPaths('item', task);
+    }
+    if (!subtask) throw new AppError('Subtask missing for action ' + type);
+    if (type === 'getFilename') {
+        return buildPaths('file', task, subtask);
     } else if (type === 'getNfo') {
         if (!subtask) throw new AppError('No subtask for handling nfo found');
         return await handleNfo(task, subtask);
@@ -216,8 +234,8 @@ export async function processQueue() {
         const handled = new Set(queue.handled);
         const list = queue.waiting.filter(v => !handled.has(v))
         queue.handled = [...handled, ...list];
-        const showtitle = `${queue.tasks[list[0]].nfo.showtitle}_${timestamp(Date.now(), { file: true })}`;
-        const result = await backend.commands.processQueue(event, list, showtitle);
+        const folder = buildPaths('series', queue.tasks[list[0]]);
+        const result = await backend.commands.processQueue(event, list, folder);
         if (result.status === 'error') throw new AppError(result.error);
     } catch(err) {
         new AppError(err).handle();
@@ -251,12 +269,12 @@ function selectToSubTasks(id: string, select: Types.PopupSelect) {
 export async function submit(info: Types.MediaInfo, select: Types.PopupSelect, checkboxs: number[]) {
     const queue = useQueueStore();
     const settings = useSettingsStore();
-    for (const v of checkboxs) {
+    for (const [index, v] of checkboxs.entries()) {
         const id = randomString(8);
         const task: Types.GeneralTask = {
             id,
             ts: Math.floor(Date.now() / 1000),
-            index: queue.waiting.length + queue.complete.length,
+            index: index,
             folder: String(),
             select: select,
             item: info.list[v],
@@ -264,7 +282,6 @@ export async function submit(info: Types.MediaInfo, select: Types.PopupSelect, c
             nfo: info.nfo,
             subtasks: selectToSubTasks(id, select),
         };
-        task.folder = buildPaths(task, 'folder');
         queue.$patch(v => {
             v.tasks[id] = task;
             v.status[id] = {

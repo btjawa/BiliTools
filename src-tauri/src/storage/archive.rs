@@ -14,7 +14,10 @@ use sea_orm::{
 };
 
 use crate::{
-    commands::queue::QUEUE_MANAGER, queue::GeneralTask, shared::DATABASE_URL
+    queue::{
+        GeneralTask, runtime::QUEUE_MANAGER
+    },
+    shared::DATABASE_URL
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

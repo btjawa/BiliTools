@@ -8,7 +8,6 @@ use anyhow::anyhow;
 use specta::Type;
 use tokio::fs;
 
-use crate::commands::queue::GeneralTask;
 // Re-export for lib.rs to register commands
 pub use crate::{
     services::{
@@ -16,8 +15,9 @@ pub use crate::{
             self, stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie
         },
         queue::{
-            self, submit_task, process_queue, task_event, update_max_conc
+            self, GeneralTask, runtime::{ submit_task, process_queue, task_event, update_max_conc }
         },
+        aria2c,
         ffmpeg,
     },
     storage::{

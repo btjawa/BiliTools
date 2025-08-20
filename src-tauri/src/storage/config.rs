@@ -70,9 +70,9 @@ pub struct SettingsDefault {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
 pub struct SettingsFormat {
-    pub filename: String,
-    pub folder: String,
-    pub favorite: String,
+    pub series: String,
+    pub item: String,
+    pub file: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]

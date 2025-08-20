@@ -16,14 +16,6 @@
 <hr />
 <section>
     <h3>
-        <i :class="[$fa.weight, 'fa-folders']"></i>
-        <span>{{ $t('settings.task_folder.name') }}</span>
-    </h3>
-    <Switch v-model="settings.task_folder"/>
-    <span class="desc">{{ $t('settings.task_folder.desc') }}</span>
-</section>
-<section>
-    <h3>
         <i :class="[$fa.weight, 'fa-angles-down']"></i>
         <span>{{ $t('settings.max_conc.name') }}</span>
     </h3>
@@ -51,7 +43,7 @@
 
 <script lang="ts" setup>
 import { useSettingsStore } from '@/store';
-import { Dropdown, Switch } from '@/components';
+import { Dropdown } from '@/components';
 import { QualityMap } from '@/types/shared.d';
 
 const defaults = ['res', 'abr', 'enc'] as const;

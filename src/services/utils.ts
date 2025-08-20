@@ -35,7 +35,7 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
     }
     (useToast())(message, {
         type,
-        timeout: type === TYPE.WARNING || type === TYPE.ERROR ? 10000 : 3000
+        timeout: type === TYPE.ERROR ? false : 3000
     });
 }
 
@@ -48,6 +48,7 @@ export function setEventHook() {
         commands.configWrite(state, app.secret);
         i18n.global.locale.value = state.language;
         commands.setWindow(state.theme);
+        commands.updateMaxConc(state.max_conc);
     });
     events.headers.listen(e => {
         app.headers = e.payload;
@@ -245,10 +246,6 @@ export function waitPage<T, K extends keyof T>(
 	});
 }
 
-export function filename(input: string) {
-    return input.replace(/[\/\\:*?"<>|]/g, "_");
-}
-
 export function randomString(len: number = 8) {
     if (len <= 0 || len % 2) throw new Error ('Length must be a unsigned even int.');
     const bytes = new Uint8Array(len / 2);
@@ -300,15 +297,14 @@ export function duration(num: number) {
     return finalHs + finalMins + ':' + finalSecs;
 }
 
-export function timestamp(ts: number, options?: { file?: boolean }) {
+export function timestamp(ts: number, zone?: string) {
     const date = new Date(ts);
     const formatter = new Intl.DateTimeFormat('zh-CN', {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false
+        hour12: false, timeZone: zone,
     });
-    const formattedDate = formatter.format(date).replace(/\//g, '-');
-    return options?.file ? formattedDate.replace(/:/g, '-').replace(/\s/g, '_'): formattedDate;
+    return formatter.format(date).replace(/\//g, '-');
 }
 
 export function formatBytes(bytes: number) {
