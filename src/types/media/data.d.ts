@@ -105,7 +105,8 @@ interface EpisodeInfo {
   long_title: string;
   season_id: number;
   season_title: string;
-  show_title: string;
+  title?: string;
+  show_title?: string;
   pub_time: number;
   share_copy: string;
   short_link: string;
@@ -120,6 +121,10 @@ export interface BangumiInfo {
     episodes: EpisodeInfo[];
     evaluate: string;
     media_id: number;
+    positive: {
+      id: number;
+      title: string;
+    };
     publish: {
       is_finish: number;
       is_started: number;

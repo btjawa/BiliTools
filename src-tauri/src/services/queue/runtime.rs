@@ -362,10 +362,10 @@ pub fn update_progress(event: Arc<Channel<ProcessEvent>>, parent: Arc<String>, i
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>, folder: Arc<String>) -> TauriResult<()> {
+pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>, name: Arc<String>) -> TauriResult<()> {
     let event = Arc::new(event);
     let max_conc = config::read().max_conc;
-    let folder = get_unique_path(config::read().down_dir.join(&*folder));
+    let folder = get_unique_path(config::read().down_dir.join(&*name));
     let scheduler = Scheduler::new(
         list.clone(), folder.clone(), event.clone(), max_conc
     );
@@ -373,12 +373,14 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
     guard.push(scheduler.clone());
     drop(guard);
 
+    let mut handles = Vec::with_capacity(list.len());
+
     for id in list {
         let sem = { scheduler.sem.read().await.clone() };
         let permit = sem.acquire_owned().await;
         let event_clone = event.clone();
         let scheduler = scheduler.clone();
-        async_runtime::spawn(async move {
+        let handle = async_runtime::spawn(async move {
             let _permit = permit;
             let task = QUEUE_MANAGER.move_task(&id, QueueType::Waiting, QueueType::Doing).await.unwrap();
             if let Err(e) = handlers::handle_task(scheduler, task.clone()).await {
@@ -396,12 +398,16 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
             QUEUE_MANAGER.move_task(&id, QueueType::Doing, QueueType::Complete).await;
             drop(_permit);
         });
+        handles.push(handle);
+    }
+    for h in handles {
+        h.await?;
     }
     if config::read().notify {
         Notification::new()
             .app_id("com.btjawa.bilitools")
             .summary("BiliTools")
-            .body(&format!("{}\nDownload complete~", folder.to_string_lossy()))
+            .body(&format!("{name}\nDownload complete~"))
             .show().unwrap();
     }
     Ok(())

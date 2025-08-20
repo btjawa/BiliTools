@@ -70,6 +70,7 @@ pub struct MediaUrls {
     #[serde(rename = "audioUrls")]
     pub audio_urls: Option<Vec<String>>,
     pub select: Arc<PopupSelect>,
+    pub subtasks: Vec<Arc<SubTask>>,
     pub folder: Arc<PathBuf>,
 }
 

@@ -48,10 +48,9 @@ export class AppError extends Error {
         );
         console.log('Got StackFrame for ' + this.message + '\n', filtered);
         const stack = filtered.map(v => {
-            const func = v.functionName ?? '<anonymous>';
             const file = v.fileName?.match(/^(?:https?|file):\/\/[^/]+(\/[^\s?#]*)/)?.[1] ?? '<anonymous>';
             const path = `${file}:${v.lineNumber}:${v.columnNumber}`;
-            return import.meta.env.DEV ? `    at ${func} (${path})` : `    at ${path}`;
+            return `    at ${path}`;
         }).join('\n');
         return AppLog(`${this.name}: ${this.message}\n` + stack, 'error');
     }

@@ -120,9 +120,9 @@ async submitTask(task: GeneralTask) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[], folder: string) : Promise<Result<null, TauriError>> {
+async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[], name: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event, list, folder }) };
+    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event, list, name }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

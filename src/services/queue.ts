@@ -6,9 +6,10 @@ import { AppError } from "./error";
 import * as Types from "@/types/shared.d";
 import * as extras from "./media/extras";
 import * as backend from "./backend";
-import { Channel } from "@tauri-apps/api/core";
-import i18n from "@/i18n";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Channel } from "@tauri-apps/api/core";
+import { toRaw } from "vue";
+import i18n from "@/i18n";
 
 // Reference https://linux.do/t/topic/642419
 function urlFilter(urls: string[]) {
@@ -47,7 +48,15 @@ async function handleMedia(task: Types.GeneralTask) {
     const playUrl = await getPlayUrl(item, type, select.fmt);
     let video: Types.PlayUrlResult = null as any;
     let audio: Types.PlayUrlResult = null as any;
+    let videoUrls: string[] = [];
+    let audioUrls: string[] = [];
 
+    const queue = useQueueStore();
+    const settings = useSettingsStore();
+
+    if (playUrl.codec !== select.fmt) {
+        select.fmt = playUrl.codec;
+    }
     if (select.media.video || select.media.audioVideo) {
         if (!playUrl.video) throw new AppError('No videos found');
         const res = getDefaultQuality(playUrl.video.map(v => v.id), 'res', select);
@@ -59,7 +68,7 @@ async function handleMedia(task: Types.GeneralTask) {
         select.enc = enc;
         video = _video;
     }
-    if (select.media.audio || select.media.audioVideo) {
+    if ((select.media.audio || select.media.audioVideo) && select.fmt === 'dash') {
         if (!playUrl.audio) throw new AppError('No audios found');
         const abr = getDefaultQuality(playUrl.audio.map(v => v.id), 'abr', select);
         const _audio = playUrl.audio.find(v => v.id === abr);
@@ -67,26 +76,43 @@ async function handleMedia(task: Types.GeneralTask) {
         select.abr = abr;
         audio = _audio;
     }
+    if (select.fmt !== 'dash') {
+        select.abr = undefined;
+        select.enc = undefined;
+        queue.$patch(v => {
+            const audioVideo = task.subtasks.find(v => v.type === 'audioVideo')?.id;
+            const hasVideo = task.subtasks.some(v => v.type === 'video');
+            task.subtasks = task.subtasks.filter(v => v.type !== 'audio' && v.type !== 'audioVideo');
+            if (!hasVideo && audioVideo) task.subtasks.unshift({
+                id: audioVideo,
+                type: Types.TaskType.Video
+            })
+            const ids = task.subtasks.map(v => v.id);
+            v.status[task.id].subtasks = v.status[task.id].subtasks.filter(v => ids.includes(v.id));
+        })
+    }
 
-    let videoUrls = (video ? [
+    videoUrls = (video ? [
         video.baseUrl ?? video.base_url,
         ...(video.backupUrl ?? video.backup_url ?? [])
     ].filter(Boolean) : []) as string[];
-
-    let audioUrls = (audio ? [
+    audioUrls = (audio ? [
         audio.baseUrl ?? audio.base_url,
         ...(audio.backupUrl ?? audio.backup_url ?? [])
     ].filter(Boolean) : []) as string[];
 
-    if (useSettingsStore().block_pcdn) {
+    if (settings.block_pcdn) {
         videoUrls = urlFilter(videoUrls);
         audioUrls = urlFilter(audioUrls);
     }
-    task.select = select;
+
     return {
-        videoUrls, audioUrls, select,
+        videoUrls,
+        audioUrls,
+        select,
+        subtasks: task.subtasks,
         folder: buildPaths('item', task),
-    };
+    }
 }
 
 async function handleDanmaku(task: Types.GeneralTask, subtask: Types.SubTask) {
@@ -95,7 +121,11 @@ async function handleDanmaku(task: Types.GeneralTask, subtask: Types.SubTask) {
 }
 async function handleThumbs(task: Types.GeneralTask) {
     const { select, nfo } = task;
-    return nfo.thumbs.filter(v => select.thumb.includes(v.id)).map(v => ({
+    const alias = { pic: "cover", cover: "pic" } as any;
+    return nfo.thumbs.filter(v =>
+        select.thumb.includes(v.id) ||
+        select.thumb.includes(alias[v.id])
+    ).map(v => ({
         id: i18n.global.t('popup.thumb.' + v.id),
         url: v.url.replace('http:', 'https:')
     }));
@@ -175,7 +205,8 @@ async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, 
         const id = item.epid ?? item.ssid ?? item.sid ?? item.aid;
         if (!id) throw new AppError('No sid or aid or epid or ssid found');
         const info = await getMediaInfo(id.toString(), item.type);
-        return info.nfo;
+        task.nfo = info.nfo;
+        return task.nfo;
     } else if (type === 'refreshUrls') {
         return await handleMedia(task);
     } else if (type === 'refreshFolder') {
@@ -266,20 +297,23 @@ function selectToSubTasks(id: string, select: Types.PopupSelect) {
     return tasks;
 }
 
-export async function submit(info: Types.MediaInfo, select: Types.PopupSelect, checkboxs: number[]) {
+export async function submit(info: Types.MediaInfo, _select: Types.PopupSelect, checkboxs: number[]) {
+    // avoid reference issues
+    const detach = <T>(x: T): T => structuredClone(toRaw(x));
     const queue = useQueueStore();
     const settings = useSettingsStore();
-    for (const [index, v] of checkboxs.entries()) {
+    for (const [index, idx] of checkboxs.entries()) {
         const id = randomString(8);
+        const select = detach(_select);
         const task: Types.GeneralTask = {
             id,
             ts: Math.floor(Date.now() / 1000),
             index: index,
             folder: String(),
             select: select,
-            item: info.list[v],
-            type: info.type,
-            nfo: info.nfo,
+            item: detach(info.list[idx]),
+            type: detach(info.type),
+            nfo: detach(info.nfo),
             subtasks: selectToSubTasks(id, select),
         };
         queue.$patch(v => {
@@ -287,7 +321,7 @@ export async function submit(info: Types.MediaInfo, select: Types.PopupSelect, c
             v.status[id] = {
                 id,
                 state: 'pending',
-                subtasks: queue.tasks[id].subtasks.map(t => ({
+                subtasks: task.subtasks.map(t => ({
                     ...t,
                     chunk: 0,
                     content: 0,

@@ -38,8 +38,9 @@
 		<div class="flex mt-3 gap-3 flex-1 min-h-0">
 			<Transition name="slide">
 			<MediaList
-				class="w-full"
-				:info="v.mediaInfo"
+				class="flex-1"
+				:list="mediaList"
+				:stein_gate="v.mediaInfo.stein_gate"
 				:update-stein="updateStein"
 				v-model="v.checkboxs"
 				v-if="!v.searching && v.mediaInfo.list.length"
@@ -56,6 +57,14 @@
 					<span>{{ $t('page') }}</span>
 					<input type="number" min="1" v-model="v.pageIndex" />
 				</template>
+				<div class="tab" v-if="v.mediaInfo.tabs">
+				<button v-for="t in v.mediaInfo.tabs" @click="v.tab = t.id; v.checkboxs = []"
+					class="!w-full" :class="{ 'active': v.tab === t.id }"
+				>
+					<span>{{ t.name }}</span>
+					<label class="primary-color"></label>
+				</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -68,7 +77,7 @@ import { MediaInfo, MediaList, Popup } from '@/components/SearchPage';
 import { Dropdown, Empty } from '@/components';
 import DownPage from './DownPage.vue';
 
-import { inject, reactive, Ref, ref, watch } from 'vue';
+import { computed, inject, nextTick, reactive, Ref, ref, watch } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import * as log from '@tauri-apps/plugin-log';
 import { useRouter } from 'vue-router';
@@ -89,6 +98,7 @@ const v = reactive({
 	listActive: false,
 	searching: false,
 	pageIndex: 1,
+	tab: -1,
 });
 
 const buttons = [{
@@ -103,8 +113,8 @@ const buttons = [{
 	icon: 'fa-check-double',
 	text: 'search.selectAll',
 	action: () => v.checkboxs = 
-		v.checkboxs.length === v.mediaInfo.list.length 
-		? [] : [...Array(v.mediaInfo.list.length).keys()]
+		v.checkboxs.length === mediaList.value.length 
+		? [] : [...Array(mediaList.value.length).keys()]
 }];
 
 const popup = ref<InstanceType<typeof Popup>>();
@@ -114,17 +124,28 @@ const router = useRouter()
 const user = useUserStore();
 const settings = useSettingsStore();
 
+const mediaList = computed(() =>
+	v.mediaInfo.tabs ? v.mediaInfo.list.filter(t => t.sid === v.tab) : v.mediaInfo.list
+);
+
+watch(() => v.tab, async () => {
+	v.searching = true;
+	await nextTick(); // trigger v-if
+	v.checkboxs.push(mediaList.value.findIndex(v => v.isTarget) ?? 0);
+	v.searching = false;
+});
+
 watch(() => v.checkboxs, (a, b) => {
 	if (a.length > b.length && a.length > 30)
 	AppLog(i18n.global.t('error.selectLimit'), 'warning');
 });
 
 watch(() => v.pageIndex, async (pn) => {
-	v.checkboxs = [0];
 	v.searching = true;
 	const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
-	v.searching = false;
 	Object.assign(v.mediaInfo, result);
+	v.checkboxs.push(mediaList.value.findIndex(v => v.isTarget) ?? 0);
+	v.searching = false;
 })
 
 defineExpose({ search });
@@ -136,6 +157,7 @@ async function search(overrideInput?: string) {
 	v.searching = false;
 	v.checkboxs.length = 0;
 	v.pageIndex = 1;
+	v.tab = -1;
 	if (!input.length) return;
 	v.searching = true;
 	const query = v.mediaType === 'auto'
@@ -143,8 +165,7 @@ async function search(overrideInput?: string) {
 		: { id: input, type: v.mediaType };
 	log.info('Query: ' + JSON.stringify(query));
 	const info = await data.getMediaInfo(query.id, query.type);
-	const target = info.list.findIndex(v => v.isTarget);
-	if (target >= 0) v.checkboxs.push(target);
+	v.tab = info.list.find(v => v.isTarget)?.sid ?? 0;
 	v.mediaInfo = info;
 	v.listActive = true;
 	} catch(e) { throw e }
@@ -171,15 +192,16 @@ async function updateStein(edge_id: number) {
 
 async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 	if (!v.checkboxs.length) return;
+	v.checkboxs.sort((a, b) => a - b);
 	const limit = pLimit(settings.max_conc);
 	const tasks = v.checkboxs.map(i => limit(async () => {
-		const info = v.mediaInfo.list[i];
+		const info = mediaList.value[i];
 		if (!info.cid && info.aid) {
 			info.cid = await data.getCid(info.aid);
 		}
 	}));
 	await Promise.all(tasks);
-	const info = v.mediaInfo.list[v.checkboxs[0]];
+	const info = mediaList.value[v.checkboxs[0]];
 	const nfo = v.mediaInfo.nfo;
 	const type = info.type ?? v.mediaInfo.type;
 	popup.value?.init(await data.getPlayUrl(info, type, fmt), {

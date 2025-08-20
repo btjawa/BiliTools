@@ -38,6 +38,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
     if (type === Types.MediaType.Video) {
         const data = (body as Resps.VideoInfo).data;
         let stein_gate = undefined;
+        let tabs = undefined;
         if (data.rights.is_stein_gate) {
             const playerInfo = await getPlayerInfo(data.aid, data.cid);
             const steinInfo = await getSteinInfo(data.aid, playerInfo.interaction.graph_version);
@@ -49,12 +50,15 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 hidden_vars: steinInfo.hidden_vars,
             };
         }
+        if (data.ugc_season) tabs = data.ugc_season.sections.map(v => ({
+            id: v.id,
+            name: v.title
+        }));
         const tagsResp = await tryFetch('https://api.bilibili.com/x/tag/archive/tags', { params });
         return {
             type,
             id: data.aid,
             desc: data.desc,
-            stein_gate,
             nfo: {
                 tags: (tagsResp as Resps.VideoTags).data.map(v => v.tag_name),
                 thumbs: [
@@ -71,6 +75,8 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 actors: [],
                 staff: [],
             },
+            stein_gate, 
+            tabs,
             stat: {
                 play: data.stat.view,
                 danmaku: data.stat.danmaku,
@@ -92,19 +98,20 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 type: Types.MediaType.Video,
                 isTarget: index === 0,
                 index
-            })) : data.ugc_season?.sections.find(v => v.type)?.episodes.map((episode, index) => ({
-                title: episode.title,
-                cover: episode.arc.pic,
-                desc: episode.arc.desc,
-                aid: episode.aid,
-                bvid: episode.bvid,
-                cid: episode.cid,
-                duration: episode.page.duration,
-                pubtime: episode.arc.pubdate,
+            })) : data.ugc_season.sections.map(s => s.episodes.map((ep, index) => ({
+                title: ep.title,
+                cover: ep.arc.pic,
+                desc: ep.arc.desc,
+                aid: ep.aid,
+                sid: s.id,
+                bvid: ep.bvid,
+                cid: ep.cid,
+                duration: ep.page.duration,
+                pubtime: ep.arc.pubdate,
                 type: Types.MediaType.Video,
-                isTarget: data.aid === episode.aid,
+                isTarget: ep.aid === data.aid,
                 index
-            }))) ?? [{
+            }))).flat()) ?? [{
                 title: data.title,
                 cover: data.pic,
                 desc: data.desc,
@@ -144,6 +151,13 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 }),
                 staff: data.staff.split('\n')
             },
+            tabs: [{
+                id: data.positive.id,
+                name: data.positive.title,
+            }, ...data.section.map(s => ({
+                id: s.id,
+                name: s.title
+            }))],
             stat: {
                 play: data.stat.views,
                 danmaku: data.stat.danmakus,
@@ -153,21 +167,37 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 favorite: data.stat.favorite,
                 share: data.stat.share,
             },
-            list: data.episodes.map((episode, index) => ({
-                title: episode.show_title,
-                cover: episode.cover,
+            list: [...data.section.map(s => s.episodes.map((ep, index) => ({
+                title: ep.show_title ?? ep.title ?? String(),
+                cover: ep.cover,
                 desc: data.evaluate,
-                aid: episode.aid,
-                bvid: episode.bvid,
-                cid: episode.cid,
-                epid: episode.ep_id,
+                aid: ep.aid,
+                sid: s.id,
+                bvid: ep.bvid,
+                cid: ep.cid,
+                epid: ep.ep_id,
                 ssid: data.season_id,
-                duration: episode.duration / 1000,
-                pubtime: episode.pub_time,
+                duration: ep.duration / 1000,
+                pubtime: ep.pub_time,
                 type: Types.MediaType.Bangumi,
-                isTarget: _id === episode.id,
+                isTarget: _id === ep.id,
                 index
-            }))
+            }))).flat(), ...data.episodes.map((ep, index) => ({
+                title: ep.show_title ?? ep.title ?? String(),
+                cover: ep.cover,
+                desc: data.evaluate,
+                aid: ep.aid,
+                sid: data.positive.id,
+                bvid: ep.bvid,
+                cid: ep.cid,
+                epid: ep.ep_id,
+                ssid: data.season_id,
+                duration: ep.duration / 1000,
+                pubtime: ep.pub_time,
+                type: Types.MediaType.Bangumi,
+                isTarget: _id === ep.id,
+                index
+            }))]
         };
     } else if (type === Types.MediaType.Lesson) {
         const data = (body as Resps.LessonInfo).data;
@@ -194,16 +224,16 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
             stat: {
                 play: data.stat.play,
             },
-            list: data.episodes.map((episode, index) => ({
-                title: episode.title,
-                cover: episode.cover,
+            list: data.episodes.map((ep, index) => ({
+                title: ep.title,
+                cover: ep.cover,
                 desc: data.subtitle,
-                aid: episode.aid,
-                cid: episode.cid,
-                epid: episode.id,
+                aid: ep.aid,
+                cid: ep.cid,
+                epid: ep.id,
                 ssid: data.season_id,
-                duration: episode.duration,
-                pubtime: episode.release_date,
+                duration: ep.duration,
+                pubtime: ep.release_date,
                 type: Types.MediaType.Lesson,
                 isTarget: index === 0,
                 index

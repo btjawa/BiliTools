@@ -86,10 +86,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             shared::set_window(window, shared::Theme::Auto).unwrap();
             shared::APP_HANDLE.set(app.app_handle().clone()).unwrap();
             async_runtime::spawn(async move {
-                use shared::process_err as err;
-                storage::init().await.map_err(|e| err(e, "storage").to_string())?;
-                services::init().await.map_err(|e| err(e, "services").to_string())?;
-                Ok::<(), String>(())
+                let _ = storage::init().await;
+                let _ = services::init().await;
             });
             Ok(())
         })

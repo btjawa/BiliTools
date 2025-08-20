@@ -3,8 +3,10 @@ pub mod ffmpeg;
 pub mod login;
 pub mod queue;
 
+use crate::shared::process_err as err;
+
 pub async fn init() -> crate::TauriResult<()> {
-    aria2c::init().await?;
-    ffmpeg::test().await?;
+    aria2c::init().await.map_err(|e| err(e, "aria2c"))?;
+    ffmpeg::test().await.map_err(|e| err(e, "ffmpeg"))?;
     Ok(())
 }

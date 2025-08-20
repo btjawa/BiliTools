@@ -162,6 +162,10 @@ export interface MediaInfo {
     choices?: SteinInfo["data"]["edges"]["questions"][0]["choices"];
     hidden_vars: SteinInfo["data"]["hidden_vars"];
   };
+  tabs?: {
+    id: number;
+    name: string;
+  }[],
   stat: {
     play?: number,
     danmaku?: number,

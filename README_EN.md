@@ -53,6 +53,12 @@ For M series chips / Apple Sillion, download `BiliTools_xxx_aarch64.dmg` then fo
 
 You may need to whitelist this app. For detailed steps, see: [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)
 
+If you cannot add tasks in the app, please try removing the quarantine attribute in Terminal with the following command:
+
+```zsh
+xattr -dr com.apple.quarantine /Applications/BiliTools.app
+```
+
 ## 🚀 Contributing
 
 > [!TIP]
