@@ -11,6 +11,7 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
+      max-parallel: 1 
       matrix:
         include:
           - platform: 'macos-latest' # for Arm based macs (M1 and above).
