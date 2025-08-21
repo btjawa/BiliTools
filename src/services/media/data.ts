@@ -98,12 +98,12 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 type: Types.MediaType.Video,
                 isTarget: index === 0,
                 index
-            })) : data.ugc_season.sections.map(s => s.episodes.map((ep, index) => ({
+            })) : data.ugc_season?.sections.map(s => s.episodes.map((ep, index) => ({
                 title: ep.title,
                 cover: ep.arc.pic,
                 desc: ep.arc.desc,
+                section: s.id,
                 aid: ep.aid,
-                sid: s.id,
                 bvid: ep.bvid,
                 cid: ep.cid,
                 duration: ep.page.duration,
@@ -171,8 +171,8 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 title: ep.show_title ?? ep.title ?? String(),
                 cover: ep.cover,
                 desc: data.evaluate,
+                section: s.id,
                 aid: ep.aid,
-                sid: s.id,
                 bvid: ep.bvid,
                 cid: ep.cid,
                 epid: ep.ep_id,
@@ -186,8 +186,8 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 title: ep.show_title ?? ep.title ?? String(),
                 cover: ep.cover,
                 desc: data.evaluate,
+                section: data.positive.id,
                 aid: ep.aid,
-                sid: data.positive.id,
                 bvid: ep.bvid,
                 cid: ep.cid,
                 epid: ep.ep_id,
@@ -391,7 +391,6 @@ export async function getPlayUrl(
         case Types.StreamFormat.Dash: params.fnval = user.isLogin ? 4048 : 16; break;
     }
     switch(type) {
-        case Types.MediaType.Favorite:
         case Types.MediaType.Video:
             url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
             params.avid = item.aid;
@@ -409,7 +408,6 @@ export async function getPlayUrl(
             params.ep_id = item.epid;
             params.season_id = item.ssid;
             break;
-        case Types.MediaType.MusicList:
         case Types.MediaType.Music:
             url = 'https://www.bilibili.com/audio/music-service-c/web/url';
             params = { sid: item.sid, privilege: 2, quality: 0 } as any;

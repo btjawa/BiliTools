@@ -123,6 +123,7 @@ export interface MediaItem {
   pubtime: number; // sec timestamp
   isTarget: boolean;
   type: MediaType; // specific type
+  section?: number; // for tabs
   aid?: number; // general video
   sid?: number; // music
   fid?: number; // favorite

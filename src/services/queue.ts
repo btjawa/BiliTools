@@ -44,8 +44,8 @@ function urlFilter(urls: string[]) {
 }
 
 async function handleMedia(task: Types.GeneralTask) {
-    const { select, item, type } = task;
-    const playUrl = await getPlayUrl(item, type, select.fmt);
+    const { select, item } = task;
+    const playUrl = await getPlayUrl(item, item.type, select.fmt);
     let video: Types.PlayUrlResult = null as any;
     let audio: Types.PlayUrlResult = null as any;
     let videoUrls: string[] = [];
@@ -91,6 +91,8 @@ async function handleMedia(task: Types.GeneralTask) {
             v.status[task.id].subtasks = v.status[task.id].subtasks.filter(v => ids.includes(v.id));
         })
     }
+
+    console.log(queue)
 
     videoUrls = (video ? [
         video.baseUrl ?? video.base_url,

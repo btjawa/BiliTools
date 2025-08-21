@@ -58,7 +58,7 @@
 					<input type="number" min="1" v-model="v.pageIndex" />
 				</template>
 				<div class="tab" v-if="v.mediaInfo.tabs">
-				<button v-for="t in v.mediaInfo.tabs" @click="v.tab = t.id; v.checkboxs = []"
+				<button v-for="t in v.mediaInfo.tabs" @click="v.tab = t.id"
 					class="!w-full" :class="{ 'active': v.tab === t.id }"
 				>
 					<span>{{ t.name }}</span>
@@ -125,13 +125,13 @@ const user = useUserStore();
 const settings = useSettingsStore();
 
 const mediaList = computed(() =>
-	v.mediaInfo.tabs ? v.mediaInfo.list.filter(t => t.sid === v.tab) : v.mediaInfo.list
+	v.mediaInfo.tabs ? v.mediaInfo.list.filter(t => t.section === v.tab) : v.mediaInfo.list
 );
 
 watch(() => v.tab, async () => {
 	v.searching = true;
 	await nextTick(); // trigger v-if
-	v.checkboxs.push(mediaList.value.findIndex(v => v.isTarget) ?? 0);
+	v.checkboxs = [mediaList.value.findIndex(v => v.isTarget) ?? 0];
 	v.searching = false;
 });
 
@@ -144,7 +144,7 @@ watch(() => v.pageIndex, async (pn) => {
 	v.searching = true;
 	const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
 	Object.assign(v.mediaInfo, result);
-	v.checkboxs.push(mediaList.value.findIndex(v => v.isTarget) ?? 0);
+	v.checkboxs = [mediaList.value.findIndex(v => v.isTarget) ?? 0];
 	v.searching = false;
 })
 
@@ -165,8 +165,8 @@ async function search(overrideInput?: string) {
 		: { id: input, type: v.mediaType };
 	log.info('Query: ' + JSON.stringify(query));
 	const info = await data.getMediaInfo(query.id, query.type);
-	v.tab = info.list.find(v => v.isTarget)?.sid ?? 0;
 	v.mediaInfo = info;
+	v.tab = info.list.find(v => v.isTarget)?.section ?? 0;
 	v.listActive = true;
 	} catch(e) { throw e }
 	finally {

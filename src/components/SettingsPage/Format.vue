@@ -1,14 +1,5 @@
 <template>
 <section>
-    <h3>
-        <i :class="[$fa.weight, 'fa-folders']"></i>
-        <span>{{ $t('settings.task_folder.name') }}</span>
-    </h3>
-    <Switch v-model="settings.task_folder"/>
-    <span class="desc">{{ $t('settings.task_folder.desc') }}</span>
-</section>
-<hr />
-<section>
     <h2>
         <i :class="[$fa.weight, 'fa-file-signature']"></i>
         <span>{{ $t('settings.naming.name') }}</span>
@@ -45,7 +36,6 @@
 import { useSettingsStore } from '@/store';
 import { NamingTemplates as v } from '@/types/shared.d';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import Switch from '../Switch.vue';
 
 const settings = useSettingsStore();
 

@@ -344,7 +344,7 @@ async fn handle_media(
     let status_tx = Arc::new(update_progress(event, parent, id.clone()));
     
     let mut download = Box::pin(aria2c::download(id.clone(), status_tx.clone(), urls));
-    let path = loop { tokio::select! {
+    let mut path = loop { tokio::select! {
         res = &mut download => break res,
         msg = rx.recv() => match msg {
             Ok(CtrlEvent::Cancel) => {
@@ -362,28 +362,28 @@ async fn handle_media(
     } }?;
 
     let abr = ptask.task.select.abr.unwrap_or(0);
-    let ext = get_ext(subtask.task_type.clone(), abr);
+    let mut ext = get_ext(subtask.task_type.clone(), abr).to_string();
 
-    let output = ptask.folder.join(&*ptask.filename);
-    let mut ext = ext.to_string();
-
-    let target = if subtask.task_type == TaskType::Video {
+    if subtask.task_type == TaskType::Video {
         video_path
     } else if subtask.task_type == TaskType::Audio {
-        let converted = ffmpeg::convert_audio(id, &ext, status_tx.clone(), &path).await?;
-        ext = converted.extension().ok_or(anyhow!("No audio extension found"))?.to_string_lossy().into();
         audio_path
     } else {
         return Err(anyhow!("No path for type {:?} found", &subtask.task_type).into());
-    };
-    
+    }.set(path.clone())?;
+
+    if subtask.task_type == TaskType::Audio {
+        let (file, suffix) = ffmpeg::convert_audio(id, &ext, status_tx.clone(), &path, ptask.task.clone()).await?;
+        path = file.with_extension(&suffix);
+        ext = suffix;
+    }
+
     if select.media.video || select.media.audio {
-        fs::copy(&path, &output.with_extension(ext)).await?;
+        fs::copy(&path, &ptask.folder.join(&*ptask.filename).with_extension(ext)).await?;
     }
     if !select.media.audio_video {
         fs::remove_file(&path).await?;
     }
-    target.set(path)?;
     Ok(())
 }
 
