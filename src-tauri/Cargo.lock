@@ -535,7 +535,7 @@ dependencies = [
 
 [[package]]
 name = "bilitools"
-version = "1.4.0-3"
+version = "1.4.0-4"
 dependencies = [
  "anyhow",
  "backtrace",

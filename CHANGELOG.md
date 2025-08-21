@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.4.0-4] - 2025-08-21
+
+(`1.4.0-3`) Update STORAGE_VERSION to 8
+
+## 更新
+
+- [`f099939`](https://github.com/btjawa/BiliTools/commit/f099939911aadb2c755d57bf6fb7ffd32db37e5a) (`1.4.0-3`) 支持强制转换音频为 `MP3` 格式 （[#95](https://github.com/btjawa/BiliTools/issues/95)）
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) (`1.4.0-3`) 重构命名格式，支持顶层文件夹格式与自定义事件格式
+- [`6e11760`](https://github.com/btjawa/BiliTools/commit/6e117604a17aac5c654634b59c4abfb32eeefdc8) (`1.4.0-3`) 支持为音频添加元数据，EAC3 支持
+- [`59a3ddb`](https://github.com/btjawa/BiliTools/commit/59a3ddb035c96d2ddb9e4f0116308d1f6b523aff) (`1.4.0-3`) 支持解析子合集与番剧PV等资源 ([#55](https://github.com/btjawa/BiliTools/issues/55), [#64](https://github.com/btjawa/BiliTools/issues/64))
+
+## 修复
+
+- [`d99e608`](https://github.com/btjawa/BiliTools/commit/d99e608ae3e6c6843db14b233241573f070e35b1) 修复若干杂项 BUG
+- [`6e11760`](https://github.com/btjawa/BiliTools/commit/6e117604a17aac5c654634b59c4abfb32eeefdc8) (`1.4.0-3`) 规范元数据格式 ([#104](https://github.com/btjawa/BiliTools/issues/104), [#114](https://github.com/btjawa/BiliTools/issues/114))
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) (`1.4.0-3`) 修复 `duration` 字段格式不匹配问题 ([#119](https://github.com/btjawa/BiliTools/issues/119), [#124](https://github.com/btjawa/BiliTools/issues/124))
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) (`1.4.0-3`) 规范文件编号排序 ([#115](https://github.com/btjawa/BiliTools/issues/115), [#119](https://github.com/btjawa/BiliTools/issues/119), [#121](https://github.com/btjawa/BiliTools/issues/121))
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) (`1.4.0-3`) 规范文件名，去除非法字符 ([#120](https://github.com/btjawa/BiliTools/issues/120))
+
 ## [1.4.0-3] - 2025-08-21
 
 Update STORAGE_VERSION to 8
