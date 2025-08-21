@@ -71,18 +71,14 @@
         }
     },
     "format": {
-        "title": "Part/Episode Title",
         "showtitle": "Video/Series Title",
+        "title": "Part/Episode Title",
+        "container": "Resource Category",
+        "mediaType": "Media Type",
+        "taskType": "Task Name",
+        "pubtime": "Publish/Upload Time",
         "upper": "Uploader Nickname",
         "upperid": "Uploader UID",
-        "pubtime": "Upload Time",
-        "pubts": "Upload Time (UNIX Timestamp)",
-        "res": "Resolution",
-        "abr": "Bitrate",
-        "enc": "Encoding Format",
-        "fmt": "Streaming Format",
-        "mediaType": "Media Type",
-        "taskType": "Resource Name",
         "aid": "AV ID",
         "sid": "SID (Music)",
         "fid": "FID (Favorites)",
@@ -90,9 +86,12 @@
         "bvid": "BV ID",
         "epid": "EP ID",
         "ssid": "SS ID",
+        "res": "Resolution",
+        "abr": "Bitrate",
+        "enc": "Encoding Format",
+        "fmt": "Streaming Format",
         "index": "Download Index",
-        "downtime": "Download Time",
-        "downts": "Download Time (UNIX Timestamp)"
+        "downtime": "Download Time"
     },
     "quality": {
         "res": {
@@ -236,8 +235,8 @@
             "desc": "These will be used first during download. If not supported, the highest available option will be used."
         },
         "task_folder": {
-            "name": "Create Separate Folders for Tasks",
-            "desc": "If enabled, each task will be stored in its own folder."
+            "name": "Create \"Subfolders\"",
+            "desc": "If enabled, each task will be stored in its own subfolder following the subfolder naming format.\nIf disabled, no subfolders will be created and files will be stored flat in the top-level folder."
         },
         "max_conc": {
             "name": "Max Concurrent Downloads",
@@ -253,8 +252,8 @@
         },
         "advanced": "Advanced",
         "add_metadata": {
-            "name": "Embed Metadata Automatically",
-            "desc": "If enabled, title, description, and other info will be embedded into media files."
+            "name": "Embed Metadata into Audio Files",
+            "desc": "If enabled, metadata will be automatically embedded when downloading audio files."
         },
         "block_pcdn": {
             "name": "Try Blocking PCDN",
@@ -268,17 +267,21 @@
             },
             "mp3": {
                 "name": "Convert Audio to MP3",
-                "desc": "If enabled, audio will be forcibly converted to MP3. Video+Audio unaffected."
+                "desc": "If enabled, audio will be forcibly converted to MP3. Audio+Video unaffected."
             }
         },
         "format": "Naming Format",
         "naming": {
-            "desc": "Click the buttons to insert variables. If missing, \"-1\" will be used.\nDo not edit placeholders manually (except for time format).",
-            "filename": "Filename Format",
-            "folder": "Folder Name Format",
-            "basic": "Basic",
-            "id": "ID",
-            "down": "Download"
+            "name": "Naming Format",
+            "desc": "Click the corresponding button to insert variables. If the resource does not support the variable, it will be left blank.\nTime variables support {format} formatting, e.g. {example}\nSee details: {link}",
+            "timeDoc": "Time Format",
+            "series": "Top-level Folder",
+            "item": "Subfolder",
+            "file": "Filename",
+            "general": "General",
+            "down": "Download",
+            "ids": "IDs",
+            "stream": "Media"
         }
     },
     "info": {

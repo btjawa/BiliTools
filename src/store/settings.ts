@@ -17,9 +17,9 @@ export const useSettingsStore = defineStore('settings', () => {
         },
         down_dir: String(),
         format: {
-            filename: String(),
-            folder: String(),
-            favorite: String(),
+            series: String(),
+            item: String(),
+            file: String(),
         },
         language: String(),
         max_conc: Number(),

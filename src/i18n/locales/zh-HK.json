@@ -4,7 +4,7 @@
     "page": "頁數",
     "reset": "重設",
     "wip": "此處施工中～",
-    "empty": "沒有可用資源～",
+    "empty": "無可用資源～",
     "contextMenu": {
         "cut": "剪下",
         "copy": "複製",
@@ -25,10 +25,10 @@
         "singleNfo": "單集刮削",
         "liveDanmaku": "即時彈幕",
         "historyDanmaku": "歷史彈幕",
-        "thumb": "圖片",
+        "thumb": "圖像",
         "video": "影片",
         "audio": "音訊",
-        "audioVideo": "音畫"
+        "audioVideo": "音訊影片"
     },
     "popup": {
         "least": "請至少選擇一項資源",
@@ -36,7 +36,7 @@
         "popupLint": "請點擊所需資源的按鈕，並選擇對應參數",
         "dashHint": {
             "name": "關於 DASH / FLV / MP4",
-            "desc": "請勿隨意更改。如確有需要，請先閱讀：{0}，並確保你明白自己正在做甚麼"
+            "desc": "請勿隨意更改。如確有需要，請先閱讀：{0}，並確保你明白自己正在做什麼"
         },
         "nextStep": "下一步",
         "misc": {
@@ -55,7 +55,7 @@
             "history": "歷史彈幕"
         },
         "thumb": {
-            "name": "圖片",
+            "name": "圖像",
             "pic": "封面",
             "cover": "封面",
             "square_cover": "方形封面",
@@ -67,22 +67,18 @@
         "mediaType": {
             "video": "影片",
             "audio": "音訊",
-            "audioVideo": "音畫"
+            "audioVideo": "音訊影片"
         }
     },
     "format": {
-        "title": "分 P / 單集標題",
-        "showtitle": "影片 / 合集標題",
+        "showtitle": "影片/合集標題",
+        "title": "分 P/單集標題",
+        "container": "資源分類",
+        "mediaType": "媒體類型",
+        "taskType": "任務名稱",
+        "pubtime": "發布/上載時間",
         "upper": "UP 主暱稱",
         "upperid": "UP 主 UID",
-        "pubtime": "上載時間",
-        "pubts": "上載時間 (UNIX 時間戳)",
-        "res": "解像度",
-        "abr": "比特率",
-        "enc": "編碼格式",
-        "fmt": "串流格式",
-        "mediaType": "媒體類型",
-        "taskType": "資源名稱",
         "aid": "AV 號",
         "sid": "SID (音樂)",
         "fid": "FID (收藏夾)",
@@ -90,9 +86,12 @@
         "bvid": "BV 號",
         "epid": "EP 號",
         "ssid": "SS 號",
+        "res": "解析度",
+        "abr": "比特率",
+        "enc": "編碼格式",
+        "fmt": "串流格式",
         "index": "下載編號",
-        "downtime": "下載時間",
-        "downts": "下載時間 (UNIX 時間戳)"
+        "downtime": "下載時間"
     },
     "quality": {
         "res": {
@@ -130,11 +129,11 @@
         }
     },
     "error": {
-        "risk": "已觸發風控，請進行驗證",
-        "sidecar": "Sidecar {0} 發生錯誤",
-        "checkUpdate": "請到 GitHub 查看最新版本",
-        "invalidInput": "無法解析輸入內容",
-        "selectLimit": "不建議一次選取超過 30 個選項"
+        "risk": "觸發風控，請進行驗證",
+        "sidecar": "Sidecar {0} 的錯誤",
+        "checkUpdate": "請到 GitHub 檢查最新更新",
+        "invalidInput": "無法解析輸入",
+        "selectLimit": "不建議一次選擇超過 30 個選項"
     },
     "updater": {
         "title": "發現新版本！",
@@ -150,16 +149,16 @@
         "phone": "手機號碼",
         "code": "驗證碼",
         "scan": "掃描二維碼登入",
-        "getScan": "請使用嗶哩嗶哩客戶端\n掃碼登入或下載 App",
+        "getScan": "請使用嗶哩嗶哩客戶端\n掃碼登入或掃碼下載 App",
         "pwd": "密碼登入",
-        "sms": "短訊登入",
+        "sms": "簡訊登入",
         "sendSms": "獲取驗證碼",
         "login": "登入",
         "info": {
             "86038": "二維碼已過期\n請點擊重新整理",
-            "86090": "掃碼成功\n請於手機上確認"
+            "86090": "掃碼成功\n請在手機上確認"
         },
-        "agree": "登入即代表你同意嗶哩嗶哩的使用者協議與私隱政策\n{0}",
+        "agree": "登入即代表你同意嗶哩嗶哩的使用者協議與隱私政策\n{0}",
         "stat": {
             "following": "關注數",
             "follower": "粉絲數",
@@ -169,28 +168,28 @@
         "exit": "登出"
     },
     "search": {
-        "input": "{0}連結/AV/BV/SS/EP/AU/AM/SID/FID 編號…",
-        "suggest": "今天想搜尋些甚麼呢～",
-        "autoDetect": "自動偵測",
+        "input": "{0}連結/AV/BV/SS/EP/AU/AM/SID/FID 號…",
+        "suggest": "今天想搜尋些什麼呢～",
+        "autoDetect": "自動檢測",
         "general": "常規下載",
         "advanced": "進階下載",
         "selectAll": "全選"
     },
     "history": {
-        "title": "歷史紀錄",
+        "title": "歷史記錄",
         "refresh": "重新整理"
     },
     "down": {
         "title": "下載",
         "waiting": "等待中",
-        "doing": "處理中",
+        "doing": "進行中",
         "complete": "已完成",
-        "empty": "佇列目前為空～",
+        "empty": "此佇列為空～",
         "processQueue": "點擊以開始下載"
     },
     "settings": {
         "title": "設定",
-        "confirm": "確定要刪除嗎？此操作無法復原。",
+        "confirm": "確定刪除嗎？此操作不可復原。",
         "general": "一般",
         "language": {
             "name": "語言"
@@ -206,11 +205,11 @@
         },
         "notify": {
             "name": "通知系統",
-            "desc": "啟用後，下載完成時會發送系統通知。"
+            "desc": "若啟用，則會在下載完畢時發送系統通知。"
         },
         "auto_download": {
             "name": "自動開始下載",
-            "desc": "啟用後，新增任務後會自動開始下載。"
+            "desc": "若啟用，則會在新增任務後自動開始下載。"
         },
         "auto_check_update": {
             "name": "自動檢查更新"
@@ -218,13 +217,13 @@
         "storage": "儲存",
         "paths": {
             "name": "路徑",
-            "desc": "「臨時檔案」會儲存未完成的檔案，處理完成後將轉移至「輸出檔案」。",
+            "desc": "「臨時檔案」儲存未下載完成的檔案，處理後將轉移至「輸出檔案」。",
             "down_dir": "輸出檔案",
             "temp_dir": "臨時檔案"
         },
         "cache": {
             "name": "快取",
-            "desc": "資料庫會儲存設定、登入資訊、下載紀錄等資料，建議定期備份。",
+            "desc": "資料庫儲存設定、登入資訊、下載記錄等資料，建議定期備份。",
             "log": "日誌",
             "temp": "臨時檔案",
             "webview": "Webview 快取",
@@ -233,19 +232,19 @@
         "download": "下載",
         "default": {
             "name": "預設參數",
-            "desc": "下載時，將會優先使用此處設定。如目標資源不支援此參數，將改用其支援的最高選項。"
+            "desc": "下載時，將會優先使用此處參數。若目標資源不支援此處選定的參數，則會使用其支援的最高參數。"
         },
         "task_folder": {
-            "name": "為各個任務單獨建立資料夾",
-            "desc": "啟用後，下載時會為每個任務建立專屬資料夾存放檔案。"
+            "name": "建立「子資料夾」",
+            "desc": "若啟用，則會在下載時為每個任務單獨建立子資料夾存放檔案，遵循「子資料夾」命名格式。\n若停用，則不再建立子資料夾，檔案將平鋪於「頂層資料夾」內。"
         },
         "max_conc": {
             "name": "最大並行下載數",
-            "desc": "控制同時執行的任務數量。若設定過高，可能會增加被風控的風險。"
+            "desc": "控制同時執行的最大任務數量。若該值過高，可能導致觸發風控。"
         },
         "proxy": {
-            "name": "網絡代理",
-            "desc": "目前僅支援 HTTP(S) 協議。",
+            "name": "網路代理",
+            "desc": "暫僅支援 HTTP(S) 協議。",
             "address": "地址",
             "placeholder": "http(s)://server:port",
             "username": "使用者名稱",
@@ -253,32 +252,36 @@
         },
         "advanced": "進階",
         "add_metadata": {
-            "name": "自動嵌入中繼資料",
-            "desc": "啟用後會在下載時將標題、簡介等資訊嵌入至媒體檔案中。"
+            "name": "自動為音訊檔案嵌入中繼資料",
+            "desc": "若啟用，則會在下載音訊時自動為其嵌入中繼資料。"
         },
         "block_pcdn": {
             "name": "嘗試屏蔽 PCDN",
-            "desc": "啟用後會在下載時嘗試使用更高質量的連結而非 PCDN。"
+            "desc": "若啟用，則會在下載時嘗試使用更高品質的連結而非 PCDN。"
         },
         "convert": {
             "name": "轉換策略",
             "danmaku": {
                 "name": "將 XML 彈幕轉換為 ASS 字幕",
-                "desc": "啟用後，下載彈幕時會調用 DanmakuFactory 將 XML 轉換為 ASS 格式。"
+                "desc": "若啟用，則會在下載彈幕時調用 DanmakuFactory 將 XML 轉換為 ASS 格式。"
             },
             "mp3": {
                 "name": "將音訊轉換為 MP3 格式",
-                "desc": "啟用後會強制轉換音訊為 MP3 格式。音畫不受影響。"
+                "desc": "若啟用，則會強制轉換音訊為 MP3 格式。音訊影片不受影響。"
             }
         },
         "format": "命名格式",
         "naming": {
-            "desc": "點擊對應按鈕以新增變數。如目標資源不包含某一變數，將以 -1 取代。\n除時間格式外，請勿手動修改佔位符，以免導致無法正確檢測與填充變數。",
-            "filename": "檔案名稱格式",
-            "folder": "資料夾名稱格式",
-            "basic": "基本",
-            "id": "編號",
-            "down": "下載"
+            "name": "命名格式",
+            "desc": "點擊對應按鈕以新增變數。若目標資源不支援該變數，將留空。\n時間變數支援使用 {format} 格式化，例如：{example}\n詳細規則參見：{link}",
+            "timeDoc": "時間格式",
+            "series": "頂層資料夾",
+            "item": "子資料夾",
+            "file": "檔案名稱",
+            "general": "通用",
+            "down": "下載",
+            "ids": "編號",
+            "stream": "媒體"
         }
     },
     "info": {
@@ -288,9 +291,9 @@
         "document": "文件",
         "feedback": "回饋",
         "donate": "贊助",
-        "paid": "本軟體為公益免費項目。若你曾付費購買，可能已遭詐騙。",
-        "star": "如果覺得好用，歡迎到 GitHub 為本項目點個 Star！",
-        "data": "此應用所產生與獲取的所有資料均僅儲存於用戶本機",
+        "paid": "此軟體為公益免費項目。如果你付費購買了此軟體，你可能遭遇詐騙。",
+        "star": "覺得好用的話，歡迎到 GitHub 為此項目點個 Star！",
+        "data": "該應用產生與獲取的所有資料均僅儲存於使用者本機",
         "others": "使用本應用時，請遵守相關法律法規及平台服務協議，開發者對不當使用所造成的任何後果概不負責。\n「嗶哩嗶哩」及「Bilibili」為上海寬娛數碼科技有限公司的註冊商標或商標。\n本軟體與嗶哩嗶哩無關，亦未獲其授權。"
     }
 }
