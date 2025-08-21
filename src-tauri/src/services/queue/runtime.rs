@@ -404,8 +404,12 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
         h.await?;
     }
     if config::read().notify {
-        Notification::new()
-            .app_id("com.btjawa.bilitools")
+        let mut notify = Notification::new();
+        #[cfg(target_os = "windows")]
+        {
+            notify.app_id("com.btjawa.bilitools");
+        }
+        notify
             .summary("BiliTools")
             .body(&format!("{name}\nDownload complete~"))
             .show().unwrap();
