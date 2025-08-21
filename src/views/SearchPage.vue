@@ -39,7 +39,7 @@
 			<Transition name="slide">
 			<MediaList
 				class="flex-1"
-				:list="mediaList"
+				:list="mediaList" ref="mediaListRef"
 				:stein_gate="v.mediaInfo.stein_gate"
 				:update-stein="updateStein"
 				v-model="v.checkboxs"
@@ -119,6 +119,7 @@ const buttons = [{
 
 const popup = ref<InstanceType<typeof Popup>>();
 const downPage = inject<Ref<InstanceType<typeof DownPage>>>('page');
+const mediaListRef = ref<InstanceType<typeof MediaList>>();
 
 const router = useRouter()
 const user = useUserStore();
@@ -128,11 +129,20 @@ const mediaList = computed(() =>
 	v.mediaInfo.tabs ? v.mediaInfo.list.filter(t => t.section === v.tab) : v.mediaInfo.list
 );
 
+const updateIndex = () => {
+	const raw = mediaList.value.findIndex(v => v.isTarget);
+	const target = raw >= 0 ? raw : mediaList.value[0]?.index ?? 0;
+	v.checkboxs = [target];
+	requestAnimationFrame(() => {
+		mediaListRef.value?.scrollList?.scrollToItem(target);
+	})
+}
+
 watch(() => v.tab, async () => {
 	v.searching = true;
 	await nextTick(); // trigger v-if
-	v.checkboxs = [mediaList.value.findIndex(v => v.isTarget) ?? 0];
 	v.searching = false;
+	updateIndex();
 });
 
 watch(() => v.checkboxs, (a, b) => {
@@ -144,32 +154,36 @@ watch(() => v.pageIndex, async (pn) => {
 	v.searching = true;
 	const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
 	Object.assign(v.mediaInfo, result);
-	v.checkboxs = [mediaList.value.findIndex(v => v.isTarget) ?? 0];
 	v.searching = false;
+	updateIndex();
 })
 
 defineExpose({ search });
 async function search(overrideInput?: string) {
 	try {
-	const input = (overrideInput ?? v.searchInput).trim();
-	v.searchInput = input;
-	v.listActive = false;
-	v.searching = false;
-	v.checkboxs.length = 0;
-	v.pageIndex = 1;
-	v.tab = -1;
-	if (!input.length) return;
-	v.searching = true;
-	const query = v.mediaType === 'auto'
-		? await parseId(input)
-		: { id: input, type: v.mediaType };
-	log.info('Query: ' + JSON.stringify(query));
-	const info = await data.getMediaInfo(query.id, query.type);
-	v.mediaInfo = info;
-	v.tab = info.list.find(v => v.isTarget)?.section ?? 0;
-	v.listActive = true;
-	} catch(e) { throw e }
-	finally {
+		const input = (overrideInput ?? v.searchInput).trim();
+		v.searchInput = input;
+		v.listActive = false;
+		v.searching = false;
+		v.checkboxs.length = 0;
+		v.pageIndex = 1;
+		v.tab = -1;
+		if (!input.length) return;
+		v.searching = true;
+		const raw = await parseId(input, v.mediaType !== 'auto');
+		const query = {
+			id: raw.id,
+			type: v.mediaType === 'auto' ? raw.type! : v.mediaType,
+		};
+		log.info('Query: ' + JSON.stringify(query));
+		const info = await data.getMediaInfo(query.id, query.type);
+		v.mediaInfo = info;
+		v.listActive = true;
+		v.tab = info.list.find(v => v.isTarget)?.section ?? info.tabs?.[0]?.id ?? -1;
+		updateIndex();
+	} catch(e) {
+		throw e;
+	} finally {
 		v.searching = false;
 	}
 }
@@ -192,6 +206,7 @@ async function updateStein(edge_id: number) {
 
 async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 	if (!v.checkboxs.length) return;
+	v.checkboxs = v.checkboxs.filter(i => i >= 0 && i < mediaList.value.length);
 	v.checkboxs.sort((a, b) => a - b);
 	const limit = pLimit(settings.max_conc);
 	const tasks = v.checkboxs.map(i => limit(async () => {

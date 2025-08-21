@@ -62,7 +62,8 @@
             "ugc_season_cover": "Series Cover",
             "season_cover": "Season Cover",
             "season_horizontal_cover_1610": "Season Poster (16:10)",
-            "season_horizontal_cover_169": "Season Poster (16:9)"
+            "season_horizontal_cover_169": "Season Poster (16:9)",
+            "brief": "Preview-{num}"
         },
         "mediaType": {
             "video": "Video",

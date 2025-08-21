@@ -62,7 +62,8 @@
             "ugc_season_cover": "シリーズカバー",
             "season_cover": "シーズンカバー",
             "season_horizontal_cover_1610": "シーズンポスター (16:10)",
-            "season_horizontal_cover_169": "シーズンポスター (16:9)"
+            "season_horizontal_cover_169": "シーズンポスター (16:9)",
+            "brief": "プレビュー-{num}"
         },
         "mediaType": {
             "video": "動画",

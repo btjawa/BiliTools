@@ -35,6 +35,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
             params = { media_id: _id, ps: 36, pn: options?.pn ?? 1, platform: 'web' };
     }
     const body = await tryFetch(url, { params });
+    console.log(body)
     if (type === Types.MediaType.Video) {
         const data = (body as Resps.VideoInfo).data;
         let stein_gate = undefined;
@@ -154,10 +155,10 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
             tabs: [{
                 id: data.positive.id,
                 name: data.positive.title,
-            }, ...data.section.map(s => ({
+            }, ...data.section ? data.section.map(s => ({
                 id: s.id,
                 name: s.title
-            }))],
+            })) : []],
             stat: {
                 play: data.stat.views,
                 danmaku: data.stat.danmakus,
@@ -167,7 +168,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 favorite: data.stat.favorite,
                 share: data.stat.share,
             },
-            list: [...data.section.map(s => s.episodes.map((ep, index) => ({
+            list: [...(data.section ? data.section.map(s => s.episodes.map((ep, index) => ({
                 title: ep.show_title ?? ep.title ?? String(),
                 cover: ep.cover,
                 desc: data.evaluate,
@@ -182,7 +183,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 type: Types.MediaType.Bangumi,
                 isTarget: _id === ep.id,
                 index
-            }))).flat(), ...data.episodes.map((ep, index) => ({
+            }))) : []).flat(), ...data.episodes.map((ep, index) => ({
                 title: ep.show_title ?? ep.title ?? String(),
                 cover: ep.cover,
                 desc: data.evaluate,
@@ -209,7 +210,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 tags: [],
                 thumbs: [
                     ...getPublicImages(data),
-                    ...data.brief.img.map((v, i) => ({ id: 'brief' + (i+1), url: v.url }))
+                    ...data.brief.img.map((v, i) => ({ id: 'brief-' + (i+1), url: v.url }))
                 ],
                 showtitle: data.title,
                 premiered: data.episodes[0].release_date,

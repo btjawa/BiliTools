@@ -51,6 +51,7 @@ const props = defineProps<{
 }>();
 
 const scrollList = ref<RecycleScrollerInstance>();
+defineExpose({ scrollList });
 
 function show(stein_gate: typeof props.stein_gate, index: number) {
 	const question = stein_gate?.choices?.[index];
@@ -60,6 +61,4 @@ function show(stein_gate: typeof props.stein_gate, index: number) {
 	}) : '1';
 	return (new Function('return ' + exp.match(/^[\d+\-*/.()=<>\s]+$/)?.[0]))();
 }
-
-requestAnimationFrame(() => scrollList.value?.scrollToItem((model.value as number[])[0]));
 </script>

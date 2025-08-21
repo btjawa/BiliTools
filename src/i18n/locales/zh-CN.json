@@ -62,7 +62,8 @@
             "ugc_season_cover": "合集封面",
             "season_cover": "本季封面",
             "season_horizontal_cover_1610": "本季海报 (16:10)",
-            "season_horizontal_cover_169": "本季海报 (16:9)"
+            "season_horizontal_cover_169": "本季海报 (16:9)",
+            "brief": "预览-{num}"
         },
         "mediaType": {
             "video": "视频",

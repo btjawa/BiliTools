@@ -138,7 +138,7 @@ export interface BangumiInfo {
     season_id: number;
     season_title: string;
     seasons: EpisodeInfo[];
-    section: {
+    section?: {
       id: number;
       title: string;
       episodes: EpisodeInfo[];

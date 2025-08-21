@@ -18,7 +18,10 @@
             <button
                 :class="{ 'selected': selected(k, id) }"
                 @click="click(k, id)"
-            >{{ $t(`popup.${k}.${id}`) }}</button>
+            >{{
+                id.includes('-')
+                ? $t(`popup.${k}.${id.split('-')[0]}`, { num: id.split('-')[1] })
+                : $t(`popup.${k}.${id}`) }}</button>
             <Dropdown
                 v-if="id === 'subtitles'"
                 :drop="v.extras.misc.subtitles"

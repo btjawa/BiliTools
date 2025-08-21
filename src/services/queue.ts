@@ -92,8 +92,6 @@ async function handleMedia(task: Types.GeneralTask) {
         })
     }
 
-    console.log(queue)
-
     videoUrls = (video ? [
         video.baseUrl ?? video.base_url,
         ...(video.backupUrl ?? video.backup_url ?? [])
@@ -128,7 +126,9 @@ async function handleThumbs(task: Types.GeneralTask) {
         select.thumb.includes(v.id) ||
         select.thumb.includes(alias[v.id])
     ).map(v => ({
-        id: i18n.global.t('popup.thumb.' + v.id),
+        id: v.id.includes('-')
+            ? i18n.global.t(`popup.thumb.${v.id.split('-')[0]}`, { num: v.id.split('-')[1] })
+            : i18n.global.t('popup.thumb.' + v.id),
         url: v.url.replace('http:', 'https:')
     }));
 }

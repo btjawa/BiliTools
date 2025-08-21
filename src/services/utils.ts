@@ -186,7 +186,7 @@ export async function getBlob(url: string) {
     return URL.createObjectURL(blob);
 }
 
-export async function parseId(input: string) {
+export async function parseId(input: string, ignore?: boolean) {
     const err = new AppError(i18n.global.t('error.invalidInput'));
     if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(input)) throw err;
     try {
@@ -218,6 +218,7 @@ export async function parseId(input: string) {
         }
         throw err;
     } catch(_) { // NOT URL
+        if (ignore) return { id: input, type: null };
         if (!/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(input)) {
             throw err;
         }
