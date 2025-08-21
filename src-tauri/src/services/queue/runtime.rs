@@ -2,7 +2,6 @@ use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, 
 use tokio::sync::{broadcast::{Sender, Receiver, channel}, mpsc, oneshot, RwLock, Semaphore};
 use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use anyhow::{Context, Result, anyhow};
-use notify_rust::Notification;
 use lazy_static::lazy_static;
 
 use tauri::{async_runtime, ipc::Channel, Listener};
@@ -403,13 +402,10 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
     for h in handles {
         h.await?;
     }
+    #[cfg(target_os = "windows")]
     if config::read().notify {
-        let mut notify = Notification::new();
-        #[cfg(target_os = "windows")]
-        {
-            notify.app_id("com.btjawa.bilitools");
-        }
-        notify
+        notify_rust::Notification::new()
+            .app_id("com.btjawa.bilitools")
             .summary("BiliTools")
             .body(&format!("{name}\nDownload complete~"))
             .show().unwrap();

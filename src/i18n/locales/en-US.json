@@ -185,7 +185,7 @@
         "doing": "In Progress",
         "complete": "Completed",
         "empty": "This queue is empty~",
-        "processQueue": "Click to start downloads"
+        "processQueue": "Click to start"
     },
     "settings": {
         "title": "Settings",

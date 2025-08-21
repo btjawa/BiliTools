@@ -185,7 +185,7 @@
         "doing": "実行中",
         "complete": "完了",
         "empty": "キューは空です～",
-        "processQueue": "クリックしてダウンロードを開始"
+        "processQueue": "ダウンロード開始"
     },
     "settings": {
         "title": "設定",
