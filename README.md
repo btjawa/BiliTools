@@ -24,6 +24,10 @@
 
 📖 文档 / 其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools) 
 
+| Dark                   | Light                   |
+| ---------------------- | ----------------------- |
+| ![](./assets/dark.png) | ![](./assets/light.png) |
+
 ## 🧪 支持功能
 
 | 资源解析 | 状态    | 备注                      |
@@ -39,9 +43,7 @@
 | 收藏夹  | ✅ 已完成 | FID 号解析 |
 | NFO刮削 | ✅ 已完成 | 合集/剧集刮削、单集刮削 |
 | 元数据  | ✅ 已完成 | 音频文件支持写入基本元数据 |
-| AI总结  | ✅ 已完成 | Markdown格式，**来自哔哩哔哩 `AI 小助手`** |
-
-<br>
+| AI总结  | ✅ 已完成 | Markdown格式，来自哔哩哔哩 `AI 小助手` |
 
 | 登录 & 验证    | 状态       | 杂项      | 状态      |
 |----------------|-----------|-----------|-----------|
@@ -76,13 +78,13 @@
 | Intel 芯片 (amd64) | `BiliTools_x.y.z_x64.dmg` |
 | M 系列芯片 (aarch64) | `BiliTools_x.y.z_aarch64.dmg` |
 
-在 [Releases](https://github.com/btjawa/BiliTools/releases) 页面按照机型选择好安装包，下载并进行安装
+在 [Releases](https://github.com/btjawa/BiliTools/releases) 页面按照机型选择对应的安装包，下载并进行安装
 
 对于 M 系列芯片的机器，**可能** 需要做以下的额外操作：
 
 - 若提示 “已损坏”
   - 将应用列入白名单，具体流程参见：[打开来自未知开发者的 Mac App](https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac)
-  - 若依然无法使用，打开 **终端** 运行该命令移除隔离：
+  - 若依然无法使用，打开 **终端** 运行以下命令移除隔离：
 
 ```bash
 sudo xattr -r -d com.apple.quarantine /Applications/BiliTools.app
@@ -130,8 +132,6 @@ sudo chmod +sx /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 
 ## 💫 鸣谢
 
-
-
 <a href="https://github.com/btjawa/BiliTools/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=btjawa/BiliTools" />
 </a>
@@ -164,11 +164,11 @@ sudo chmod +sx /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 
 ## 声明
 
-本项目遵守 [GPL-3.0-or-later](/LICENSE) 开源协议，免费开源：
-- 任何形式的二次分发必须 **继续开源、遵守相同协议、保留原作者及版权信息**
+> [!IMPORTANT]
+ >本项目遵守 [GPL-3.0-or-later](/LICENSE) 开源协议，免费开源：<br>
+> **任何形式的二次分发必须继续开源、遵守相同协议、保留原作者及版权信息**
 
 <hr />
-<br />
 
 本项目旨在学习技术与测试代码，**使用者需自行承担风险，切勿滥用！**
 

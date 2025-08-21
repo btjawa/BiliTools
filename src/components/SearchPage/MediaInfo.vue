@@ -10,7 +10,7 @@
             </div>
             </template>
         </div>
-        <span class="text-sm line-clamp-3 mt-2 ellipsis">{{ info.desc }}</span>
+        <span class="text-sm line-clamp-3 mt-1.5 ellipsis">{{ info.desc }}</span>
     </div>
     <div v-if="avatar" @click="open('https://space.bilibili.com/' + info.nfo.upper?.mid)"
         class="flex flex-col items-center cursor-pointer"

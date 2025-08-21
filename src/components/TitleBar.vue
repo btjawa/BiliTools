@@ -4,11 +4,11 @@
 >
     <div v-if="osType() == 'windows'" class='relative z-[100] float-right'>
         <div class="button translate-y-[-5px]" @click="appWindow.minimize()">
-            <div class="!h-[1px]" :style='`mask-image:url("${icons.minimize}")`'></div>
+            <div class="!h-[1px]"></div>
         </div>
         <div class="button" @click="appWindow.toggleMaximize()">
-            <div v-if="!maxed" :style='`mask-image:url("${icons.maximize_0}")`'></div>
-            <div v-else :style='`mask-image:url("${icons.maximize_1}")`'></div>
+            <div v-if="!maxed" :style='`mask-image:url("${icons.max}")`'></div>
+            <div v-else :style='`mask-image:url("${icons.unmax}")`'></div>
         </div>
         <div class="button hover:!bg-[color:#c42b1c]" @click="appWindow.close()">
             <div :style='`mask-image:url("${icons.close}")`'></div>
@@ -27,9 +27,8 @@ const maxed = ref(false);
 const appWindow = getCurrentWindow();
 
 const icons = {
-    minimize: new URL('@/assets/img/titlebar/minimize.svg', import.meta.url).href,
-    maximize_0: new URL('@/assets/img/titlebar/maximize-0.svg', import.meta.url).href,
-    maximize_1: new URL('@/assets/img/titlebar/maximize-1.svg', import.meta.url).href,
+    max: new URL('@/assets/img/titlebar/max.svg', import.meta.url).href,
+    unmax: new URL('@/assets/img/titlebar/unmax.svg', import.meta.url).href,
     close: new URL('@/assets/img/titlebar/close.svg', import.meta.url).href,
 }
 
