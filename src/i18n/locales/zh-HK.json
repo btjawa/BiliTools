@@ -134,7 +134,8 @@
         "sidecar": "Sidecar {0} 的錯誤",
         "checkUpdate": "請到 GitHub 檢查最新更新",
         "invalidInput": "無法解析輸入",
-        "selectLimit": "不建議一次選擇超過 30 個選項"
+        "selectLimit": "不建議一次選擇超過 30 個選項",
+        "clipboardRead": "無法讀取剪貼簿內容"
     },
     "updater": {
         "title": "發現新版本！",
@@ -202,7 +203,16 @@
             "auto": "跟隨系統"
         },
         "clipboard": {
-            "name": "監聽剪貼簿"
+            "name": "監聽剪貼簿",
+            "desc": "若啟用，則會自動檢測剪貼簿中的B站連結並彈出對話方塊。",
+            "dialog": {
+                "title": "檢測到B站內容",
+                "detected": "從剪貼簿中檢測到以下B站內容",
+                "search": "立即搜尋",
+                "cancel": "取消",
+                "loading": "正在獲取影片資訊...",
+                "patience": "請稍候，正在解析內容"
+            }
         },
         "notify": {
             "name": "通知系統",

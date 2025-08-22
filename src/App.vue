@@ -12,6 +12,7 @@
             </Transition>
         </router-view>
 		<Updater ref="updater" />
+		<ClipboardDialog ref="clipboardDialog" @search="handleClipboardSearch" />
     </div>
 </template>
 
@@ -19,6 +20,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 import { ref, onMounted, provide, watch, getCurrentInstance, reactive } from 'vue';
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
+import ClipboardDialog from "@/components/ClipboardDialog.vue";
 import { useRouter } from 'vue-router';
 
 import { fetchUser, activateCookies } from '@/services/login';
@@ -26,10 +28,12 @@ import { useAppStore, useSettingsStore } from '@/store';
 import { setEventHook } from '@/services/utils';
 import { AppError } from '@/services/error';
 import { commands } from '@/services/backend';
+import { clipboardService, type ClipboardDetection } from '@/services/clipboard';
 
 const page = ref();
 const contextMenu = ref<InstanceType<typeof ContextMenu>>();
 const updater = ref<InstanceType<typeof Updater>>();
+const clipboardDialog = ref<InstanceType<typeof ClipboardDialog>>();
 const router = useRouter();
 
 const settings = useSettingsStore();
@@ -68,8 +72,44 @@ onMounted(async () => {
 
 	await fetchUser();
 	await activateCookies();
+	
+	// Initialize clipboard monitoring
+	console.log('[App] Initializing clipboard service');
+	clipboardService.init();
+	setupClipboardMonitoring();
+	
 	app.inited = true;
 })
+
+// Clipboard functionality
+function setupClipboardMonitoring() {
+	console.log('[App] Setting up clipboard monitoring callback');
+	clipboardService.onBilibiliDetected((info: ClipboardDetection) => {
+		console.log('[App] Bilibili content detected, showing dialog:', info);
+		clipboardDialog.value?.show(info);
+	});
+}
+
+function handleClipboardSearch(info: ClipboardDetection) {
+	console.log('[App] Handle clipboard search:', info);
+	// Navigate to search page if not already there
+	if (router.currentRoute.value.path !== '/') {
+		console.log('[App] Navigating to search page');
+		router.push('/');
+	}
+	
+	// Get the search page component and trigger search
+	const searchPage = page.value as any;
+	if (searchPage && typeof searchPage.search === 'function') {
+		console.log('[App] Triggering search with:', info.originalUrl);
+		// Use a slight delay to ensure the component is mounted
+		setTimeout(() => {
+			searchPage.search(info.originalUrl);
+		}, 100);
+	} else {
+		console.warn('[App] Search page component not available or search method not found');
+	}
+}
 </script>
 
 <style lang="scss">
