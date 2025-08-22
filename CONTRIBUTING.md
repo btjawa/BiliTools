@@ -1,12 +1,7 @@
 # Contributing
 
-> [!IMPORTANT]
-> 此项目的开发仍处于早期阶段，因此请耐心等待我们完善此文档。
->
-> The development of this project is still in its early stages, so please be patient for us to complete this document.
-
 > [!WARNING] 
-> **当前文档为简体中文 (zh-CN) 版。**
+> **本文档目前仅有简体中文 (zh-CN) 版。**
 > 
 > 如您希望贡献其他语言，欢迎提交 Pull Request 或 Issue！
 >
@@ -14,25 +9,41 @@
 > 
 > If you'd like to contribute versions in other languages, feel free to submit a Pull Request or Issue!
 
-感谢您有意为 BiliTools 做出贡献！我们欢迎任何形式的参与，无论是报告 bug、提出建议、改进文档，亦或是提交代码。
+感谢您有意为 BiliTools 做出贡献！
 
-若您欲直接提交您实现的代码，请通过 Pull Request 提交，并遵循 [代码提交](#代码提交) 的规范，并参考 [开发向导](#开发向导)。
-
-若您欲提交建议而并非直接实现，请通过 Issues / Discussions 提交，并遵循 [Issue 与 Discussion](#issue-与-discussion) 的规范。
+无论是报告 bug、提出建议、改进文档、亦或是提交代码，我们都非常欢迎。
 
 ## 总览
 
-本项目是一个公益、开源，同时仅用于学习与研究的 [哔哩哔哩](https://www.bilibili.com) 资源解析与下载工具。
+本项目是一个公益、开源的 [哔哩哔哩](https://www.bilibili.com) 工具箱，旨在学习技术与测试代码。
 
 本项目遵循 [GPL-3.0-or-later](/LICENSE) 开源协议，任何形式的二次分发必须 **继续开源、遵守相同协议、保留原作者及版权信息**。
 
 本项目基于 [Tauri v2](https://v2.tauri.app) 框架构建，采用 “前后端分离” 架构：
-- 前端由 [Vite](https://vitejs.dev/) + [Vue3](https://vuejs.org/) 构建，负责用户界面与交互。
-- 后端使用 [Rust](https://www.rust-lang.org/) 实现本地功能逻辑，通过 IPC 通道与前端通信。
+- 前端由 [Vite](https://vitejs.dev/) + [Vue3](https://vuejs.org/) 构建，负责用户界面与交互
+- 后端使用 [Rust](https://www.rust-lang.org/) 实现本地功能逻辑，通过 IPC 通道与前端通信
 
-## 目录与路径结构
+## 目录结构
 
-> Work in progress.
+- `src/` 前端源代码
+  - `assets/` 静态资源
+  - `components/` 各 Vue 组件
+  - `views/` 页面入口
+  - `lib/` 静态库
+  - `proto/` ProtoBuf 相关
+  - `router/` 页面导航路由
+  - `services/` 前端逻辑 (API 请求，推送队列与同步状态等)
+  - `store/` Pinia 全局响应式状态管理
+  - `i18n/` 多语言支持
+    - `locales` 多语言翻译
+  - `types/` TS 类型声明
+- `src-tauri`
+  - `binaries/` Sidecar
+  - `capabilities/` Tauri 运行时权限
+  - `src/` 后端源代码
+    - `services/` 后端服务 (aria2c, ffmpeg, login, queue)
+    - `storage/` 数据持久化 (config, cookies, archive)
+- `scripts/` 构建工具脚本
 
 ## Issue 与 Discussion
 
@@ -60,10 +71,6 @@
 
 ## 开发向导
 
-`dev` 分支存储开发中、且不稳定的代码，您在进行开发时应优先使用该分支作为 `base`.
-
-`master` 分支存储已稳定、且可发行的代码，只有在部分文档修改时，才考虑使用该分支。
-
 ### 准备
 
 如总览所述，您需要准备以下环境：
@@ -81,9 +88,33 @@ $ cd BiliTools
 $ npm install
 ```
 
-### 技术选型
+启动开发服务器与实例：
 
-对于前端，我们推荐优先使用 [TypeScript](https://www.typescriptlang.org/) 而非传统 [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)。
+```bash
+npm run tauri dev
+```
+
+### 分支策略
+
+- `dev`：开发分支，存储开发中、且不稳定的代码，提交新功能与修复
+- `master`：稳定分支，仅在发布版本时合并
+
+**提交 PR 时请提交至主仓库的 `dev` 分支，切勿提交至 `master` 分支。**
+
+### 提交规范
+
+所有提交信息都应遵循 [约定式提交](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 规范。
+
+例：
+- `feat: notifications for Linux`
+- `fix: increase aria2c polling interval`
+- `chore: cleanup unused assets`
+
+### 代码风格 & 技术选型
+
+#### 前端
+
+我们推荐优先使用 [TypeScript](https://www.typescriptlang.org/) 而非传统 [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)。
 
 TypeScript 相比后者具有更强的类型系统，有助于在开发阶段修复潜在错误，提升可维护性。
 
@@ -91,25 +122,23 @@ TypeScript 相比后者具有更强的类型系统，有助于在开发阶段修
 
 - 使用 `.ts` 文件而不是 `.js` 文件。
 - 在 `.vue` 文件中，为 `<script>` 标签添加 `lang="ts"` 属性:
-```vue
+```html
 <script lang="ts">
 </script>
 ```
 
-### 预览
+Vue 开发时，请使用 `Composition API` 而不是 `Options API`。
 
-启动开发服务器：
+例如：
 
-```bash
-npm run tauri dev
+- 为 `<script>` 标签添加 `setup` 属性：
+```html
+<script lang="ts" setup>
+</script>
 ```
 
-对于前端，得益于 Vite 的热重载支持，修改源文件后可立刻看到更新后的效果。
+#### 后端
 
-对于后端，修改源文件后会触发 Tauri 的自动重新编译，也可中断当前开发服务器实例后，手动重新启动开发服务器。
+尽可能使用 `anyhow::Result` 代替标准库的 Result，同时请尽可能少的使用 `unwrap()` ，而是使用 `?` 冒泡向上传递错误。
 
-## 代码提交
-
-所有提交信息都应遵循 [约定式提交](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 规范。
-
-> Work in progress.
+对于关键逻辑，请使用 `anyhow::Context` 添加报错上下文。
