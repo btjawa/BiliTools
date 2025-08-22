@@ -94,7 +94,7 @@
 ## 💫 鸣谢
 
 <a href="https://github.com/btjawa/BiliTools/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=btjawa/BiliTools" />
+  <img src="https://contrib.rocks/image?repo=btjawa/BiliTools&max=100" />
 </a>
 
 <br />
