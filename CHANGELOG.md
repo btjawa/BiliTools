@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0-5] - 2025-08-22
+
+## 更新
+
+- [`75fc043`](https://github.com/btjawa/BiliTools/commit/75fc043351d9669ee54f09b5316c31344d4f27f1) 支持解析稍后再看 ([#83](https://github.com/btjawa/BiliTools/issues/83))
+
+## 修复
+
+- [`75fc043`](https://github.com/btjawa/BiliTools/commit/75fc043351d9669ee54f09b5316c31344d4f27f1) 修复 aria2c 超时问题 ([#127](https://github.com/btjawa/BiliTools/issues/127), [#122](https://github.com/btjawa/BiliTools/issues/122), [#111](https://github.com/btjawa/BiliTools/issues/111), [#103](https://github.com/btjawa/BiliTools/issues/103), [#93](https://github.com/btjawa/BiliTools/issues/93))
+- [`fbe5adc`](https://github.com/btjawa/BiliTools/commit/fbe5adce71b0043cfbe23703fe792b65be64f230) 修复视频列表中索引偏移量问题 ([#128](https://github.com/btjawa/BiliTools/issues/128), [#126](https://github.com/btjawa/BiliTools/issues/126))
+
 ## [1.4.0-4] - 2025-08-21
 
 (`1.4.0-3`) Update STORAGE_VERSION to 8
