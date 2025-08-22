@@ -38,8 +38,64 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
     console.log(body)
     if (type === Types.MediaType.Video) {
         const data = (body as Resps.VideoInfo).data;
-        let stein_gate = undefined;
-        let tabs = undefined;
+        const map = (ep: Resps.UgcInfo, index: number) => ({
+            title: ep.title,
+            cover: ep.arc.pic,
+            desc: ep.arc.desc,
+            aid: ep.aid,
+            bvid: ep.bvid,
+            cid: ep.cid,
+            duration: ep.page.duration,
+            pubtime: ep.arc.pubdate,
+            type: Types.MediaType.Video,
+            isTarget: ep.aid === data.aid,
+            index
+        });
+        let sections: Types.MediaInfo['sections'] = undefined;
+        let stein_gate: Types.MediaInfo['stein_gate'] = undefined;
+        let list: Types.MediaInfo['list'] = [{
+            title: data.title,
+            cover: data.pic,
+            desc: data.desc,
+            aid: data.aid,
+            bvid: data.bvid,
+            cid: data.cid,
+            duration: data.duration,
+            pubtime: data.pubdate,
+            type: Types.MediaType.Video,
+            isTarget: true,
+            index: 0,
+        }];
+        if (data.pages?.length > 1) {
+            list = data.pages.map((page, index) => ({
+                title: page.part || data.title,
+                cover: data.pic,
+                desc: data.desc,
+                aid: data.aid,
+                bvid: data.bvid,
+                cid: page.cid,
+                duration: page.duration,
+                pubtime: data.pubdate,
+                type: Types.MediaType.Video,
+                isTarget: index === 0,
+                index
+            }))
+        }
+        if (data.ugc_season) {
+            const target = data.ugc_season.sections.find(v => v.episodes.some(v => v.aid === data.aid));
+            if (target) list = target.episodes.map(map);
+            sections = {
+                target: target?.id ?? data.ugc_season.sections[0].id,
+                tabs: data.ugc_season.sections.map(v => ({
+                    id: v.id, name: v.title
+                })),
+                data: data.ugc_season.sections?.reduce<Record<number, Types.MediaItem[]>>((acc, { id, episodes }) => {
+                    if (!acc[id]) acc[id]= [];
+                    acc[id].push(...episodes.map(map));
+                    return acc;
+                }, {})
+            }
+        }
         if (data.rights.is_stein_gate) {
             const playerInfo = await getPlayerInfo(data.aid, data.cid);
             const steinInfo = await getSteinInfo(data.aid, playerInfo.interaction.graph_version);
@@ -51,10 +107,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 hidden_vars: steinInfo.hidden_vars,
             };
         }
-        if (data.ugc_season) tabs = data.ugc_season.sections.map(v => ({
-            id: v.id,
-            name: v.title
-        }));
         const tagsResp = await tryFetch('https://api.bilibili.com/x/tag/archive/tags', { params });
         return {
             type,
@@ -77,7 +129,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 staff: [],
             },
             stein_gate, 
-            tabs,
             stat: {
                 play: data.stat.view,
                 danmaku: data.stat.danmaku,
@@ -87,48 +138,28 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 favorite: data.stat.favorite,
                 share: data.stat.share,
             },
-            list: (data.pages.length > 1 ? data.pages?.map((page, index) => ({
-                title: page.part || data.title,
-                cover: data.pic,
-                desc: data.desc,
-                aid: data.aid,
-                bvid: data.bvid,
-                cid: page.cid,
-                duration: page.duration,
-                pubtime: data.pubdate,
-                type: Types.MediaType.Video,
-                isTarget: index === 0,
-                index
-            })) : data.ugc_season?.sections.map(s => s.episodes.map((ep, index) => ({
-                title: ep.title,
-                cover: ep.arc.pic,
-                desc: ep.arc.desc,
-                section: s.id,
-                aid: ep.aid,
-                bvid: ep.bvid,
-                cid: ep.cid,
-                duration: ep.page.duration,
-                pubtime: ep.arc.pubdate,
-                type: Types.MediaType.Video,
-                isTarget: ep.aid === data.aid,
-                index
-            }))).flat()) ?? [{
-                title: data.title,
-                cover: data.pic,
-                desc: data.desc,
-                aid: data.aid,
-                bvid: data.bvid,
-                cid: data.cid,
-                duration: data.duration,
-                pubtime: data.pubdate,
-                type: Types.MediaType.Video,
-                isTarget: true,
-                index: 0,
-            }]
+            sections,
+            list
         };
     } else if (type === Types.MediaType.Bangumi) {
         const data = (body as Resps.BangumiInfo).result;
         const season = data.seasons.find(v => v.season_id === data.season_id);
+        const map = (ep: Resps.EpisodeInfo, index: number) => ({
+            title: ep.show_title ?? ep.title ?? String(),
+            cover: ep.cover,
+            desc: data.evaluate,
+            section: data.positive.id,
+            aid: ep.aid,
+            bvid: ep.bvid,
+            cid: ep.cid,
+            epid: ep.ep_id,
+            ssid: data.season_id,
+            duration: ep.duration / 1000,
+            pubtime: ep.pub_time,
+            type: Types.MediaType.Bangumi,
+            isTarget: _id === ep.id,
+            index
+        });
         return {
             type,
             id: data.season_id,
@@ -152,13 +183,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 }),
                 staff: data.staff.split('\n')
             },
-            tabs: [{
-                id: data.positive.id,
-                name: data.positive.title,
-            }, ...data.section ? data.section.map(s => ({
-                id: s.id,
-                name: s.title
-            })) : []],
             stat: {
                 play: data.stat.views,
                 danmaku: data.stat.danmakus,
@@ -168,37 +192,24 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
                 favorite: data.stat.favorite,
                 share: data.stat.share,
             },
-            list: [...(data.section ? data.section.map(s => s.episodes.map((ep, index) => ({
-                title: ep.show_title ?? ep.title ?? String(),
-                cover: ep.cover,
-                desc: data.evaluate,
-                section: s.id,
-                aid: ep.aid,
-                bvid: ep.bvid,
-                cid: ep.cid,
-                epid: ep.ep_id,
-                ssid: data.season_id,
-                duration: ep.duration / 1000,
-                pubtime: ep.pub_time,
-                type: Types.MediaType.Bangumi,
-                isTarget: _id === ep.id,
-                index
-            }))) : []).flat(), ...data.episodes.map((ep, index) => ({
-                title: ep.show_title ?? ep.title ?? String(),
-                cover: ep.cover,
-                desc: data.evaluate,
-                section: data.positive.id,
-                aid: ep.aid,
-                bvid: ep.bvid,
-                cid: ep.cid,
-                epid: ep.ep_id,
-                ssid: data.season_id,
-                duration: ep.duration / 1000,
-                pubtime: ep.pub_time,
-                type: Types.MediaType.Bangumi,
-                isTarget: _id === ep.id,
-                index
-            }))]
+            sections: {
+                target: data.positive.id,
+                tabs: [{
+                    id: data.positive.id,
+                    name: data.positive.title
+                }, ...(data.section ? data.section.map(v => ({
+                    id: v.id, name: v.title
+                })) : [])],
+                data: {
+                    [data.positive.id]: data.episodes.map(map),
+                    ...data.section?.reduce<Record<number, Types.MediaItem[]>>((acc, { id, episodes }) => {
+                        if (!acc[id]) acc[id]= [];
+                        acc[id].push(...episodes.map(map));
+                        return acc;
+                    }, {}) ?? {}
+                }
+            },
+            list: data.episodes.map(map)
         };
     } else if (type === Types.MediaType.Lesson) {
         const data = (body as Resps.LessonInfo).data;

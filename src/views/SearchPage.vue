@@ -39,7 +39,7 @@
 			<Transition name="slide">
 			<MediaList
 				class="flex-1"
-				:list="mediaList" ref="mediaListRef"
+				:list="v.mediaInfo.list" ref="mediaListRef"
 				:stein_gate="v.mediaInfo.stein_gate"
 				:update-stein="updateStein"
 				v-model="v.checkboxs"
@@ -57,13 +57,13 @@
 					<span>{{ $t('page') }}</span>
 					<input type="number" min="1" v-model="v.pageIndex" />
 				</template>
-				<div class="tab" v-if="v.mediaInfo.tabs">
-				<button v-for="t in v.mediaInfo.tabs" @click="v.tab = t.id"
-					class="!w-full" :class="{ 'active': v.tab === t.id }"
-				>
-					<span>{{ t.name }}</span>
-					<label class="primary-color"></label>
-				</button>
+				<div class="tab">
+					<button v-for="t in v.mediaInfo.sections?.tabs" @click="v.tab = t.id"
+						class="!w-full" :class="{ 'active': v.tab === t.id }"
+					>
+						<span>{{ t.name }}</span>
+						<label class="primary-color"></label>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -77,7 +77,7 @@ import { MediaInfo, MediaList, Popup } from '@/components/SearchPage';
 import { Dropdown, Empty } from '@/components';
 import DownPage from './DownPage.vue';
 
-import { computed, inject, nextTick, reactive, Ref, ref, watch } from 'vue';
+import { inject, nextTick, reactive, Ref, ref, watch } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import * as log from '@tauri-apps/plugin-log';
 import { useRouter } from 'vue-router';
@@ -113,8 +113,8 @@ const buttons = [{
 	icon: 'fa-check-double',
 	text: 'search.selectAll',
 	action: () => v.checkboxs = 
-		v.checkboxs.length === mediaList.value.length 
-		? [] : [...Array(mediaList.value.length).keys()]
+		v.checkboxs.length === v.mediaInfo.list.length 
+		? [] : [...Array(v.mediaInfo.list.length).keys()]
 }];
 
 const popup = ref<InstanceType<typeof Popup>>();
@@ -125,21 +125,18 @@ const router = useRouter()
 const user = useUserStore();
 const settings = useSettingsStore();
 
-const mediaList = computed(() =>
-	v.mediaInfo.tabs ? v.mediaInfo.list.filter(t => t.section === v.tab) : v.mediaInfo.list
-);
-
 const updateIndex = () => {
-	const raw = mediaList.value.findIndex(v => v.isTarget);
-	const target = raw >= 0 ? raw : mediaList.value[0]?.index ?? 0;
+	const raw = v.mediaInfo.list.findIndex(v => v.isTarget);
+	const target = raw >= 0 ? raw : v.mediaInfo.list[0]?.index ?? 0;
 	v.checkboxs = [target];
 	requestAnimationFrame(() => {
 		mediaListRef.value?.scrollList?.scrollToItem(target);
 	})
 }
 
-watch(() => v.tab, async () => {
+watch(() => v.tab, async (t) => {
 	v.searching = true;
+	v.mediaInfo.list = v.mediaInfo.sections!.data[t] ?? v.mediaInfo.list;
 	await nextTick(); // trigger v-if
 	v.searching = false;
 	updateIndex();
@@ -179,7 +176,7 @@ async function search(overrideInput?: string) {
 		const info = await data.getMediaInfo(query.id, query.type);
 		v.mediaInfo = info;
 		v.listActive = true;
-		v.tab = info.list.find(v => v.isTarget)?.section ?? info.tabs?.[0]?.id ?? -1;
+		if (info.sections) v.tab = info.sections.target;
 		updateIndex();
 	} catch(e) {
 		throw e;
@@ -206,17 +203,17 @@ async function updateStein(edge_id: number) {
 
 async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 	if (!v.checkboxs.length) return;
-	v.checkboxs = v.checkboxs.filter(i => i >= 0 && i < mediaList.value.length);
+	v.checkboxs = v.checkboxs.filter(i => i >= 0 && i < v.mediaInfo.list.length);
 	v.checkboxs.sort((a, b) => a - b);
 	const limit = pLimit(settings.max_conc);
 	const tasks = v.checkboxs.map(i => limit(async () => {
-		const info = mediaList.value[i];
+		const info = v.mediaInfo.list[i];
 		if (!info.cid && info.aid) {
 			info.cid = await data.getCid(info.aid);
 		}
 	}));
 	await Promise.all(tasks);
-	const info = mediaList.value[v.checkboxs[0]];
+	const info = v.mediaInfo.list[v.checkboxs[0]];
 	const nfo = v.mediaInfo.nfo;
 	const type = info.type ?? v.mediaInfo.type;
 	popup.value?.init(await data.getPlayUrl(info, type, fmt), {

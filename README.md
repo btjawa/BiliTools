@@ -22,11 +22,21 @@
 
 💡 一个简洁、轻量的哔哩哔哩工具箱，基于 [Tauri](https://github.com/tauri-apps/tauri) 构建。
 
-📖 文档 / 其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools) 
+<!-- - 📖 使用文档：[https://docs.btjawa.top](https://docs.btjawa.top)  -->
 
-| Dark                   | Light                   |
-| ---------------------- | ----------------------- |
-| ![](./assets/dark.png) | ![](./assets/light.png) |
+- 🧾 使用文档及其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools)
+
+- 🚀 下载页：[Releases](https://github.com/btjawa/BiliTools/releases)
+
+安装说明、使用向导与常见问题等，请参见文档
+
+| Dark                       | Light                        |
+| -------------------------- | ---------------------------- |
+| ![Dark](./assets/dark.png) | ![Light](./assets/light.png) |
+
+> [!IMPORTANT]
+> 本项目基于用户账号解析资源，因此你需要订阅大会员、或是购买对应内容后才能解析对应资源
+
 
 ## 🧪 支持功能
 
@@ -57,12 +67,10 @@
 
 ## 💾 安装指南
 
-目前暂不提供便携版本。
-
 ### Windows
 
 > [!Note]
-> 暂仅支持 Windows 8.1+ 版本<br>
+> 暂不支持 Windows ARM 平台，不支持 Windows 7<br>
 > 若未安装 `WebView2 运行时`，请前往 [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2) 获取并安装
 
 在 [Releases](https://github.com/btjawa/BiliTools/releases) 页面下载 `BiliTools_x.y.z_x64-setup.exe` 并进行安装
@@ -104,7 +112,7 @@ sudo chown root:admin /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 sudo chmod +sx /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 ```
 
-## 🛠️ 参与贡献
+## �🛠️ 参与贡献
 
 > [!TIP]
 > 本项目将于 `v1.4.0` 正式版发布后进入稳定状态，暂缓更新。
@@ -144,6 +152,8 @@ sudo chmod +sx /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 - [FFmpeg](https://git.ffmpeg.org/ffmpeg.git) FFmpeg is a collection of libraries and tools to process multimedia content.
 - [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 支持特殊弹幕的xml转ass格式转换工具
 - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 哔哩哔哩-API收集整理
+
+- [Vercel](https://github.com/vercel/vercel) Develop. Preview. Ship.
 
 <a href="https://www.star-history.com/#btjawa/BiliTools&Date" alt="Star History Chart">
 <picture>

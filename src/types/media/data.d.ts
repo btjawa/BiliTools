@@ -8,6 +8,30 @@ export interface VideoTags {
   }[];
 }
 
+export interface UgcInfo {
+  season_id: number;
+  id: number;
+  aid: number;
+  cid: number;
+  title: string;
+  arc: {
+    aid: number;
+    pic: string;
+    title: string;
+    pubdate: number;
+    ctime: number;
+    desc: string;
+    duration: number;
+  };
+  page: {
+    cid: number;
+    page: number;
+    part: string;
+    duration: number;
+  };
+  bvid: string;
+}
+
 export interface VideoInfo {
   code: number;
   message: string;
@@ -56,29 +80,7 @@ export interface VideoInfo {
         id: number;
         type: number;
         title: string;
-        episodes: {
-          season_id: number;
-          id: number;
-          aid: number;
-          cid: number;
-          title: string;
-          arc: {
-            aid: number;
-            pic: string;
-            title: string;
-            pubdate: number;
-            ctime: number;
-            desc: string;
-            duration: number;
-          };
-          page: {
-            cid: number;
-            page: number;
-            part: string;
-            duration: number;
-          };
-          bvid: string;
-        }[];
+        episodes: UgcInfo[];
       }[];
     };
   };

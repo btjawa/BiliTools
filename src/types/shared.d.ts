@@ -123,7 +123,6 @@ export interface MediaItem {
   pubtime: number; // sec timestamp
   isTarget: boolean;
   type: MediaType; // specific type
-  section?: number; // for tabs
   aid?: number; // general video
   sid?: number; // music
   fid?: number; // favorite
@@ -131,7 +130,7 @@ export interface MediaItem {
   bvid?: string;
   epid?: number;
   ssid?: number;
-  index: number
+  index: number;
 }
 
 export interface MediaNfo {
@@ -163,19 +162,23 @@ export interface MediaInfo {
     choices?: SteinInfo["data"]["edges"]["questions"][0]["choices"];
     hidden_vars: SteinInfo["data"]["hidden_vars"];
   };
-  tabs?: {
-    id: number;
-    name: string;
-  }[],
   stat: {
-    play?: number,
-    danmaku?: number,
-    reply?: number | string,
-    like?: number,
-    coin?: number,
-    favorite?: number,
-    share?: number,
-  },
+    play?: number;
+    danmaku?: number;
+    reply?: number | string;
+    like?: number;
+    coin?: number;
+    favorite?: number;
+    share?: number;
+  };
+  sections?: {
+    target: number;
+    tabs: {
+      id: number;
+      name: string;
+    }[];
+    data: Record<number, MediaItem[]>;
+  };
   list: MediaItem[]
 }
 
