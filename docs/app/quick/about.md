@@ -82,7 +82,7 @@
 ## 声明
 
 > [!IMPORTANT]
-> 本项目遵守 [GPL-3.0-or-later](/LICENSE) 开源协议，免费开源：<br>
+> 本项目遵守 [GPL-3.0-or-later](https://github.com/btjawa/BiliTools/blob/master/LICENSE) 开源协议，免费开源：<br>
 > **任何形式的二次分发必须继续开源、遵守相同协议、保留原作者及版权信息**
 
 <hr />

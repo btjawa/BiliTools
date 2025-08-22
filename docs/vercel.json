@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vitepress",
+  "buildCommand": "npm run build",
+  "outputDirectory": "app/.vitepress/dist",
+  "ignoreCommand": "git diff --name-only $VERCEL_GIT_COMMIT_SHA~1 $VERCEL_GIT_COMMIT_SHA | grep -q '^app/' || exit 0; exit 1;",
+  "git": {
+    "deploymentEnabled": {
+      "master": true,
+      "dev": true,
+      "*": false
+    }
+  }
+}

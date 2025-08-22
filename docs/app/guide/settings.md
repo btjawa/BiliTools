@@ -72,7 +72,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 详细请见 [命名格式](#命名格式)。
 
 若启用了此选项，则每个任务在下载时在顶层文件夹中新建 “子文件夹”，将文件存放于其中。
-```tree
+```txt
 输出目录
 └── 顶层文件夹
     └── 子文件夹
@@ -80,7 +80,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 ```
 
 若禁用了此选项，则每个任务在下载时将会把文件 “平铺” 存放于顶层文件夹中，不再创建子文件夹。
-```tree
+```txt
 输出目录
 └── 顶层文件夹
     └── 文件
@@ -143,7 +143,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 
 应用在下载时，默认采用的文件夹结构为：
 
-```tree
+```txt
 输出目录
 └── 顶层文件夹
     ├── poster.jpg
@@ -181,7 +181,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 
 输出效果如下：
 
-```tree
+```txt
 输出目录
 └── 收藏夹 - 标题 (2020-01-01_00-00-00)
     ├── (1) 视频 - 标题
