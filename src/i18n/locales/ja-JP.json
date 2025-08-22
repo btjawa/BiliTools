@@ -134,7 +134,8 @@
         "sidecar": "Sidecar {0} のエラー",
         "checkUpdate": "GitHub で最新バージョンを確認してください",
         "invalidInput": "入力を解析できません",
-        "selectLimit": "一度に 30 個以上選択することは推奨されません"
+        "selectLimit": "一度に 30 個以上選択することは推奨されません",
+        "clipboardRead": "クリップボードの内容を読み取れませんでした"
     },
     "updater": {
         "title": "新しいバージョンが見つかりました！",
@@ -202,7 +203,16 @@
             "auto": "システムに従う"
         },
         "clipboard": {
-            "name": "クリップボード監視"
+            "name": "クリップボード監視",
+            "desc": "有効にすると、クリップボード内のBilibiliリンクを自動検出してダイアログを表示します。",
+            "dialog": {
+                "title": "Bilibiliコンテンツを検出",
+                "detected": "クリップボードから以下のBilibiliコンテンツを検出しました",
+                "search": "今すぐ検索",
+                "cancel": "キャンセル",
+                "loading": "動画情報を取得中...",
+                "patience": "しばらくお待ちください、コンテンツを解析中"
+            }
         },
         "notify": {
             "name": "通知",
