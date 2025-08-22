@@ -1,44 +1,18 @@
-<div align="center">
-<img src="./assets/logo.svg" width=500 />
-
-<h1>BiliTools - 哔哩哔哩工具箱</h1>
-
-<a href="https://trendshift.io/repositories/13286" target="_blank">
-  <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-</a>
-
-<div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
-<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
-</div>
-
-简体中文 | [English](./README_EN.md) | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md)
-</div>
+<div align="center"><img width=500 src="/hero.svg" alt="Logo" /></div>
 
 <hr />
 
 💡 一个简约、轻量的哔哩哔哩工具箱，基于 [Tauri](https://github.com/tauri-apps/tauri) 构建。
 
-- 📖 使用文档：[https://docs.btjawa.top](https://docs.btjawa.top) 
-
-- 🧾 其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools)
-
-- 🚀 下载页：[Releases](https://github.com/btjawa/BiliTools/releases)
-
-安装说明、使用向导与常见问题等，请参见文档
-
 | 暗色 | 亮色 |
-| -------------------------- | ---------------------------- |
-| ![Dark](./assets/dark.png) | ![Light](./assets/light.png) |
+| ------------------ | -------------------- |
+| ![Dark](/dark.png) | ![Light](/light.png) |
 
 > [!IMPORTANT]
 > 本项目基于用户账号解析资源，因此你需要订阅大会员、或是购买对应内容后才能解析对应资源
 
 
-## 🧪 支持功能
+## 功能
 
 | 资源解析 | 状态    | 备注                      |
 |---------|---------|---------------------------|
@@ -65,33 +39,13 @@
 | 风控验证        | ✅ 已完成 | 音频转 MP3 | ✅ 已完成 |
 | 指纹验证        | ✅ 已完成 | 并发处理   | ✅ 已完成 |
 
-## 🛠️ 参与贡献
-
-> [!TIP]
-> 本项目将于 `v1.4.0` 正式版发布后进入稳定状态，暂缓更新。
-
-欢迎各位为本项目做出贡献，让本项目变得更好！请参考 [Contributing](./CONTRIBUTING.md) 进行贡献~
-
-在提交 Issue 时，请提供足够的信息，以便于维护者分析并解决你的问题
-
-## 🌎 多语言支持
-
-我们主要维护 **简体中文 (zh-CN)**，同时该语言将作为其他语言的翻译源
-
-| 代码           | 状态       |
-|----------------|-----------|
-| zh-CN          | ✅ 已完成 |
-| zh-HK          | ✅ 已完成 |
-| en-US          | ⚠️ ~90% |
-| ja-JP          | ⚠️ ~70% |
-
-## ⚡ 赞助
+## 赞助
 
 如果你喜欢，并想助力这个项目，请考虑到 [爱发电](https://afdian.com/a/BTJ_Shiroi) 请我喝杯咖啡~
 
 你的支持将是 [我](https://github.com/btjawa) 持续维护的一大动力！
 
-## 💫 鸣谢
+## 鸣谢
 
 <a href="https://github.com/btjawa/BiliTools/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=btjawa/BiliTools" />
