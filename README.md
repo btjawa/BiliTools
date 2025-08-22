@@ -112,7 +112,7 @@ sudo chown root:admin /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 sudo chmod +sx /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 ```
 
-## �🛠️ 参与贡献
+## 🛠️ 参与贡献
 
 > [!TIP]
 > 本项目将于 `v1.4.0` 正式版发布后进入稳定状态，暂缓更新。

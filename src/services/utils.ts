@@ -200,6 +200,7 @@ export async function parseId(input: string, ignore?: boolean) {
             match = input.match(/fid=(\d+)/i);
             if (match) return { id: match[1], type: MediaType.Favorite };
         }
+        console.log(segs);
         switch (segs[1]) {
             case 'video':
                 match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
@@ -215,6 +216,12 @@ export async function parseId(input: string, ignore?: boolean) {
                 if (match) return { id: match[0], type: MediaType.Music };
                 match = input.match(/am(\d+)/i);
                 if (match) return { id: match[0], type: MediaType.MusicList }; break;
+            case 'list':
+                if (segs[2] === 'watchlater') {
+                    const params = url.searchParams;
+                    match = params.get('aid') ?? params.get('bvid');
+                    if (match) return { id: match, type: MediaType.Video };
+                }
         }
         throw err;
     } catch(_) { // NOT URL

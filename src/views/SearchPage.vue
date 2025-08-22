@@ -136,7 +136,7 @@ const updateIndex = () => {
 
 watch(() => v.tab, async (t) => {
 	v.searching = true;
-	v.mediaInfo.list = v.mediaInfo.sections!.data[t] ?? v.mediaInfo.list;
+	v.mediaInfo.list = v.mediaInfo.sections?.data[t] ?? v.mediaInfo.list;
 	await nextTick(); // trigger v-if
 	v.searching = false;
 	updateIndex();

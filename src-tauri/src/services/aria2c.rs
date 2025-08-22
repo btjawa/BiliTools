@@ -16,7 +16,7 @@ use crate::{
 };
 
 lazy_static! {
-    static ref ARIA2_RPC: Arc<RwLock<Aria2Rpc>> = Arc::new(RwLock::new(Aria2Rpc::new()));
+    static ref ARIA2_RPC: Arc<Aria2Rpc> = Arc::new(Aria2Rpc::new());
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,7 +27,7 @@ struct Aria2Error {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Aria2Resp<T> {
-    id: String,
+    id: Value,
     jsonrpc: String,
     result: Option<T>,
     error: Option<Aria2Error>
@@ -82,7 +82,7 @@ impl Aria2Rpc {
     pub async fn update(&self, port: u16, secret: String) -> Result<()> {
         let client = Client::builder()
             .no_proxy()
-            .timeout(Duration::from_secs(1))
+            .timeout(Duration::from_secs(5))
             .connect_timeout(Duration::from_secs(1))
             .pool_max_idle_per_host(2)
             .pool_idle_timeout(Duration::from_secs(10))
@@ -149,7 +149,6 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
         )
     ]);
     let _ = app.shell().command(cmd.0).args(cmd.1).spawn();
-    let client = ARIA2_RPC.read().await;
     let stderr = Arc::new(RwLock::new(String::new()));
     let stderr_clone = stderr.clone();
     async_runtime::spawn(async move {
@@ -167,11 +166,12 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
                     name: name.clone(), error: format!("Process {name} ({pid}) is dead")
                 }.emit(app).unwrap();
             }
-            if let Err(e) = client.request::<Value>("getGlobalStat", vec![]).await {
+            if let Err(e) = ARIA2_RPC.request::<Value>("getGlobalStat", vec![]).await {
                 SidecarError {
                     name: name.clone(), error: e.message
                 }.emit(app).unwrap();
             }
+            sleep(Duration::from_secs(5)).await;
         }
     });
     while let Some(event) = rx.recv().await {
@@ -192,7 +192,7 @@ pub async fn init() -> Result<()> {
     log::info!("Found a free port for aria2c: {port}");
     drop(l);
 
-    ARIA2_RPC.read().await.update(port, secret.clone()).await?;
+    ARIA2_RPC.update(port, secret.clone()).await?;
 
     let app = get_app_handle();
     let session_file = WORKING_PATH.join("aria2.session");
@@ -212,6 +212,7 @@ pub async fn init() -> Result<()> {
         "--referer=https://www.bilibili.com/".into(),
         "--header=Origin: https://www.bilibili.com".into(),
         format!("--input-file={session_file}"),
+        format!("--save-session-interval={}", 5),
         format!("--save-session={session_file}"),
         format!("--user-agent={USER_AGENT}"),
         format!("--rpc-listen-port={port}"),
@@ -225,17 +226,17 @@ pub async fn init() -> Result<()> {
 }
 
 pub async fn cancel(gid: Arc<String>) -> TauriResult<()> {
-    ARIA2_RPC.read().await.request::<Value>("forceRemove", vec![json!(gid)]).await?;
+    ARIA2_RPC.request::<Value>("forceRemove", vec![json!(gid)]).await?;
     Ok(())
 }
 
 pub async fn pause(gid: Arc<String>) -> TauriResult<()> {
-    ARIA2_RPC.read().await.request::<Value>("pause", vec![json!(gid)]).await?;
+    ARIA2_RPC.request::<Value>("pause", vec![json!(gid)]).await?;
     Ok(())
 }
 
 pub async fn resume(gid: Arc<String>) -> TauriResult<()> {
-    ARIA2_RPC.read().await.request::<Value>("unpause", vec![json!(gid)]).await?;
+    ARIA2_RPC.request::<Value>("unpause", vec![json!(gid)]).await?;
     Ok(())
 }
 
@@ -283,10 +284,9 @@ pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<S
             "gid": gid,
         })
     ];
-    let client = ARIA2_RPC.read().await;
-    client.request::<Value>("addUri", params).await?;
+    ARIA2_RPC.request::<Value>("addUri", params).await?;
     loop {
-        let data = client.request::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await?;
+        let data = ARIA2_RPC.request::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await?;
         if let Some(code) = data.error_code {
             let code = code.parse::<isize>()?;
             if code != 0 {
@@ -296,14 +296,14 @@ pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<S
                 ));
             }
         }
-        tx.send((
+        tx.try_send((
             data.total_length.parse::<u64>()?,
             data.completed_length.parse::<u64>()?
-        )).await?;
+        ))?;
         if data.status.as_str() == "complete" {
             break;
         }
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(500)).await;
     }
     Ok(dir.join(name))
 }
