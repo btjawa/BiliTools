@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vitepress",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./docs"
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != master ] || git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- ."
 }
