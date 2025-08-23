@@ -10,7 +10,6 @@
         "height": 680,
         "transparent": true,
         "decorations": false,
-        "backgroundColor": "#00000000",
         "dragDropEnabled": false
       }
     ]

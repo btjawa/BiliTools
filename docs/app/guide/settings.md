@@ -104,7 +104,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 - 日期 (`DATE & YEAR`，`YYYY-MM-DD`)
 - 标题 (`title`)
 - 流派 / 标签 (`GENRE / genre`)
-- 备注 / 简洁 (`comment`)
+- 备注 / 简介 (`comment`)
 
 ### 尝试屏蔽 PCDN
 
@@ -133,7 +133,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 
 启用后，会在下载音频时调用 FFmpeg 将音频文件 **强制** 转换为 MP3 格式的音频文件。对于高音质 / 比特率的音频，有损失音质的可能。
 
-## 命名格式
+## <i class="fa-solid fa-file-signature"></i> 命名格式
 
 > [!TIP]
 > 此处可以配置下载时文件夹及文件使用的命名格式。<br>

@@ -1,4 +1,5 @@
 <template><div>
+	<div ref="topEl" class="w-full h-full flex flex-col justify-center items-center">
     <div class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-[var(--block-color)]">
         <input
 			v-model="v.searchInput" class="w-full !rounded-2xl"
@@ -69,7 +70,8 @@
 		</div>
 	</div>
 	</Transition>
-	<Popup ref="popup" :fmt="initPopup" :emit />
+	</div>
+	<Popup ref="popup" :fmt="initPopup" :close="() => v.anim.reverse()" :emit />
 </div></template>
 
 <script setup lang="ts">
@@ -91,6 +93,7 @@ import * as Types from '@/types/shared.d';
 import i18n from '@/i18n';
 
 const v = reactive({
+    anim: {} as Animation,
 	mediaInfo: {} as Types.MediaInfo,
 	mediaType: 'auto' as Types.MediaType | 'auto',
 	checkboxs: [] as number[],
@@ -120,6 +123,7 @@ const buttons = [{
 const popup = ref<InstanceType<typeof Popup>>();
 const downPage = inject<Ref<InstanceType<typeof DownPage>>>('page');
 const mediaListRef = ref<InstanceType<typeof MediaList>>();
+const topEl = ref<HTMLElement>();
 
 const router = useRouter()
 const user = useUserStore();
@@ -216,7 +220,8 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 	const info = v.mediaInfo.list[v.checkboxs[0]];
 	const nfo = v.mediaInfo.nfo;
 	const type = info.type ?? v.mediaInfo.type;
-	popup.value?.init(await data.getPlayUrl(info, type, fmt), {
+	const playUrl = await data.getPlayUrl(info, type, fmt);
+	const provider = {
 		misc: {
 			aiSummary: type === 'video' && user.isLogin ? await extras.getAISummary(info, { check: true }) : false,
 			subtitles: type !== 'music' && user.isLogin ? (await extras.getSubtitle(info)).map(v => ({ id: v.lan, name: v.lan_doc })) : [],
@@ -224,7 +229,15 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 		nfo: true,
 		danmaku: type !== 'music' ? user.isLogin ? ['live', 'history'] : ['live'] : [],
 		thumb: nfo.thumbs.map(v => v.id)
+	}
+	v.anim = topEl.value!.animate([
+		{ opacity: '1' },
+		{ opacity: '0' },
+	], {
+		duration: 150,
+		fill: 'forwards'
 	});
+	popup.value?.init(playUrl, provider);
 }
 
 async function emit(select: Types.PopupSelect) {

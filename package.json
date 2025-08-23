@@ -32,6 +32,7 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "@vuepic/vue-datepicker": "^11.0.2",
     "@wcj/markdown-style": "^1.1.2",
+    "dayjs": "^1.11.13",
     "jsencrypt": "^3.5.4",
     "marked": "^16.2.0",
     "md5": "^2.3.0",

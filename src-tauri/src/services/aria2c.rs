@@ -301,6 +301,10 @@ pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<S
             data.completed_length.parse::<u64>()?
         ))?;
         if data.status.as_str() == "complete" {
+            tx.try_send((
+                data.total_length.parse::<u64>()?,
+                data.total_length.parse::<u64>()?,
+            ))?;
             break;
         }
         sleep(Duration::from_millis(500)).await;

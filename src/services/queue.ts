@@ -10,6 +10,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Channel } from "@tauri-apps/api/core";
 import { toRaw } from "vue";
 import i18n from "@/i18n";
+import dayjs from "dayjs";
 
 // Reference https://linux.do/t/topic/642419
 function urlFilter(urls: string[]) {
@@ -184,13 +185,7 @@ function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.Gener
             const t = new Date(data[k] * 1000);
             const pattern = v ?? 'YYYY-MM-DD_HH-mm-ss';
             if (pattern.toLowerCase() === 'ts') return String(data[k]);
-            return pattern
-                .replace(/YYYY/g, String(t.getFullYear()))
-                .replace(/MM/g, String(t.getMonth() + 1).padStart(2, '0'))
-                .replace(/DD/g, String(t.getDate()).padStart(2, '0'))
-                .replace(/HH/g, String(t.getHours()).padStart(2, '0'))
-                .replace(/mm/g, String(t.getMinutes()).padStart(2, '0'))
-                .replace(/ss/g, String(t.getSeconds()).padStart(2, '0'))
+            return dayjs(t).format(pattern);
         } else {
             return String(data[k as keyof typeof data] ?? '');
         }

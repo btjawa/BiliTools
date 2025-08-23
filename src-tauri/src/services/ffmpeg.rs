@@ -215,7 +215,7 @@ async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Arc<Se
             CommandEvent::Terminated(msg) => {
                 let code = msg.code.unwrap_or(0);
                 if code == 0 {
-                    break;
+                    tx.send((duration, duration)).await?;
                 } else {
                     return Err(TauriError::new(
                         format!("FFmpeg task failed\n{}", clean_log(&stderr.join("\n").as_bytes())),

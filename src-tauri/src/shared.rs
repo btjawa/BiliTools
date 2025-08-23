@@ -228,31 +228,29 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
             }
         } else { theme.as_tauri().unwrap() };
         window.set_background_color(Some(match theme {
-            tauri::Theme::Dark => Color(32, 32, 32, 255),
-            _ => Color(249, 249, 249, 255),
+            tauri::Theme::Dark => Color(32, 32, 32, 128),
+            _ => Color(249, 249, 249, 128),
         }))?;
         Ok::<(), anyhow::Error>(())
     };
     match tauri_plugin_os::platform() {
-        "windows" => if let Version::Semantic(major, minor, patch) = tauri_plugin_os::version() {
-            if major < 6 || (major == 6 && minor < 2) {
-                panic!("Unsupported Windows Version");
-            } else if major >= 10 {
-                if patch >= 22000 {
-                    window.set_effects(WindowEffectsConfig {
-                        effects: vec![WindowEffect::Mica],
-                        ..Default::default()
-                    })?
-                } else if patch < 18362 || patch > 22000 {
-                    window.set_effects(WindowEffectsConfig {
-                        effects: vec![WindowEffect::Acrylic],
-                        ..Default::default()
-                    })?
-                } else if patch < 22621 {
-                    set_default()?
-                }
+        "windows" => if let Version::Semantic(_, _, patch) = tauri_plugin_os::version() {
+            if patch >= 22000 {
+                window.set_effects(WindowEffectsConfig {
+                    effects: vec![WindowEffect::Mica],
+                    ..Default::default()
+                })?
+            } else if patch < 18362 || patch > 22000 {
+                window.set_effects(WindowEffectsConfig {
+                    effects: vec![WindowEffect::Acrylic],
+                    ..Default::default()
+                })?
+            } else if patch < 22621 {
+                set_default()?
             }
-        } else { set_default()? },
+        } else {
+            set_default()?
+        },
         "macos" => window.set_effects(WindowEffectsConfig {
             effects: vec![WindowEffect::Sidebar],
             ..Default::default()

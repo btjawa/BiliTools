@@ -75,7 +75,6 @@ async function check(notice?: boolean) {
             duration: 150,
             fill: 'forwards'
         });
-        await v.anim.finished;
         active.value = true;
     } else if (notice) {
         AppLog(i18n.global.t('updater.latest'), 'success');
