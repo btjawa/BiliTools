@@ -7,8 +7,8 @@ export default defineAdditionalConfig({
   themeConfig: {
     nav: [
       { text: '快速开始', link: '/quick/about', activeMatch: '/quick' },
-      { text: '使用说明', link: '/guide', activeMatch: '/guide' },
-      { text: '常见问题', link: '/help', activeMatch: '/help' }
+      { text: '使用说明', link: '/guide/stream', activeMatch: '/guide' },
+      { text: '常见问题', link: '/help/windows', activeMatch: '/help' }
     ],
 
     sidebar: [
@@ -33,7 +33,6 @@ export default defineAdditionalConfig({
       {
         text: '常见问题',
         items: [
-          { text: '总览', link: '/help' },
           { text: 'Windows', link: '/help/windows' },
           { text: 'macOS', link: '/help/macos' },
         ]
@@ -41,7 +40,7 @@ export default defineAdditionalConfig({
     ],
 
     footer: {
-      message: 'Licensed under the <a href="https://github.com/btjawa/BiliTools/blob/main/LICENSE">GPL-3.0-or-later</a>.',
+      message: 'Licensed under the <a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE">GPL-3.0-or-later</a>.',
       copyright: 'Copyright © 2023-present <a href="https://github.com/btjawa">btjawa</a>.'
     }
   }

@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vitepress"
+  "framework": "vitepress",
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./docs"
 }
