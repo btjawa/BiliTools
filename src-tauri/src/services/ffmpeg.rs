@@ -3,7 +3,7 @@ use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 use tokio::{fs, sync::{mpsc::{self, Sender}, oneshot}};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use std::{path::{Path, PathBuf}, sync::Arc};
 use regex::Regex;
 
 use crate::{
@@ -18,11 +18,11 @@ struct StreamInfo {
 }
 
 fn clean_log(raw_log: &[u8]) -> String {
-    return String::from_utf8_lossy(raw_log)
+    String::from_utf8_lossy(raw_log)
         .lines()
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n")
 }
 
 pub async fn test() -> Result<()> {
@@ -38,7 +38,7 @@ pub async fn test() -> Result<()> {
     Ok(())
 }
 
-async fn get_duration(path: &PathBuf) -> Result<u64> {
+async fn get_duration(path: &Path) -> Result<u64> {
     let app = get_app_handle();
     let path = path.to_string_lossy().to_string();
     let result = app.shell().sidecar("ffmpeg")?
@@ -49,7 +49,7 @@ async fn get_duration(path: &PathBuf) -> Result<u64> {
     
     log::info!("Stream info for {path}\n:{}", &clean_log(&result.stderr));
 
-    Ok(Regex::new(r"Duration:\s*(\d+):(\d+):(\d+)")?
+    Regex::new(r"Duration:\s*(\d+):(\d+):(\d+)")?
         .captures_iter(&clean_log(&result.stderr))
         .filter_map(|caps| {
             let h = caps[1].parse::<u64>().ok()?;
@@ -58,17 +58,16 @@ async fn get_duration(path: &PathBuf) -> Result<u64> {
             Some((h * 60 + m) * 60 + s)
         })
         .min()
-        .context("No duration found in stream info")?
-    )
+        .context("No duration found in stream info")
 }
 
-pub async fn merge(id: Arc<String>, ext: &str, tx: Arc<Sender<(u64, u64)>>, mut cancel: oneshot::Receiver<()>, video_path: &PathBuf, audio_path: &PathBuf) -> TauriResult<PathBuf> {
+pub async fn merge(id: Arc<String>, ext: &str, tx: Arc<Sender<(u64, u64)>>, mut cancel: oneshot::Receiver<()>, video_path: &Path, audio_path: &Path) -> TauriResult<PathBuf> {
     let app = get_app_handle();
     let temp_root = config::read().temp_dir().join(format!("{id}_{}", get_ts(true)));
     fs::create_dir_all(&temp_root).await?;
 
     let output = temp_root.join(format!("{id}.{ext}"));
-    let duration = get_duration(&video_path).await?;
+    let duration = get_duration(video_path).await?;
 
     let video = video_path.to_string_lossy().to_string();
     let audio = audio_path.to_string_lossy().to_string();
@@ -101,18 +100,18 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: Arc<Sender<(u64, u64)>>, mut 
     Ok(output)
 }
 
-pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, u64)>>, input: &PathBuf, task: Arc<GeneralTask>) -> TauriResult<(PathBuf, String)> {
+pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, u64)>>, input: &Path, task: Arc<GeneralTask>) -> TauriResult<(PathBuf, String)> {
     let app = get_app_handle();
     let temp_root = config::read().temp_dir().join(format!("{id}_{}", get_ts(true)));
     fs::create_dir_all(&temp_root).await?;
 
-    let duration = get_duration(&input).await?;
+    let duration = get_duration(input).await?;
 
     let mut args: Vec<String> = Vec::new();
 
     args.extend([
         "-hide_banner", "-nostats", "-loglevel", "warning",
-        "-i", &input.to_string_lossy().to_string(),
+        "-i", input.to_string_lossy().as_ref(),
         "-map", "0:a:0", "-vn"
     ].into_iter().map(Into::into));
     
@@ -144,7 +143,7 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, 
         let fmt = format_description!("[year]-[month]-[day]");
 
         let artist =
-            if let Some(v) = nfo.staff.first() { &v }
+            if let Some(v) = nfo.staff.first() { v }
             else if let Some(v) = &nfo.upper { &v.name }
             else { &String::new() };
         args.extend([
@@ -205,7 +204,7 @@ async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Arc<Se
                 match key.trim() {
                     "out_time_us" | "out_time_ms" => {
                         let chunk = value.parse::<u64>().unwrap_or(0);
-                        tx.send((duration, (chunk / 1000_000))).await?;
+                        tx.send((duration, (chunk / 1_000_000))).await?;
                     },
                     "progress" => {
                         if value.trim() == "end" {
@@ -219,7 +218,7 @@ async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Arc<Se
                 stderr.push(String::from_utf8_lossy(&line).into());
             },
             CommandEvent::Error(line) => {
-                stderr.push(line.into());
+                stderr.push(line);
             },
             CommandEvent::Terminated(msg) => {
                 let code = msg.code.unwrap_or(0);
@@ -227,7 +226,7 @@ async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Arc<Se
                     tx.send((duration, duration)).await?;
                 } else {
                     return Err(TauriError::new(
-                        format!("FFmpeg task failed\n{}", clean_log(&stderr.join("\n").as_bytes())),
+                        format!("FFmpeg task failed\n{}", clean_log(stderr.join("\n").as_bytes())),
                         Some(code)
                     ));
                 }

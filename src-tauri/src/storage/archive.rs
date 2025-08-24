@@ -74,7 +74,7 @@ pub async fn load() -> Result<(
 }
 
 pub async fn insert(task: Arc<GeneralTask>, status: Arc<Value>) -> Result<()> {
-    let name = (&*task.id).clone();
+    let name = (*task.id).clone();
     let task = serde_json::to_string(&task)?;
     let status = serde_json::to_string(&status)?;
     let (sql, values) = Query::insert()

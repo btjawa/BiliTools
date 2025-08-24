@@ -66,15 +66,15 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         }
     })
 );
+pub static HEADERS: LazyLock<Headers>      = LazyLock::new(Headers::new);
+pub static READY: LazyLock<OnceCell<()>>   = LazyLock::new(OnceCell::new);
 pub static DATABASE_URL: LazyLock<String>  = LazyLock::new(|| format!("sqlite://{}", STORAGE_PATH.to_string_lossy()));
-pub static READY: LazyLock<OnceCell<()>>   = LazyLock::new(|| OnceCell::new());
 pub static SECRET: LazyLock<String>        = LazyLock::new(|| random_string(8));
 pub static STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKING_PATH.join("Storage"));
 pub static WORKING_PATH: LazyLock<PathBuf> = LazyLock::new(||
     get_app_handle().path().app_data_dir().expect("Failed to get app_data_dir")
 );
 
-pub static HEADERS: LazyLock<Headers> = LazyLock::new(|| Headers::new());
 
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";
 
@@ -120,6 +120,12 @@ pub struct HeadersData {
 
 pub struct Headers {
     map: RwLock<BTreeMap<String, String>>
+}
+
+impl Default for Headers {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Headers {
@@ -275,7 +281,7 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
                     effects: vec![WindowEffect::Mica],
                     ..Default::default()
                 })?
-            } else if patch < 18362 || patch > 22000 {
+            } else if !(18362..=22000).contains(&patch) {
                 window.set_effects(WindowEffectsConfig {
                     effects: vec![WindowEffect::Acrylic],
                     ..Default::default()

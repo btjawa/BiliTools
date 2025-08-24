@@ -190,8 +190,8 @@ async fn handle_danmaku(
 
     let (mut _rx, child) = get_app_handle().shell().sidecar(NAME)?
         .args([
-            "-i", &xml.to_string_lossy().to_string(),
-            "-o", &ass.to_string_lossy().to_string(),
+            "-i", xml.to_string_lossy().as_ref(),
+            "-o", ass.to_string_lossy().as_ref(),
         ]).spawn()?;
 
     let mut child = Some(child);
@@ -303,13 +303,13 @@ async fn handle_merge(
     let ext = get_ext(subtask.task_type.clone(), abr);
     
     let mut merge = Box::pin(ffmpeg::merge(id.clone(), ext, status_tx, cancel_rx, video, audio));
-    let path = loop { tokio::select! {
-        res = &mut merge => break res,
+    let path = tokio::select! {
+        res = &mut merge => res,
         Ok(CtrlEvent::Cancel) = rx.recv() => {
             let _ = cancel_tx.send(());
             return Ok(());
         }
-    } }?;
+    }?;
 
     let output_file = get_unique_path(ptask.folder.join(format!("{}.{}", &ptask.filename, ext)));
 

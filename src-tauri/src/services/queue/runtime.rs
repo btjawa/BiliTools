@@ -17,10 +17,8 @@ use crate::{
     }, TauriResult
 };
 
-pub static QUEUE_MANAGER: LazyLock<QueueManager> = LazyLock::new(|| QueueManager::new());
-pub static SCHEDULER_LIST: LazyLock<RwLock<Vec<Arc<Scheduler>>>> = LazyLock::new(||
-    Default::default()
-);
+pub static QUEUE_MANAGER: LazyLock<QueueManager> = LazyLock::new(QueueManager::new);
+pub static SCHEDULER_LIST: LazyLock<RwLock<Vec<Arc<Scheduler>>>> = LazyLock::new(Default::default);
 
 // Queue
 
@@ -37,6 +35,12 @@ pub struct QueueManager {
     pub waiting:  RwLock<VecDeque<Arc<String>>>,
     pub doing:    RwLock<VecDeque<Arc<String>>>,
     pub complete: RwLock<VecDeque<Arc<String>>>,
+}
+
+impl Default for QueueManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl QueueManager {
@@ -72,7 +76,7 @@ impl QueueManager {
 
         let (id, ts) = {
             let guard = task.read().await;
-            (guard.id.clone(), guard.ts.clone())
+            (guard.id.clone(), guard.ts)
         };
         let mut map = self.tasks.write().await;
         map.insert(id.clone(), task);
@@ -197,12 +201,13 @@ impl Scheduler {
     }
 
     pub async fn update_max_conc(&self, new_conc: usize) {
+        use std::cmp::Ordering;
         let mut max_conc = self.max_conc.write().await;
         let mut sem = self.sem.write().await;
-        if new_conc > *max_conc {
-            (**sem).add_permits(new_conc - *max_conc);
-        } else if new_conc < *max_conc {
-            *sem = Arc::new(Semaphore::new(new_conc));
+        match new_conc.cmp(&*max_conc) {
+            Ordering::Greater => (**sem).add_permits(new_conc - *max_conc),
+            Ordering::Less    => *sem = Arc::new(Semaphore::new(new_conc)),
+            Ordering::Equal   => ()
         }
         *max_conc = new_conc;
     }
@@ -428,7 +433,7 @@ pub async fn task_event(event: CtrlEvent, id: Arc<String>) -> TauriResult<()> {
         },
         CtrlEvent::Cancel => {
             QUEUE_MANAGER.pop_task(&id).await;
-            archive::delete((&*id).clone()).await?;
+            archive::delete((*id).clone()).await?;
         },
         _ => {
             let guard = SCHEDULER_LIST.read().await;

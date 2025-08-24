@@ -5,6 +5,7 @@ use tokio::time::{sleep, Duration};
 use anyhow::{Context, Result};
 use serde_json::Value;
 use hmac::{Hmac, Mac};
+use std::fmt::Write;
 use sha2::Sha256;
 use rand::Rng;
 
@@ -159,14 +160,17 @@ pub async fn get_bili_ticket() -> TauriResult<()> {
     let mut mac = Hmac::<Sha256>::new_from_slice("XgwSnGZ1p".as_bytes())?;
     mac.update(format!("ts{ts}").as_bytes());
     let tag = mac.finalize().into_bytes();
-    let hexsign: String = tag.iter().map(|b| format!("{:02x}", b)).collect();
+    let mut hexsign = String::with_capacity(tag.len() * 2);
+    for b in tag {
+        let _ = write!(&mut hexsign, "{:02x}", b);
+    }
     let response = client
         .post("https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket")
         .query(&[
             ("key_id", "ec02"),
             ("hexsign", &hexsign),
             ("context[ts]", &ts.to_string()),
-            ("csrf", &bili_csrf),
+            ("csrf", bili_csrf),
         ]).send().await?;
     if response.status() != StatusCode::OK {
         return Err(TauriError::new(
@@ -470,7 +474,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
             ("csrf", bili_csrf),
             ("refresh_csrf", &refresh_csrf),
             ("refresh_token", refresh_token),
-            ("source", "main_web".into()),
+            ("source", "main_web"),
         ]).send().await?;
     if refresh_token_resp.status() != StatusCode::OK {
         return Err(TauriError::new(
@@ -496,7 +500,7 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
         .post("https://passport.bilibili.com/x/passport-login/web/confirm/refresh")
         .query(&[
             ("csrf", bili_csrf),
-            ("refresh_token", refresh_token.into()),
+            ("refresh_token", refresh_token),
         ]).send().await?;
     if confirm_refresh_resp.status() != StatusCode::OK {
         return Err(TauriError::new(

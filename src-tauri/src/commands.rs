@@ -108,7 +108,7 @@ pub async fn config_write(settings: serde_json::Map<String, Value>, secret: Stri
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn ready() -> TauriResult<String> {
-    if let Err(_) = READY.set(()) {
+    if READY.set(()).is_err() {
         #[cfg(not(debug_assertions))]
         return Ok("403 Forbidden".into());
     }
