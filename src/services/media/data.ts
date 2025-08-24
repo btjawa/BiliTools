@@ -35,7 +35,6 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
             params = { media_id: _id, ps: 36, pn: options?.pn ?? 1, platform: 'web' };
     }
     const body = await tryFetch(url, { params });
-    console.log(body)
     if (type === Types.MediaType.Video) {
         const data = (body as Resps.VideoInfo).data;
         const map = (ep: Resps.UgcInfo, index: number) => ({

@@ -1,14 +1,21 @@
 pub mod archive;
 pub mod config;
 pub mod cookies;
-mod migrate;
+mod db;
 
+use db::TableSpec;
 use crate::shared::process_err as err;
 
 pub async fn init() -> anyhow::Result<()> {
-    migrate::init().await.map_err(|e| err(e, "migrate"))?;
-    config::init().await.map_err(|e| err(e, "config"))?;
-    cookies::init().await.map_err(|e| err(e, "cookies"))?;
-    archive::init().await.map_err(|e| err(e, "archive"))?;
+    db::init_db().await
+        .map_err(|e| err(e, "db"))?;
+    archive::ArchiveTable::check_latest().await
+        .map_err(|e| err(e, "archive"))?;
+    cookies::CookiesTable::check_latest().await
+        .map_err(|e| err(e, "cookies"))?;
+    config::ConfigTable::check_latest().await
+        .map_err(|e| err(e, "config"))?;
+    config::load().await
+        .map_err(|e| err(e, "config"))?;
     Ok(())
 }

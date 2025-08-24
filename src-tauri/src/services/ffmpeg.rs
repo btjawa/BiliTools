@@ -1,6 +1,6 @@
+use time::{macros::format_description, OffsetDateTime, UtcOffset};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 use tokio::{fs, sync::{mpsc::{self, Sender}, oneshot}};
-use chrono::{DateTime, Datelike, FixedOffset};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
@@ -40,14 +40,14 @@ pub async fn test() -> Result<()> {
 
 async fn get_duration(path: &PathBuf) -> Result<u64> {
     let app = get_app_handle();
+    let path = path.to_string_lossy().to_string();
     let result = app.shell().sidecar("ffmpeg")?
         .args([
             "-hide_banner", "-nostats",
-            "-i", path.to_str().unwrap(),
-            "-c", "copy", "-f", "null", "-"
+            "-i", &path, "-c", "copy", "-f", "null", "-"
         ]).output().await?;
     
-    log::info!("Stream info for {}\n:{}", path.display(), &clean_log(&result.stderr));
+    log::info!("Stream info for {path}\n:{}", &clean_log(&result.stderr));
 
     Ok(Regex::new(r"Duration:\s*(\d+):(\d+):(\d+)")?
         .captures_iter(&clean_log(&result.stderr))
@@ -70,11 +70,12 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: Arc<Sender<(u64, u64)>>, mut 
     let output = temp_root.join(format!("{id}.{ext}"));
     let duration = get_duration(&video_path).await?;
 
+    let video = video_path.to_string_lossy().to_string();
+    let audio = audio_path.to_string_lossy().to_string();
+
     let mut args = vec![
         "-hide_banner", "-nostats", "-loglevel", "warning",
-        "-i", video_path.to_str().unwrap(),
-        "-i", audio_path.to_str().unwrap(),
-        "-c", "copy", "-shortest",
+        "-i", &video, "-i", &audio, "-c", "copy", "-shortest",
     ];
 
     if ext == "mp4" {
@@ -82,9 +83,10 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: Arc<Sender<(u64, u64)>>, mut 
         args.push("+faststart");
     }
 
+    let _output = output.to_string_lossy().to_string();
+
     args.extend_from_slice(&[
-        "-progress", "pipe:1",
-        output.to_str().unwrap(), "-y"
+        "-progress", "pipe:1", &_output, "-y"
     ]);
 
     let (mut _rx, child) = app.shell().sidecar("ffmpeg")?.args(args).spawn()?;
@@ -110,7 +112,8 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, 
 
     args.extend([
         "-hide_banner", "-nostats", "-loglevel", "warning",
-        "-i", input.to_str().unwrap(), "-map", "0:a:0", "-vn"
+        "-i", &input.to_string_lossy().to_string(),
+        "-map", "0:a:0", "-vn"
     ].into_iter().map(Into::into));
     
     if config::read().convert.mp3 {
@@ -132,9 +135,14 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, 
         let item = task.item.as_ref();
         let nfo = task.nfo.as_ref();
         let ts = nfo.premiered.as_i64().unwrap_or(0);
-        let utc = DateTime::from_timestamp(ts, 0).ok_or(anyhow!("Failed to parse timestamp: {ts}"))?;
-        let zone = FixedOffset::east_opt(8 * 3600).ok_or(anyhow!("Failed to create timezone"))?;
-        let date = utc.with_timezone(&zone);
+
+        let utc = OffsetDateTime::from_unix_timestamp(ts)
+            .context(format!("Failed to parse timestamp: {ts}"))?;
+        let offset = UtcOffset::from_hms(8, 0, 0)
+            .context("Failed to create timezone")?;
+        let date = utc.to_offset(offset);
+        let fmt = format_description!("[year]-[month]-[day]");
+
         let artist =
             if let Some(v) = nfo.staff.first() { &v }
             else if let Some(v) = &nfo.upper { &v.name }
@@ -147,7 +155,7 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, 
         ]);
         if ext == "flac" {
             args.extend([
-                "-metadata".into(), format!("DATE={}", date.format("%Y-%m-%d")),
+                "-metadata".into(), format!("DATE={}", date.format(&fmt)?),
                 "-metadata".into(), format!("YEAR={}", date.year()),
             ]);
             for artist in nfo.staff.iter() {
@@ -164,7 +172,7 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, 
             args.extend([
                 "-metadata".into(), format!("artist={}", nfo.staff.join("; ")),
                 "-metadata".into(), format!("genre={}", nfo.tags.join("; ")),                
-                "-metadata".into(), format!("date={}", date.format("%Y-%m-%d")),
+                "-metadata".into(), format!("date={}", date.format(&fmt)?),
                 "-metadata".into(), format!("year={}", date.year()),
             ]);
         }
@@ -174,10 +182,11 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: Arc<Sender<(u64, 
     }
 
     let output = temp_root.join(&*id);
+    let _output = output.to_string_lossy().to_string();
 
     args.extend([
         "-map_metadata", "0", "-progress", "pipe:1",
-        &format!("{}.{ext}", output.to_str().unwrap()), "-y"
+        &format!("{_output}.{ext}"), "-y"
     ].into_iter().map(Into::into));
 
     let (mut _rx, _) = app.shell().sidecar("ffmpeg")?.args(args).spawn()?;
@@ -219,7 +228,7 @@ async fn monitor(duration: u64, mut rx: mpsc::Receiver<CommandEvent>, tx: Arc<Se
                 } else {
                     return Err(TauriError::new(
                         format!("FFmpeg task failed\n{}", clean_log(&stderr.join("\n").as_bytes())),
-                        Some(code as isize)
+                        Some(code)
                     ));
                 }
             },

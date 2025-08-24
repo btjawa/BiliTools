@@ -4,6 +4,7 @@ version = "1.4.0-5"
 description = "A cross-platform bilibili toolbox"
 authors = ["btjawa"]
 edition = "2021"
+rust-version = "1.80"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -31,22 +32,19 @@ tauri-build = { version = "2.3.1", features = [] }
 
 [dependencies]
 anyhow = "1.0.98"
-backtrace = "0.3.75"
+arc-swap = "1.7.1"
 base64 = "0.22.1"
-chrono = "0.4.41"
 dark-light = "2.0.0"
-lazy_static = "1.5.0"
+hmac = "0.12.1"
 log = "0.4"
-notifica = "3.0.2"
-process_alive = "0.1.1"
+notify-rust = "4.11.7"
 rand = "0.9"
 regex = "1.11.1"
-ring = "0.17.14"
-sea-orm = { version = "1", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros" ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 specta = { version = "2.0.0-rc.22", features = ["serde_json"] }
 specta-typescript = "0.0.9"
+sha2 = "0.10.9"
 sys-locale = "0.3.2"
 tauri = { version = "2.7.0", features = ["macos-private-api"] }
 tauri-plugin-clipboard-manager = "2.3.0"
@@ -59,9 +57,12 @@ tauri-plugin-process = "2.3.0"
 tauri-plugin-single-instance = "2.3.2"
 tauri-plugin-shell = "2.3.0"
 tauri-specta = { version = "2.0.0-rc.21", features = ["derive", "typescript"] }
+time = "0.3.41"
 tokio = { version = "1.47", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
 walkdir = "2.5.0"
-notify-rust = "4.11.7"
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "macros"] }
+sea-query = "0.32.7"
+sea-query-binder = { version = "0.7.0", features = ["sqlx-sqlite"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.61.3", features = ["Win32_Foundation", "Win32_System_Com"] }

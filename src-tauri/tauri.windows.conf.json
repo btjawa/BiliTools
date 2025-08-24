@@ -1,17 +1,19 @@
 {
-  "app": {
-    "windows": [
-      {
-        "minWidth": 960,
-        "minHeight": 680,
-        "title": "BiliTools",
-        "label": "main",
-        "width": 960,
-        "height": 680,
-        "transparent": true,
-        "decorations": false,
-        "dragDropEnabled": false
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.btjawa.bilitools",
+  "bundle": {
+    "targets": "nsis",
+    "windows": {
+      "certificateThumbprint": null,
+      "nsis": {
+        "languages": [
+          "SimpChinese",
+          "TradChinese",
+          "English",
+          "Japanese"
+        ],
+        "displayLanguageSelector": true
       }
-    ]
+    }
   }
 }

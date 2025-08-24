@@ -1,19 +1,25 @@
 {
-  "app": {
-    "windows": [
-      {
-        "fullscreen": false,
-        "resizable": true,
-        "minWidth": 800,
-        "minHeight": 600,
-        "title": "BiliTools",
-        "label": "main",
-        "width": 960,
-        "height": 680,
-        "titleBarStyle": "Overlay",
-        "transparent": true,
-        "dragDropEnabled": false
-      }
-    ]
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.btjawa.bilitools",
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "macOS": {
+      "dmg": {
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "height": 400,
+          "width": 660
+        }
+      },
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    }
   }
 }

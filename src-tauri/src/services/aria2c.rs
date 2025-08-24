@@ -1,12 +1,11 @@
+use std::{net::TcpListener, path::PathBuf, sync::{Arc, LazyLock}, time::Duration};
 use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
 use tauri::{async_runtime::{self, Receiver}, http::StatusCode, Manager};
-use std::{net::TcpListener, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{fs, sync::{mpsc::Sender, RwLock}, time::sleep};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use anyhow::{anyhow, Context, Result};
 use tauri_plugin_http::reqwest::{self, Client};
+use anyhow::{anyhow, Context, Result};
 use serde_json::{json, Value};
-use lazy_static::lazy_static;
 use tauri_specta::Event;
 
 use crate::{
@@ -15,9 +14,9 @@ use crate::{
     }, TauriResult
 };
 
-lazy_static! {
-    static ref ARIA2_RPC: Arc<Aria2Rpc> = Arc::new(Aria2Rpc::new());
-}
+static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(||
+    Arc::new(Aria2Rpc::new())
+);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aria2Error {
@@ -113,7 +112,10 @@ impl Aria2Rpc {
             .json(&payload).send().await?;
 
         if response.status() != StatusCode::OK {
-            return Err(TauriError::new("Error while fetching Aria2 RPC Response", Some(response.status().as_u16() as isize)));
+            return Err(TauriError::new(
+                "Error while fetching Aria2 RPC Response",
+                Some(response.status())
+            ));
         }
 
         let body: Aria2Resp<T> = response.json().await
@@ -128,7 +130,6 @@ impl Aria2Rpc {
 }
 
 async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEvent>) {
-    use process_alive::{State, Pid};
     let app = get_app_handle();
     let pid = child.pid();
     #[cfg(target_os = "windows")]
@@ -149,50 +150,56 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
         )
     ]);
     let _ = app.shell().command(cmd.0).args(cmd.1).spawn();
-    let stderr = Arc::new(RwLock::new(String::new()));
-    let stderr_clone = stderr.clone();
-    async_runtime::spawn(async move {
+    let mut stderr: Vec<String> = vec![];
+
+    let mut daemon = Box::pin(async {
+        let name_clone = &name;
         loop {
-            let mut lock = stderr_clone.write().await;
-            if lock.len() > 0 {
-                SidecarError {
-                    name: name.clone(), error: lock.to_string()
-                }.emit(app).unwrap();
-                lock.clear();
-            }
-            let pid = Pid::from(pid);
-            if process_alive::state(pid) != State::Alive {
-                break SidecarError {
-                    name: name.clone(), error: format!("Process {name} ({pid}) is dead")
-                }.emit(app).unwrap();
-            }
             if let Err(e) = ARIA2_RPC.request::<Value>("getGlobalStat", vec![]).await {
-                SidecarError {
-                    name: name.clone(), error: e.message
-                }.emit(app).unwrap();
+                let _ = SidecarError {
+                    name: name_clone.clone(), error: e.message
+                }.emit(app);
             }
             sleep(Duration::from_secs(5)).await;
         }
     });
-    while let Some(event) = rx.recv().await {
-        if let CommandEvent::Stderr(line) = event {
-            let line = String::from_utf8_lossy(&line);
-            if !line.trim().is_empty() {
-                let mut lock = stderr.write().await;
-                lock.push_str(&line.to_string());
-            }
+    loop { tokio::select! {
+        _ = &mut daemon => break,
+        Some(msg) = rx.recv() => match msg {
+            CommandEvent::Stdout(line) => {
+                let line = String::from_utf8_lossy(&line);
+                if !line.trim().is_empty() {
+                    log::info!("{name} STDOUT: {line}");
+                }
+            },
+            CommandEvent::Stderr(line) => {
+                let line = String::from_utf8_lossy(&line);
+                log::warn!("{name} STDERR: {line}");
+                stderr.push(line.into());
+            },
+            CommandEvent::Error(line) => {
+                log::error!("{name} ERROR: {line}");
+            },
+            CommandEvent::Terminated(msg) => {
+                let code = msg.code.unwrap_or(0);
+                let _ = SidecarError {
+                    name: name.clone(), error: format!("Process {name} ({pid}) exited ({code})\nSee logs for more infos.")
+                }.emit(app);
+                log::error!("{name} exited with following STDERR:\n {}", stderr.join("\n"));
+                break;
+            },
+            _ => ()
         }
-    }
+    } }
 }
 
 pub async fn init() -> Result<()> {
-    let secret = SECRET.read().unwrap().clone();
     let l = TcpListener::bind(("127.0.0.1", 0))?;
     let port = l.local_addr()?.port();
     log::info!("Found a free port for aria2c: {port}");
     drop(l);
 
-    ARIA2_RPC.update(port, secret.clone()).await?;
+    ARIA2_RPC.update(port, SECRET.clone()).await?;
 
     let app = get_app_handle();
     let session_file = WORKING_PATH.join("aria2.session");
@@ -216,7 +223,7 @@ pub async fn init() -> Result<()> {
         format!("--save-session={session_file}"),
         format!("--user-agent={USER_AGENT}"),
         format!("--rpc-listen-port={port}"),
-        format!("--rpc-secret={secret}"),
+        format!("--rpc-secret={}", &*SECRET),
         format!("--log={log_file}"),
     ]).spawn()?;
     async_runtime::spawn(async move {
@@ -247,7 +254,9 @@ async fn check_breakpoint(
     let mut dirs = fs::read_dir(root).await?;
     while let Some(dir) = dirs.next_entry().await? {
         let path = dir.path();
-        let name = path.file_name().and_then(|v| v.to_str()).unwrap();
+        let name = path.file_name()
+            .and_then(|v| v.to_str())
+            .ok_or(anyhow!("Failed to get file name: {path:?}"))?;
         if !name.starts_with(folder) {
             continue;
         }
@@ -274,7 +283,9 @@ pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<S
     fs::create_dir_all(&dir).await.context("Failed to create temp dir")?;
 
     let url = reqwest::Url::parse(&urls[0])?;
-    let name = url.path_segments().unwrap().last().unwrap();
+    let name = url.path_segments()
+        .ok_or(anyhow!("Failed to get path segments: {url:?}"))?
+        .last().ok_or(anyhow!("Failed to get file name: {url:?}"))?;
 
     let params = vec![
         json!(urls),

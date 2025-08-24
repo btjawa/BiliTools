@@ -14,14 +14,12 @@ use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::panic::set_hook(Box::new(|e| {
-        log::error!("Panicked: {}", e);
-        println!("Panicked: {}", e);
-        let backtrace = backtrace::Backtrace::new();
-        log::error!("Backtrace:\n{:?}", backtrace);
-        println!("Backtrace:\n{:?}", backtrace);
+        let bt = std::backtrace::Backtrace::capture();
+        log::error!("Panicked: {e}");
+        log::error!("Backtrace:\n{bt:?}");
+        eprintln!("Panicked: {e}");
+        eprintln!("Backtrace:\n{bt:?}");
     }));
-    *shared::SECRET.write().unwrap() = shared::random_string(10);
-
     let builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
         .commands(collect_commands![
@@ -30,7 +28,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             submit_task, process_queue, task_event, update_max_conc // Queue
         ])
         .events(collect_events![
-            shared::Headers, shared::SidecarError, queue::QueueData
+            shared::HeadersData, shared::SidecarError, queue::QueueData
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
@@ -80,11 +78,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             let version = &app.package_info().version;
             log::info!("BiliTools v{}", version);
             builder.mount_events(app);
-            let window = app.get_webview_window("main").unwrap();
-            #[cfg(debug_assertions)]
-            window.open_devtools();
-            shared::set_window(window, shared::Theme::Auto).unwrap();
-            shared::APP_HANDLE.set(app.app_handle().clone()).unwrap();
+            if let Some(window) = app.get_webview_window("main") {
+                #[cfg(debug_assertions)]
+                window.open_devtools();
+                let _ = shared::set_window(window, shared::Theme::Auto);
+            }
+            let _ = shared::APP_HANDLE.set(app.app_handle().clone());
             async_runtime::spawn(async move {
                 let _ = storage::init().await;
                 let _ = services::init().await;

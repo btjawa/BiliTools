@@ -60,14 +60,13 @@ onMounted(async () => {
 
 	const init = await commands.init(secret);
 	if (init.status === 'error') throw new AppError(init.error);
-	const { config, complete, tasks, status, ...initData } = init.data;
-	settings.$patch(config);
+	const { config, tasks, status, ...initData } = init.data;
+	app.$patch({ ...initData });
 	queue.$patch(v => {
-		v.complete = complete;
 		v.tasks = tasks as any;
 		v.status = status as any;
 	});
-	app.$patch({ ...initData });
+	settings.$patch(config);
 
 	const initLogin = await commands.initLogin(secret);
 	if (initLogin.status === 'error') throw new AppError(initLogin.error);

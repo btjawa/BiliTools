@@ -1,24 +1,27 @@
 use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry};
-use std::{collections::BTreeMap, path::PathBuf, sync::{Arc, RwLock}};
+use std::{collections::BTreeMap, path::PathBuf, sync::{Arc, LazyLock}};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use lazy_static::lazy_static;
-use tokio::sync::OnceCell;
+use tokio::sync::{OnceCell, RwLock};
+use time::OffsetDateTime;
 use tauri_specta::Event;
-use serde_json::Value;
+use arc_swap::ArcSwap;
 use anyhow::Result;
 use specta::Type;
-use chrono::Utc;
 
-use crate::storage::{config::{
+use crate::storage::{
+    config::{
         self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsProxy
-    }, cookies};
+    },
+    cookies
+};
 
-lazy_static! {
-    pub static ref READY: Arc<RwLock<bool>> = Arc::new(RwLock::new(false));
-    pub static ref APP_HANDLE: Arc<OnceCell<AppHandle<Wry>>> = Arc::new(OnceCell::new());
-    pub static ref CONFIG: RwLock<Arc<Settings>> = RwLock::new(Arc::new(Settings {
+pub static APP_HANDLE: LazyLock<Arc<OnceCell<AppHandle<Wry>>>> = LazyLock::new(||
+    Arc::new(OnceCell::new())
+);
+pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
+    ArcSwap::from_pointee(Settings {
         add_metadata: true,
         auto_check_update: true,
         auto_download: false,
@@ -30,7 +33,7 @@ lazy_static! {
             abr: 30280,
             enc: 7
         },
-        down_dir: get_app_handle().path().desktop_dir().unwrap(),
+        down_dir: get_app_handle().path().desktop_dir().expect("Failed to get desktop_dir"),
         format: SettingsFormat {
             series: "{container} - {showtitle} ({downtime:YYYY-MM-DD_HH-mm-ss})".into(),
             item: "({index}) {mediaType} - {title}".into(),
@@ -46,11 +49,11 @@ lazy_static! {
                         "zh-HK".into()
                     } else { "zh-CN".into() }
                 } else { c }
-            }).unwrap_or_else(|| "en-US".into()),
+            }).unwrap_or("en-US".into()),
         max_conc: 3,
         notify: true,
         task_folder: true,
-        temp_dir: get_app_handle().path().temp_dir().unwrap(),
+        temp_dir: get_app_handle().path().temp_dir().expect("Failed to get temp_dir"),
         theme: Theme::Auto,
         proxy: SettingsProxy {
             address: String::new(),
@@ -61,12 +64,17 @@ lazy_static! {
             danmaku: true,
             mp3: false,
         }
-    }));
-    pub static ref SECRET: Arc<RwLock<String>> = Arc::new(RwLock::new(String::new()));
-    pub static ref WORKING_PATH: PathBuf = get_app_handle().path().app_data_dir().unwrap();
-    pub static ref STORAGE_PATH: PathBuf = WORKING_PATH.join("Storage");
-    pub static ref DATABASE_URL: String = format!("sqlite://{}", STORAGE_PATH.to_string_lossy());
-}
+    })
+);
+pub static DATABASE_URL: LazyLock<String>  = LazyLock::new(|| format!("sqlite://{}", STORAGE_PATH.to_string_lossy()));
+pub static READY: LazyLock<OnceCell<()>>   = LazyLock::new(|| OnceCell::new());
+pub static SECRET: LazyLock<String>        = LazyLock::new(|| random_string(8));
+pub static STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKING_PATH.join("Storage"));
+pub static WORKING_PATH: LazyLock<PathBuf> = LazyLock::new(||
+    get_app_handle().path().app_data_dir().expect("Failed to get app_data_dir")
+);
+
+pub static HEADERS: LazyLock<Headers> = LazyLock::new(|| Headers::new());
 
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";
 
@@ -99,7 +107,7 @@ pub struct SidecarError {
 }
 
 #[derive(Clone, Serialize, Deserialize, Type, Event)]
-pub struct Headers {
+pub struct HeadersData {
     #[serde(rename = "Cookie")]
     cookie: String,
     #[serde(rename = "User-Agent")]
@@ -110,24 +118,47 @@ pub struct Headers {
     origin: String,
 }
 
-pub async fn init_headers() -> Result<BTreeMap<String, String>> {
-    let mut map = BTreeMap::new();
-    let cookies = cookies::load().await?
-        .iter().map(|(name, value)|
-            format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
-        ).collect::<Vec<_>>().join("; ");
-    map.insert("Cookie".into(), cookies);
-    map.insert("User-Agent".into(), USER_AGENT.into());
-    map.insert("Referer".into(), "https://www.bilibili.com/".into());
-    map.insert("Origin".into(), "https://www.bilibili.com".into());
-    let app = get_app_handle();
-    let headers_value: Value = serde_json::to_value(&map)?;
-    let headers: Headers = serde_json::from_value(headers_value)?;
-    app.run_on_main_thread(move || {
+pub struct Headers {
+    map: RwLock<BTreeMap<String, String>>
+}
+
+impl Headers {
+    pub fn new() -> Self {
+        let mut map = BTreeMap::new();
+        map.insert("User-Agent".into(), USER_AGENT.into());
+        map.insert("Referer".into(), "https://www.bilibili.com/".into());
+        map.insert("Origin".into(), "https://www.bilibili.com".into());
+        map.insert("Cookie".into(), String::new());
+        Self {
+            map: RwLock::new(map)
+        }
+    }
+    pub async fn refresh(&self) -> Result<()> {
+        let mut map = self.map.write().await;
+        let cookies = cookies::load().await?
+            .iter().map(|(name, value)|
+                format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
+            ).collect::<Vec<_>>().join("; ");
+        map.insert("Cookie".into(), cookies);
+        let headers: HeadersData = serde_json::from_value(
+            serde_json::to_value(&*map)?
+        )?;
+        drop(map);
         let app = get_app_handle();
-        let _ = headers.emit(app);
-    })?;
-    Ok(map)
+        headers.emit(app)?;
+        Ok(())
+    }
+    pub async fn to_header_map(&self) -> Result<HeaderMap> {
+        let mut headers = HeaderMap::new();
+        let map = self.map.read().await;
+        for (key, value) in &*map {
+            headers.insert(
+                HeaderName::from_bytes(key.as_bytes())?,
+                HeaderValue::from_str(value)?
+            );
+        }
+        Ok(headers)
+    }
 }
 
 pub async fn init_client() -> Result<Client> {
@@ -139,16 +170,9 @@ pub async fn init_client_no_proxy() -> Result<Client> {
 }
 
 pub async fn init_client_inner(use_proxy: bool) -> Result<Client> {
-    let mut headers = HeaderMap::new();
-    for (key, value) in init_headers().await? {
-        headers.insert(
-            HeaderName::from_bytes(key.as_bytes())?,
-            HeaderValue::from_str(&value)?
-        );
-    }
     let proxy = &config::read().proxy;
     let client_builder = Client::builder()
-        .default_headers(headers);
+        .default_headers(HEADERS.to_header_map().await?);
     let client_builder = if !proxy.address.is_empty() && use_proxy {
         client_builder.proxy(
             Proxy::all(&proxy.address)?
@@ -161,13 +185,17 @@ pub async fn init_client_inner(use_proxy: bool) -> Result<Client> {
 }
 
 pub fn get_app_handle() -> &'static AppHandle<Wry> {
-    APP_HANDLE.get().unwrap()
+    APP_HANDLE.get().expect("Failed to get APP_HANDLE")
 }
 
 pub fn get_ts(mills: bool) -> i64 {
-    let now = Utc::now();
-    if mills { now.timestamp_millis() }
-    else { now.timestamp() }
+    let now = OffsetDateTime::now_utc();
+    let sec = now.unix_timestamp();
+    if mills {
+        sec
+    } else {
+        sec * 1000 + (now.millisecond() as i64)
+    }
 }
 
 pub fn random_string(len: usize) -> String {
@@ -177,7 +205,10 @@ pub fn random_string(len: usize) -> String {
 
 pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
     let mut count = 1;
-    let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+    let stem = path.file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or("file".into());
+
     let ext = path.extension().map(|e| e.to_string_lossy().to_string());
     while path.exists() {
         path.set_file_name(match &ext {
@@ -191,13 +222,11 @@ pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
 
 pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     let app = get_app_handle();
-    while !*READY.read().unwrap() {
-        std::thread::sleep(std::time::Duration::from_millis(250));
-    }
     log::error!("{name}: {}", e.to_string());
-    SidecarError {
+    let _ = SidecarError {
         name: name.into(), error: e.to_string(),
-    }.emit(app).unwrap(); e
+    }.emit(app);
+    e
 }
 
 #[tauri::command]
@@ -209,14 +238,20 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
     window.with_webview(|webview| unsafe {
         use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
         use windows::core::Interface;
-        let core = webview.controller().CoreWebView2().unwrap();
-        let settings = core.Settings().unwrap().cast::<ICoreWebView2Settings5>().unwrap();
-        #[cfg(not(debug_assertions))]
-        settings.SetAreBrowserAcceleratorKeysEnabled(false).unwrap();
-        settings.SetAreDefaultContextMenusEnabled(false).unwrap();
-        settings.SetIsPasswordAutosaveEnabled(false).unwrap();
-        settings.SetIsGeneralAutofillEnabled(false).unwrap();
-        settings.SetIsZoomControlEnabled(false).unwrap();
+        let settings = webview.controller().CoreWebView2()
+            .and_then(|c| c.Settings())
+            .and_then(|s| s.cast::<ICoreWebView2Settings5>())
+            .map_err(|e| {
+                log::info!("Failed to parse Core Settings to ICoreWebView2Settings5: \n{e:?}")
+            }).ok();
+        if let Some(s) = settings {
+            #[cfg(not(debug_assertions))]
+            let _ = s.SetAreBrowserAcceleratorKeysEnabled(false);
+            let _ = s.SetAreDefaultContextMenusEnabled(false);
+            let _ = s.SetIsPasswordAutosaveEnabled(false);
+            let _ = s.SetIsGeneralAutofillEnabled(false);
+            let _ = s.SetIsZoomControlEnabled(false);
+        }
     })?;
     window.set_theme(theme.as_tauri())?;
     let set_default = || {
@@ -226,7 +261,7 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
                 Ok(dark_light::Mode::Light) => tauri::Theme::Light,
                 _ => tauri::Theme::Light,
             }
-        } else { theme.as_tauri().unwrap() };
+        } else { theme.as_tauri().unwrap_or(tauri::Theme::Light) };
         window.set_background_color(Some(match theme {
             tauri::Theme::Dark => Color(32, 32, 32, 128),
             _ => Color(249, 249, 249, 128),

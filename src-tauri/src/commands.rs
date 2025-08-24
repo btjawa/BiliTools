@@ -21,14 +21,12 @@ pub use crate::{
         ffmpeg,
     },
     storage::{
-        config::{
-            self, config_write
-        },
+        config,
         cookies,
         archive,
     },
     shared::{
-        self, set_window
+        self, set_window, SECRET, READY, HEADERS
     },
     errors::{TauriResult, TauriError},
 };
@@ -45,7 +43,6 @@ pub struct Paths {
 pub struct InitData {
     version: String,
     hash: String,
-    complete: Vec<Arc<String>>,
     tasks: HashMap<Arc<String>, Arc<GeneralTask>>,
     status: HashMap<Arc<String>, Arc<Value>>,
     config: Arc<config::Settings>,
@@ -60,13 +57,12 @@ pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriRes
     for entry in walkdir::WalkDir::new(&path).into_iter().filter_map(Result::ok) {
         let path = entry.path();
         if path.is_file() {
-            // let file_name = path.file_name().unwrap().to_str().unwrap();
             match fs::metadata(path).await {
                 Ok(meta) => {
                     bytes += meta.len();
                     count += 1;
                     if count > 200 {
-                        event.send(bytes).unwrap();
+                        event.send(bytes)?;
                         count = 0;
                     }
                 },
@@ -74,7 +70,7 @@ pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriRes
             }
         }
     }
-    event.send(bytes).unwrap();
+    event.send(bytes)?;
     Ok(())
 }
 
@@ -101,24 +97,33 @@ pub async fn clean_cache(path: String) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
+pub async fn config_write(settings: serde_json::Map<String, Value>, secret: String) -> TauriResult<()> {
+    if secret != *SECRET {
+        return Err(anyhow!("403 Forbidden").into())
+    }
+    config::write(settings).await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn ready() -> TauriResult<String> {
-    #[cfg(not(debug_assertions))]
-    if *shared::READY.read().unwrap() {
+    if let Err(_) = READY.set(()) {
+        #[cfg(not(debug_assertions))]
         return Ok("403 Forbidden".into());
     }
-    *shared::READY.write().unwrap() = true;
-    Ok(shared::SECRET.read().unwrap().to_string())
+    Ok(SECRET.clone())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData> {
-    if secret != *shared::SECRET.read().unwrap() {
+    if secret != *SECRET {
         return Err(anyhow!("403 Forbidden").into())
     }
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
-    let (complete, tasks, status) = archive::load().await?;
+    let (tasks, status) = archive::load().await?;
     let config = config::read();
     let path = app.path();
     let paths = Paths {
@@ -131,19 +136,19 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
         },
         database: path.app_data_dir()?.join("Storage")
     };
-    Ok(InitData { version, hash, complete, tasks, status, config, paths })
+    Ok(InitData { version, hash, tasks, status, config, paths })
 }
 
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn init_login(secret: String) -> TauriResult<()> {
-    if secret != *shared::SECRET.read().unwrap() {
+    if secret != *SECRET {
         return Err(anyhow!("403 Forbidden").into())
     }
     login::stop_login();
     login::get_buvid().await?;
     login::get_bili_ticket().await?;
     login::get_uuid().await?;
-    shared::init_headers().await?;
+    HEADERS.refresh().await?;
     Ok(())
 }

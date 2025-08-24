@@ -141,7 +141,10 @@ async fn handle_nfo(
             .get(&url)
             .send().await?;
         if response.status() != StatusCode::OK {
-            return Err(TauriError::new(format!("Error while fetching thumb {url}"), Some(response.status().as_u16() as isize)));
+            return Err(TauriError::new(
+                format!("Error while fetching thumb {url}"),
+                Some(response.status())
+            ));
         }
         let bytes = response.bytes().await?;
         fs::write(folder.join("poster.jpg"), &bytes).await?;
@@ -183,36 +186,37 @@ async fn handle_danmaku(
         status_tx.send((2, 2)).await?;
         return Ok(()); 
     }
+    const NAME: &str = "DanmakuFactory";
 
-    let (mut _rx, child) = get_app_handle().shell().sidecar("DanmakuFactory")?
+    let (mut _rx, child) = get_app_handle().shell().sidecar(NAME)?
         .args([
-            "-i", &xml.to_str().unwrap(),
-            "-o", &ass.to_str().unwrap(),
+            "-i", &xml.to_string_lossy().to_string(),
+            "-o", &ass.to_string_lossy().to_string(),
         ]).spawn()?;
 
     let mut child = Some(child);
     let mut stderr: Vec<String> = vec![];
 
     loop { tokio::select! {
-        msg = _rx.recv() => match msg {
-            Some(CommandEvent::Stdout(line)) => {
-                log::info!("STDOUT: {}", String::from_utf8_lossy(&line));
+        Some(msg) = _rx.recv() => match msg {
+            CommandEvent::Stdout(line) => {
+                log::info!("{NAME} STDOUT: {}", String::from_utf8_lossy(&line));
             },
-            Some(CommandEvent::Stderr(line)) => {
+            CommandEvent::Stderr(line) => {
                 let line = String::from_utf8_lossy(&line);
-                log::info!("{}", line);
+                log::warn!("{NAME} STDERR: {line}");
                 stderr.push(line.into());
             },
-            Some(CommandEvent::Error(line)) => {
-                log::info!("ERROR: {line}");
+            CommandEvent::Error(line) => {
+                log::error!("{NAME} ERROR: {line}");
             },
-            Some(CommandEvent::Terminated(msg)) => {
+            CommandEvent::Terminated(msg) => {
                 let code = msg.code.unwrap_or(0);
                 if code == 0 {
                     break;
                 } else {
                     return Err(TauriError::new(
-                        format!("DanmakuFactory task failed\n{}", stderr.join("\n")),
+                        format!("{NAME} task failed\n{}", stderr.join("\n")),
                         Some(code as isize)
                     ));
                 }

@@ -50,17 +50,14 @@ export function setEventHook() {
         commands.setWindow(state.theme);
         commands.updateMaxConc(state.max_conc);
     });
-    events.headers.listen(e => {
-        app.headers = e.payload;
-    });
-    events.queueData.listen(e => {
-        const payload = e.payload;
-        queue.$patch(v => {
-            v.waiting = payload.waiting;
-            v.doing = payload.doing;
-            v.complete = payload.complete;
-        });
-    })
+    events.headersData.listen(e => app.$patch(v => {
+        v.headers = e.payload;
+    }));
+    events.queueData.listen(e => queue.$patch(v => {
+        v.waiting = e.payload.waiting;
+        v.doing = e.payload.doing;
+        v.complete = e.payload.complete;
+    }))
     events.sidecarError.listen(e => {
         const err = e.payload;
         new AppError(i18n.global.t('error.sidecar', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handle();
@@ -200,7 +197,6 @@ export async function parseId(input: string, ignore?: boolean) {
             match = input.match(/fid=(\d+)/i);
             if (match) return { id: match[1], type: MediaType.Favorite };
         }
-        console.log(segs);
         switch (segs[1]) {
             case 'video':
                 match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);

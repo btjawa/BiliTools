@@ -75,7 +75,7 @@
 
 如总览所述，您需要准备以下环境：
 
-- [Rust 1.70+](https://www.rust-lang.org/tools/install)
+- [Rust 1.80.0+](https://www.rust-lang.org/tools/install)
 - [Node.js 20.0+](https://nodejs.org/en/download)
 
 参考 Tauri 官方文档进行完整配置：[Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)

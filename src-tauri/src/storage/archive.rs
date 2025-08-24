@@ -1,103 +1,103 @@
-use serde::{Serialize, Deserialize};
-use anyhow::{Context, Result};
-use serde_json::{json, Value};
-use tokio::sync::RwLock;
+use sea_query::{ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
 use std::{collections::HashMap, sync::Arc};
+use sea_query_binder::SqlxBinder;
+use tokio::sync::RwLock;
+use serde_json::Value;
+use anyhow::Result;
+use sqlx::Row;
 
-use sea_orm::{
-    Database, DbBackend, Schema, Set, Statement,
-    entity::prelude::*,
-    sea_query::{
-        TableCreateStatement,
-        SqliteQueryBuilder
-    },
-};
+use crate::{commands::{queue::runtime::QUEUE_MANAGER, GeneralTask}, storage::db::get_db};
 
-use crate::{
-    queue::{
-        GeneralTask, runtime::QUEUE_MANAGER
-    },
-    shared::DATABASE_URL
-};
+use super::db::TableSpec;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Data {
-    status: Arc<Value>,
-    task: Arc<GeneralTask>
+#[derive(Iden)]
+pub enum Archive {
+    Table,
+    Name,
+    Task,
+    Status,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "archive")]
-pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    name: String,
-    value: Value,
+pub struct ArchiveTable;
+
+impl TableSpec for ArchiveTable {
+    const NAME: &'static str = "archive";
+    const LATEST: i32 = 1;
+    fn create_stmt() -> TableCreateStatement {
+        Table::create()
+            .table(Archive::Table)
+            .col(ColumnDef::new(Archive::Name)
+                .text().not_null().primary_key()
+            )
+            .col(ColumnDef::new(Archive::Task)
+                .text().not_null()
+            )
+            .col(ColumnDef::new(Archive::Status)
+                .text().not_null()
+            )
+            .to_owned()
+    }
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub async fn load() -> Result<(
+    HashMap<Arc<String>, Arc<GeneralTask>>,
+    HashMap<Arc<String>, Arc<Value>>,
+)> {
+    let (sql, values) = Query::select()
+        .columns([Archive::Task, Archive::Status])
+        .from(Archive::Table)
+        .build_sqlx(SqliteQueryBuilder);
 
-impl ActiveModelBehavior for ActiveModel {}
-
-pub async fn init() -> Result<()> {
-    let db = Database::connect(&*DATABASE_URL)
-        .await.context("Failed to connect to the database")?;
-    let schema = Schema::new(DbBackend::Sqlite);
-    let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
-    db.execute(Statement::from_string(
-        DbBackend::Sqlite, 
-        stmt.to_string(SqliteQueryBuilder)
-    )).await.context("Failed to init Archive")?;
-    Ok(())
-}
-
-pub async fn load() -> Result<(Vec<Arc<String>>, HashMap<Arc<String>, Arc<GeneralTask>>, HashMap<Arc<String>, Arc<Value>>)> {
-    let db = Database::connect(&*DATABASE_URL)
-        .await.context("Failed to connect to the database")?;
-    let archives = Entity::find().all(&db)
-        .await.context("Failed to load archives")?;
-
-    let mut complete = vec![];
-    let mut tasks = HashMap::new();
-    let mut status = HashMap::new();
+    let rows = sqlx::query_with(&sql, values).fetch_all(&get_db()?).await?;
+    
+    let mut tasks = HashMap::with_capacity(rows.len());
+    let mut status = HashMap::with_capacity(rows.len());
     let mut tasks_guard = QUEUE_MANAGER.tasks.write().await;
     let mut complete_guard = QUEUE_MANAGER.complete.write().await;
-
-    for archive in archives {
-        let data = serde_json::from_value::<Data>(archive.value)?;
-        let id = data.task.id.clone();
-        let task = data.task.clone();
-        complete.push(id.clone());
-        tasks.insert(id.clone(), data.task.clone());
-        status.insert(id.clone(), data.status);
-
+    for r in rows {
+        let t: Arc<GeneralTask> = serde_json::from_str(
+            &r.try_get::<String, _>("task")?
+        )?;
+        let s: Arc<Value> = serde_json::from_str(
+            &r.try_get::<String, _>("status")?
+        )?;
+        let id = t.id.clone();
+        tasks.insert(id.clone(), t.clone());
+        status.insert(id.clone(), s);
         complete_guard.push_back(id.clone());
-        tasks_guard.insert(id.clone(), Arc::new(RwLock::new((*task).clone())));
+        tasks_guard.insert(id.clone(), Arc::new(RwLock::new((*t).clone())));
     }
-    Ok((complete, tasks, status))
+    drop(tasks_guard);
+    drop(complete_guard);
+    QUEUE_MANAGER.emit().await;
+    Ok((tasks, status))
 }
 
 pub async fn insert(task: Arc<GeneralTask>, status: Arc<Value>) -> Result<()> {
-    let db = Database::connect(&*DATABASE_URL)
-        .await.context("Failed to connect to the database")?;
-    let id = (&*task.id).clone();
-    let db_info = ActiveModel {
-        name: Set(id),
-        value: Set(json!(Data {
-            task,
-            status
-        }))
-    };
-    db_info.insert(&db).await?;
+    let name = (&*task.id).clone();
+    let task = serde_json::to_string(&task)?;
+    let status = serde_json::to_string(&status)?;
+    let (sql, values) = Query::insert()
+        .into_table(Archive::Table)
+        .columns([Archive::Name, Archive::Task, Archive::Status])
+        .values_panic([name.into(), task.into(), status.into()])
+        .on_conflict(
+            OnConflict::column(Archive::Name)
+                .update_columns([Archive::Task, Archive::Status])
+                .to_owned()
+        )
+        .build_sqlx(SqliteQueryBuilder);
+
+    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
     Ok(())
 }
 
 pub async fn delete(id: String) -> Result<()> {
-    let db = Database::connect(&*DATABASE_URL)
-        .await.context("Failed to connect to the database")?;
-    Entity::delete_many()
-        .filter(Column::Name.eq(&id))
-        .exec(&db).await?;
+    let (sql, values) = Query::delete()
+        .from_table(Archive::Table)
+        .cond_where(Expr::col(Archive::Name).eq(&id))
+        .build_sqlx(SqliteQueryBuilder);
 
+    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
     Ok(())
 }

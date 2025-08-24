@@ -1,33 +1,16 @@
-use std::{collections::BTreeMap, sync::Arc};
-use anyhow::{anyhow, Context, Result};
-use serde::{Serialize, Deserialize};
-use std::path::PathBuf;
+use sea_query::{ColumnDef, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, sync::Arc};
+use sea_query_binder::SqlxBinder;
+use anyhow::{anyhow, Result};
 use serde_json::Value;
 use specta::Type;
+use sqlx::Row;
 
-use sea_orm::{
-    Database, DbBackend, IntoActiveModel, JsonValue, Schema, Statement, FromJsonQueryResult,
-    entity::prelude::*,
-    sea_query::{
-        TableCreateStatement,
-        SqliteQueryBuilder,
-        OnConflict,
-    },
-};
+use super::db::{get_db, TableSpec};
+use crate::shared::{Theme, CONFIG};
 
-use crate::{shared::{
-    Theme, CONFIG, DATABASE_URL, SECRET
-}, TauriResult};
-
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "config")]
-pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub name: String,
-    pub value: JsonValue,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct Settings {
     pub add_metadata: bool,
     pub auto_check_update: bool,
@@ -54,113 +37,141 @@ impl Settings {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SettingsProxy {
     pub address: String,
     pub username: String,
     pub password: String
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SettingsDefault {
     pub res: usize,
     pub abr: usize,
     pub enc: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SettingsFormat {
     pub series: String,
     pub item: String,
     pub file: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult, Type)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SettingsConvert {
     pub danmaku: bool,
     pub mp3: bool,
 }
 
+#[derive(Iden)]
+pub enum Config {
+    Table,
+    Name,
+    Value
+}
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub struct ConfigTable;
 
-impl ActiveModelBehavior for ActiveModel {}
+impl TableSpec for ConfigTable {
+    const NAME: &'static str = "config";
+    const LATEST: i32 = 1;
+    fn create_stmt() -> TableCreateStatement {
+        Table::create()
+            .table(Config::Table)
+            .col(ColumnDef::new(Config::Name)
+                .text().not_null().primary_key()
+            )
+            .col(ColumnDef::new(Config::Value)
+                .text().not_null()
+            )
+            .to_owned()
+    }
+}
 
-pub async fn init() -> Result<()> {
-    let db = Database::connect(&*DATABASE_URL)
-        .await.context("Failed to connect to the database")?;
-    let schema = Schema::new(DbBackend::Sqlite);
-    let stmt: TableCreateStatement = schema.create_table_from_entity(Entity).if_not_exists().to_owned();
-    db.execute(Statement::from_string(
-        DbBackend::Sqlite, 
-        stmt.to_string(SqliteQueryBuilder)
-    )).await.context("Failed to init Config")?;
-    let local = load(&db).await?;
-    let map = serde_json::to_value(CONFIG.read().unwrap().clone())?
-        .as_object().cloned().unwrap();
+pub fn read() -> Arc<Settings> {
+    CONFIG.load_full()
+}
 
-    let mut local: serde_json::Map<String, Value> = 
-        local.into_iter().map(|Model { name, value }| (name, value)).collect();
+pub async fn load() -> Result<()> {
+    let (sql, values) = Query::select()
+        .columns([Config::Name, Config::Value])
+        .from(Config::Table)
+        .build_sqlx(SqliteQueryBuilder);
 
+    let rows = sqlx::query_with(&sql, values).fetch_all(&get_db()?).await?;
+    let mut local = serde_json::Map::new();
+    for r in rows {
+        let n: String = r.try_get("name")?;
+        let v: Value = serde_json::from_str(
+            &r.try_get::<String, _>("value")?
+        )?;
+        local.insert(n, v);
+    }
+
+    let map = serde_json::to_value(read())?
+        .as_object().cloned().ok_or(anyhow!("Failed to read config"))?;
     for (k, v) in map {
         if !local.contains_key(&k) {
-            local.insert(k.clone(), v.clone());
-            insert(&db, k, v).await?;
-        } else if let (Value::Object(default), Value::Object(local)) = (v, local.get_mut(&k).unwrap()) {
+            insert(&k, &v).await?;
+            local.insert(k, v);
+        } else if let (
+            Value::Object(default),
+            Value::Object(local)
+        ) = (
+            v, local.get_mut(&k)
+                .ok_or(anyhow!("Failed to get local config"))?
+        ) {
             for (k, v) in default {
                 if !local.contains_key(&k) {
                     local.insert(k, v);
                 }
             }
-            insert(&db, k, Value::Object(local.clone())).await?;
+            insert(&k, &Value::Object(local.to_owned())).await?;
         }
     }
-    *CONFIG.write().unwrap() = serde_json::from_value(Value::Object(local))?;
+    CONFIG.store(Arc::new(
+        serde_json::from_value(Value::Object(local))?
+    ));
     Ok(())
 }
 
-pub async fn load(db: &DatabaseConnection) -> Result<Vec<Model>> {
-    Ok(Entity::find().all(db).await.context("Failed to load Settings")?)
-}
-
-pub async fn insert(db: &DatabaseConnection, name: String, value: JsonValue) -> Result<()> {
-    Entity::insert(Model { name: name.clone(), value }.into_active_model())
+pub async fn insert(name: &str, value: &Value) -> Result<()> {
+    let (sql, values) = Query::insert()
+        .into_table(Config::Table)
+        .columns([Config::Name, Config::Value])
+        .values_panic([
+            name.into(),
+            serde_json::to_string(&value)?.into()
+        ])
         .on_conflict(
-        OnConflict::column(Column::Name)
-            .update_columns([Column::Value])
-            .to_owned())
-        .exec(db).await
-        .with_context(|| format!("Failed to insert Setting: {:?}", &name))?;
+            OnConflict::column(Config::Name)
+                .update_columns([Config::Value])
+                .to_owned()
+        )
+        .build_sqlx(SqliteQueryBuilder);
 
+    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
     Ok(())
 }
 
-pub fn read() -> Arc<Settings> {
-    CONFIG.read().unwrap().clone()
-}
+pub async fn write(settings: serde_json::Map<String, Value>) -> Result<()> {
+    let mut map = serde_json::to_value(read())?;
+    let keys = map.as_object().map(|v|
+        v.keys().cloned().collect::<Vec<String>>()
+    ).ok_or(anyhow!("Failed to read config"))?;
 
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn config_write(settings: BTreeMap<String, Value>, secret: String) -> TauriResult<()> {
-    if secret != *SECRET.read().unwrap() {
-        return Err(anyhow!("403 Forbidden").into());
-    }
-    let db = Database::connect(&*DATABASE_URL)
-        .await.context("Failed to connect to the database")?;
-    let mut map = serde_json::to_value(CONFIG.read().unwrap().clone())?;
-    let keys = map.as_object().map(|f|
-        f.keys().cloned().collect::<Vec<String>>()
-    ).unwrap();
-    
-    let update = settings.into_iter().filter(|(k, _)| keys.contains(k))
-        .collect::<BTreeMap<_, _>>();
+    let ftr = settings.into_iter().filter(|(k, _)| keys.contains(k));
+    let obj = map.as_object_mut().ok_or(anyhow!("Failed to get mutable config"))?;
 
-    map.as_object_mut().unwrap().extend(update.clone());
-    for (k, v) in update {
-        insert(&db, k, v).await?;
+    for (k, v) in ftr {
+        insert(&k, &v).await?;
+        obj.insert(k, v);
     }
-    *CONFIG.write().unwrap() = serde_json::from_value(map)?;
+    CONFIG.store(Arc::new(
+        serde_json::from_value(map)?
+    ));
+
     #[cfg(debug_assertions)]
     log::info!("CONFIG: \n{}", serde_json::to_string_pretty(&read())?);
     Ok(())

@@ -1,32 +1,26 @@
-use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, pin::Pin, sync::Arc};
+use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, pin::Pin, sync::{Arc, LazyLock}};
 use tokio::sync::{broadcast::{Sender, Receiver, channel}, mpsc, oneshot, RwLock, Semaphore};
 use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use anyhow::{Context, Result, anyhow};
-use lazy_static::lazy_static;
 
 use tauri::{async_runtime, ipc::Channel, Listener};
 use tauri_specta::Event;
 use specta::Type;
 
 use crate::{
-    shared::{
+    archive, config, errors::AnyInt, queue::{
+        handlers, types::{
+            GeneralTask, QueueData, TaskState
+        }
+    }, shared::{
         get_app_handle, get_unique_path
-    },
-    TauriResult, archive, config,
-    queue::{
-        types::{
-            GeneralTask,
-            TaskState,
-            QueueData
-        },
-        handlers,
-    },
+    }, TauriResult
 };
 
-lazy_static! {
-    pub static ref QUEUE_MANAGER: QueueManager = QueueManager::new();
-    static ref SCHEDULER_LIST: RwLock<Vec<Arc<Scheduler>>> = Default::default();
-}
+pub static QUEUE_MANAGER: LazyLock<QueueManager> = LazyLock::new(|| QueueManager::new());
+pub static SCHEDULER_LIST: LazyLock<RwLock<Vec<Arc<Scheduler>>>> = LazyLock::new(||
+    Default::default()
+);
 
 // Queue
 
@@ -63,7 +57,7 @@ impl QueueManager {
         }
     }
 
-    async fn emit(&self) {
+    pub async fn emit(&self) {
         let queue = QueueData {
             waiting:  self.waiting.read().await.clone(),
             doing:    self.doing.read().await.clone(),
@@ -162,7 +156,7 @@ pub enum ProcessEvent {
     Error {
         id: Arc<String>,
         message: String,
-        code: Option<isize>,
+        code: Option<AnyInt>,
     }
 }
 
@@ -381,20 +375,21 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
         let scheduler = scheduler.clone();
         let handle = async_runtime::spawn(async move {
             let _permit = permit;
-            let task = QUEUE_MANAGER.move_task(&id, QueueType::Waiting, QueueType::Doing).await.unwrap();
-            if let Err(e) = handlers::handle_task(scheduler, task.clone()).await {
-                log::error!("task {} failed: {e:#}", id.clone());
-                let _ = event_clone.send(ProcessEvent::Error {
-                    id: id.clone(),
-                    message: e.message,
-                    code: e.code,
-                });
-                let _ = event_clone.send(ProcessEvent::TaskState {
-                    id: id.clone(),
-                    state: TaskState::Failed
-                });
-            }
-            QUEUE_MANAGER.move_task(&id, QueueType::Doing, QueueType::Complete).await;
+            if let Some(task) = QUEUE_MANAGER.move_task(&id, QueueType::Waiting, QueueType::Doing).await {
+                if let Err(e) = handlers::handle_task(scheduler, task.clone()).await {
+                    log::error!("task {} failed: {e:#}", id.clone());
+                    let _ = event_clone.send(ProcessEvent::Error {
+                        id: id.clone(),
+                        message: e.message,
+                        code: e.code,
+                    });
+                    let _ = event_clone.send(ProcessEvent::TaskState {
+                        id: id.clone(),
+                        state: TaskState::Failed
+                    });
+                }
+                QUEUE_MANAGER.move_task(&id, QueueType::Doing, QueueType::Complete).await;
+            };
             drop(_permit);
         });
         handles.push(handle);
@@ -408,7 +403,7 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
             .app_id("com.btjawa.bilitools")
             .summary("BiliTools")
             .body(&format!("{name}\nDownload complete~"))
-            .show().unwrap();
+            .show()?;
     }
     Ok(())
 }
@@ -440,7 +435,9 @@ pub async fn task_event(event: CtrlEvent, id: Arc<String>) -> TauriResult<()> {
             let scheduler = guard.iter().find(|v| {
                 v.list.iter().any(|v| v.as_str() == id.as_str())
             }).ok_or(anyhow!("No scheduler for task {id} found"))?;
-            scheduler.get_ctrl(&id).await.unwrap().send(event.clone())?;
+            scheduler.get_ctrl(&id).await
+                .ok_or(anyhow!("Failed to get ctrl for {id}"))?
+                .send(event.clone())?;
             scheduler.event.send(ProcessEvent::TaskState {
                 id: id.clone(),
                 state: match event {
