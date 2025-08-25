@@ -1,12 +1,14 @@
 use sea_query::{Alias, ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
 use sqlx::{sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions}, SqlitePool, Row};
-use std::{str::FromStr, time::Duration};
-use anyhow::{anyhow, Context, Result};
+use std::{future::Future, path::PathBuf, str::FromStr, time::Duration};
+use tokio::{fs, sync::{Notify, RwLock}};
 use sea_query_binder::SqlxBinder;
-use crate::shared::DATABASE_URL;
-use tokio::sync::OnceCell;
+use anyhow::Result;
 
-static DB: OnceCell<SqlitePool> = OnceCell::const_new();
+use crate::shared::{DATABASE_URL, STORAGE_PATH};
+
+static DB: RwLock<Option<SqlitePool>> = RwLock::const_new(None);
+static DB_READY: Notify = Notify::const_new();
 
 #[derive(Iden)] enum Meta {
     Table, Name, Version
@@ -16,12 +18,13 @@ pub trait TableSpec: Send + Sync + 'static {
     const NAME: &'static str;
     const LATEST: i32;
     fn create_stmt() -> TableCreateStatement;
-    async fn check_latest() -> Result<()> {
+    // actually async
+    fn check_latest() -> impl Future<Output = Result<()>> { async {
         init_meta().await?;
-        let db = get_db()?;
+        let pool = get_db().await?;
         let cur = get_version(Self::NAME).await?;
         if cur != Self::LATEST {
-            let mut tx = db.begin().await?;
+            let mut tx = pool.begin().await?;
 
             let drop_sql = Table::drop()
                 .table(Alias::new(Self::NAME))
@@ -38,7 +41,7 @@ pub trait TableSpec: Send + Sync + 'static {
             set_version(Self::NAME, Self::LATEST).await?;
         }
         Ok(())
-    }
+    } }
 }
 
 pub async fn init_db() -> Result<()> {
@@ -54,12 +57,20 @@ pub async fn init_db() -> Result<()> {
         .connect_with(opts)
         .await?;
 
-    DB.set(pool).context("DB already initialized")?;
+    let mut guard = DB.write().await;
+    *guard = Some(pool);
+    drop(guard);
+    DB_READY.notify_waiters();
     Ok(())
 }
 
-pub fn get_db() -> Result<SqlitePool> {
-    DB.get().cloned().ok_or(anyhow!("DB not initialized"))
+pub async fn get_db() -> Result<SqlitePool> {
+    loop {
+        if let Some(pool) = DB.read().await.clone() {
+            return Ok(pool);
+        }
+        DB_READY.notified().await;
+    }
 }
 
 pub async fn init_meta() -> Result<()> {
@@ -70,7 +81,8 @@ pub async fn init_meta() -> Result<()> {
         .col(ColumnDef::new(Meta::Version).integer().not_null().default(0))
         .to_string(SqliteQueryBuilder);
 
-    sqlx::query(&sql).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query(&sql).execute(&pool).await?;
     Ok(())
 }
 
@@ -81,7 +93,8 @@ pub async fn get_version(name: &str) -> Result<i32> {
         .cond_where(Expr::col(Meta::Name).eq(name))
         .build_sqlx(SqliteQueryBuilder);
 
-    if let Some(row) = sqlx::query_with(&sql, values).fetch_optional(&get_db()?).await? {
+    let pool = get_db().await?;
+    if let Some(row) = sqlx::query_with(&sql, values).fetch_optional(&pool).await? {
         Ok(row.try_get::<i32, _>("version")?)
     } else {
         Ok(0)
@@ -100,6 +113,31 @@ pub async fn set_version(name: &str, value: i32) -> Result<()> {
         )
         .build_sqlx(SqliteQueryBuilder);
 
-    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query_with(&sql, values).execute(&pool).await?;
+    Ok(())
+}
+
+pub async fn import(input: PathBuf) -> Result<()> {
+    let mut guard = DB.write().await;
+    if let Some(old) = guard.take() {
+        old.close().await;
+    }
+    drop(guard);
+    let target = STORAGE_PATH.to_string_lossy();
+    let _ = fs::remove_file(&*target).await;
+    let _ = fs::remove_file(&format!("{target}-wal")).await;
+    let _ = fs::remove_file(&format!("{target}-shm")).await;
+    fs::copy(&input, &*target).await?;
+    init_db().await?;
+    Ok(())
+}
+
+pub async fn export(output: PathBuf) -> Result<()> {
+    let pool = get_db().await?;
+    let mut conn = pool.acquire().await?;
+    let output = output.to_string_lossy().replace('\'', "''");
+    sqlx::query("PRAGMA wal_checkpoint(FULL);").execute(&mut *conn).await?;
+    sqlx::query(&format!("VACUUM INTO '{output}';")).execute(&mut *conn).await?;
     Ok(())
 }

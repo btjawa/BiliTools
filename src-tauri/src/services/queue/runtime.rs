@@ -8,7 +8,7 @@ use tauri_specta::Event;
 use specta::Type;
 
 use crate::{
-    archive, config, errors::AnyInt, queue::{
+    archive, config, queue::{
         handlers, types::{
             GeneralTask, QueueData, TaskState
         }
@@ -160,7 +160,7 @@ pub enum ProcessEvent {
     Error {
         id: Arc<String>,
         message: String,
-        code: Option<AnyInt>,
+        code: Option<isize>,
     }
 }
 
@@ -269,7 +269,7 @@ impl Scheduler {
             let _ = result.unwrap_or(Ok(())).map_err(|e| self.event.send(ProcessEvent::Error {
                 id: id.clone(),
                 message: e.message,
-                code: e.code,
+                code: e.code.map(|v| v.saturating_isize()),
             }));
         }
         Ok(())
@@ -386,7 +386,7 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
                     let _ = event_clone.send(ProcessEvent::Error {
                         id: id.clone(),
                         message: e.message,
-                        code: e.code,
+                        code: e.code.map(|v| v.saturating_isize()),
                     });
                     let _ = event_clone.send(ProcessEvent::TaskState {
                         id: id.clone(),

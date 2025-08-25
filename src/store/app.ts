@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { Headers } from "@/services/backend";
+import { HeadersData } from "@/services/backend";
 
 export const useAppStore = defineStore('app', {
     state: () => ({
@@ -7,7 +7,7 @@ export const useAppStore = defineStore('app', {
         hash: String(),
         secret: String(),
         inited: false,
-        headers: {} as Headers,
+        headers: {} as HeadersData,
         cache: {
             log: Number(),
             temp: Number(),

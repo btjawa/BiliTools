@@ -48,7 +48,8 @@ pub async fn load() -> Result<(
         .from(Archive::Table)
         .build_sqlx(SqliteQueryBuilder);
 
-    let rows = sqlx::query_with(&sql, values).fetch_all(&get_db()?).await?;
+    let pool = get_db().await?;
+    let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
     
     let mut tasks = HashMap::with_capacity(rows.len());
     let mut status = HashMap::with_capacity(rows.len());
@@ -88,7 +89,8 @@ pub async fn insert(task: Arc<GeneralTask>, status: Arc<Value>) -> Result<()> {
         )
         .build_sqlx(SqliteQueryBuilder);
 
-    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }
 
@@ -98,6 +100,7 @@ pub async fn delete(id: String) -> Result<()> {
         .cond_where(Expr::col(Archive::Name).eq(&id))
         .build_sqlx(SqliteQueryBuilder);
 
-    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }

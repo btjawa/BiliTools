@@ -5,10 +5,10 @@
         <span>{{ $t('settings.paths.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.paths.desc') }}</span>
-    <div v-for="v in pathList">
+    <div v-for="v in pathList" class="io">
         <h3>{{ $t('settings.paths.' + v) }}</h3>
         <button @click="openPath(settings[v])">{{ settings[v] }}</button>
-        <button @click="choosePath(v)"><i class="fa-light fa-folder-open"></i></button>
+        <button @click="getFolder(v)"><i class="fa-light fa-folder-open"></i></button>
     </div>
 </section>
 <hr />
@@ -18,10 +18,28 @@
         <span>{{ $t('settings.cache.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.cache.desc') }}</span>
-    <div v-for="v in cacheList">
+    <div v-for="v in cacheList" class="io">
         <h3>{{ $t('settings.cache.' + v) }}</h3>
         <button @click="openPath(app.paths[v])">{{ formatBytes(app.cache[v]) }}</button>
         <button @click="cleanCache(v)"><i class="fa-light fa-broom-wide"></i></button>
+    </div>
+</section>
+<hr />
+<section>
+    <h2>
+        <i :class="[$fa.weight, 'fa-box-taped']"></i>
+        <span>{{ $t('settings.database.name') }}</span>
+    </h2>
+    <span class="desc">{{ $t('settings.database.desc') }}</span>
+    <div class="db flex gap-2">
+        <button @click="importDb">
+            <i :class="[$fa.weight, 'fa-file-import']"></i>
+            <span>{{ $t('settings.database.import') }}</span>
+        </button>
+        <button @click="exportDb">
+            <i :class="[$fa.weight, 'fa-file-export']"></i>
+            <span>{{ $t('settings.database.export') }}</span>
+        </button>
     </div>
 </section>
 </template>
@@ -30,6 +48,7 @@
 import { onMounted } from 'vue';
 import i18n from '@/i18n';
 
+import { relaunch } from '@tauri-apps/plugin-process';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { Channel } from '@tauri-apps/api/core';
 import * as dialog from '@tauri-apps/plugin-dialog';
@@ -56,11 +75,11 @@ async function getSize(type: CacheKey) {
 async function cleanCache(type: CacheKey) {
     const result = await dialog.ask(i18n.global.t('settings.confirm'), { 'kind': 'warning' });
     if (!result) return;
-    await commands.cleanCache(app.paths[type]);
+    await commands.cleanCache(app.paths[type], app.secret);
     await getSize(type);
 }
 
-async function choosePath(type: typeof pathList[number]) {
+async function getFolder(type: typeof pathList[number]) {
     const path = await dialog.open({
         directory: true,
         defaultPath: settings[type]
@@ -69,10 +88,29 @@ async function choosePath(type: typeof pathList[number]) {
     settings[type] = path;
     app.paths.temp = path;
 }
+
+async function importDb() {
+    const path = await dialog.open({
+        defaultPath: settings.down_dir
+    });
+    if (!path) return;
+    const result = await commands.dbImport(path, app.secret);
+    if (result.status === 'error') throw result.error;
+    await relaunch();
+}
+
+async function exportDb() {
+    const path = await dialog.save({
+        defaultPath: `${settings.down_dir}/Storage_${Date.now()}`
+    });
+    if (!path) return;
+    const result = await commands.dbExport(path, app.secret);
+    if (result.status === 'error') throw result.error;
+}
 </script>
 
 <style lang="scss" scoped>
-section > div button {
+.io button {
     @apply m-0;
     &:nth-of-type(1) {
         @apply min-w-24 max-w-[420px] rounded-r-none;
@@ -80,5 +118,8 @@ section > div button {
     &:nth-of-type(2) {
         @apply bg-[var(--primary-color)] rounded-l-none;
     }
+}
+.db button {
+    @apply w-32;
 }
 </style>

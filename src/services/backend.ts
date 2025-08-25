@@ -56,38 +56,6 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async ready() : Promise<Result<string, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("ready") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async init(secret: string) : Promise<Result<InitData, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("init", { secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async initLogin(secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("init_login", { secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
@@ -104,9 +72,25 @@ async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null,
     else return { status: "error", error: e  as any };
 }
 },
-async cleanCache(path: string) : Promise<Result<null, TauriError>> {
+async cleanCache(path: string, secret: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path }) };
+    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dbImport(input: string, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("db_import", { input, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dbExport(output: string, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("db_export", { output, secret }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -143,6 +127,38 @@ async updateMaxConc(maxConc: number) : Promise<Result<null, TauriError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async ready() : Promise<Result<string, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ready") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async init(secret: string) : Promise<Result<InitData, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("init", { secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async initLogin(secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("init_login", { secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -165,7 +181,7 @@ sidecarError: "sidecar-error"
 
 /** user-defined types **/
 
-export type AnyInt = { I128: number } | { U128: number }
+export type AnyInt = number
 export type CtrlEvent = "pause" | "resume" | "cancel" | "openfolder"
 export type GeneralTask = { id: string; ts: number; index: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo; subtasks: SubTask[] }
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
@@ -182,7 +198,7 @@ export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
 export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
 export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
-export type ProcessEvent = { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "progress"; parent: string; id: string; content: number; chunk: number } | { type: "taskState"; id: string; state: TaskState } | { type: "error"; id: string; message: string; code: AnyInt | null }
+export type ProcessEvent = { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "progress"; parent: string; id: string; content: number; chunk: number } | { type: "taskState"; id: string; state: TaskState } | { type: "error"; id: string; message: string; code: number | null }
 export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
 export type RequestAction = "getStatus" | "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
 export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; task_folder: boolean; temp_dir: string; theme: Theme; proxy: SettingsProxy; convert: SettingsConvert }

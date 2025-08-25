@@ -1,7 +1,7 @@
 pub mod archive;
 pub mod config;
 pub mod cookies;
-mod db;
+pub mod db;
 
 use db::TableSpec;
 use crate::shared::process_err as err;

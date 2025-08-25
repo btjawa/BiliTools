@@ -99,7 +99,8 @@ pub async fn load() -> Result<()> {
         .from(Config::Table)
         .build_sqlx(SqliteQueryBuilder);
 
-    let rows = sqlx::query_with(&sql, values).fetch_all(&get_db()?).await?;
+    let pool = get_db().await?;
+    let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
     let mut local = serde_json::Map::new();
     for r in rows {
         let n: String = r.try_get("name")?;
@@ -151,7 +152,8 @@ pub async fn insert(name: &str, value: &Value) -> Result<()> {
         )
         .build_sqlx(SqliteQueryBuilder);
 
-    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }
 

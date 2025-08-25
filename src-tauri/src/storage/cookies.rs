@@ -71,7 +71,8 @@ pub async fn load() -> Result<BTreeMap<String, String>> {
         .from(Cookies::Table)
         .build_sqlx(SqliteQueryBuilder);
 
-    let rows = sqlx::query_with(&sql, values).fetch_all(&get_db()?).await?;
+    let pool = get_db().await?;
+    let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
 
     let mut result = BTreeMap::new();
     for r in rows {
@@ -120,7 +121,6 @@ pub async fn insert(cookie: String) -> Result<()> {
             _ => continue
         }
     }
-    log::info!("{:?}", row);
     let (sql, values) = Query::insert()
         .into_table(Cookies::Table)
         .columns([
@@ -144,7 +144,8 @@ pub async fn insert(cookie: String) -> Result<()> {
         )
         .build_sqlx(SqliteQueryBuilder);
 
-    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }
 
@@ -154,6 +155,7 @@ pub async fn delete(name: String) -> Result<()> {
         .cond_where(Expr::col(Cookies::Name).eq(&name))
         .build_sqlx(SqliteQueryBuilder);
 
-    sqlx::query_with(&sql, values).execute(&get_db()?).await?;
+    let pool = get_db().await?;
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }

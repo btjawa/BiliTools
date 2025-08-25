@@ -7,13 +7,8 @@
   ],
   "platforms": ["linux", "macOS", "windows"],
   "permissions": [
-    "core:path:default",
     "core:event:default",
     "core:app:default",
-    "core:image:default",
-    "core:resources:default",
-    "core:menu:default",
-    "core:tray:default",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",

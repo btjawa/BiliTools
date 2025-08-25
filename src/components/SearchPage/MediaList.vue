@@ -37,7 +37,6 @@
     </template>
 </RecycleScroller>
 </template>
-<!--  -->
 <script lang="ts" setup>
 import { RecycleScroller, RecycleScrollerInstance } from 'vue-virtual-scroller';
 import { MediaInfo, MediaItem } from '@/types/shared.d';

@@ -24,6 +24,7 @@ pub use crate::{
         config,
         cookies,
         archive,
+        db,
     },
     shared::{
         self, set_window, SECRET, READY, HEADERS
@@ -76,7 +77,10 @@ pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriRes
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn clean_cache(path: String) -> TauriResult<()> {
+pub async fn clean_cache(path: String, secret: String) -> TauriResult<()> {
+    if secret != *SECRET {
+        return Err(anyhow!("403 Forbidden").into())
+    }
     if path.ends_with("Storage") {
         let _ = fs::remove_file(&path).await;
     } else {
@@ -102,6 +106,26 @@ pub async fn config_write(settings: serde_json::Map<String, Value>, secret: Stri
         return Err(anyhow!("403 Forbidden").into())
     }
     config::write(settings).await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn db_export(output: PathBuf, secret: String) -> TauriResult<()> {
+    if secret != *SECRET {
+        return Err(anyhow!("403 Forbidden").into())
+    }
+    db::export(output).await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn db_import(input: PathBuf, secret: String) -> TauriResult<()> {
+    if secret != *SECRET {
+        return Err(anyhow!("403 Forbidden").into())
+    }
+    db::import(input).await?;
     Ok(())
 }
 

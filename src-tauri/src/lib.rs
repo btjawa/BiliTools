@@ -24,8 +24,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         // Then register them (separated by a comma)
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            ready, init, init_login, set_window, config_write, get_size, clean_cache, // Essentials
-            submit_task, process_queue, task_event, update_max_conc // Queue
+            config_write, get_size, clean_cache, db_import, db_export, // Settings
+            submit_task, process_queue, task_event, update_max_conc, // Queue
+            ready, init, init_login, set_window, // Basics
         ])
         .events(collect_events![
             shared::HeadersData, shared::SidecarError, queue::QueueData

@@ -257,6 +257,7 @@ async function handleEvent(event: backend.ProcessEvent) {
 export async function processQueue() {
     try {
         const queue = useQueueStore();
+        queue.seq = 0;
         const event = new Channel<backend.ProcessEvent>();
         event.onmessage = handleEvent;
         const handled = new Set(queue.handled);
@@ -299,13 +300,13 @@ export async function submit(info: Types.MediaInfo, _select: Types.PopupSelect, 
     const detach = <T>(x: T): T => structuredClone(toRaw(x));
     const queue = useQueueStore();
     const settings = useSettingsStore();
-    for (const [index, idx] of checkboxs.entries()) {
+    for (const idx of checkboxs) {
         const id = randomString(8);
         const select = detach(_select);
         const task: Types.GeneralTask = {
             id,
             ts: Math.floor(Date.now() / 1000),
-            index: index,
+            index: queue.seq++,
             folder: String(),
             select: select,
             item: detach(info.list[idx]),

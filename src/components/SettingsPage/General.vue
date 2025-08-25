@@ -22,7 +22,7 @@
     />
 </section>
 <hr />
-<section v-if="false"> <!-- temporarily inop -->
+<section>
     <h3>
         <i :class="[$fa.weight, 'fa-clipboard-check']"></i>
         <span>{{ $t('settings.clipboard.name') }}</span>
