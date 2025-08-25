@@ -134,7 +134,8 @@
         "sidecar": "Sidecar {0} Error",
         "checkUpdate": "Check the latest updates on GitHub",
         "invalidInput": "Failed to parse input",
-        "selectLimit": "It is not recommended to select more than 30 items at once"
+        "selectLimit": "It is not recommended to select more than 30 items at once",
+        "clipboardRead": "Failed to read clipboard content"
     },
     "updater": {
         "title": "New version available!",
@@ -202,7 +203,16 @@
             "auto": "Follow System"
         },
         "clipboard": {
-            "name": "Clipboard Monitor"
+            "name": "Clipboard Monitor",
+            "desc": "If enabled, automatically detects Bilibili links in clipboard and shows a dialog.",
+            "dialog": {
+                "title": "Bilibili Content Detected",
+                "detected": "Detected the following Bilibili content from clipboard",
+                "search": "Search Now",
+                "cancel": "Cancel",
+                "loading": "Getting video information...",
+                "patience": "Please wait, parsing content"
+            }
         },
         "notify": {
             "name": "Notification",
