@@ -5,6 +5,9 @@ layout: home
 hero:
   name: "BiliTools"
   text: "简约 & 轻量的\n哔哩哔哩工具箱"
+  image:
+    src: /hero.svg
+    alt: BiliTools
   actions:
     - theme: brand
       text: 快速开始
