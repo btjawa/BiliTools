@@ -113,7 +113,7 @@ const buttons = [{
 	text: 'search.advanced',
 	action: () => AppLog(i18n.global.t('wip'), 'info')
 }, {
-	icon: 'fa-check-double',
+	icon: 'fa-border-outer',
 	text: 'search.selectAll',
 	action: () => v.checkboxs = 
 		v.checkboxs.length === v.mediaInfo.list.length 
@@ -146,9 +146,8 @@ watch(() => v.tab, async (t) => {
 	updateIndex();
 });
 
-watch(() => v.checkboxs, (a, b) => {
-	if (a.length > b.length && a.length > 30)
-	AppLog(i18n.global.t('error.selectLimit'), 'warning');
+watch(() => v.checkboxs.length, (len) => {
+	if (len > 30) AppLog(i18n.global.t('error.selectLimit'), 'warning');
 });
 
 watch(() => v.pageIndex, async (pn) => {
