@@ -5,7 +5,7 @@
         <span>{{ $t('settings.default.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.default.desc') }}</span>
-    <div v-for="v in defaults">
+    <div v-for="v in (['res', 'abr', 'enc'] as const)">
         <h3>{{ $t('format.' + v) }}</h3>
         <Dropdown
             :drop="QualityMap[v].map(id => ({ id, name: $t(`quality.${v}.${id}`) }))"
@@ -14,14 +14,6 @@
     </div>
 </section>
 <hr />
-<section>
-    <h3>
-        <i :class="[$fa.weight, 'fa-folders']"></i>
-        <span>{{ $t('settings.task_folder.name') }}</span>
-    </h3>
-    <Switch v-model="settings.task_folder"/>
-    <span class="desc">{{ $t('settings.task_folder.desc') }}</span>
-</section>
 <section>
     <h3>
         <i :class="[$fa.weight, 'fa-angles-down']"></i>
@@ -39,7 +31,7 @@
         <i :class="[$fa.weight, 'fa-globe']"></i>
         <span>{{ $t('settings.proxy.name') }}</span>
     </h2>
-    <div v-for="v in proxys">
+    <div v-for="v in (['address', 'username', 'password'] as const)">
         <h3>{{ $t('settings.proxy.' + v) }}</h3>
         <input
             type="text"
@@ -50,12 +42,9 @@
 </template>
 
 <script lang="ts" setup>
-import { useSettingsStore } from '@/store';
-import { Dropdown, Switch } from '@/components';
 import { QualityMap } from '@/types/shared.d';
-
-const defaults = ['res', 'abr', 'enc'] as const;
-const proxys = ['address', 'username', 'password'] as const;
+import { useSettingsStore } from '@/store';
+import { Dropdown } from '@/components';
 
 const settings = useSettingsStore();
 </script>

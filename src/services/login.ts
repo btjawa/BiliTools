@@ -17,6 +17,7 @@ export async function fetchUser() {
         user.$reset();
         return;
     }
+    await checkRefresh();
     const info = (await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', {
         auth: 'wbi', params: { mid }
     }) as Types.UserInfo).data;

@@ -182,32 +182,34 @@ export interface MediaInfo {
   list: MediaItem[]
 }
 
-type TaskState = 'pending' | 'active' | 'completed' | 'paused' | 'cancelled' | 'failed';
-
-export interface TaskStatus {
-  id: string,
-  state: TaskState;
-  subtasks: {
-    id: string,
-    type: TaskType,
-    chunk: number,
-    content: number,
-  }[],
-}
-
-export interface SubTask {
-  id: string,
-  type: TaskType,
-}
-
-export interface GeneralTask {
+export interface Task {
   id: string;
+  state: TaskState;
+  subtasks: SubTask[];
+  status: Record<string, SubTaskStatus>;
   ts: number; // sec timestamp
-  index: number;
+  seq: number;
   folder: string;
   select: PopupSelect;
   item: MediaItem;
   type: MediaType;
   nfo: MediaNfo;
-  subtasks: SubTask[];
+}
+
+type TaskState = 'pending' | 'active' | 'completed' | 'paused' | 'cancelled' | 'failed';
+
+export interface SubTask {
+  id: string;
+  type: TaskType;
+}
+
+export interface SubTaskStatus {
+  chunk: number;
+  content: number;
+}
+
+export interface Scheduler {
+  sid: string;
+  ts: number;
+  list: string[];
 }

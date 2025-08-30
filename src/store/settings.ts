@@ -10,6 +10,10 @@ export const useSettingsStore = defineStore('settings', () => {
         block_pcdn: true,
         check_update: true,
         clipboard: true,
+        convert: {
+            danmaku: true,
+            mp3: false,
+        },
         default: {
             res: Number(),
             abr: Number(),
@@ -24,17 +28,16 @@ export const useSettingsStore = defineStore('settings', () => {
         language: String(),
         max_conc: Number(),
         notify: true,
-        task_folder: true,
         temp_dir: String(),
         theme: 'auto',
+        organize: {
+            top_folder: true,
+            sub_folder: true
+        },
         proxy: {
             address: String(),
             username: String(),
             password: String(),
-        },
-        convert: {
-            danmaku: true,
-            mp3: false,
         }
     });
 

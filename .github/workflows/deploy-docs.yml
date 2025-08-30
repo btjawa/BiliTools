@@ -1,0 +1,23 @@
+name: Deploy Docs (Vercel Hook)
+
+on:
+  push:
+    branches: [ master, dev ]
+    paths:
+      - 'docs/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel
+        run: |
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            curl -X POST "$VERCEL_HOOK_PROD_MASTER"
+          else
+            curl -X POST "$VERCEL_HOOK_PROD_DEV"
+          fi
+
+    env:
+      VERCEL_HOOK_PROD_MASTER: ${{ secrets.VERCEL_HOOK_PROD_MASTER }}
+      VERCEL_HOOK_PROD_DEV: ${{ secrets.VERCEL_HOOK_PROD_DEV }}

@@ -5,16 +5,20 @@ layout: home
 hero:
   name: "BiliTools"
   text: "简约 & 轻量的\n哔哩哔哩工具箱"
+  tagline: 基于 Tauri & Typescript & Rust 构建
   actions:
     - theme: brand
       text: 快速开始
       link: /quick/about
     - theme: alt
-      text: 其他信息
-      link: https://btjawa.top/bilitools
+      text: 博客 / 其他信息
+      link: https://blog.btjawa.top/posts/bilitools
     - theme: alt
       text: GitHub
       link: https://github.com/btjawa/BiliTools
+  image:
+    src: /icon.svg
+    alt: BiliTools
 
 features:
   - icon: "<i class='fa-solid fa-cloud'></i>"

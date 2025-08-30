@@ -1,21 +1,25 @@
 use sea_query::{ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
-use std::{collections::HashMap, sync::Arc};
 use sea_query_binder::SqlxBinder;
 use tokio::sync::RwLock;
-use serde_json::Value;
+use std::sync::Arc;
 use anyhow::Result;
 use sqlx::Row;
 
-use crate::{commands::{queue::runtime::QUEUE_MANAGER, GeneralTask}, storage::db::get_db};
+use crate::{
+    queue::{
+        runtime::TASK_MANAGER,
+        types::{Task, TaskState}
+    }, shared::get_ts
+};
 
-use super::db::TableSpec;
+use super::db::{TableSpec, get_db};
 
 #[derive(Iden)]
 pub enum Archive {
     Table,
     Name,
-    Task,
-    Status,
+    Value,
+    UpdatedAt,
 }
 
 pub struct ArchiveTable;
@@ -29,75 +33,69 @@ impl TableSpec for ArchiveTable {
             .col(ColumnDef::new(Archive::Name)
                 .text().not_null().primary_key()
             )
-            .col(ColumnDef::new(Archive::Task)
+            .col(ColumnDef::new(Archive::Value)
                 .text().not_null()
             )
-            .col(ColumnDef::new(Archive::Status)
-                .text().not_null()
+            .col(ColumnDef::new(Archive::UpdatedAt)
+                .integer().not_null()
             )
             .to_owned()
     }
 }
 
-pub async fn load() -> Result<(
-    HashMap<Arc<String>, Arc<GeneralTask>>,
-    HashMap<Arc<String>, Arc<Value>>,
-)> {
+pub async fn load() -> Result<()> {
     let (sql, values) = Query::select()
-        .columns([Archive::Task, Archive::Status])
+        .columns([Archive::Value])
         .from(Archive::Table)
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;
     let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
-    
-    let mut tasks = HashMap::with_capacity(rows.len());
-    let mut status = HashMap::with_capacity(rows.len());
-    let mut tasks_guard = QUEUE_MANAGER.tasks.write().await;
-    let mut complete_guard = QUEUE_MANAGER.complete.write().await;
     for r in rows {
-        let t: Arc<GeneralTask> = serde_json::from_str(
-            &r.try_get::<String, _>("task")?
+        let mut v: Task = serde_json::from_str(
+            &r.try_get::<String, _>("value")?
         )?;
-        let s: Arc<Value> = serde_json::from_str(
-            &r.try_get::<String, _>("status")?
-        )?;
-        let id = t.id.clone();
-        tasks.insert(id.clone(), t.clone());
-        status.insert(id.clone(), s);
-        complete_guard.push_back(id.clone());
-        tasks_guard.insert(id.clone(), Arc::new(RwLock::new((*t).clone())));
+        if v.state == TaskState::Active {
+            v.state = TaskState::Paused
+        }
+        let id = v.id.clone();
+        let mut guard = TASK_MANAGER.tasks.write().await;
+        guard.insert(
+            id.clone(),
+            Arc::new(RwLock::new(v.clone()))
+        );
+        drop(guard);
     }
-    drop(tasks_guard);
-    drop(complete_guard);
-    QUEUE_MANAGER.emit().await;
-    Ok((tasks, status))
+    Ok(())
 }
 
-pub async fn insert(task: Arc<GeneralTask>, status: Arc<Value>) -> Result<()> {
+pub async fn upsert(task: &Task) -> Result<()> {
+    let pool = get_db().await?;
+    let now = get_ts(true);
     let name = (*task.id).clone();
-    let task = serde_json::to_string(&task)?;
-    let status = serde_json::to_string(&status)?;
+    let value = serde_json::to_string(task)?;
     let (sql, values) = Query::insert()
         .into_table(Archive::Table)
-        .columns([Archive::Name, Archive::Task, Archive::Status])
-        .values_panic([name.into(), task.into(), status.into()])
+        .columns([Archive::Name, Archive::Value, Archive::UpdatedAt])
+        .values_panic([name.into(), value.into(), now.into()])
         .on_conflict(
             OnConflict::column(Archive::Name)
-                .update_columns([Archive::Task, Archive::Status])
+                .update_columns([Archive::Value, Archive::UpdatedAt])   
                 .to_owned()
         )
         .build_sqlx(SqliteQueryBuilder);
 
-    let pool = get_db().await?;
-    sqlx::query_with(&sql, values).execute(&pool).await?;
+    sqlx::query_with(&sql, values)
+        .execute(&pool)
+        .await?;
+
     Ok(())
 }
 
-pub async fn delete(id: String) -> Result<()> {
+pub async fn delete(name: &str) -> Result<()> {
     let (sql, values) = Query::delete()
         .from_table(Archive::Table)
-        .cond_where(Expr::col(Archive::Name).eq(&id))
+        .cond_where(Expr::col(Archive::Name).eq(name))
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;

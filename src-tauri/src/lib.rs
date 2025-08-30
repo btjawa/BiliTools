@@ -14,7 +14,7 @@ use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::panic::set_hook(Box::new(|e| {
-        let bt = std::backtrace::Backtrace::capture();
+        let bt = std::backtrace::Backtrace::force_capture();
         log::error!("Panicked: {e}");
         log::error!("Backtrace:\n{bt:?}");
         eprintln!("Panicked: {e}");
@@ -24,12 +24,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         // Then register them (separated by a comma)
         .commands(collect_commands![
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
+            submit_task, process_queue, open_folder, ctrl_event, update_max_conc, // Queue
             config_write, get_size, clean_cache, db_import, db_export, // Settings
-            submit_task, process_queue, task_event, update_max_conc, // Queue
             ready, init, init_login, set_window, // Basics
         ])
         .events(collect_events![
-            shared::HeadersData, shared::SidecarError, queue::QueueData
+            shared::HeadersData, shared::SidecarError, queue::runtime::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

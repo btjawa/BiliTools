@@ -1,7 +1,6 @@
 
-use std::{collections::VecDeque, path::PathBuf, sync::Arc};
+use std::{collections::{HashMap, VecDeque}, path::PathBuf, sync::Arc};
 use serde::{Serialize, Deserialize};
-use tauri_specta::Event;
 use serde_json::Number;
 use specta::Type;
 
@@ -151,25 +150,64 @@ impl PopupSelectMedia {
 
 // Tasks
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct QueueData {
     pub waiting:  VecDeque<Arc<String>>,
     pub doing:    VecDeque<Arc<String>>,
     pub complete: VecDeque<Arc<String>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum QueueType {
+    Waiting,
+    Doing,
+    Complete
+}
+
+impl QueueType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            QueueType::Waiting => "waiting",
+            QueueType::Doing => "doing",
+            QueueType::Complete => "complete"
+        }
+    }
+    pub fn from_str_lossy(str: &str) -> QueueType {
+        match str {
+            "waiting" => QueueType::Waiting,
+            "doing" => QueueType::Doing,
+            "complete" => QueueType::Complete,
+            _ => QueueType::Waiting,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
-pub struct GeneralTask {
+pub struct Task {
     pub id: Arc<String>,
+    pub state: TaskState,
+    pub subtasks: Vec<Arc<SubTask>>,
+    pub status: HashMap<Arc<String>, Arc<SubTaskStatus>>,
     pub ts: u64,
-    pub index: usize,
+    pub seq: usize,
     pub folder: Arc<PathBuf>,
     pub select: Arc<PopupSelect>,
     pub item: Arc<MediaItem>,
     #[serde(rename = "type")]
     pub media_type: String,
     pub nfo: Arc<MediaNfo>,
-    pub subtasks: Vec<Arc<SubTask>>
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TaskState {
+    Pending,
+    Active,
+    Completed,
+    Paused,
+    Failed,
+    Cancelled
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
@@ -194,13 +232,8 @@ pub enum TaskType {
     AudioVideo,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]
-#[serde(rename_all = "camelCase")]
-pub enum TaskState {
-    Pending,
-    Active,
-    Completed,
-    Paused,
-    Failed,
-    Cancelled
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+pub struct SubTaskStatus {
+    pub chunk: u64,
+    pub content: u64,
 }

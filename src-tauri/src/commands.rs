@@ -1,7 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
-use serde_json::Value;
+use std::{env, path::PathBuf, sync::Arc};
 use tauri::{async_runtime, Manager};
 use serde::Serialize;
 use anyhow::anyhow;
@@ -15,7 +14,9 @@ pub use crate::{
             self, stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie
         },
         queue::{
-            self, GeneralTask, runtime::{ submit_task, process_queue, task_event, update_max_conc }
+            self, runtime::{
+                submit_task, process_queue, open_folder, ctrl_event, update_max_conc
+            }
         },
         aria2c,
         ffmpeg,
@@ -44,8 +45,6 @@ pub struct Paths {
 pub struct InitData {
     version: String,
     hash: String,
-    tasks: HashMap<Arc<String>, Arc<GeneralTask>>,
-    status: HashMap<Arc<String>, Arc<Value>>,
     config: Arc<config::Settings>,
     paths: Paths,
 }
@@ -101,7 +100,7 @@ pub async fn clean_cache(path: String, secret: String) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn config_write(settings: serde_json::Map<String, Value>, secret: String) -> TauriResult<()> {
+pub async fn config_write(settings: serde_json::Map<String, serde_json::Value>, secret: String) -> TauriResult<()> {
     if secret != *SECRET {
         return Err(anyhow!("403 Forbidden").into())
     }
@@ -147,7 +146,6 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     }
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
-    let (tasks, status) = archive::load().await?;
     let config = config::read();
     let path = app.path();
     let paths = Paths {
@@ -160,7 +158,8 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
         },
         database: path.app_data_dir()?.join("Storage")
     };
-    Ok(InitData { version, hash, tasks, status, config, paths })
+    queue::runtime::TASK_MANAGER.snapshot(true).await?;
+    Ok(InitData { version, hash, config, paths })
 }
 
 #[tauri::command(async)]

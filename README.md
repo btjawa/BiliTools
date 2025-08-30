@@ -22,7 +22,7 @@
 
 💡 一个简约、轻量的哔哩哔哩工具箱，基于 [Tauri](https://github.com/tauri-apps/tauri) 构建。
 
-- 📖 使用文档：[https://docs.btjawa.top](https://docs.btjawa.top) 
+- 📖 使用文档：[https://bilitools.btjawa.top](https://bilitools.btjawa.top) 
 
 - 🧾 其他信息：[https://btjawa.top/bilitools](https://btjawa.top/bilitools)
 

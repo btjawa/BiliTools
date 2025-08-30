@@ -1,4 +1,4 @@
-// Generated from https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/grpc_api/bilibili/community/service/dm/v1/dm.proto
+import { strip } from "@/services/utils";
 /**
  * Convert DmSegMobileReply binary to readable XML.
  * @author https://github.com/btjawa
@@ -21,12 +21,14 @@ export function DmSegMobileReplyToXML(binary: Uint8Array, options?: { inputXml?:
         elem.midHash,
         elem.idStr,
       ].join(','));
-      dElement.textContent = elem.content || '';
+      dElement.textContent = strip(elem.content || '');
       iElement?.appendChild(dElement);
     });
     return new XMLSerializer().serializeToString(xmlDoc);
   } else throw new Error('No danmaku elems found');
 }
+
+// Generated from https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/grpc_api/bilibili/community/service/dm/v1/dm.proto
 
 export const enum DmColorfulType {
   NoneType = "NoneType",

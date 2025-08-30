@@ -3,38 +3,35 @@ use std::{sync::Arc, path::PathBuf};
 use anyhow::{Context, anyhow};
 
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
-use tauri::{http::StatusCode, ipc::Channel};
+use tauri::http::StatusCode;
 
 use crate::{
     TauriResult, TauriError,
     shared::{
         get_app_handle, get_unique_path, init_client
     },
-    aria2c, ffmpeg, archive, config,
+    aria2c, ffmpeg, config,
     queue::{
         types::{
             MediaNfoThumb,
             MediaUrls,
             MediaNfo,
-            GeneralTask,
-            TaskState,
+            Task,
             TaskType,
             SubTask,
         },
         runtime::{
             CtrlEvent,
-            ProcessEvent,
             RequestAction,
             Scheduler,
-            update_progress,
+            Progress,
             request_frontend
         }
     }
 };
 
 struct ProgressTask {
-    event: Arc<Channel<ProcessEvent>>,
-    task: Arc<GeneralTask>,
+    task: Arc<Task>,
     subtask: Arc<SubTask>,
     urls: Option<Arc<MediaUrls>>,
     folder: Arc<PathBuf>,
@@ -68,22 +65,22 @@ async fn handle_subtitle(
     _rx: Receiver<CtrlEvent>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
+
+    let prog = Progress::new(parent.clone(), id.clone());
     
-    let status_tx = update_progress(event.clone(), parent.clone(), id.clone());
-    status_tx.send((1, 0)).await?;
+    prog.send(1, 0).await?;
 
     let result = request_frontend::<Vec<u8>>(
-        event, parent, Some(id), RequestAction::GetSubtitle
+        parent, Some(id), RequestAction::GetSubtitle
     ).await?;
 
     let lang = &ptask.task.select.misc.subtitles.as_str().ok_or(anyhow!("No subtitle lang found"))?;
     let output_file = get_unique_path(ptask.folder.join(format!("{}.{lang}.srt", &ptask.filename )));
     fs::write(&output_file, &*result).await?;
 
-    status_tx.send((1, 1)).await?;
+    prog.send(1, 1).await?;
     Ok(())
 }
 
@@ -92,21 +89,20 @@ async fn handle_ai_summary(
     _rx: Receiver<CtrlEvent>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
     
-    let status_tx = update_progress(event.clone(), parent.clone(), id.clone());
-    status_tx.send((1, 0)).await?;
+    let prog = Progress::new(parent.clone(), id.clone());
+    prog.send(1, 0).await?;
 
     let result = request_frontend::<Vec<u8>>(
-        event, parent, Some(id), RequestAction::GetAISummary
+        parent, Some(id), RequestAction::GetAISummary
     ).await?;
 
     let output_file = get_unique_path(ptask.folder.join(format!("{}.md", &ptask.filename)));
     fs::write(&output_file, &*result).await?;
 
-    status_tx.send((1, 1)).await?;
+    prog.send(1, 1).await?;
     Ok(())
 }
 
@@ -116,15 +112,14 @@ async fn handle_nfo(
     folder: PathBuf,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
     
-    let status_tx = update_progress(event.clone(), parent.clone(), id.clone());
-    status_tx.send((1, 0)).await?;
+    let prog = Progress::new(parent.clone(), id.clone());
+    prog.send(1, 0).await?;
 
     let nfo = request_frontend::<Vec<u8>>(
-        event, parent, Some(id), RequestAction::GetNfo
+        parent, Some(id), RequestAction::GetNfo
     ).await?;
 
     let output_file = if subtask.task_type == TaskType::AlbumNfo {
@@ -150,7 +145,7 @@ async fn handle_nfo(
         fs::write(folder.join("poster.jpg"), &bytes).await?;
     }
 
-    status_tx.send((1, 1)).await?;
+    prog.send(1, 1).await?;
     Ok(())
 }
 
@@ -159,15 +154,14 @@ async fn handle_danmaku(
     mut rx: Receiver<CtrlEvent>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
     
-    let status_tx = update_progress(event.clone(), parent.clone(), id.clone());
-    status_tx.send((2, 1)).await?;
+    let prog = Progress::new(parent.clone(), id.clone());
+    prog.send(3, 1).await?;
 
     let danmaku = request_frontend::<Vec<u8>>(
-        event, parent, Some(id.clone()), RequestAction::GetDanmaku
+        parent, Some(id.clone()), RequestAction::GetDanmaku
     ).await?;
 
     let temp_root = config::read().temp_dir();
@@ -183,11 +177,13 @@ async fn handle_danmaku(
 
     if !config::read().convert.danmaku {
         fs::copy(&xml, get_unique_path(PathBuf::from(format!("{output_file}.xml")))).await?;
-        status_tx.send((2, 2)).await?;
+        prog.send(2, 2).await?;
         return Ok(()); 
     }
     const NAME: &str = "DanmakuFactory";
 
+
+    prog.send(3, 2).await?;
     let (mut _rx, child) = get_app_handle().shell().sidecar(NAME)?
         .args([
             "-i", xml.to_string_lossy().as_ref(),
@@ -231,9 +227,9 @@ async fn handle_danmaku(
         }
     } };
 
-    fs::copy(&xml, get_unique_path(PathBuf::from(format!("{output_file}.ass")))).await?;
+    fs::copy(&ass, get_unique_path(PathBuf::from(format!("{output_file}.ass")))).await?;
     fs::remove_file(&xml).await?;
-    status_tx.send((2, 2)).await?;
+    prog.send(3, 3).await?;
     Ok(())
 }
 
@@ -242,19 +238,18 @@ async fn handle_thumbs(
     mut rx: Receiver<CtrlEvent>,  
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
     
-    let status_tx = update_progress(event.clone(), parent.clone(), id.clone());
-    status_tx.send((0, 0)).await?;
+    let prog = Progress::new(parent.clone(), id.clone());
+    prog.send(0, 0).await?;
 
     let thumbs = request_frontend::<Vec<MediaNfoThumb>>(
-        event, parent, Some(id), RequestAction::GetThumbs
+        parent, Some(id), RequestAction::GetThumbs
     ).await?;
 
     let client = init_client().await?;
-    let content = thumbs.len();
+    let content = thumbs.len() as u64;
 
     for (index, thumb) in thumbs.iter().enumerate() {
         tokio::select! {
@@ -267,17 +262,20 @@ async fn handle_thumbs(
                     .get(format!("{}@.jpg", thumb.url))
                     .send().await?;
                 if response.status() != StatusCode::OK {
-                    return Err(anyhow!("Error while fetching thumb {} ({})", thumb.url, response.status()));
+                    return Err(TauriError::new(
+                        format!("Error while fetching thumb {}", thumb.url),
+                        Some(response.status())
+                    ));
                 }
                 let bytes = response.bytes().await?;
                 fs::write(&output_file, &bytes).await?;
-                status_tx.send((content as u64, index as u64)).await?;
-                Ok::<(), anyhow::Error>(())
+                prog.send(content, index as u64).await?;
+                Ok::<(), TauriError>(())
             } => res?
         }
     }
 
-    status_tx.send((content as u64, content as u64)).await?;
+    prog.send(content, content).await?;
 
     Ok(())
 }
@@ -289,20 +287,19 @@ async fn handle_merge(
     audio_path: Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
     let video = video_path.get().ok_or(anyhow!("No path for video found"))?;
     let audio = audio_path.get().ok_or(anyhow!("No path for audio found"))?;
 
-    let status_tx = Arc::new(update_progress(event, parent, id.clone()));
+    let prog = Progress::new(parent.clone(), id.clone());
     let (cancel_tx, cancel_rx) = oneshot::channel();
 
     let abr = ptask.task.select.abr.unwrap_or(0);
     let ext = get_ext(subtask.task_type.clone(), abr);
     
-    let mut merge = Box::pin(ffmpeg::merge(id.clone(), ext, status_tx, cancel_rx, video, audio));
+    let mut merge = Box::pin(ffmpeg::merge(id.clone(), ext, &prog, cancel_rx, video, audio));
     let path = tokio::select! {
         res = &mut merge => res,
         Ok(CtrlEvent::Cancel) = rx.recv() => {
@@ -328,7 +325,6 @@ async fn handle_media(
     audio_path: Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
-    let event = ptask.event;
     let select = ptask.task.select.clone();
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
@@ -345,9 +341,9 @@ async fn handle_media(
         return Err(anyhow!("No urls found").into());
     };
 
-    let status_tx = Arc::new(update_progress(event, parent, id.clone()));
+    let prog = Progress::new(parent.clone(), id.clone());
     
-    let mut download = Box::pin(aria2c::download(id.clone(), status_tx.clone(), urls));
+    let mut download = Box::pin(aria2c::download(id.clone(), &prog, urls));
     let mut path = loop { tokio::select! {
         res = &mut download => break res,
         msg = rx.recv() => match msg {
@@ -377,7 +373,7 @@ async fn handle_media(
     }.set(path.clone())?;
 
     if subtask.task_type == TaskType::Audio {
-        let (file, suffix) = ffmpeg::convert_audio(id, &ext, status_tx.clone(), &path, ptask.task.clone()).await?;
+        let (file, suffix) = ffmpeg::convert_audio(id, &ext, &prog, &path, ptask.task.clone()).await?;
         path = file.with_extension(&suffix);
         ext = suffix;
     }
@@ -391,26 +387,23 @@ async fn handle_media(
     Ok(())
 }
 
-pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask>>) -> TauriResult<()> {    
+pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> TauriResult<()> {    
     let temp_root = config::read().temp_dir();
     fs::create_dir_all(&temp_root).await.context("Failed to create temp folder")?;
 
-    let event = scheduler.event.clone();
     let task_snapshot = Arc::new(task.read().await.clone());
     let id = task_snapshot.id.clone();
     let select = task_snapshot.select.clone();
 
-    event.send(ProcessEvent::TaskState { id: id.clone(), state: TaskState::Active })?;
-
     let nfo = request_frontend::<MediaNfo>(
-        event.clone(), id.clone(), None, RequestAction::RefreshNfo
+        id.clone(), None, RequestAction::RefreshNfo
     ).await?;
     let mut guard = task.write().await;
     guard.nfo = nfo;
 
     let urls = if select.media.any_true() {
         let urls = request_frontend::<MediaUrls>(
-            event.clone(), id.clone(), None, RequestAction::RefreshUrls
+            id.clone(), None, RequestAction::RefreshUrls
         ).await?;
         guard.select = urls.select.clone();
         guard.subtasks = urls.subtasks.clone();
@@ -420,11 +413,10 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask
     };
 
     let sub_folder = request_frontend::<String>(
-        event.clone(), id.clone(), None, RequestAction::RefreshFolder
+        id.clone(), None, RequestAction::RefreshFolder
     ).await?;
 
-    let task_folder = config::read().task_folder;
-    let folder = Arc::new(if task_folder {
+    let folder = Arc::new(if config::read().organize.sub_folder {
         scheduler.folder.join(&*sub_folder)
     } else {
         scheduler.folder.clone()
@@ -445,13 +437,11 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask
         log::info!("Handling subtask: {sub_id}\n    task_type: {:?}\n    parent: {id}", subtask.task_type);
 
         let filename = request_frontend::<String>(
-            event.clone(),
             id.clone(),
             Some(sub_id.clone()),
             RequestAction::GetFilename
         ).await?;
         let ptask = ProgressTask {
-            event: event.clone(),
             task: task.clone(),
             subtask: subtask.clone(),
             urls: urls.clone(),
@@ -499,13 +489,5 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<GeneralTask
             },
         }
     }
-
-    event.send(ProcessEvent::TaskState {
-        id: id.clone(),
-        state: TaskState::Completed
-    })?;
-
-    let status = request_frontend::<serde_json::Value>(event.clone(), id.clone(), None, RequestAction::GetStatus).await?;
-    archive::insert(task, status).await?;
     Ok(())
 }

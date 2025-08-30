@@ -18,17 +18,17 @@ pub struct Settings {
     pub block_pcdn: bool,
     pub check_update: bool,
     pub clipboard: bool,
+    pub convert: SettingsConvert,
     pub default: SettingsDefault,
     pub down_dir: PathBuf,
     pub format: SettingsFormat,
     pub language: String,
     pub max_conc: usize,
     pub notify: bool,
-    pub task_folder: bool,
     pub temp_dir: PathBuf,
     pub theme: Theme,
+    pub organize: SettingsOrganize,
     pub proxy: SettingsProxy,
-    pub convert: SettingsConvert,
 }
 
 impl Settings {
@@ -62,6 +62,12 @@ pub struct SettingsFormat {
 pub struct SettingsConvert {
     pub danmaku: bool,
     pub mp3: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+pub struct SettingsOrganize {
+    pub top_folder: bool,
+    pub sub_folder: bool,
 }
 
 #[derive(Iden)]

@@ -21,8 +21,8 @@ import { ref, onMounted, provide, watch, getCurrentInstance, reactive } from 'vu
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { useRouter } from 'vue-router';
 
-import { checkRefresh, fetchUser, activateCookies } from '@/services/login';
-import { useAppStore, useQueueStore, useSettingsStore } from '@/store';
+import { fetchUser, activateCookies } from '@/services/login';
+import { useAppStore, useSettingsStore } from '@/store';
 import { setEventHook } from '@/services/utils';
 import { AppError } from '@/services/error';
 import { commands } from '@/services/backend';
@@ -33,7 +33,6 @@ const updater = ref<InstanceType<typeof Updater>>();
 const router = useRouter();
 
 const settings = useSettingsStore();
-const queue = useQueueStore();
 const app = useAppStore();
 const context = getCurrentInstance()?.appContext!;
 
@@ -60,18 +59,13 @@ onMounted(async () => {
 
 	const init = await commands.init(secret);
 	if (init.status === 'error') throw new AppError(init.error);
-	const { config, tasks, status, ...initData } = init.data;
+	const { config, ...initData } = init.data;
 	app.$patch({ ...initData });
-	queue.$patch(v => {
-		v.tasks = tasks as any;
-		v.status = status as any;
-	});
 	settings.$patch(config);
 
 	const initLogin = await commands.initLogin(secret);
 	if (initLogin.status === 'error') throw new AppError(initLogin.error);
 
-	await checkRefresh();
 	await fetchUser();
 	await activateCookies();
 	app.inited = true;

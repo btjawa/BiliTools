@@ -182,7 +182,7 @@ i + span, span + i {
 }
 
 .Vue-Toastification__container {
-    transform: translateY(10px) translateX(-4px);
+    transform: translateY(10px) translateX(28px);
     .Vue-Toastification__toast {
         display: flex;
         justify-content: center;

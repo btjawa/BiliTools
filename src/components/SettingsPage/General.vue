@@ -28,6 +28,7 @@
         <span>{{ $t('settings.clipboard.name') }}</span>
     </h3>
     <Switch v-model="settings.clipboard"/>
+    <span class="desc">{{ $t('settings.clipboard.desc') }}</span>
 </section>
 <section>
     <h3>

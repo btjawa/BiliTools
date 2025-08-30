@@ -1,5 +1,5 @@
 import { useQueueStore, useSettingsStore } from "@/store";
-import { getDefaultQuality, randomString } from "./utils";
+import { AppLog, getDefaultQuality, randomString, strip } from "./utils";
 import { getMediaInfo, getPlayUrl } from "./media/data";
 import { AppError } from "./error";
 
@@ -7,7 +7,6 @@ import * as Types from "@/types/shared.d";
 import * as extras from "./media/extras";
 import * as backend from "./backend";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Channel } from "@tauri-apps/api/core";
 import { toRaw } from "vue";
 import i18n from "@/i18n";
 import dayjs from "dayjs";
@@ -44,7 +43,7 @@ function urlFilter(urls: string[]) {
     return others.map(v => v.toString());
 }
 
-async function handleMedia(task: Types.GeneralTask) {
+async function handleMedia(task: Types.Task) {
     const { select, item } = task;
     const playUrl = await getPlayUrl(item, item.type, select.fmt);
     let video: Types.PlayUrlResult = null as any;
@@ -52,7 +51,6 @@ async function handleMedia(task: Types.GeneralTask) {
     let videoUrls: string[] = [];
     let audioUrls: string[] = [];
 
-    const queue = useQueueStore();
     const settings = useSettingsStore();
 
     if (playUrl.codec !== select.fmt) {
@@ -80,17 +78,17 @@ async function handleMedia(task: Types.GeneralTask) {
     if (select.fmt !== 'dash') {
         select.abr = undefined;
         select.enc = undefined;
-        queue.$patch(v => {
-            const audioVideo = task.subtasks.find(v => v.type === 'audioVideo')?.id;
-            const hasVideo = task.subtasks.some(v => v.type === 'video');
-            task.subtasks = task.subtasks.filter(v => v.type !== 'audio' && v.type !== 'audioVideo');
-            if (!hasVideo && audioVideo) task.subtasks.unshift({
-                id: audioVideo,
-                type: Types.TaskType.Video
-            })
-            const ids = task.subtasks.map(v => v.id);
-            v.status[task.id].subtasks = v.status[task.id].subtasks.filter(v => ids.includes(v.id));
+        const audioVideo = task.subtasks.find(v => v.type === 'audioVideo')?.id;
+        const hasVideo = task.subtasks.some(v => v.type === 'video');
+        task.subtasks = task.subtasks.filter(v => v.type !== 'audio' && v.type !== 'audioVideo');
+        if (!hasVideo && audioVideo) task.subtasks.unshift({
+            id: audioVideo,
+            type: Types.TaskType.Video
         })
+        task.status = task.subtasks.reduce<Record<string, Types.SubTaskStatus>>((acc, item) => {
+            acc[item.id] = task.status[item.id];
+            return acc;
+        }, {});
     }
 
     videoUrls = (video ? [
@@ -116,11 +114,11 @@ async function handleMedia(task: Types.GeneralTask) {
     }
 }
 
-async function handleDanmaku(task: Types.GeneralTask, subtask: Types.SubTask) {
+async function handleDanmaku(task: Types.Task, subtask: Types.SubTask) {
     const { select, item } = task;
     return await extras.getDanmaku(item, subtask.type === 'liveDanmaku' ? false : select.danmaku.history);
 }
-async function handleThumbs(task: Types.GeneralTask) {
+async function handleThumbs(task: Types.Task) {
     const { select, nfo } = task;
     const alias = { pic: "cover", cover: "pic" } as any;
     return nfo.thumbs.filter(v =>
@@ -133,20 +131,20 @@ async function handleThumbs(task: Types.GeneralTask) {
         url: v.url.replace('http:', 'https:')
     }));
 }
-async function handleNfo(task: Types.GeneralTask, subtask: Types.SubTask) {
+async function handleNfo(task: Types.Task, subtask: Types.SubTask) {
     const { item, nfo } = task;
     return await extras.getNfo(item, nfo, subtask.type === 'albumNfo' ? 'album' : 'nfo');
 }
-async function handleSubtitle(task: Types.GeneralTask) {
+async function handleSubtitle(task: Types.Task) {
     const { select, item } = task;
     return await extras.getSubtitle(item, { name: select.misc.subtitles });
 }
-async function handleAISummary(task: Types.GeneralTask) {
+async function handleAISummary(task: Types.Task) {
     const { item } = task;
     return await extras.getAISummary(item);
 }
 
-function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.GeneralTask, subtask?: Types.SubTask) {
+function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.Task, subtask?: Types.SubTask) {
     const template = useSettingsStore().format[scope];
     const ctx = new Set(Object.values(Types.NamingTemplates[scope]).flat());
 
@@ -172,11 +170,11 @@ function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.Gener
         abr: select?.abr ? t('quality.abr.' + select.abr) : undefined,
         enc: select?.enc ? t('quality.enc.' + select.enc) : undefined,
         fmt: select?.fmt ? t('quality.fmt.' + select.fmt) : undefined,
-        index: task.index + 1,
+        index: task.seq + 1,
         downtime: task.ts,
     }
 
-    return template.replace(/\{([^{}]+)\}/g, (full, inner) => {
+    return strip(template.replace(/\{([^{}]+)\}/g, (full, inner) => {
         const result = (inner as string).split(':');
         const k = result?.[0]?.trim();
         const v = result?.[1]?.trim();
@@ -189,15 +187,11 @@ function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.Gener
         } else {
             return String(data[k as keyof typeof data] ?? '');
         }
-    })
-        .replace(/[\x00-\x1F\x7F]/g, "_")
-        .replace(/[\/\\:*?"<>|]/g, "_");
+    })).replace(/[\/\\:*?"<>|]/g, "_");
 }
 
-async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, subtask?: Types.SubTask) {
-    if (type === 'getStatus') {
-        return useQueueStore().status[task.id];
-    } else if (type === 'refreshNfo') {
+async function handleTask(task: Types.Task, type: backend.RequestAction, subtask?: Types.SubTask) {
+    if (type === 'refreshNfo') {
         const item = task.item;
         const id = item.epid ?? item.ssid ?? item.sid ?? item.aid;
         if (!id) throw new AppError('No sid or aid or epid or ssid found');
@@ -227,11 +221,27 @@ async function handleTask(task: Types.GeneralTask, type: backend.RequestAction, 
     }
 }
 
-async function handleEvent(event: backend.ProcessEvent) {
+export async function handleEvent(event: backend.QueueEvent) {
     const { type } = event;
-    const app = getCurrentWindow();
     const queue = useQueueStore();
-    if (type === 'request') {
+    if (type === 'snapshot') {
+        queue.$patch({ ...event.queue });
+        if (event.schedulers) queue.$patch({
+            schedulers: event.schedulers
+        })
+        if (event.tasks) queue.$patch({
+            tasks: event.tasks as any
+        })
+        if (event.init && queue.doing.length) {
+            AppLog(i18n.global.t('down.restored'), 'info');
+        }
+    } else if (type === 'state') {
+        const task = queue.tasks?.[event.parent];
+        if (task) task.state = event.state;
+    } else if (type === 'progress') {
+        const status = queue.tasks?.[event.parent]?.status?.[event.id];
+        if (status) Object.assign(status, event.status);
+    } else if (type === 'request') {
         const task = queue.tasks[event.parent];
         const subtask = task.subtasks.find(v => v.id === event.subtask);
         let result = null as any;
@@ -240,15 +250,8 @@ async function handleEvent(event: backend.ProcessEvent) {
         } catch(e) {
             new AppError(e).handle();
         }
+        const app = getCurrentWindow();
         app.emit(`${event.action}_${event.subtask ?? event.parent}`, result);
-    } else if (type === 'progress') {
-        const target = queue.status[event.parent]?.subtasks.find(v => v.id === event.id);
-        if (target) Object.assign(target, {
-            chunk: event.chunk,
-            content: event.content,
-        });
-    } else if (type === 'taskState') {
-        queue.status[event.id].state = event.state;
     } else if (type === 'error') {
         new AppError(event.message, { code: event.code as number }).handle();
     }
@@ -257,14 +260,11 @@ async function handleEvent(event: backend.ProcessEvent) {
 export async function processQueue() {
     try {
         const queue = useQueueStore();
-        queue.seq = 0;
-        const event = new Channel<backend.ProcessEvent>();
-        event.onmessage = handleEvent;
-        const handled = new Set(queue.handled);
-        const list = queue.waiting.filter(v => !handled.has(v))
-        queue.handled = [...handled, ...list];
-        const folder = buildPaths('series', queue.tasks[list[0]]);
-        const result = await backend.commands.processQueue(event, list, folder);
+        const snapshot = queue.tasks[queue.schedulers[queue.waiting[0]].list[0]];
+        console.log(queue.tasks, queue.waiting)
+        const folder = buildPaths('series', snapshot);
+        const sid = randomString(8);
+        const result = await backend.commands.processQueue(sid, folder);
         if (result.status === 'error') throw new AppError(result.error);
     } catch(err) {
         new AppError(err).handle();
@@ -303,30 +303,28 @@ export async function submit(info: Types.MediaInfo, _select: Types.PopupSelect, 
     for (const idx of checkboxs) {
         const id = randomString(8);
         const select = detach(_select);
-        const task: Types.GeneralTask = {
+        const subtasks = selectToSubTasks(id, select);
+        const status = subtasks.reduce<Record<string, Types.SubTaskStatus>>((acc, item) => {
+            acc[item.id] = {
+                content: 0,
+                chunk: 0,
+            };
+            return acc;
+        }, {});
+        const task: Types.Task = {
             id,
+            state: 'pending',
+            subtasks,
+            status,
             ts: Math.floor(Date.now() / 1000),
-            index: queue.seq++,
+            seq: queue.schedulers[queue.waiting[0]].list.length,
             folder: String(),
             select: select,
             item: detach(info.list[idx]),
             type: detach(info.type),
             nfo: detach(info.nfo),
-            subtasks: selectToSubTasks(id, select),
         };
-        queue.$patch(v => {
-            v.tasks[id] = task;
-            v.status[id] = {
-                id,
-                state: 'pending',
-                subtasks: task.subtasks.map(t => ({
-                    ...t,
-                    chunk: 0,
-                    content: 0,
-                }))
-            }
-            v.waiting = [...v.waiting, id];
-        });
+        queue.tasks[id] = task;
         const result = await backend.commands.submitTask(task);
         if (result.status === 'error') throw new AppError(result.error);
     }

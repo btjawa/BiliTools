@@ -1,59 +1,113 @@
-use std::{collections::{HashMap, VecDeque}, fmt, future::Future, path::PathBuf, pin::Pin, sync::{Arc, LazyLock}};
-use tokio::sync::{broadcast::{Sender, Receiver, channel}, mpsc, oneshot, RwLock, Semaphore};
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use std::{collections::{HashMap, VecDeque}, future::Future, path::PathBuf, pin::Pin, sync::{Arc, LazyLock}};
+use tokio::sync::{broadcast::{channel, Receiver, Sender}, oneshot, OnceCell, RwLock, Semaphore};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use anyhow::{Context, Result, anyhow};
-
-use tauri::{async_runtime, ipc::Channel, Listener};
 use tauri_specta::Event;
+
+use tauri::{async_runtime, Listener};
 use specta::Type;
 
 use crate::{
-    archive, config, queue::{
-        handlers, types::{
-            GeneralTask, QueueData, TaskState
-        }
-    }, shared::{
-        get_app_handle, get_unique_path
-    }, TauriResult
+    archive, config, errors::{
+        TauriError, TauriResult
+    },
+    queue::{
+        handlers, types::{QueueData, Task}
+    },
+    shared::{
+        get_app_handle, get_ts, get_unique_path
+    }, storage::schedulers
 };
 
-pub static QUEUE_MANAGER: LazyLock<QueueManager> = LazyLock::new(QueueManager::new);
-pub static SCHEDULER_LIST: LazyLock<RwLock<Vec<Arc<Scheduler>>>> = LazyLock::new(Default::default);
+use super::types::{SubTaskStatus, TaskState, QueueType};
 
-// Queue
+pub static TASK_MANAGER: LazyLock<TaskManager> = LazyLock::new(TaskManager::new);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "lowercase")]
-pub enum QueueType {
-    Waiting,
-    Doing,
-    Complete
+pub static QUEUE_READY: LazyLock<OnceCell<()>> = LazyLock::new(OnceCell::new);
+
+// Syncing
+
+pub struct Progress {
+    parent: Arc<String>,
+    id: Arc<String>
 }
 
-pub struct QueueManager {
-    pub tasks: RwLock<HashMap<Arc<String>, Arc<RwLock<GeneralTask>>>>,
+impl Progress {
+    pub fn new(parent: Arc<String>, id: Arc<String>) -> Self {
+        Self { parent, id }
+    }
+    pub async fn send(&self, content: u64, chunk: u64) -> Result<()> {
+        TASK_MANAGER.progress(&self.parent, &self.id, content, chunk).await
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "type")]
+pub enum QueueEvent {
+    Snapshot {
+        init: bool,
+        queue: QueueData,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tasks: Option<HashMap<Arc<String>, Arc<Task>>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        schedulers: Option<HashMap<Arc<String>, Arc<SchedulerView>>>
+    },
+    State {
+        parent: Arc<String>,
+        state: TaskState,
+    },
+    Progress {
+        parent: Arc<String>,
+        id: Arc<String>,
+        status: SubTaskStatus,
+    },
+    Request {
+        parent: Arc<String>,
+        subtask: Option<Arc<String>>,
+        action: RequestAction,
+    },
+    Error {
+        parent: Arc<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        id: Option<Arc<String>>,
+        message: String,
+        code: Option<isize>,
+    },
+}
+
+// Tasks
+
+pub struct TaskManager {
+    pub schedulers: RwLock<HashMap<Arc<String>, Arc<Scheduler>>>,
+    pub tasks: RwLock<HashMap<Arc<String>, Arc<RwLock<Task>>>>,
     pub waiting:  RwLock<VecDeque<Arc<String>>>,
     pub doing:    RwLock<VecDeque<Arc<String>>>,
     pub complete: RwLock<VecDeque<Arc<String>>>,
+    pub sem:  RwLock<Arc<Semaphore>>,
+    pub conc: RwLock<usize>,
 }
 
-impl Default for QueueManager {
+impl Default for TaskManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl QueueManager {
+impl TaskManager {
     pub fn new() -> Self {
+        let conc = config::read().max_conc;
         Self {
+            schedulers: Default::default(),
             tasks: Default::default(),
             waiting: Default::default(),
             doing: Default::default(),
             complete: Default::default(),
+            sem: RwLock::new(Arc::new(Semaphore::new(conc))),
+            conc: RwLock::new(conc),
         }
     }
 
-    fn get_queue(&self, queue: &QueueType) -> &RwLock<VecDeque<Arc<String>>> {
+    pub fn get_queue(&self, queue: &QueueType) -> &RwLock<VecDeque<Arc<String>>> {
         match queue {
             QueueType::Waiting => &self.waiting,
             QueueType::Doing => &self.doing,
@@ -61,19 +115,19 @@ impl QueueManager {
         }
     }
 
-    pub async fn emit(&self) {
-        let queue = QueueData {
-            waiting:  self.waiting.read().await.clone(),
-            doing:    self.doing.read().await.clone(),
-            complete: self.complete.read().await.clone(),
-        };
-        let app = get_app_handle();
-        let _ = queue.emit(app);
+    pub async fn get_task(&self, id: &Arc<String>) -> Option<Arc<RwLock<Task>>> {
+        let tasks = TASK_MANAGER.tasks.read().await;
+        tasks.get(id).cloned()
     }
 
-    pub async fn push_pending(&self, task: GeneralTask) {
-        let task = Arc::new(RwLock::new(task));
+    pub async fn get_scheduler(&self, sid: &Arc<String>) -> Result<Arc<Scheduler>> {
+        let schedulers = self.schedulers.read().await;
+        schedulers.get(sid).cloned().ok_or(anyhow!("No scheduler with sid {sid} found"))
+    }
 
+    pub async fn push_pending(&self, task: Task) -> Result<()> {
+        archive::upsert(&task).await?;
+        let task = Arc::new(RwLock::new(task));
         let (id, ts) = {
             let guard = task.read().await;
             (guard.id.clone(), guard.ts)
@@ -82,87 +136,202 @@ impl QueueManager {
         map.insert(id.clone(), task);
         drop(map);
 
-        let mut queue = self.waiting.write().await;
-        queue.push_back(id.clone());
-        drop(queue);
+        let sch = self.get_scheduler(
+            &Arc::new(schedulers::WAITING_SID.into())
+        ).await?;
+        let mut list = sch.list.write().await;
+        list.push(id.clone());
+        let snapshot = list.clone();
+        drop(list);
 
+        schedulers::update_list(
+            schedulers::WAITING_SID,
+            &snapshot,
+        ).await?;
         log::info!("Pushed new task: {id}, time: {ts}");
+        self.snapshot(false).await?;
+        Ok(())
     }
 
-    pub async fn move_task(
+    pub async fn plan_scheduler(&self, sid: &Arc<String>, filename: &str) -> Result<Arc<Scheduler>> {
+        let sch = self.get_scheduler(
+            &Arc::new(schedulers::WAITING_SID.into())
+        ).await?;
+        let mut guard = sch.list.write().await;
+        let list = guard.clone();
+        guard.clear();
+        drop(guard);
+        schedulers::update_list(schedulers::WAITING_SID, &[]).await?;
+        if list.is_empty() {
+            return Err(anyhow!("No unassigned tasks"))
+        }
+        let folder = if config::read().organize.top_folder {
+            &get_unique_path(config::read().down_dir.join(filename) )
+        } else {
+            &config::read().down_dir
+        };
+        let scheduler = Scheduler::new(
+            sid.clone(), list.clone(), folder.clone()
+        );
+        let mut guard = self.schedulers.write().await;
+        guard.insert(sid.clone(), scheduler.clone());
+        drop(guard);
+        let mut guard = self.doing.write().await;
+        guard.push_back(sid.clone());
+        drop(guard);
+        log::info!("Planed new scheduler: {sid}");
+        schedulers::upsert(sid, QueueType::Doing, &list, folder, None).await?;
+        self.snapshot(true).await?;
+        Ok(scheduler)
+    }
+
+    pub async fn move_scheduler(
         &self,
-        id: &Arc<String>,
-        _from: QueueType,
-        _to: QueueType
-    ) -> Option<Arc<RwLock<GeneralTask>>> {
-        let mut from = self.get_queue(&_from).write().await;
-        if let Some(pos) = from.iter().position(|v| v.as_str() == id.as_str()) {
+        sid: &Arc<String>,
+        f: QueueType,
+        t: QueueType
+    ) -> Result<()> {
+        let mut from = self.get_queue(&f).write().await;
+        if let Some(pos) = from.iter().position(|v| v.as_str() == sid.as_str()) {
             from.remove(pos);
         } else {
-            log::warn!("Task {id} not found in {:?}", from);
-            return None;
+            return Err(anyhow!("No scheduler with sid {sid} found"));
         }
         drop(from);
 
-        let mut to = self.get_queue(&_to).write().await;
-        to.push_back(id.clone());
+        let mut to = self.get_queue(&t).write().await;
+        to.push_back(sid.clone());
         drop(to);
+        
+        log::info!("Scheduler {sid} moved: from {f:?} to {t:?}");
+        schedulers::move_queue(sid, t).await?;
+        self.snapshot(false).await?;
+        Ok(())
+    }
 
-        self.emit().await;
+    pub async fn state(&self, parent: &Arc<String>, state: TaskState) -> Result<()> {
+        if let Some(lock) = self.get_task(parent).await {
+            let mut task = lock.write().await;
+            task.state = state.clone();
+            let snapshot = task.clone();
+            archive::upsert(&snapshot).await?;
+        }
+        let app = get_app_handle();
+        QueueEvent::State {
+            parent: parent.clone(),
+            state,
+        }.emit(app)?;
+        Ok(())
+    }
 
-        log::info!("Task {id} moved: from {_from:?} to {_to:?}");
+    pub async fn progress(&self, parent: &Arc<String>, id: &Arc<String>, content: u64, chunk: u64) -> Result<()> {
+        if let Some(lock) = self.get_task(parent).await {
+            let mut task = lock.write().await;
+            let status = task.status.get_mut(id).ok_or(
+                anyhow!(format!("Failed to get subtask: {id}, parent: {parent}"))
+            )?;
+            *status = Arc::new(SubTaskStatus {
+                content, chunk
+            });
+            archive::upsert(&task).await?;
+        }
+        let app = get_app_handle();
+        QueueEvent::Progress {
+            parent: parent.clone(),
+            id: id.clone(),
+            status: SubTaskStatus {
+                content,
+                chunk
+            },
+        }.emit(app)?;
+        Ok(())
+    }
 
-        let map = self.tasks.read().await;
-        map.get(id).cloned()
+    pub async fn snapshot(&self, with_tasks: bool) -> Result<()> {
+        let queue = QueueData {
+            waiting: self.waiting.read().await.clone(),
+            doing: self.doing.read().await.clone(),
+            complete: self.complete.read().await.clone(),
+        };
+        let tasks = if with_tasks {
+            let mut map = HashMap::new();
+            let guard = self.tasks.read().await;
+            for (id, lock) in guard.iter() {
+                map.insert(id.clone(), Arc::new(lock.read().await.clone()));
+            }
+            Some(map)
+        } else {
+            None
+        };
+        let schedulers = {
+            let mut map = HashMap::new();
+            let guard = self.schedulers.read().await;
+            for (id, sch) in guard.iter() {
+                map.insert(id.clone(), Arc::new(SchedulerView {
+                    sid: sch.sid.clone(),
+                    ts: sch.ts,
+                    list: sch.list.read().await.clone()
+                }));
+            }
+            Some(map)
+        };
+        let app = get_app_handle();
+        let init = if QUEUE_READY.get().is_none() {
+            QUEUE_READY.set(())?;
+            true
+        } else {
+            false
+        };
+        QueueEvent::Snapshot { init, queue, tasks, schedulers }.emit(app)?;
+        Ok(())
+    }
+
+    pub async fn update_max_conc(&self, new_conc: usize) {
+        use std::cmp::Ordering;
+        let mut conc = self.conc.write().await;
+        let mut sem = self.sem.write().await;
+        match new_conc.cmp(&*conc) {
+            Ordering::Greater => (**sem).add_permits(new_conc - *conc),
+            Ordering::Less    => *sem = Arc::new(Semaphore::new(new_conc)),
+            Ordering::Equal   => ()
+        }
+        *conc = new_conc;
     }
 
     pub async fn pop_task(
         &self,
+        sid: &Arc<String>,
         id: &Arc<String>,
-    ) {
-        let list = vec![
-            self.get_queue(&QueueType::Waiting),
-            self.get_queue(&QueueType::Doing),
-            self.get_queue(&QueueType::Complete),
-        ];
-        for queue in list {
-            let mut guard = queue.write().await;
-            if let Some(pos) = guard.iter().position(|v| v.as_str() == id.as_str()) {
-                guard.remove(pos);
+    ) -> Result<()> {
+        archive::delete(id).await?;
+
+        let sch = self.get_scheduler(sid).await?;
+        sch.ctrls.write().await.remove(id);
+        
+        let mut list = sch.list.write().await;
+        list.retain(|v| v.as_str() != id.as_str());
+        let snapshot = list.clone();
+        drop(list);
+        drop(sch);
+
+        self.tasks.write().await.remove(id);
+        schedulers::update_list(sid, &snapshot).await?;
+        if snapshot.is_empty() && sid.as_str() != schedulers::WAITING_SID {
+            self.schedulers.write().await.remove(sid);
+            schedulers::delete(sid).await?;
+            for q in [&self.doing, &self.complete, &self.waiting] {
+                let mut guard = q.write().await;
+                if let Some(pos) = guard.iter().position(|v| v.as_str() == sid.as_str()) {
+                    guard.remove(pos);
+                }
             }
         }
-        self.emit().await;
+        self.snapshot(true).await?;
+        Ok(())
     }
 }
 
 // Scheduler
-
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "type")]
-pub enum ProcessEvent {
-    Request {
-        parent: Arc<String>,
-        subtask: Option<Arc<String>>,
-        action: RequestAction,
-    },
-    Progress {
-        parent: Arc<String>,
-        id: Arc<String>,
-        #[serde(rename = "content")]
-        content: u64,
-        #[serde(rename = "chunk")]
-        chunk: u64,
-    },
-    TaskState {
-        id: Arc<String>,
-        state: TaskState,
-    },
-    Error {
-        id: Arc<String>,
-        message: String,
-        code: Option<isize>,
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
@@ -170,22 +339,27 @@ pub enum CtrlEvent {
     Pause,
     Resume,
     Cancel,
-    OpenFolder,
 }
 
+#[derive(Debug)]
 pub struct Scheduler {
-    pub list: Vec<Arc<String>>,
+    pub sid: Arc<String>,
+    pub ts: i64,
+    pub list: RwLock<Vec<Arc<String>>>,
     pub folder: PathBuf,
+    ctrls: RwLock<HashMap<Arc<String>, Sender<CtrlEvent>>>,
+    inited: OnceCell<()>,
+}
 
-    pub event: Arc<Channel<ProcessEvent>>,
-    pub sem: RwLock<Arc<Semaphore>>,
-    pub max_conc: RwLock<usize>,
-
-    pub ctrls: RwLock<HashMap<Arc<String>, Sender<CtrlEvent>>>
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct SchedulerView {
+    pub sid: Arc<String>,
+    pub ts: i64,
+    pub list: Vec<Arc<String>>,
 }
 
 impl Scheduler {
-    pub fn new(list: Vec<Arc<String>>, folder: PathBuf, event: Arc<Channel<ProcessEvent>>, max_conc: usize) -> Arc<Self> {
+    pub fn new(sid: Arc<String>, list: Vec<Arc<String>>, folder: PathBuf) -> Arc<Self> {
         let mut map = HashMap::new();
         for id in &list {
             map.entry(id.clone()).or_insert_with(|| {
@@ -193,26 +367,60 @@ impl Scheduler {
             });
         }
         Arc::new(Self {
-            list, folder, event,
-            sem: RwLock::new(Arc::new(Semaphore::new(max_conc))),
-            max_conc: RwLock::new(max_conc),
-            ctrls: RwLock::new(map)
+            sid,
+            ts: get_ts(false),
+            folder,
+            list: RwLock::new(list),
+            ctrls: RwLock::new(map),
+            inited: OnceCell::new()
         })
     }
 
-    pub async fn update_max_conc(&self, new_conc: usize) {
-        use std::cmp::Ordering;
-        let mut max_conc = self.max_conc.write().await;
-        let mut sem = self.sem.write().await;
-        match new_conc.cmp(&*max_conc) {
-            Ordering::Greater => (**sem).add_permits(new_conc - *max_conc),
-            Ordering::Less    => *sem = Arc::new(Semaphore::new(new_conc)),
-            Ordering::Equal   => ()
-        }
-        *max_conc = new_conc;
+    async fn get_ctrl(&self, id: &Arc<String>) -> Result<Sender<CtrlEvent>> {
+        let ctrls = self.ctrls.read().await;
+        ctrls.get(id).cloned().ok_or(anyhow!("Failed to get ctrl for {id}"))
     }
 
-    // Try join in the party >_<
+    async fn dispatch(self: Arc<Self>) -> TauriResult<()> {
+        self.inited.set(())?;
+        let list = { self.list.read().await.clone() };
+        let mut handles = Vec::with_capacity(list.len());
+        for id in list {
+            let Some(task) = TASK_MANAGER.get_task(&id).await else { continue };
+            let state = task.read().await.state.clone();
+            if matches!(state, TaskState::Completed | TaskState::Cancelled | TaskState::Failed) {
+                continue;
+            }
+            let sem = { TASK_MANAGER.sem.read().await.clone() };
+            let permit = sem.acquire_owned().await;
+            TASK_MANAGER.state(&id, TaskState::Active).await?;
+            let scheduler = self.clone();
+            handles.push(async_runtime::spawn(async move {
+                let _permit = permit;
+                match handlers::handle_task(scheduler, task).await {
+                    Ok(_) => TASK_MANAGER.state(&id, TaskState::Completed).await?,
+                    Err(e) => {
+                        log::error!("task {} failed: {e:#}", id.clone());
+                        let app = get_app_handle();
+                        QueueEvent::Error {
+                            parent: id.clone(),
+                            id: None,
+                            message: format!("Task {id} failed: \n{}", e.message),
+                            code: e.code.map(|v| v.saturating_isize()),
+                        }.emit(app)?;
+                        TASK_MANAGER.state(&id, TaskState::Failed).await?;
+                    }
+                }
+                Ok::<(), TauriError>(())
+            }));
+        }
+        for h in handles {
+            h.await??;
+        }
+        TASK_MANAGER.move_scheduler(&self.sid, QueueType::Doing, QueueType::Complete).await?;
+        Ok(())
+    }
+
     pub async fn try_join<F>(
         &self,
         parent: &Arc<String>,
@@ -222,61 +430,44 @@ impl Scheduler {
     where
         F: FnOnce(Receiver<CtrlEvent>) -> Pin<Box<dyn Future<Output = TauriResult<()>> + Send>> + Send + 'static,
     {
-        let tx = { self.ctrls.read().await.get(parent).cloned().ok_or(anyhow!("No tx for {} found", &id))? };
-        let rx = tx.subscribe();
-        let mut _rx = tx.subscribe();
-        let mut cancelled = false;
+        let tx = self.get_ctrl(parent).await?;
+        let task_rx = tx.subscribe();
+        let mut rx = tx.subscribe();
         let mut paused = false;
         let mut result: Option<TauriResult<()>> = None;
 
         let (done_tx, mut done_rx) = oneshot::channel();
-        let id_clone = id.clone();
         async_runtime::spawn(async move {
-            let result = func(rx).await.map_err(|e| {
-                anyhow!(e).context(format!("Task {id_clone} failed"))
-            });
-            let _ = done_tx.send(result);
+            let _ = done_tx.send(func(task_rx).await);
         });
 
         loop { tokio::select! {
-            Ok(msg) = _rx.recv() => match msg {
-                CtrlEvent::Cancel => {
-                    cancelled = true;
-                    break;
-                },
-                CtrlEvent::Pause => {
-                    paused = true;
-                },
+            Ok(msg) = rx.recv() => match msg {
+                CtrlEvent::Cancel => break,
+                CtrlEvent::Pause => paused = true,
                 CtrlEvent::Resume => {
                     paused = false;
-                    if result.is_some() || cancelled {
+                    if result.is_some() {
                         break;
                     }
                 },
-                _ => ()
             },
             res = &mut done_rx => {
-                result = Some(res?.map_err(|e| e.into()));
+                result = Some(res?);
                 if !paused {
                     break;
                 }
             }
-        } };
+        } }
 
-        if cancelled {
-            return Err(anyhow!("Task {id} cancelled"));
-        } else {
-            let _ = result.unwrap_or(Ok(())).map_err(|e| self.event.send(ProcessEvent::Error {
-                id: id.clone(),
-                message: e.message,
-                code: e.code.map(|v| v.saturating_isize()),
-            }));
-        }
+        let app = get_app_handle();
+        let _ = result.unwrap_or(Ok(())).map_err(|e| QueueEvent::Error {
+            parent: parent.clone(),
+            id: Some(id.clone()),
+            message: format!("SubTask {id} failed, parent: {parent}: \n{}", e.message),
+            code: e.code.map(|v| v.saturating_isize()),
+        }.emit(app));
         Ok(())
-    }
-
-    pub async fn get_ctrl(&self, id: &Arc<String>) -> Option<Sender<CtrlEvent>> {
-        self.ctrls.read().await.get(id).cloned()
     }
 }
 
@@ -285,7 +476,6 @@ impl Scheduler {
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum RequestAction {
-    GetStatus,
     RefreshNfo,
     RefreshUrls,
     RefreshFolder,
@@ -297,10 +487,9 @@ pub enum RequestAction {
     GetAISummary,
 }
 
-impl fmt::Display for RequestAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", match self {
-            RequestAction::GetStatus => "getStatus",
+impl RequestAction {
+    fn as_str(&self) -> &str {
+        match self {
             RequestAction::RefreshNfo => "refreshNfo",
             RequestAction::RefreshUrls => "refreshUrls",
             RequestAction::RefreshFolder => "refreshFolder",
@@ -310,12 +499,11 @@ impl fmt::Display for RequestAction {
             RequestAction::GetDanmaku => "getDanmaku",
             RequestAction::GetSubtitle => "getSubtitle",
             RequestAction::GetAISummary => "getAISummary",
-        })
+        } 
     }
 }
 
 pub async fn request_frontend<T: DeserializeOwned + Send + 'static>(
-    event: Arc<Channel<ProcessEvent>>,
     parent: Arc<String>,
     subtask: Option<Arc<String>>,
     action: RequestAction
@@ -327,13 +515,18 @@ pub async fn request_frontend<T: DeserializeOwned + Send + 'static>(
     } else {
         &parent
     };
-    app.once(format!("{action}_{id}"), move |event| {
+    let endpoint = format!("{}_{}", action.as_str(), id);
+    app.once(endpoint, move |event| {
         let _ = tx.send(
             serde_json::from_str::<Option<T>>(event.payload())
             .context("Failed to deserialize frontend response")
         );
     });
-    event.send(ProcessEvent::Request { parent, subtask, action })?;
+    QueueEvent::Request {
+        parent,
+        subtask,
+        action
+    }.emit(app)?;
     let result = rx.await.context("No response from frontend")??;
 
     Ok(Arc::new(
@@ -341,73 +534,19 @@ pub async fn request_frontend<T: DeserializeOwned + Send + 'static>(
     ))
 }
 
-pub fn update_progress(event: Arc<Channel<ProcessEvent>>, parent: Arc<String>, id: Arc<String>) -> mpsc::Sender<(u64, u64)> {
-    let (status_tx, mut status_rx) = mpsc::channel::<(u64, u64)>(16);
-    async_runtime::spawn({
-        async move { while let Some((content, chunk)) = status_rx.recv().await {
-            let _ = event.send(ProcessEvent::Progress {
-                parent: parent.clone(),
-                id: id.clone(),
-                content,
-                chunk
-            });
-        } }
-    });
-    status_tx
-}
-
 // Commands
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>, name: Arc<String>) -> TauriResult<()> {
-    let event = Arc::new(event);
-    let max_conc = config::read().max_conc;
-    let folder = get_unique_path(config::read().down_dir.join(&*name));
-    let scheduler = Scheduler::new(
-        list.clone(), folder.clone(), event.clone(), max_conc
-    );
-    let mut guard = SCHEDULER_LIST.write().await;
-    guard.push(scheduler.clone());
-    drop(guard);
-
-    let mut handles = Vec::with_capacity(list.len());
-
-    for id in list {
-        let sem = { scheduler.sem.read().await.clone() };
-        let permit = sem.acquire_owned().await;
-        let event_clone = event.clone();
-        let scheduler = scheduler.clone();
-        let handle = async_runtime::spawn(async move {
-            let _permit = permit;
-            if let Some(task) = QUEUE_MANAGER.move_task(&id, QueueType::Waiting, QueueType::Doing).await {
-                if let Err(e) = handlers::handle_task(scheduler, task.clone()).await {
-                    log::error!("task {} failed: {e:#}", id.clone());
-                    let _ = event_clone.send(ProcessEvent::Error {
-                        id: id.clone(),
-                        message: e.message,
-                        code: e.code.map(|v| v.saturating_isize()),
-                    });
-                    let _ = event_clone.send(ProcessEvent::TaskState {
-                        id: id.clone(),
-                        state: TaskState::Failed
-                    });
-                }
-                QUEUE_MANAGER.move_task(&id, QueueType::Doing, QueueType::Complete).await;
-            };
-            drop(_permit);
-        });
-        handles.push(handle);
-    }
-    for h in handles {
-        h.await?;
-    }
+pub async fn process_queue(sid: Arc<String>, folder: String) -> TauriResult<()> {
+    let scheduler = TASK_MANAGER.plan_scheduler(&sid, &folder).await?;
+    scheduler.dispatch().await?;
     #[cfg(target_os = "windows")]
     if config::read().notify {
         notify_rust::Notification::new()
             .app_id("com.btjawa.bilitools")
             .summary("BiliTools")
-            .body(&format!("{name}\nDownload complete~"))
+            .body(&format!("{folder}\nDownload complete~"))
             .show()?;
     }
     Ok(())
@@ -415,42 +554,45 @@ pub async fn process_queue(event: Channel<ProcessEvent>, list: Vec<Arc<String>>,
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn submit_task(task: GeneralTask) -> TauriResult<()> {
-    QUEUE_MANAGER.push_pending(task).await;
+pub async fn submit_task(task: Task) -> TauriResult<()> {
+    TASK_MANAGER.push_pending(task).await?;
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn task_event(event: CtrlEvent, id: Arc<String>) -> TauriResult<()> {
-    match event {
-        CtrlEvent::OpenFolder => {
-            let map = QUEUE_MANAGER.tasks.read().await;
-            if let Some(task) = map.get(&id) {
-                let path = task.read().await.folder.clone();
-                tauri_plugin_opener::open_path(&*path, None::<&str>)?;
-            }
-        },
-        CtrlEvent::Cancel => {
-            QUEUE_MANAGER.pop_task(&id).await;
-            archive::delete((*id).clone()).await?;
-        },
-        _ => {
-            let guard = SCHEDULER_LIST.read().await;
-            let scheduler = guard.iter().find(|v| {
-                v.list.iter().any(|v| v.as_str() == id.as_str())
-            }).ok_or(anyhow!("No scheduler for task {id} found"))?;
-            scheduler.get_ctrl(&id).await
-                .ok_or(anyhow!("Failed to get ctrl for {id}"))?
-                .send(event.clone())?;
-            scheduler.event.send(ProcessEvent::TaskState {
-                id: id.clone(),
-                state: match event {
-                    CtrlEvent::Pause => TaskState::Paused,
-                    CtrlEvent::Resume => TaskState::Active,
-                    _ => TaskState::Cancelled,
-                },
-            })?;
+pub async fn open_folder(sid: Arc<String>, id: Option<Arc<String>>) -> TauriResult<()> {
+    let sch = TASK_MANAGER.get_scheduler(&sid).await?;
+    if let Some(id) = id {
+        if let Some(task) = TASK_MANAGER.get_task(&id).await {
+            let path = task.read().await.folder.clone();
+            tauri_plugin_opener::open_path(&*path, None::<&str>)?;
+        }
+    } else {
+        tauri_plugin_opener::open_path(&*sch.folder, None::<&str>)?;
+    }
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn ctrl_event(event: CtrlEvent, sid: Arc<String>, list: Vec<Arc<String>>) -> TauriResult<()> {
+    let sch = TASK_MANAGER.get_scheduler(&sid).await?;
+    if sch.inited.get().is_none() && event == CtrlEvent::Resume {
+        let sch = sch.clone();
+        async_runtime::spawn(async move {
+            let _ = sch.dispatch().await;
+        });
+    }
+    for id in list.iter() {
+        let _ = sch.get_ctrl(id).await?.send(event.clone());
+        TASK_MANAGER.state(id, match event {
+            CtrlEvent::Pause => TaskState::Paused,
+            CtrlEvent::Resume => TaskState::Active,
+            _ => TaskState::Cancelled,
+        }).await?;
+        if event == CtrlEvent::Cancel {
+            TASK_MANAGER.pop_task(&sid, id).await?;
         }
     }
     Ok(())
@@ -458,10 +600,7 @@ pub async fn task_event(event: CtrlEvent, id: Arc<String>) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn update_max_conc(max_conc: usize) -> TauriResult<()> {
-    let guard = SCHEDULER_LIST.read().await;
-    for sch in guard.iter() {
-        sch.update_max_conc(max_conc).await;
-    }
+pub async fn update_max_conc(new_conc: usize) -> TauriResult<()> {
+    TASK_MANAGER.update_max_conc(new_conc).await;
     Ok(())
 }

@@ -1,17 +1,18 @@
 use std::{net::TcpListener, path::PathBuf, sync::{Arc, LazyLock}, time::Duration};
 use tauri_plugin_shell::{process::{CommandChild, CommandEvent}, ShellExt};
-use tauri::{async_runtime::{self, Receiver}, http::StatusCode, Manager};
-use tokio::{fs, sync::{mpsc::Sender, RwLock}, time::sleep};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tauri::{async_runtime::{self, Receiver}, Manager};
 use tauri_plugin_http::reqwest::{self, Client};
+use tokio::{fs, sync::RwLock, time::sleep};
 use anyhow::{anyhow, Context, Result};
 use serde_json::{json, Value};
 use tauri_specta::Event;
 
 use crate::{
     config, errors::TauriError, shared::{
-        get_app_handle, get_ts, SidecarError, SECRET, USER_AGENT, WORKING_PATH
-    }, TauriResult
+        get_app_handle, SidecarError, SECRET, USER_AGENT, WORKING_PATH
+    }, TauriResult,
+    queue::runtime::Progress,
 };
 
 static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(||
@@ -111,13 +112,6 @@ impl Aria2Rpc {
             .post(&inner.endpoint)
             .json(&payload).send().await?;
 
-        if response.status() != StatusCode::OK {
-            return Err(TauriError::new(
-                "Error while fetching Aria2 RPC Response",
-                Some(response.status())
-            ));
-        }
-
         let body: Aria2Resp<T> = response.json().await
             .context("Failed to decode aria2c JsonRPC response")?;
 
@@ -216,6 +210,7 @@ pub async fn init() -> Result<()> {
         "--rpc-listen-all=false".into(),
         "--disable-ipv6=true".into(),
         "--log-level=warn".into(),
+        "--pause=true".into(),
         "--referer=https://www.bilibili.com/".into(),
         "--header=Origin: https://www.bilibili.com".into(),
         format!("--input-file={session_file}"),
@@ -247,55 +242,34 @@ pub async fn resume(gid: Arc<String>) -> TauriResult<()> {
     Ok(())
 }
 
-async fn check_breakpoint(
-    root: &PathBuf,
-    folder: &String
-) -> Result<Option<PathBuf>> {
-    let mut dirs = fs::read_dir(root).await?;
-    while let Some(dir) = dirs.next_entry().await? {
-        let path = dir.path();
-        let name = path.file_name()
-            .and_then(|v| v.to_str())
-            .ok_or(anyhow!("Failed to get file name: {path:?}"))?;
-        if !name.starts_with(folder) {
-            continue;
-        }
-        let mut aria2 = false;
-        let mut inner = fs::read_dir(&path).await?;
-        while let Some(file) = inner.next_entry().await? {
-            if file.path().extension().and_then(|v| v.to_str()) == Some("aria2") {
-                aria2 = true;
-                break;
-            }
-        }
-        if aria2 {
-            return Ok(Some(path));
-        }
-    }
-    Ok(None)
-}
-
-pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<String>) -> TauriResult<PathBuf> {
+pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> TauriResult<PathBuf> {
     let temp_root = config::read().temp_dir();
-    let temp_dir = format!("{gid}_{}", get_ts(true));
-    let dir = check_breakpoint(&temp_root, &temp_dir).await?
-        .unwrap_or(temp_root.join(temp_dir));
+    let dir = temp_root.join(&*gid);
     fs::create_dir_all(&dir).await.context("Failed to create temp dir")?;
 
     let url = reqwest::Url::parse(&urls[0])?;
     let name = url.path_segments()
         .ok_or(anyhow!("Failed to get path segments: {url:?}"))?
         .last().ok_or(anyhow!("Failed to get file name: {url:?}"))?;
+    let output = dir.join(name);
 
-    let params = vec![
-        json!(urls),
-        json!({
-            "dir": dir,
-            "out": name,
-            "gid": gid,
-        })
-    ];
-    ARIA2_RPC.request::<Value>("addUri", params).await?;
+    match ARIA2_RPC.request::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await {
+        Ok(v) => {log::info!("{v:?}");match v.status.as_str() {
+            "complete" => {
+                let total = v.total_length.parse::<u64>()?;
+                tx.send(total, total).await?;
+                return Ok(output);
+            },
+            "paused" => {
+                ARIA2_RPC.request::<Value>("unpause", vec![json!(gid)]).await?;
+            },
+            _ => ()
+        }},
+        Err(_) => { ARIA2_RPC.request::<Value>("addUri", vec![
+            json!(urls),
+            json!({"dir": dir, "out": name, "gid": gid})
+        ]).await?; },
+    };
     loop {
         let data = ARIA2_RPC.request::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await?;
         if let Some(code) = data.error_code {
@@ -307,18 +281,17 @@ pub async fn download(gid: Arc<String>, tx: Arc<Sender<(u64, u64)>>, urls: Vec<S
                 ));
             }
         }
-        tx.try_send((
-            data.total_length.parse::<u64>()?,
-            data.completed_length.parse::<u64>()?
-        ))?;
+        let content = data.total_length.parse::<u64>()?;
+        let chunk = data.completed_length.parse::<u64>()?;
+        if chunk == 0 {
+            continue;
+        }
+        tx.send(content, chunk).await?;
         if data.status.as_str() == "complete" {
-            tx.try_send((
-                data.total_length.parse::<u64>()?,
-                data.total_length.parse::<u64>()?,
-            ))?;
+            tx.send(content, content).await?;
             break;
         }
         sleep(Duration::from_millis(500)).await;
     }
-    Ok(dir.join(name))
+    Ok(output)
 }

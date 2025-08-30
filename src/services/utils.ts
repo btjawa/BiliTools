@@ -1,4 +1,4 @@
-import { useSettingsStore, useAppStore, useQueueStore } from "@/store";
+import { useSettingsStore, useAppStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
 import { MediaType } from '@/types/shared.d';
 import { MutationType } from 'pinia';
@@ -9,6 +9,7 @@ import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 
 import { commands, events } from './backend';
+import { handleEvent } from "./queue";
 import { AppError } from './error';
 import * as auth from './auth';
 
@@ -42,7 +43,6 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
 export function setEventHook() {
     const app = useAppStore();
     const settings = useSettingsStore();
-    const queue = useQueueStore();
     settings.$subscribe(async (mutation, state) => {
         if (mutation.type === MutationType.direct)
         commands.configWrite(state, app.secret);
@@ -50,17 +50,13 @@ export function setEventHook() {
         commands.setWindow(state.theme);
         commands.updateMaxConc(state.max_conc);
     });
-    events.headersData.listen(e => app.$patch(v => {
-        v.headers = e.payload;
+    events.headersData.listen(e => app.$patch({
+        headers: e.payload
     }));
-    events.queueData.listen(e => queue.$patch(v => {
-        v.waiting = e.payload.waiting;
-        v.doing = e.payload.doing;
-        v.complete = e.payload.complete;
-    }))
+    events.queueEvent.listen(e => handleEvent(e.payload));
     events.sidecarError.listen(e => {
         const err = e.payload;
-        new AppError(i18n.global.t('error.sidecar', [err.name]) + ':\n' + err.error, { name: 'SidecarError' }).handle();
+        new AppError(err.error, { name: `ProcessError (${err.name})` }).handle();
     });
 }
 
@@ -176,6 +172,10 @@ export async function tryFetch(url: string, options?: {
             loadingBox?.classList.remove('active');
         }
     }
+}
+
+export function strip(input: string, char?: string) {
+    return input.replace(/[\u0000-\u001F\u007F-\u009F]/g, char ?? '');
 }
 
 export async function getBlob(url: string) {

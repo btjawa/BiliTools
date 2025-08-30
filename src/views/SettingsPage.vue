@@ -2,7 +2,7 @@
 <h1 class="w-full my-1.5">
     <i :class="[$fa.weight, 'fa-gear']"></i>
     <span>{{ $t('settings.title') }}</span>
-    <i @click="openUrl('https://btjawa.top/bilitools#设置')"
+    <i @click="openUrl('https://btjawa.top/bilitools/settings')"
         class="question fa-light fa-circle-question text-lg"
     ></i>
 </h1>
@@ -25,12 +25,12 @@
 import { ref, Transition } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
-import { General, Storage, Download, Advanced, Format } from '@/components/SettingsPage';
+import { General, Storage, Download, Strategy, Format } from '@/components/SettingsPage';
 const list = {
     general: { icon: 'fa-sliders', comp: General },
     storage: { icon: 'fa-database', comp: Storage },
     download: { icon: 'fa-download', comp: Download },
-    advanced: { icon: 'fa-flask-gear', comp: Advanced },
+    strategy: { icon: 'fa-bullseye-arrow', comp: Strategy },
     format: { icon: 'fa-file-signature', comp: Format },
 }
 

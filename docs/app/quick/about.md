@@ -1,4 +1,4 @@
-<div align="center"><img width=500 src="/hero.svg" alt="Logo" /></div>
+<div align="center"><img width=500 src="/logo.svg" alt="Logo" /></div>
 
 <hr />
 

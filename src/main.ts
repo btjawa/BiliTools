@@ -18,12 +18,14 @@ import '@vuepic/vue-datepicker/dist/main.css';
 
 const ToastOptions: PluginOptions = {
     transition: "Vue-Toastification__fade",
-    position: POSITION.TOP_RIGHT,
+    position: POSITION.TOP_CENTER,
     draggable: false,
     pauseOnFocusLoss: true,
     pauseOnHover: true,
     closeButton: "button",
     closeOnClick: false,
+    maxToasts: 20,
+    newestOnTop: true,
     icon: true,
 }
 

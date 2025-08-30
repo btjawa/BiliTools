@@ -56,6 +56,46 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async submitTask(task: Task) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("submit_task", { task }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async processQueue(sid: string, folder: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("process_queue", { sid, folder }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async openFolder(sid: string, id: string | null) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_folder", { sid, id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async ctrlEvent(event: CtrlEvent, sid: string, list: string[]) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ctrl_event", { event, sid, list }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_max_conc", { newConc }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
@@ -91,38 +131,6 @@ async dbImport(input: string, secret: string) : Promise<Result<null, TauriError>
 async dbExport(output: string, secret: string) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("db_export", { output, secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async submitTask(task: GeneralTask) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("submit_task", { task }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async processQueue(event: TAURI_CHANNEL<ProcessEvent>, list: string[], name: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("process_queue", { event, list, name }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async taskEvent(event: CtrlEvent, id: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("task_event", { event, id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async updateMaxConc(maxConc: number) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("update_max_conc", { maxConc }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -167,11 +175,11 @@ async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
 
 export const events = __makeEvents__<{
 headersData: HeadersData,
-queueData: QueueData,
+queueEvent: QueueEvent,
 sidecarError: SidecarError
 }>({
 headersData: "headers-data",
-queueData: "queue-data",
+queueEvent: "queue-event",
 sidecarError: "sidecar-error"
 })
 
@@ -182,10 +190,9 @@ sidecarError: "sidecar-error"
 /** user-defined types **/
 
 export type AnyInt = number
-export type CtrlEvent = "pause" | "resume" | "cancel" | "openfolder"
-export type GeneralTask = { id: string; ts: number; index: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo; subtasks: SubTask[] }
+export type CtrlEvent = "pause" | "resume" | "cancel"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { version: string; hash: string; tasks: Partial<{ [key in string]: GeneralTask }>; status: Partial<{ [key in string]: JsonValue }>; config: Settings; paths: Paths }
+export type InitData = { version: string; hash: string; config: Settings; paths: Paths }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; index: number }
 export type MediaNfo = { tags: string[]; thumbs: MediaNfoThumb[]; showtitle: string; premiered: number; upper: MediaNfoUpper | null; actors: MediaNfoActor[]; staff: string[] }
@@ -198,18 +205,22 @@ export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
 export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
 export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
-export type ProcessEvent = { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "progress"; parent: string; id: string; content: number; chunk: number } | { type: "taskState"; id: string; state: TaskState } | { type: "error"; id: string; message: string; code: number | null }
 export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
-export type RequestAction = "getStatus" | "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
-export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; task_folder: boolean; temp_dir: string; theme: Theme; proxy: SettingsProxy; convert: SettingsConvert }
+export type QueueEvent = { type: "snapshot"; init: boolean; queue: QueueData; tasks?: Partial<{ [key in string]: Task }> | null; schedulers?: Partial<{ [key in string]: SchedulerView }> | null } | { type: "state"; parent: string; state: TaskState } | { type: "progress"; parent: string; id: string; status: SubTaskStatus } | { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "error"; parent: string; id?: string | null; message: string; code: number | null }
+export type RequestAction = "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
+export type SchedulerView = { sid: string; ts: number; list: string[] }
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; organize: SettingsOrganize; proxy: SettingsProxy }
 export type SettingsConvert = { danmaku: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { series: string; item: string; file: string }
+export type SettingsOrganize = { top_folder: boolean; sub_folder: boolean }
 export type SettingsProxy = { address: string; username: string; password: string }
 export type SidecarError = { name: string; error: string }
 export type StreamFormat = "dash" | "mp4" | "flv"
 export type StringOrFalse = string | boolean
 export type SubTask = { id: string; type: TaskType }
+export type SubTaskStatus = { chunk: number; content: number }
+export type Task = { id: string; state: TaskState; subtasks: SubTask[]; status: Partial<{ [key in string]: SubTaskStatus }>; ts: number; seq: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo }
 export type TaskState = "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
 export type TaskType = "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
 export type TauriError = { code: AnyInt | null; message: string }

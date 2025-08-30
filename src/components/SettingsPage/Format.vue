@@ -3,6 +3,9 @@
     <h2>
         <i :class="[$fa.weight, 'fa-file-signature']"></i>
         <span>{{ $t('settings.naming.name') }}</span>
+        <i @click="openUrl('https://btjawa.top/bilitools/naming')"
+            class="question fa-light fa-circle-question"
+        ></i>
     </h2>
     <i18n-t keypath="settings.naming.desc" tag="span" scope="global" class="desc text">
         <template #format>
@@ -10,9 +13,6 @@
         </template>
         <template #example>
             <a>{pubtime:YYYY-MM-DD_HH-mm-ss}</a>
-        </template>
-        <template #link>
-            <a @click="openUrl('https://btjawa.top/bilitools#时间格式')">{{ $t('settings.naming.timeDoc') }}</a>
         </template>
     </i18n-t>
     <template v-for="(val, key) in placeholders">

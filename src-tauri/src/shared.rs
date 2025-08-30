@@ -12,7 +12,7 @@ use specta::Type;
 
 use crate::storage::{
     config::{
-        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsProxy
+        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsProxy, SettingsOrganize
     },
     cookies
 };
@@ -28,6 +28,10 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         block_pcdn: true,
         check_update: true,
         clipboard: true,
+        convert: SettingsConvert {
+            danmaku: true,
+            mp3: false,
+        },
         default: SettingsDefault {
             res: 80,
             abr: 30280,
@@ -52,18 +56,17 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
             }).unwrap_or("en-US".into()),
         max_conc: 3,
         notify: true,
-        task_folder: true,
         temp_dir: get_app_handle().path().temp_dir().expect("Failed to get temp_dir"),
         theme: Theme::Auto,
+        organize: SettingsOrganize {
+            top_folder: true,
+            sub_folder: true
+        },
         proxy: SettingsProxy {
             address: String::new(),
             username: String::new(),
             password: String::new()
         },
-        convert: SettingsConvert {
-            danmaku: true,
-            mp3: false,
-        }
     })
 );
 pub static HEADERS: LazyLock<Headers>      = LazyLock::new(Headers::new);

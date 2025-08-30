@@ -8,10 +8,10 @@
     >
         <i :class="[$fa.weight, 'fa-close']"></i>
     </button>
-    <div v-for="v of status?.subtasks" class="flex w-full gap-4 items-center">
+    <div v-for="v of task?.subtasks" class="flex w-full gap-4 items-center">
         <span class="flex-shrink-0 min-w-28">{{ $t('taskType.' + v.type) }}</span>
-        <span class="w-16">{{ ((v.chunk / v.content || 0) * 100).toFixed(2) }}%</span>
-        <ProgressBar :progress="(v.chunk / v.content || 0) * 100" />
+        <span class="w-16">{{ stat(v.id).toFixed(2) }}%</span>
+        <ProgressBar :progress="stat(v.id)" />
     </div>
 </div>
 </Transition>
@@ -19,18 +19,23 @@
 </template>
 
 <script lang="ts" setup>
-import { TaskStatus } from '@/types/shared';
+import { Task } from '@/types/shared.d';
 import { ref, Transition } from 'vue';
 import ProgressBar from '../ProgressBar.vue';
 
 defineExpose({ init });
 
 const active = ref(false);
-const status = ref<TaskStatus>();
+const task = ref<Task>();
 
-function init(stat: TaskStatus) {
+const stat = (id: string) => {
+    const stat = task.value?.status[id];
+    return (stat ? (stat?.chunk / stat?.content || 0) : 0) * 100;
+}
+
+function init(_task: Task) {
     active.value = true;
-    status.value = stat;
+    task.value = _task;
 }
 </script>
 

@@ -5,118 +5,136 @@
 </h1>
 <div class="flex w-full h-full mt-4 flex-1 gap-3 min-h-0">
     <Transition mode="out-in">
-    <RecycleScroller class="w-full"
-        key-field="id" :key="tab"
-        :items="queueData" :item-size="112"
+    <DynamicScroller class="w-full"
+        key-field="sid" :key="tab"
+        :items="queueData" :min-item-size="48"
     >
-        <template #before v-if="!queue[tab].length">
+        <template #before v-if="!queueData.length">
             <Empty :text="$t('down.empty')" />
         </template>
-        <template v-slot="{ item }">
-            <div class="flex flex-col text-sm p-4 py-3 gap-1.5 rounded-lg bg-[var(--block-color)] border-2 border-solid border-transparent"
-                :style="{ 'border-color': getBorder(item) }"
+        <template v-slot="{ item, active }">
+        <DynamicScrollerItem
+            :item :active :size-dependencies="item.list"
+            class="block gap-0.5"
+        >
+            <div class="flex mb-2.5 mx-[14px] text items-center">
+                <i :class="[$fa.weight, 'fa-id-badge']"></i>
+                <span class="mr-auto">{{
+                    item.sid === '__waiting__' ? $t('down.ordering') : item.sid
+                }}</span>
+                <div class="flex gap-2 items-center">
+                    <button
+                        @click="processQueue(); tab = 'doing'"
+                        v-if="item.sid === '__waiting__' && item.list.length"
+                        class="ml-auto w-fit"
+                    >
+                        <i :class="[$fa.weight, 'fa-download']"></i>
+                        <span>{{ $t('down.processQueue') }}</span>
+                    </button>
+                    <template v-if="item.sid !== '__waiting__'">
+                        <span class="mr-2 ml-auto">{{ timestamp(item.ts) }}</span>
+                        <button
+                            @click="event(k, item.sid, null)"
+                            v-for="(v, k) in buttons()"
+                        >
+                            <i :class="[$fa.weight, v]"></i>
+                        </button>
+                    </template>
+                </div>
+            </div>
+            <Empty v-if="!item.list.length" :text="$t('down.empty')" />
+            <template v-for="task in item.list.map(v => queue.tasks[v])">
+            <div
+                class="block gap-1.5 px-4 border-2 border-solid border-transparent"
+                :style="{ 'border-color': getBorder(task.id) }"
             >
                 <div class="flex w-full text">
-                    <span class="w-full ellipsis">{{ item.item.title }}</span>
-                    <span class="flex-shrink-0">{{ timestamp(item.ts * 1000) }}</span>
+                    <span class="w-full ellipsis">{{ task.item.title }}</span>
+                    <span class="flex-shrink-0">{{ timestamp(task.ts * 1000) }}</span>
                 </div>
                 <div class="!flex gap-2 desc w-full text">
-                    <div class="w-full ellipsis">
-                    <template
-                        v-if="item.select.media.video || item.select.media.audioVideo"
+                <div class="flex gap-1 max-w-full overflow-auto whitespace-nowrap">
+                    <span
+                        v-if="task.select.media.video || task.select.media.audioVideo"
                         v-for="k in (['res', 'enc'] as const)"
                     >
-                    <template v-if="item.select[k]">
-                        {{ $t(`quality.${k}.${item.select[k]}`) }}
-                        <gap />
-                    </template>
-                    </template>
-                    <template v-if="(item.select.media.audio || item.select.media.audioVideo) && item.select.abr">
-						{{ $t(`quality.abr.${item.select.abr}`) }}
-                        <gap />
-                    </template>
-                    <template v-if="Object.entries(item.select.media).some(([_, k]) => k) && item.select.fmt">
-                        {{ $t(`quality.fmt.${item.select.fmt}`) }}
-                        <gap />
-                    </template>
-                    <template v-if="item.select.danmaku.live">
+                    <span v-if="task.select[k]">
+                        {{ $t(`quality.${k}.${task.select[k]}`) }}
+                    </span>
+                    </span>
+                    <span v-if="(task.select.media.audio || task.select.media.audioVideo) && task.select.abr">
+						{{ $t(`quality.abr.${task.select.abr}`) }}
+                    </span>
+                    <span v-if="Object.entries(task.select.media).some(([_, k]) => k) && task.select.fmt">
+                        {{ $t(`quality.fmt.${task.select.fmt}`) }}
+                    </span>
+                    <span v-if="task.select.danmaku.live">
                         {{ $t('taskType.liveDanmaku') }}
-                        <gap />
-                    </template>
-                    <template v-if="item.select.danmaku.history">
+                    </span>
+                    <span v-if="task.select.danmaku.history">
                         {{ $t('taskType.historyDanmaku') }}
-                        <gap />
-                    </template>
-                    <template v-if="item.select.thumb.length">
+                    </span>
+                    <span v-if="task.select.thumb.length">
                         {{ $t('popup.thumb.name') }}
-                    </template>
-                    <template v-if="item.select.misc.subtitles">
-                        {{ item.select.misc.subtitles }}
-                        <gap />
-                    </template>
-                    <template v-if="item.select.misc.aiSummary">
+                    </span>
+                    <span v-if="task.select.misc.subtitles">
+                        {{ task.select.misc.subtitles }}
+                    </span>
+                    <span v-if="task.select.misc.aiSummary">
                         {{ $t('taskType.aiSummary') }}
-                        <gap />
-                    </template>
-                    </div>
-                    <div class="flex gap-1 flex-shrink-0 items-center">
+                    </span>
+                </div>
+                <div class="flex gap-1 ml-auto flex-shrink-0 items-center">
                     <i :class="[$fa.weight, 'fa-id-badge ml-auto']"></i>
-                    {{ item.id }}
+                    {{ task.id }}
                     <i :class="[$fa.weight, 'fa-hashtag']"></i>
-                    {{ String(item.index + 1).padStart(2, '0') }}
-                    </div>
+                    {{ String(task.seq + 1).padStart(2, '0') }}
+                </div>
                 </div>
                 <div class="flex w-full gap-4 *:flex-shrink-0 items-center">
-                    <button @click="popup?.init(queue.status[item.id])">
+                    <button @click="popup?.init(task)">
                         <i :class="[$fa.weight, 'fa-list']"></i>
-                        <span>任务列表</span>
+                        <span>{{ $t('down.taskList') }}</span>
                     </button>
-                    <ProgressBar :progress="getProgress(item)" />
-                    <span class="w-14">{{ getProgress(item).toFixed(2) }}%</span>
+                    <ProgressBar :progress="getProgress(task)" />
+                    <span class="w-14">{{ getProgress(task).toFixed(2) }}%</span>
                     <div class="flex gap-2 text-sm">
                         <button
-                            v-for="(v, k) in buttons"
-                            @click="click(item, k)"
+                            v-for="(v, k) in buttons(task)"
+                            @click="event(k, item.sid, task.id)"
                         >
                             <i :class="[$fa.weight, v]"></i>
                         </button>
                     </div>
                 </div>
             </div>
+            </template>
+        </DynamicScrollerItem>
         </template>
-    </RecycleScroller>
+    </DynamicScroller>
     </Transition>
-    <div class="flex flex-col gap-4">
-        <div class="tab">
-        <button v-for="(v, k) in tabs" @click="tab = k" :class="{ 'active': tab === k }">
-            <span>{{ $t(`down.${k}`) }}</span>
-            <i :class="[tab === k ? 'fa-solid' : 'fa-light', v]"></i>
-            <label class="primary-color"></label>
-        </button>
-        </div>
-        <button
-            v-if="queue.waiting.some(v => !queue.handled.includes(v))"
-            @click="processQueue(); tab = 'doing'"
-            class="ml-auto w-fit primary-color"
-        >
-            <i :class="[$fa.weight, 'fa-download']"></i>
-            <span>{{ $t('down.processQueue') }}</span>
-        </button>
+    <div class="tab">
+    <button v-for="(v, k) in tabs" @click="tab = k" :class="{ 'active': tab === k }">
+        <span>{{ $t(`down.${k}`) }}</span>
+        <i :class="[tab === k ? 'fa-solid' : 'fa-light', v]"></i>
+        <label class="primary-color"></label>
+    </button>
     </div>
     <Popup ref="popup" />
 </div>
 </div></template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import { Empty, ProgressBar } from '@/components';
-import { useQueueStore } from '@/store';
-import { RecycleScroller } from 'vue-virtual-scroller';
-import { timestamp } from '@/services/utils';
 import { Popup } from '@/components/DownPage';
-import { GeneralTask } from '@/types/shared.d';
-import { processQueue } from '@/services/queue';
+import { useQueueStore } from '@/store';
+import { computed, ref } from 'vue';
+
 import * as backend from '@/services/backend';
+import { processQueue } from '@/services/queue';
+import { timestamp } from '@/services/utils';
+import { Task } from '@/types/shared.d';
 
 const tabs = {
     waiting: 'fa-stopwatch',
@@ -125,14 +143,22 @@ const tabs = {
 };
 type Key = keyof typeof tabs;
 
-const buttons = {
-    togglePause: 'fa-play-pause',
-    openfolder: 'fa-folder-open',
+const buttons = computed(() => (task?: Task) => ({
+    ...(task?.state === 'active' && {
+        pause: 'fa-pause',
+    }),
+    ...(task?.state === 'paused' && {
+        resume: 'fa-play',
+    }),
+    ...((!task && tab.value === 'doing') && {
+        pause: 'fa-pause',
+        resume: 'fa-play',
+    }),
+    openFolder: 'fa-folder-open',
     cancel: 'fa-trash',
-}
-type Button = keyof typeof buttons;
+}))
 
-const queueData = computed(() => (queue[tab.value].length ? queue[tab.value] : []).map(v => queue.tasks[v])); // avoid "does not exists"
+const queueData = computed(() => queue[tab.value].map(v => queue.schedulers[v]));
 
 const tab = ref<Key>('waiting');
 const queue = useQueueStore();
@@ -140,41 +166,37 @@ const popup = ref<InstanceType<typeof Popup>>();
 
 defineExpose({ tab });
 
-function getProgress(task: GeneralTask) {
+function getProgress(task: Task) {
     const subtasks = task.subtasks;
     const content = subtasks.length;
     let chunk = 0;
-    for (const [_, v] of Object.entries(queue.status[task.id].subtasks)) {
+    for (const [_, v] of Object.entries(queue.tasks[task.id].status)) {
         chunk += (v.chunk / v.content || 0);
     }
     return ((chunk / content || 0) * 100);
 }
 
-function getBorder(task: GeneralTask) {
-    switch (queue.status[task.id]?.state) {
+function getBorder(id: string) {
+    switch (queue.tasks[id]?.state) {
         case 'active': return 'var(--primary-color)';
         case 'paused': return '#ffc107';
         case 'failed': return '#ff5252';
         case 'completed': return '#4caf50';
-        default: return 'var(--split-color)';
+        default: return 'transparent';
     }
 }
 
-async function click(task: GeneralTask, id: Button) {
-    const target = queue.status[task.id];
-    let action = id as backend.CtrlEvent;
-    if (id === 'togglePause') {
-        action = target.state === 'active' ? 'pause' : 'resume';
-    } else {
-        action = id; // type inference
-    }
-    const result = await backend.commands.taskEvent(action, target.id);
+async function event(event: backend.CtrlEvent | 'openFolder', sid: string, id: string | null) {
+    const sch = queue.schedulers[sid];
+    const result = event === 'openFolder'
+        ? await backend.commands.openFolder(sid, id)
+        : await backend.commands.ctrlEvent(event, sid, id ? [id] : sch.list);
     if (result.status === 'error') throw result.error;
 }
 </script>
 
 <style lang="scss" scoped>
-gap {
-    @apply inline-block w-1;
+.block {
+    @apply flex flex-col p-3 rounded-lg text-sm bg-[var(--block-color)];
 }
 </style>
