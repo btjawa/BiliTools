@@ -9,7 +9,7 @@ export const useSettingsStore = defineStore('settings', () => {
         auto_download: false,
         block_pcdn: true,
         check_update: true,
-        clipboard: true,
+        clipboard: false,
         convert: {
             danmaku: true,
             mp3: false,

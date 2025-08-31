@@ -133,8 +133,7 @@
         "risk": "触发风控，请进行验证",
         "checkUpdate": "请在 GitHub 检查最新更新",
         "invalidInput": "无法解析输入",
-        "selectLimit": "不建议一次选择超过 30 个选项",
-        "clipboardRead": "无法读取剪切板内容"
+        "selectLimit": "不建议一次选择超过 30 个选项"
     },
     "updater": {
         "title": "发现新版本！",
@@ -204,17 +203,9 @@
             "dark": "深色",
             "auto": "遵循系统"
         },
-        "clipboard" :{
+        "clipboard": {
             "name": "监听剪贴板",
-            "desc": "若启用，则会自动检测剪贴板中的B站链接并弹出对话框。",
-            "dialog": {
-                "title": "检测到B站内容",
-                "detected": "从剪贴板中检测到以下B站内容",
-                "search": "立即搜索",
-                "cancel": "取消",
-                "loading": "正在获取视频信息...",
-                "patience": "请稍候，正在解析内容"
-            }
+            "desc": "若启用，则会自动检测剪贴板中的哔哩哔哩链接并搜索。"
         },
         "notify": {
             "name": "通知系统",

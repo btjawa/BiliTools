@@ -160,6 +160,9 @@ watch(() => v.pageIndex, async (pn) => {
 
 defineExpose({ search });
 async function search(overrideInput?: string) {
+	if (overrideInput) try {
+		await parseId(overrideInput)
+	} catch(_) { return }
 	try {
 		const input = (overrideInput ?? v.searchInput).trim();
 		v.searchInput = input;

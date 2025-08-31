@@ -242,8 +242,8 @@ export function waitPage<T, K extends keyof T>(
 	component: Ref<T | undefined> | undefined, tag: K
 ): Promise<Ref<T>> {
 	return new Promise((resolve) => {
-		if (!component) return;
-		watch(() => component.value?.[tag],
+        if (component?.value?.[tag]) resolve(component as Ref<T>);
+		watch(() => component?.value?.[tag],
 			(v) => { if (v) resolve(component as Ref<T>) },
 			{ once: true }
 		);

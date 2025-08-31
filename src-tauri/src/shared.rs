@@ -27,7 +27,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         auto_download: false,
         block_pcdn: true,
         check_update: true,
-        clipboard: true,
+        clipboard: false,
         convert: SettingsConvert {
             danmaku: true,
             mp3: false,

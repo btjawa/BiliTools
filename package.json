@@ -37,7 +37,6 @@
     "marked": "^16.2.0",
     "md5": "^2.3.0",
     "p-limit": "^7.0.0",
-    "pako": "^2.1.0",
     "pinia": "^3.0.3",
     "qrcode-generator": "^2.0.4",
     "source-map-support": "^0.5.21",
@@ -51,7 +50,6 @@
   "devDependencies": {
     "@tauri-apps/cli": "2.7.0",
     "@types/md5": "^2.3.5",
-    "@types/pako": "^2.0.4",
     "autoprefixer": "^10.4.21",
     "pbjs": "^0.0.14",
     "postcss": "^8.5.6",
