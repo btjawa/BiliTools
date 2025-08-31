@@ -20,7 +20,7 @@
     <span class="desc">{{ $t('settings.cache.desc') }}</span>
     <div v-for="v in cacheList" class="io">
         <h3>{{ $t('settings.cache.' + v) }}</h3>
-        <button @click="openPath(app.paths[v])">{{ formatBytes(app.cache[v]) }}</button>
+        <button @click="openCache(v)">{{ formatBytes(app.cache[v]) }}</button>
         <button @click="cleanCache(v)"><i class="fa-light fa-broom-wide"></i></button>
     </div>
 </section>
@@ -69,14 +69,18 @@ onMounted(() => cacheList.forEach(k => getSize(k)));
 async function getSize(type: CacheKey) {
     const event = new Channel<number>();
     event.onmessage = (v) => app.cache[type] = v;
-    await commands.getSize(app.paths[type], event);
+    await commands.getSize(type, event);
 }
 
 async function cleanCache(type: CacheKey) {
     const result = await dialog.ask(i18n.global.t('settings.confirm'), { 'kind': 'warning' });
     if (!result) return;
-    await commands.cleanCache(app.paths[type], app.secret);
+    await commands.cleanCache(type, app.secret);
     await getSize(type);
+}
+
+async function openCache(type: CacheKey) {
+    await commands.openCache(type, app.secret);
 }
 
 async function getFolder(type: typeof pathList[number]) {
@@ -86,7 +90,6 @@ async function getFolder(type: typeof pathList[number]) {
     });
     if (!path) return;
     settings[type] = path;
-    app.paths.temp = path;
 }
 
 async function importDb() {

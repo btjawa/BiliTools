@@ -4,11 +4,21 @@ use std::{path::PathBuf, sync::Arc};
 use sea_query_binder::SqlxBinder;
 use anyhow::{anyhow, Result};
 use serde_json::Value;
+use tauri::Manager;
 use specta::Type;
 use sqlx::Row;
 
 use super::db::{get_db, TableSpec};
-use crate::shared::{Theme, CONFIG};
+use crate::shared::{get_app_handle, Theme, CONFIG};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum CacheKey {
+    Log,
+    Temp,
+    Webview,
+    Database,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct Settings {
@@ -32,6 +42,21 @@ pub struct Settings {
 }
 
 impl Settings {
+    pub fn get_cache(&self, key: &CacheKey) -> Result<PathBuf> {
+        let app = get_app_handle();
+        let path = app.path();
+        let result = match key {
+            CacheKey::Log => path.app_log_dir()?,
+            CacheKey::Temp => self.temp_dir(),
+            CacheKey::Webview => match std::env::consts::OS {
+                "macos" => path.app_cache_dir()?.join("../WebKit/BiliTools/WebsiteData"),
+                "linux" => path.app_cache_dir()?.join("bilitools"),
+                _ => path.app_local_data_dir()?.join("EBWebView"), // windows
+            },
+            CacheKey::Database => path.app_data_dir()?.join("Storage"),
+        };
+        Ok(result)
+    }
     pub fn temp_dir(&self) -> PathBuf {
         self.temp_dir.join("com.btjawa.bilitools")
     }

@@ -1,7 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 use std::{env, path::PathBuf, sync::Arc};
-use tauri::{async_runtime, Manager};
+use tauri::async_runtime;
 use serde::Serialize;
 use anyhow::anyhow;
 use specta::Type;
@@ -22,7 +22,7 @@ pub use crate::{
         ffmpeg,
     },
     storage::{
-        config,
+        config::{self, CacheKey},
         cookies,
         archive,
         db,
@@ -34,24 +34,16 @@ pub use crate::{
 };
 
 #[derive(Serialize, Type)]
-pub struct Paths {
-    log: PathBuf,
-    temp: PathBuf,
-    webview: PathBuf,
-    database: PathBuf,
-}
-
-#[derive(Serialize, Type)]
 pub struct InitData {
     version: String,
     hash: String,
     config: Arc<config::Settings>,
-    paths: Paths,
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriResult<()> {
+pub async fn get_size(key: CacheKey, event: tauri::ipc::Channel<u64>) -> TauriResult<()> {
+    let path = config::read().get_cache(&key)?;
     let mut bytes = 0u64;
     let mut count = 0;
     for entry in walkdir::WalkDir::new(&path).into_iter().filter_map(Result::ok) {
@@ -76,25 +68,36 @@ pub async fn get_size(path: String, event: tauri::ipc::Channel<u64>) -> TauriRes
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn clean_cache(path: String, secret: String) -> TauriResult<()> {
+pub async fn clean_cache(key: CacheKey, secret: String) -> TauriResult<()> {
     if secret != *SECRET {
         return Err(anyhow!("403 Forbidden").into())
     }
-    if path.ends_with("Storage") {
-        let _ = fs::remove_file(&path).await;
-    } else {
-        let mut entries = fs::read_dir(&path).await?;
-        while let Some(entry) = entries.next_entry().await? {
-            let path = entry.path();
-            async_runtime::spawn(async move {
-                let _ = if path.is_dir() {
-                    fs::remove_dir_all(&path).await
-                } else {
-                    fs::remove_file(&path).await
-                };
-            });
-        }
+    let path = config::read().get_cache(&key)?;
+    if key == CacheKey::Database {
+        return Ok(fs::remove_file(&path).await?);
     }
+    let mut entries = fs::read_dir(&path).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        async_runtime::spawn(async move {
+            let _ = if path.is_dir() {
+                fs::remove_dir_all(&path).await
+            } else {
+                fs::remove_file(&path).await
+            };
+        });
+    }
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn open_cache(key: CacheKey, secret: String) -> TauriResult<()> {
+    if secret != *SECRET {
+        return Err(anyhow!("403 Forbidden").into())
+    }
+    let path = config::read().get_cache(&key)?;
+    tauri_plugin_opener::open_path(path, None::<&str>)?;
     Ok(())
 }
 
@@ -147,19 +150,8 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
     let config = config::read();
-    let path = app.path();
-    let paths = Paths {
-        log: path.app_log_dir()?,
-        temp: config::read().temp_dir(),
-        webview: match env::consts::OS {
-            "macos" => path.app_cache_dir()?.join("../WebKit/BiliTools/WebsiteData"),
-            "linux" => path.app_cache_dir()?.join("bilitools"),
-            _ => path.app_local_data_dir()?.join("EBWebView"), // windows
-        },
-        database: path.app_data_dir()?.join("Storage")
-    };
     queue::runtime::TASK_MANAGER.snapshot(true).await?;
-    Ok(InitData { version, hash, config, paths })
+    Ok(InitData { version, hash, config })
 }
 
 #[tauri::command(async)]

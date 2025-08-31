@@ -56,6 +56,54 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async openCache(key: CacheKey, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_cache", { key, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSize(key: CacheKey, event: TAURI_CHANNEL<number>) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_size", { key, event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cleanCache(key: CacheKey, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { key, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dbImport(input: string, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("db_import", { input, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dbExport(output: string, secret: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("db_export", { output, secret }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async submitTask(task: Task) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("submit_task", { task }) };
@@ -91,46 +139,6 @@ async ctrlEvent(event: CtrlEvent, sid: string, list: string[]) : Promise<Result<
 async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("update_max_conc", { newConc }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getSize(path: string, event: TAURI_CHANNEL<number>) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_size", { path, event }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async cleanCache(path: string, secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { path, secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async dbImport(input: string, secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("db_import", { input, secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async dbExport(output: string, secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("db_export", { output, secret }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -190,16 +198,16 @@ sidecarError: "sidecar-error"
 /** user-defined types **/
 
 export type AnyInt = number
+export type CacheKey = "log" | "temp" | "webview" | "database"
 export type CtrlEvent = "pause" | "resume" | "cancel"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { version: string; hash: string; config: Settings; paths: Paths }
+export type InitData = { version: string; hash: string; config: Settings }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; index: number }
 export type MediaNfo = { tags: string[]; thumbs: MediaNfoThumb[]; showtitle: string; premiered: number; upper: MediaNfoUpper | null; actors: MediaNfoActor[]; staff: string[] }
 export type MediaNfoActor = { role: string; name: string }
 export type MediaNfoThumb = { id: string; url: string }
 export type MediaNfoUpper = { name: string; mid: number; avatar: string }
-export type Paths = { log: string; temp: string; webview: string; database: string }
 export type PopupSelect = { res?: number | null; abr?: number | null; enc?: number | null; fmt: StreamFormat; misc: PopupSelectMisc; nfo: PopupSelectNfo; danmaku: PopupSelectDanmaku; thumb: string[]; media: PopupSelectMedia }
 export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
 export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
