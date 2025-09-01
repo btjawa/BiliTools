@@ -13,7 +13,11 @@ export default defineConfig({
       lang: 'en-US'
     }
   },
-  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+  head: [
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    ['script', {}, `window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };`],
+    ['script', { defer: '', src: '/_vercel/insights/script.js' }],
+  ],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     socialLinks: [

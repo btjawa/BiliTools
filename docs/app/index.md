@@ -23,7 +23,10 @@ hero:
 features:
   - icon: "<i class='fa-solid fa-cloud'></i>"
     title: 轻量
-    details: 得益于 Tauri 框架及 Edge WebView2 的灵活性，应用的体积几乎只有 ~30 MB。
+    details: 得益于 Tauri 框架及 WebView2 的灵活性，应用本体仅有 ~30 MB。
+  - icon: "<i class='fa-solid fa-umbrella'></i>"
+    title: 简约
+    details: 界面轻盈简洁，支持明暗主题，开箱即用。
   - icon: "<i class='fa-solid fa-window-restore'></i>"
     title: 功能
     details: 从番剧到收藏夹，弹幕到 NFO，尽数支持。

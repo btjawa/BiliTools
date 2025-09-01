@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.4.0-6] - 2025-09-02
+
+## 更新
+
+- [`210a1ba`](https://github.com/btjawa/BiliTools/commit/210a1ba48508463947648360165a238d8d85285a) 支持设置是否检测重名 ([#146](https://github.com/btjawa/BiliTools/issues/146))
+- [`27a48bb`](https://github.com/btjawa/BiliTools/commit/27a48bbd2baf652aaadb0a0be9e97b054972075d) [`d78fd38`](https://github.com/btjawa/BiliTools/commit/d78fd3862be898b062012c082001ab8ff023c6d5) 支持 Shift 多选 ([#129](https://github.com/btjawa/BiliTools/issues/129))
+- [`4e82999`](https://github.com/btjawa/BiliTools/commit/4e82999946f6c5e948eca2ebd89069dc453247f5) [`31721fe`](https://github.com/btjawa/BiliTools/commit/31721fe12eae83ebf0787d6af0d582af87262d05) 支持监听剪切板 ([#70](https://github.com/btjawa/BiliTools/issues/70))
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) [`3924441`](https://github.com/btjawa/BiliTools/commit/39244411ac8c41deed3ac65a7e540f65bc7c7543) 支持自动迁移数据库 ([#125](https://github.com/btjawa/BiliTools/issues/125))
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) 支持控制是否创建顶层文件夹 ([#141](https://github.com/btjawa/BiliTools/issues/141))
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) 支持 Scheduler 级别控制 & 自动恢复下载任务 ([#136](https://github.com/btjawa/BiliTools/issues/136), [#41](https://github.com/btjawa/BiliTools/issues/41))
+- [`220fb70`](https://github.com/btjawa/BiliTools/commit/220fb709fcf0d18a2a1618db99b8dc3bebef57d6) 支持 ISO 8601 的完整占位符 ([#134](https://github.com/btjawa/BiliTools/issues/134))
+
+## 修复
+
+- [`89caa66`](https://github.com/btjawa/BiliTools/commit/89caa665a94875301038fc0159997591ba677465) 修复临时路径指向错误的恶性漏洞
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) 修复无法输出 FLAC 的问题 ([#138](https://github.com/btjawa/BiliTools/issues/138))
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) 增强非法字符的校验 ([#135](https://github.com/btjawa/BiliTools/issues/135))
+- [`220fb70`](https://github.com/btjawa/BiliTools/commit/220fb709fcf0d18a2a1618db99b8dc3bebef57d6) 修复任务进度同步问题 ([#130](https://github.com/btjawa/BiliTools/issues/130))
+
+
 ## [1.4.0-5] - 2025-08-22
 
 ## 更新
