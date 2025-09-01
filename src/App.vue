@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-import { ref, onMounted, provide, watch, getCurrentInstance, reactive, nextTick } from 'vue';
+import { ref, onMounted, provide, watch, getCurrentInstance, reactive } from 'vue';
 import { TitleBar, ContextMenu, SideBar, Updater } from "@/components";
 import { useAppStore, useSettingsStore } from '@/store';
 import { useRouter } from 'vue-router';
@@ -52,7 +52,6 @@ provide('updater', updater);
 
 clipboard.register(async (s) => {
 	router.push('/');
-	await nextTick();
 	const result = await waitPage(page, 'search');
 	(result.value as InstanceType<typeof SearchPage>).search(s);
 });

@@ -131,11 +131,9 @@
     },
     "error": {
         "risk": "觸發風控，請進行驗證",
-        "sidecar": "Sidecar {0} 的錯誤",
         "checkUpdate": "請到 GitHub 檢查最新更新",
         "invalidInput": "無法解析輸入",
-        "selectLimit": "不建議一次選擇超過 30 個選項",
-        "clipboardRead": "無法讀取剪貼簿內容"
+        "selectLimit": "不建議一次選擇超過 30 個選項"
     },
     "updater": {
         "title": "發現新版本！",
@@ -187,7 +185,10 @@
         "doing": "進行中",
         "complete": "已完成",
         "empty": "此佇列為空～",
-        "processQueue": "點擊以開始下載"
+        "ordering": "備選區",
+        "taskList": "任務列表",
+        "processQueue": "開始處理",
+        "restored": "已恢復下載任務～"
     },
     "settings": {
         "title": "設定",
@@ -204,15 +205,7 @@
         },
         "clipboard": {
             "name": "監聽剪貼簿",
-            "desc": "若啟用，則會自動檢測剪貼簿中的B站連結並彈出對話方塊。",
-            "dialog": {
-                "title": "檢測到B站內容",
-                "detected": "從剪貼簿中檢測到以下B站內容",
-                "search": "立即搜尋",
-                "cancel": "取消",
-                "loading": "正在獲取影片資訊...",
-                "patience": "請稍候，正在解析內容"
-            }
+            "desc": "若啟用，則會自動檢測剪貼簿中的嗶哩嗶哩連結並搜尋。"
         },
         "notify": {
             "name": "通知系統",
@@ -234,20 +227,22 @@
         },
         "cache": {
             "name": "快取",
-            "desc": "資料庫儲存設定、登入資訊、下載記錄等資料，建議定期備份。",
+            "desc": "資料庫儲存設定、登入資訊、下載記錄等資料。",
             "log": "日誌",
             "temp": "臨時檔案",
             "webview": "Webview 快取",
             "database": "資料庫"
         },
+        "database": {
+            "name": "操作資料庫",
+            "desc": "此處可以備份與恢復資料庫。",
+            "import": "匯入",
+            "export": "匯出"
+        },
         "download": "下載",
         "default": {
             "name": "預設參數",
             "desc": "下載時，將會優先使用此處參數。若目標資源不支援此處選定的參數，則會使用其支援的最高參數。"
-        },
-        "task_folder": {
-            "name": "建立「子資料夾」",
-            "desc": "若啟用，則會在下載時為每個任務單獨建立子資料夾存放檔案，遵循「子資料夾」命名格式。\n若停用，則不再建立子資料夾，檔案將平鋪於「頂層資料夾」內。"
         },
         "max_conc": {
             "name": "最大並行下載數",
@@ -261,7 +256,7 @@
             "username": "使用者名稱",
             "password": "密碼"
         },
-        "advanced": "進階",
+        "strategy": "策略",
         "add_metadata": {
             "name": "自動為音訊檔案嵌入中繼資料",
             "desc": "若啟用，則會在下載音訊時自動為其嵌入中繼資料。"
@@ -281,11 +276,22 @@
                 "desc": "若啟用，則會強制轉換音訊為 MP3 格式。音訊影片不受影響。"
             }
         },
-        "format": "命名格式",
+        "organize": {
+            "name": "組織策略",
+            "auto_rename": {
+                "name": "自動檢測重名"
+            },
+            "top_folder": {
+                "name": "頂層資料夾"
+            },
+            "sub_folder": {
+                "name": "子資料夾"
+            }
+        },
+        "format": "命名",
         "naming": {
             "name": "命名格式",
-            "desc": "點擊對應按鈕以新增變數。若目標資源不支援該變數，將留空。\n時間變數支援使用 {format} 格式化，例如：{example}\n詳細規則參見：{link}",
-            "timeDoc": "時間格式",
+            "desc": "點擊對應按鈕以新增變數。若目標資源不支援該變數，將留空。\n時間變數支援使用 {format} 格式化，例如：{example}",
             "series": "頂層資料夾",
             "item": "子資料夾",
             "file": "檔案名稱",

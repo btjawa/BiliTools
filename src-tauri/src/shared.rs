@@ -59,6 +59,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         temp_dir: get_app_handle().path().temp_dir().expect("Failed to get temp_dir"),
         theme: Theme::Auto,
         organize: SettingsOrganize {
+            auto_rename: true,
             top_folder: true,
             sub_folder: true
         },
@@ -213,6 +214,9 @@ pub fn random_string(len: usize) -> String {
 }
 
 pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
+    if !config::read().organize.auto_rename {
+        return path;
+    }
     let mut count = 1;
     let stem = path.file_stem()
         .map(|s| s.to_string_lossy().to_string())

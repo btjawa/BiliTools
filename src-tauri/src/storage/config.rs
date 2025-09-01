@@ -91,6 +91,7 @@ pub struct SettingsConvert {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SettingsOrganize {
+    pub auto_rename: bool,
     pub top_folder: bool,
     pub sub_folder: bool,
 }

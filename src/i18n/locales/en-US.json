@@ -21,22 +21,22 @@
     "taskType": {
         "aiSummary": "AI Summary",
         "subtitles": "Subtitles",
-        "albumNfo": "Series/Album Metadata",
-        "singleNfo": "Episode Metadata",
+        "albumNfo": "Series/Album NFO",
+        "singleNfo": "Episode NFO",
         "liveDanmaku": "Live Danmaku",
         "historyDanmaku": "History Danmaku",
-        "thumb": "Thumbnail",
+        "thumb": "Image",
         "video": "Video",
         "audio": "Audio",
-        "audioVideo": "Audio + Video"
+        "audioVideo": "Audio+Video"
     },
     "popup": {
-        "least": "Please select at least one resource",
-        "abrHint": "You can change MP3 conversion in \"Settings → Advanced → Conversion Policy\"",
-        "popupLint": "Click on the resource button and choose its parameters",
+        "least": "Select at least one resource",
+        "abrHint": "You can change whether to convert to MP3 in \"Settings → Strategy → Conversion Policy\"",
+        "popupLint": "Click the resource and choose its options",
         "dashHint": {
             "name": "About DASH / FLV / MP4",
-            "desc": "Do not modify this casually. If you really need to, please read {0} first and make sure you know what you are doing."
+            "desc": "Don't change this unless necessary. Read {0} first and be sure you know what you're doing."
         },
         "nextStep": "Next",
         "misc": {
@@ -46,8 +46,8 @@
         },
         "nfo": {
             "name": "NFO Metadata",
-            "album": "Series/Album Metadata",
-            "single": "Episode Metadata"
+            "album": "Series/Album NFO",
+            "single": "Episode NFO"
         },
         "danmaku": {
             "name": "Danmaku",
@@ -55,7 +55,7 @@
             "history": "History Danmaku"
         },
         "thumb": {
-            "name": "Thumbnails",
+            "name": "Images",
             "pic": "Cover",
             "cover": "Cover",
             "square_cover": "Square Cover",
@@ -68,7 +68,7 @@
         "mediaType": {
             "video": "Video",
             "audio": "Audio",
-            "audioVideo": "Audio + Video"
+            "audioVideo": "Audio+Video"
         }
     },
     "format": {
@@ -78,7 +78,7 @@
         "mediaType": "Media Type",
         "taskType": "Task Name",
         "pubtime": "Publish/Upload Time",
-        "upper": "Uploader Nickname",
+        "upper": "Uploader Name",
         "upperid": "Uploader UID",
         "aid": "AV ID",
         "sid": "SID (Music)",
@@ -89,8 +89,8 @@
         "ssid": "SS ID",
         "res": "Resolution",
         "abr": "Bitrate",
-        "enc": "Encoding Format",
-        "fmt": "Streaming Format",
+        "enc": "Codec",
+        "fmt": "Stream Format",
         "index": "Download Index",
         "downtime": "Download Time"
     },
@@ -124,43 +124,41 @@
             "13": "AV1"
         },
         "fmt": {
-            "dash": "DASH Format",
-            "mp4": "MP4 Format",
-            "flv": "FLV Format"
+            "dash": "DASH",
+            "mp4": "MP4",
+            "flv": "FLV"
         }
     },
     "error": {
         "risk": "Risk control triggered, please verify",
-        "sidecar": "Sidecar {0} Error",
-        "checkUpdate": "Check the latest updates on GitHub",
-        "invalidInput": "Failed to parse input",
-        "selectLimit": "It is not recommended to select more than 30 items at once",
-        "clipboardRead": "Failed to read clipboard content"
+        "checkUpdate": "Check the latest on GitHub",
+        "invalidInput": "Cannot parse input",
+        "selectLimit": "Not recommended to select over 30 items"
     },
     "updater": {
         "title": "New version available!",
-        "latest": "Already the latest version",
-        "hint": "You can disable \"Auto Check Updates\" in \"Settings → General\", but it is not recommended",
+        "latest": "You're up to date",
+        "hint": "You can disable \"Auto Check Updates\" in \"Settings → General\" (not recommended).",
         "install": "Download & Install",
         "cancel": "Skip this update"
     },
     "user": {
-        "input": "Please enter {0}",
+        "input": "Enter {0}",
         "account": "Account",
         "password": "Password",
         "phone": "Phone Number",
-        "code": "Verification Code",
-        "scan": "Scan QR Code to login",
-        "getScan": "Use the Bilibili App\nto scan and log in",
+        "code": "Verify Code",
+        "scan": "Scan QR to log in",
+        "getScan": "Use the Bilibili app\nto scan and log in",
         "pwd": "Password Login",
         "sms": "SMS Login",
         "sendSms": "Get Code",
-        "login": "Login",
+        "login": "Log In",
         "info": {
-            "86038": "QR code expired\nClick to refresh",
+            "86038": "QR code expired\nTap to refresh",
             "86090": "Scan successful\nConfirm on your phone"
         },
-        "agree": "By logging in, you agree to Bilibili's User Agreement and Privacy Policy\n{0}",
+        "agree": "By logging in, you agree to Bilibili’s Terms and Privacy Policy\n{0}",
         "stat": {
             "following": "Following",
             "follower": "Followers",
@@ -171,7 +169,7 @@
     },
     "search": {
         "input": "{0} link/AV/BV/SS/EP/AU/AM/SID/FID ...",
-        "suggest": "What would you like to search today?",
+        "suggest": "What do you want to search?",
         "autoDetect": "Auto Detect",
         "general": "General",
         "advanced": "Advanced",
@@ -187,11 +185,14 @@
         "doing": "In Progress",
         "complete": "Completed",
         "empty": "This queue is empty~",
-        "processQueue": "Click to start"
+        "ordering": "Staging",
+        "taskList": "Task List",
+        "processQueue": "Start Processing",
+        "restored": "Tasks restored~"
     },
     "settings": {
         "title": "Settings",
-        "confirm": "Are you sure you want to delete this? This action cannot be undone.",
+        "confirm": "Delete this? This cannot be undone.",
         "general": "General",
         "language": {
             "name": "Language"
@@ -204,23 +205,15 @@
         },
         "clipboard": {
             "name": "Clipboard Monitor",
-            "desc": "If enabled, automatically detects Bilibili links in clipboard and shows a dialog.",
-            "dialog": {
-                "title": "Bilibili Content Detected",
-                "detected": "Detected the following Bilibili content from clipboard",
-                "search": "Search Now",
-                "cancel": "Cancel",
-                "loading": "Getting video information...",
-                "patience": "Please wait, parsing content"
-            }
+            "desc": "If enabled, auto-detect Bilibili links in the clipboard and search."
         },
         "notify": {
-            "name": "Notification",
-            "desc": "If enabled, a system notification will be sent when a download finishes."
+            "name": "Notifications",
+            "desc": "If enabled, send a system notification when a download finishes."
         },
         "auto_download": {
             "name": "Auto Start Download",
-            "desc": "If enabled, downloads start automatically after adding tasks."
+            "desc": "If enabled, start downloads after adding tasks."
         },
         "auto_check_update": {
             "name": "Auto Check Updates"
@@ -228,64 +221,77 @@
         "storage": "Storage",
         "paths": {
             "name": "Paths",
-            "desc": "\"Temp Files\" hold incomplete downloads, which are moved to \"Output Files\" after processing.",
+            "desc": "\"Temp Files\" store unfinished downloads and are moved to \"Output Files\" after processing.",
             "down_dir": "Output Files",
             "temp_dir": "Temp Files"
         },
         "cache": {
             "name": "Cache",
-            "desc": "The database stores settings, login info, download records, etc. Regular backups are recommended.",
+            "desc": "The database stores settings, login info, and download records.",
             "log": "Logs",
             "temp": "Temp Files",
             "webview": "Webview Cache",
             "database": "Database"
         },
+        "database": {
+            "name": "Database",
+            "desc": "Back up or restore the database here.",
+            "import": "Import",
+            "export": "Export"
+        },
         "download": "Download",
         "default": {
             "name": "Default Options",
-            "desc": "These will be used first during download. If not supported, the highest available option will be used."
-        },
-        "task_folder": {
-            "name": "Create \"Subfolders\"",
-            "desc": "If enabled, each task will be stored in its own subfolder following the subfolder naming format.\nIf disabled, no subfolders will be created and files will be stored flat in the top-level folder."
+            "desc": "Used first during download. If unsupported, the highest available option will be used."
         },
         "max_conc": {
             "name": "Max Concurrent Downloads",
-            "desc": "Controls how many tasks run at once. Higher values may increase risk of being flagged."
+            "desc": "Controls how many tasks run at once. Higher values may raise risk."
         },
         "proxy": {
             "name": "Network Proxy",
-            "desc": "Only HTTP(S) is currently supported.",
+            "desc": "Only HTTP(S) is supported.",
             "address": "Address",
             "placeholder": "http(s)://server:port",
             "username": "Username",
             "password": "Password"
         },
-        "advanced": "Advanced",
+        "strategy": "Strategy",
         "add_metadata": {
-            "name": "Embed Metadata into Audio Files",
-            "desc": "If enabled, metadata will be automatically embedded when downloading audio files."
+            "name": "Embed metadata into audio files",
+            "desc": "If enabled, embed audio metadata automatically when downloading."
         },
         "block_pcdn": {
-            "name": "Try Blocking PCDN",
-            "desc": "If enabled, higher-quality links will be used instead of PCDN."
+            "name": "Try blocking PCDN",
+            "desc": "If enabled, prefer higher-quality links over PCDN."
         },
         "convert": {
             "name": "Conversion Policy",
             "danmaku": {
                 "name": "Convert XML Danmaku to ASS",
-                "desc": "If enabled, XML danmaku will be converted to ASS format via DanmakuFactory."
+                "desc": "If enabled, convert XML to ASS via DanmakuFactory."
             },
             "mp3": {
-                "name": "Convert Audio to MP3",
-                "desc": "If enabled, audio will be forcibly converted to MP3. Audio+Video unaffected."
+                "name": "Convert audio to MP3",
+                "desc": "If enabled, force audio to MP3. Audio+Video is unaffected."
             }
         },
-        "format": "Naming Format",
+        "organize": {
+            "name": "Organization",
+            "auto_rename": {
+                "name": "Auto detect duplicates"
+            },
+            "top_folder": {
+                "name": "Top-level Folder"
+            },
+            "sub_folder": {
+                "name": "Subfolder"
+            }
+        },
+        "format": "Naming",
         "naming": {
             "name": "Naming Format",
-            "desc": "Click the corresponding button to insert variables. If the resource does not support the variable, it will be left blank.\nTime variables support {format} formatting, e.g. {example}\nSee details: {link}",
-            "timeDoc": "Time Format",
+            "desc": "Click to insert variables. Unsupported ones will be blank.\nTime variables support {format}, e.g. {example}",
             "series": "Top-level Folder",
             "item": "Subfolder",
             "file": "Filename",
@@ -299,12 +305,12 @@
         "title": "About",
         "changelog": "Changelog",
         "checkUpdate": "Check for Updates",
-        "document": "Documentation",
+        "document": "Docs",
         "feedback": "Feedback",
         "donate": "Donate",
-        "paid": "This software is a free, public-benefit project. If you paid for it, you may have been scammed.",
-        "star": "If you find this useful, please give the project a Star on GitHub!",
-        "data": "All generated and fetched data is stored locally on your device only.",
-        "others": "When using this app, follow all applicable laws and platform terms of service. The developers are not responsible for misuse.\n“Bilibili” is a registered trademark of Shanghai Kuanyu Digital Technology Co., Ltd.\nThis software is not affiliated with or endorsed by Bilibili."
+        "paid": "This is a free public project. If you paid for it, you may have been scammed.",
+        "star": "If you find it useful, give the project a Star on GitHub!",
+        "data": "All generated and fetched data is stored locally on your device.",
+        "others": "Follow laws and platform terms. Developers are not responsible for misuse.\n“Bilibili” is a registered trademark of Shanghai Kuanyu Digital Technology Co., Ltd.\nThis software is not affiliated with or endorsed by Bilibili."
     }
 }

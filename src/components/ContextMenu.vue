@@ -25,7 +25,7 @@ const options = [{
 }, {
     icon: 'fa-paste',
     text: 'contextMenu.paste',
-    action: async () => {
+    action: async () => { try {
         const elm = document.activeElement as HTMLInputElement;
         const text = await readText();
         if ('selectionStart' in elm && !elm.readOnly && !elm.disabled) {
@@ -35,7 +35,7 @@ const options = [{
             elm.selectionStart = elm.selectionEnd = start + text.length;
             elm.dispatchEvent(new Event('input'));
         }
-    },
+    } catch(_) {} },
 }];
 
 const menu = ref<HTMLElement>();

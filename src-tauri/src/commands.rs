@@ -28,7 +28,7 @@ pub use crate::{
         db,
     },
     shared::{
-        self, set_window, SECRET, READY, HEADERS
+        self, set_window, get_app_handle, SECRET, READY, HEADERS
     },
     errors::{TauriResult, TauriError},
 };
@@ -74,7 +74,10 @@ pub async fn clean_cache(key: CacheKey, secret: String) -> TauriResult<()> {
     }
     let path = config::read().get_cache(&key)?;
     if key == CacheKey::Database {
-        return Ok(fs::remove_file(&path).await?);
+        db::close_db().await?;
+        fs::remove_file(&path).await?;
+        let app = get_app_handle();
+        app.restart();
     }
     let mut entries = fs::read_dir(&path).await?;
     while let Some(entry) = entries.next_entry().await? {

@@ -1,6 +1,5 @@
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { strip } from "./utils";
-import { AppError } from "./error";
 import { watch } from "vue";
 import { useSettingsStore } from "@/store";
 
@@ -53,9 +52,7 @@ function schedule() {
                 sentry = text;
                 for (const cb of callbacks) cb(text);
             }
-        } catch(e) {
-            new AppError(e).handle();
-        } finally {
+        } catch(_) {} finally {
             inFlight = false;
             schedule();
         }

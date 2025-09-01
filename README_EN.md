@@ -3,6 +3,10 @@
 
 <h1>BiliTools - A Bilibili Toolbox</h1>
 
+<a href="https://trendshift.io/repositories/13286" target="_blank">
+    <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
+</a>
+
 <div>
 <a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
 <a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
@@ -11,89 +15,61 @@
 <a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
 </div>
 
-<a href="https://trendshift.io/repositories/13286" target="_blank">
-    <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-</a>
-
 [简体中文](./README.md) | English | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md)
 </div>
 
 <hr />
 
-> [!WARNING]
-> Translation for this article is not fully completed yet.
+💡 A simple & light-weight Bilibili toolbox, Powered by [Tauri v2](https://github.com/tauri-apps/tauri).
 
-💡 Powered by [Tauri v2](https://github.com/tauri-apps/tauri), BiliTools supports downloading & parsing various bilibili resources, with [more features](https://github.com/users/btjawa/projects/4) to come.
+- 📖 Documents: [https://bilitools.btjawa.top](https://bilitools.btjawa.top) 
 
-📖 Document & Other info: [https://btjawa.top/bilitools](https://btjawa.top/bilitools) (Chinese only)
+- 🧾 Other infos: [https://btjawa.top/bilitools](https://btjawa.top/bilitools)
+
+- 🚀 Downloads: [Releases](https://github.com/btjawa/BiliTools/releases)
+
+For installation instructions, guides and FAQs, please refer to the documents.
 
 > [!IMPORTANT] 
 > **This project is built for [Bilibili China](https://www.bilibili.com). We do NOT support the [Bilibili Overseas](https://www.bilibili.tv).**<br>
-> [Disclaimer](#disclaimer) only applies to the official version released on the [Release](https://github.com/btjawa/BiliTools/releases/latest) page.<br>
-> Please avoid using **any versions downloaded from third-party platform**. We are not responsible for any consequences caused by this.<br>
 > Accessing **VIP / Paid** content is only available for accounts that have an active subscription to the corresponding service.<br>
 
-## 💾 Installation Guide
+## 🧪 Features
 
-Requires Windows >= **8.1**，macOS >= **11.0**
+| Resources       | Status       | Notes |
+|-----------------|--------------|-------|
+| Video        | ✅ Completed | <ul><li>Collections, Episodes, Interactive, Bangumi, Courses, Movies</li><li>Support DASH, MP4, FLV</li><li>Support 4K, 8K, HDR, Dolby Vision</li></ul> |
+| Audio        | ✅ Completed | <ul><li>AVC, HEVC, AV1 codecs</li><li>Support Dolby Atmos, Hi-Res</li></ul> |
+| History Danmaku | ✅ Completed | <ul><li>ASS / XML Format</li><li>Could parse almost all the segments in the danmaku pool</li></ul> |
+| Live Danmaku | ✅ Completed | ASS / XML Format |
+| Music        | ✅ Completed | Loseless FLAC, 320Kbps audios / playlists |
+| Thumbnail    | ✅ Completed | Bangumi / Movie posters / Season Thumbnail / Courses Preview, etc |
+| Subtitles    | ✅ Completed | SRT Format |
+| Favorites    | ✅ Completed | Parsing with FID numbers |
+| NFO Scraper  | ✅ Completed | Season / Episode Scraping |
+| Metadata     | ✅ Completed | Audio files support writing basic metadata |
+| AI Summary   | ✅ Completed | Markdown format，From Bilibili `AI assistant` |
 
-Older systems are not supported.
-
-### Windows
-
-Download `BiliTools_xxx_x64-setup.exe`, then follow the installation guide.
-
-If it gets stuck at installing `WebView2`，you can install it manually from [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2).
-
-### macOS
-
-For Intel chips, download `BiliTools_xxx_x64.dmg` then follow the installation guide.
-
-For M series chips / Apple Sillion, download `BiliTools_xxx_aarch64.dmg` then follow the installation guide.
-
-You may need to whitelist this app. For detailed steps, see: [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)
-
-If you cannot add tasks in the app, please try removing the quarantine attribute in Terminal with the following command:
-
-```zsh
-xattr -dr com.apple.quarantine /Applications/BiliTools.app
-```
+| Login & Auths  | Status       | Misc | Status      |
+|----------------|--------------|------|-------------|
+| Scan login     | ✅ Completed | Light & Dark Theme | ✅ Completed |
+| Password login | ✅ Completed | Clipboard Monitor  | ✅ Completed |
+| SMS login      | ✅ Completed | HTTP Proxy         | ✅ Completed |
+| Auto refresh login state | ✅ Completed | PCDN Filter | ✅ Completed
+| Params signing | ✅ Completed | MP3 Converter      | ✅ Completed |
+| Risk ctrl      | ✅ Completed | Naming Format      | ✅ Completed |
+| Fingerprint    | ✅ Completed | Watch History      | ⚠️ WIP |
 
 ## 🚀 Contributing
 
 > [!TIP]
-> ### This project currently lacks active maintainers. To keep it going, we need your help!
+> ### This project will enter a stable state and updates will be put on hold after the release of `1.4.0` REL.
 
 Everyone is welcome to contribute and help improving this project!
 
 Please use [Contributing](./CONTRIBUTING.md) as a reference~
 
-If you are an user:
-- Submit according to the *Issue 与 Discussion* section in [Contributing](./CONTRIBUTING.md).
-- **Note the difference between the purpose of Issues and Discussions**.
-- **Respect the work of others**.
-
-## 🧪 Features
-
-### Resource Parsing
-
-| Function    | Status    | Annotation                      |
-|---------|---------|---------------------------|
-| Video    | ✅ Completed | <ul><li>Support playlists, interactive videos, bangumi, courses, and movies.</li><li>Support DASH, MP4, and FLV.</li><li>Support 4K, 8K, HDR, Dolby Vision.</li></ul> |
-| Audio    | ✅ Completed | <ul><li>Support AVC, HEVC, and AV1 codecs.</li><li>Support Dolby Atmos and Hi-Res.</li></ul> |
-| Music    | ✅ Completed | <ul><li>Support loseless FLAC、320Kbps musics / playlists.</li></ul> |
-| Historical danmakus | ✅ Completed | <ul><li>ASS subtitle format.</li><li>ProtoBuf parsing.</li></ul> |
-| Real-time danmakus | ✅ Completed | <ul><li>ASS subtitle format.</li><li>XML and ProtoBuf parsing.</li></ul> |
-| Thumbnail    | ✅ Completed | Support bangumi and movie posters, and etc... |
-| Subtitle    | ✅ Completed | SRT format. |
-| AI Conclusion  | ✅ Completed | Markdown format，**From Bilibili `AI assistant`**.<br>*Thanks to Shanghai-Bilibili index-20231207 LLM for technical support.* |
-| Favorate lists  | ✅ Completed | FID number parsing. |
-| Metadata  | ✅ Completed | Thumbnail, title, uploader, publish date, and TAGS. |
-| NFO    | ⚠️ In-Progress | Priority adaption to `Emby`. |
-
-### Login & Authentication
-
-> To be completed, see Chinese [README](./README.md#登录--验证相关) for its infomations.
+When submitting an Issue, please provide enough info so the maintainer could solve your problems.
 
 ## 🌎 Internationalization
 
@@ -103,20 +79,14 @@ If you are an user:
 |----------------|-------------|
 | zh-CN          | ✅ Complete |
 | zh-HK          | ✅ Complete |
-| ja-JP          | ✅ Complete |
 | en-US          | ✅ Complete |
+| ja-JP          | ✅ Complete |
 
 ## ⚡ Donate
 
-The project has reached 3k+ stars. Thank you for your support!
+If you found it helpful, please consider buying me a coffee via [爱发电 (afdian)](https://afdian.com/a/BTJ_Shiroi) ~
 
-Currently we are working on version `v1.4.0` Release, which will include many bug fixes & new features.
-
-If you found it helpful, consider buying me a coffee~
-
-- [爱发电 (afdian)](https://afdian.com/a/BTJ_Shiroi)
-
-Your support will be a great motivation for me to keep improving!
+Your support will be a great motivation for [me](https://github.com/btjawa) to keep improving!
 
 ## 💫 Special Thanks
 
@@ -126,14 +96,14 @@ Your support will be a great motivation for me to keep improving!
 
 <br />
 
-- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) - Reference for API requesting
+- [tauri](https://github.com/tauri-apps/tauri) Build smaller, faster, and more secure desktop and mobile applications with a web frontend.
 
-- [aria2](https://github.com/aria2/aria2) - For Multi-source & high-efficiency downloading
+- [aria2](https://github.com/aria2/aria2) aria2 is a lightweight multi-protocol & multi-source, cross platform download utility.
+- [FFmpeg](https://git.ffmpeg.org/ffmpeg.git) FFmpeg is a collection of libraries and tools to process multimedia content.
+- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) 支持特殊弹幕的xml转ass格式转换工具
+- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 哔哩哔哩-API收集整理
 
-- [ffmpeg](https://git.ffmpeg.org/ffmpeg.git) - For muxing and media processing
-
-- [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) - For convert raw XML Danmaku to ASS format
-
+- [Vercel](https://github.com/vercel/vercel) Develop. Preview. Ship.
 
 <a href="https://www.star-history.com/#btjawa/BiliTools&Date" alt="Star History Chart">
 <picture>
@@ -154,15 +124,28 @@ Your support will be a great motivation for me to keep improving!
 
 ## Disclaimer
 
-- This project is licensed under [GPL-3.0-or-later](/LICENSE). It is **free and open-source**, Any redistribution must **remain open-source, use the same license, and retain all original and copyright information**.
-- Due to the nature of this project, **users are solely responsible for any risks**. The author has **no liability for any consequences**.
+> [!IMPORTANT]
+> This project is licensed under [GPL-3.0-or-later](/LICENSE). It is free and open-source:<br>
+> Any redistribution must **remain open-source, use the same license, and retain all original and copyright information**.
 
-- This project is intended for study and research purposes only. **Please comply with local laws and regulations. Do not abuse it**.
-- This project only request resources that the user already has access to. It does not bypass the validation or crack contents.
+<hr />
+
+This project is intended to study and testing code.
+
+**Users must assume all risks themselves and MUST NOT ABUSE IT!**
+
+- Any individual who uses this project for **any illegal, Infringing, or malicious purposes, or in ways that cause negative consequences or abuse**:
+  - All responsibilities and consequences are unrelated to [me](https://github.com/btjawa), and **I take no responsibility**.
+- This project is free and open-source, I have not obtained any financial gain from it.
+- This project does not bypass authentications, crack paid resources, or conduct any other illegal activities.
 - All data generated and acquired will be stored locally using `SQLite`:
 
 > Windows: `%AppData%\com.btjawa.bilitools`<br>
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
+- The names and logos of “哔哩哔哩” and “Bilibili”, as well as related graphics, are registered trademarks or trademarks of Shanghai Kuanyu Digital Technology Co., Ltd.
+- This project has no affiliation, cooperation, or authorization relationship with Bilibili or its associated companies.
+- The copyright of any content obtained through this project belongs to the original rights holders. Please comply with relevant laws, regulations, and platform service agreements.
+- The references to Bilibili-related names and logos in this project are for descriptive and identification purposes only, and do not constitute endorsement or authorization of the trademark or brand.
 - If there is any infringement, feel free to [contact](mailto:btj2407@gmail.com) us.

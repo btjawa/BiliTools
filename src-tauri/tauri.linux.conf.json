@@ -4,10 +4,6 @@
   "bundle": {
     "targets": ["deb", "rpm"],
     "linux": {
-      "appimage": {
-        "bundleMediaFramework": false,
-        "files": {}
-      },
       "deb": {
         "files": {}
       },

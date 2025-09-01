@@ -31,6 +31,7 @@ export const useSettingsStore = defineStore('settings', () => {
         temp_dir: String(),
         theme: 'auto',
         organize: {
+            auto_rename: true,
             top_folder: true,
             sub_folder: true
         },

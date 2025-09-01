@@ -73,6 +73,15 @@ pub async fn get_db() -> Result<SqlitePool> {
     }
 }
 
+pub async fn close_db() -> Result<()> {
+    let mut guard = DB.write().await;
+    if let Some(old) = guard.take() {
+        old.close().await;
+    }
+    drop(guard);
+    Ok(())
+}
+
 pub async fn init_meta() -> Result<()> {
     let sql = Table::create()
         .table(Meta::Table)

@@ -36,7 +36,7 @@
             class="question fa-light fa-circle-question"
         ></i>
     </h2>
-    <div v-for="v in (['top_folder', 'sub_folder'] as const)">
+    <div v-for="v in (['auto_rename', 'top_folder', 'sub_folder'] as const)">
         <h3>{{ $t(`settings.organize.${v}.name`) }}</h3>
         <Switch v-model="settings.organize[v]" />
     </div>

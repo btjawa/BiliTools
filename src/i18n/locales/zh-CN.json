@@ -278,6 +278,9 @@
         },
         "organize": {
             "name": "组织策略",
+            "auto_rename": {
+                "name": "自动检测重名"
+            },
             "top_folder": {
                 "name": "顶层文件夹"
             },

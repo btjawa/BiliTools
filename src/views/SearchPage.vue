@@ -113,7 +113,7 @@ const buttons = [{
 	text: 'search.advanced',
 	action: () => AppLog(i18n.global.t('wip'), 'info')
 }, {
-	icon: 'fa-border-outer',
+	icon: 'fa-square-dashed-circle-plus',
 	text: 'search.selectAll',
 	action: () => v.checkboxs = 
 		v.checkboxs.length === v.mediaInfo.list.length 
