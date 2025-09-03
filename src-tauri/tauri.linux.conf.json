@@ -21,6 +21,7 @@
     "targets": ["deb"],
     "linux": {
       "deb": {
+        "depends": ["openssl"],
         "desktopTemplate": "./packages/linux/bilitools.desktop",
         "files": {
           "/usr/libexec/bilitools/aria2c": "./binaries/aria2c-x86_64-unknown-linux-gnu",

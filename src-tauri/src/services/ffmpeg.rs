@@ -98,6 +98,8 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: &Progress, mut cancel: onesho
         "-progress", "pipe:1", &_output, "-y"
     ]);
 
+    log::info!("Merge args for {id}: \n{args:?}");
+
     let (mut _rx, child) = app.shell().sidecar(EXEC)?.args(args).spawn()?;
     let mut child = Some(child);
     let mut monitor = Box::pin(monitor(duration, _rx, tx));

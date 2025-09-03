@@ -186,6 +186,7 @@ async function search(overrideInput?: string) {
 	} catch(e) {
 		throw e;
 	} finally {
+		await nextTick();
 		v.searching = false;
 	}
 }
