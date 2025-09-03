@@ -181,10 +181,15 @@ async fn handle_danmaku(
         return Ok(()); 
     }
     const NAME: &str = "DanmakuFactory";
+    #[cfg(all(target_os = "linux", not(debug_assertions)))]
+    const EXEC: &str = "/usr/libexec/bilitools/DanmakuFactory";
+
+    #[cfg(not(all(target_os = "linux", not(debug_assertions))))]
+    const EXEC: &str = "DanmakuFactory";
 
 
     prog.send(3, 2).await?;
-    let (mut _rx, child) = get_app_handle().shell().sidecar(NAME)?
+    let (mut _rx, child) = get_app_handle().shell().sidecar(EXEC)?
         .args([
             "-i", xml.to_string_lossy().as_ref(),
             "-o", ass.to_string_lossy().as_ref(),

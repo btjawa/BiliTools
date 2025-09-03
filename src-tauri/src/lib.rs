@@ -29,7 +29,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             ready, init, init_login, set_window, // Basics
         ])
         .events(collect_events![
-            shared::HeadersData, shared::SidecarError, queue::runtime::QueueEvent
+            shared::HeadersData, shared::ProcessError, shared::ThemeEvent, queue::runtime::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

@@ -41,11 +41,11 @@
     "qrcode-generator": "^2.0.4",
     "source-map-support": "^0.5.21",
     "stacktrace-js": "^2.0.2",
+    "virtua": "^0.42.0",
     "vue": "3.5.18",
     "vue-i18n": "^11.1.11",
     "vue-router": "4.5.1",
-    "vue-toastification": "^2.0.0-rc.5",
-    "vue-virtual-scroller": "^2.0.0-beta.8"
+    "vue-toastification": "^2.0.0-rc.5"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.7.0",

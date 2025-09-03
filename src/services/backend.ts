@@ -183,12 +183,14 @@ async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
 
 export const events = __makeEvents__<{
 headersData: HeadersData,
+processError: ProcessError,
 queueEvent: QueueEvent,
-sidecarError: SidecarError
+themeEvent: ThemeEvent
 }>({
 headersData: "headers-data",
+processError: "process-error",
 queueEvent: "queue-event",
-sidecarError: "sidecar-error"
+themeEvent: "theme-event"
 })
 
 /** user-defined constants **/
@@ -213,6 +215,7 @@ export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
 export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
 export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
+export type ProcessError = { name: string; error: string }
 export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
 export type QueueEvent = { type: "snapshot"; init: boolean; queue: QueueData; tasks?: Partial<{ [key in string]: Task }> | null; schedulers?: Partial<{ [key in string]: SchedulerView }> | null } | { type: "state"; parent: string; state: TaskState } | { type: "progress"; parent: string; id: string; status: SubTaskStatus } | { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "error"; parent: string; id?: string | null; message: string; code: number | null }
 export type RequestAction = "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
@@ -223,7 +226,6 @@ export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { series: string; item: string; file: string }
 export type SettingsOrganize = { auto_rename: boolean; top_folder: boolean; sub_folder: boolean }
 export type SettingsProxy = { address: string; username: string; password: string }
-export type SidecarError = { name: string; error: string }
 export type StreamFormat = "dash" | "mp4" | "flv"
 export type StringOrFalse = string | boolean
 export type SubTask = { id: string; type: TaskType }
@@ -245,6 +247,7 @@ export type Theme =
  * Auto theme.
  */
 "auto"
+export type ThemeEvent = { dark: boolean; color: string | null }
 
 /** tauri-specta globals **/
 

@@ -1,16 +1,37 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "identifier": "com.btjawa.bilitools",
+  "productName": "bilitools",
+  "mainBinaryName": "bilitools",
+  "app": {
+    "windows": [
+      {
+        "minWidth": 960,
+        "minHeight": 680,
+        "title": "BiliTools",
+        "label": "main",
+        "width": 960,
+        "height": 680,
+        "decorations": false,
+        "dragDropEnabled": false
+      }
+    ]
+  },
   "bundle": {
-    "targets": ["deb", "rpm"],
+    "targets": ["deb"],
     "linux": {
       "deb": {
-        "files": {}
-      },
-      "rpm": {
-        "epoch": 0,
-        "files": {},
-        "release": "1"
+        "desktopTemplate": "./packages/linux/bilitools.desktop",
+        "files": {
+          "/usr/libexec/bilitools/aria2c": "./binaries/aria2c-x86_64-unknown-linux-gnu",
+          "/usr/libexec/bilitools/ffmpeg": "./binaries/ffmpeg-x86_64-unknown-linux-gnu",
+          "/usr/libexec/bilitools/DanmakuFactory": "./binaries/DanmakuFactory-x86_64-unknown-linux-gnu",
+          "/usr/share/doc/bilitools/COPYING.aria2c": "./resources/COPYING.aria2c",
+          "/usr/share/doc/bilitools/COPYING.LGPLv3.ffmpeg": "./resources/COPYING.LGPLv3.ffmpeg",
+          "/usr/share/doc/bilitools/LICENSE.DanmakuFactory": "./resources/LICENSE.DanmakuFactory",
+          "/usr/share/doc/bilitools/LICENSE.OpenSSL": "./resources/LICENSE.OpenSSL",
+          "/usr/share/doc/bilitools/LICENSE": "../LICENSE"
+        }
       }
     }
   }

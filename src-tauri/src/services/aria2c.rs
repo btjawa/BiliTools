@@ -10,7 +10,7 @@ use tauri_specta::Event;
 
 use crate::{
     config, errors::TauriError, shared::{
-        get_app_handle, SidecarError, SECRET, USER_AGENT, WORKING_PATH
+        get_app_handle, ProcessError, SECRET, USER_AGENT, WORKING_PATH
     }, TauriResult,
     queue::runtime::Progress,
 };
@@ -18,6 +18,12 @@ use crate::{
 static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(||
     Arc::new(Aria2Rpc::new())
 );
+
+#[cfg(all(target_os = "linux", not(debug_assertions)))]
+const EXEC: &str = "/usr/libexec/bilitools/aria2c";
+
+#[cfg(not(all(target_os = "linux", not(debug_assertions))))]
+const EXEC: &str = "aria2c";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aria2Error {
@@ -82,7 +88,7 @@ impl Aria2Rpc {
     pub async fn update(&self, port: u16, secret: String) -> Result<()> {
         let client = Client::builder()
             .no_proxy()
-            .timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(3))
             .connect_timeout(Duration::from_secs(1))
             .pool_max_idle_per_host(2)
             .pool_idle_timeout(Duration::from_secs(10))
@@ -150,11 +156,11 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
         let name_clone = &name;
         loop {
             if let Err(e) = ARIA2_RPC.request::<Value>("getGlobalStat", vec![]).await {
-                let _ = SidecarError {
+                let _ = ProcessError {
                     name: name_clone.clone(), error: e.message
                 }.emit(app);
             }
-            sleep(Duration::from_secs(5)).await;
+            sleep(Duration::from_secs(3)).await;
         }
     });
     loop { tokio::select! {
@@ -176,7 +182,7 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
             },
             CommandEvent::Terminated(msg) => {
                 let code = msg.code.unwrap_or(0);
-                let _ = SidecarError {
+                let _ = ProcessError {
                     name: name.clone(), error: format!("Process {name} ({pid}) exited ({code})\nSee logs for more infos.")
                 }.emit(app);
                 log::error!("{name} exited with following STDERR:\n {}", stderr.join("\n"));
@@ -204,7 +210,7 @@ pub async fn init() -> Result<()> {
 
     let log_file = app.path().app_log_dir()?.join("aria2.log");
     let log_file = log_file.to_string_lossy();
-    let (mut rx, child) = app.shell().sidecar("aria2c")?
+    let (mut rx, child) = app.shell().sidecar(EXEC)?
     .args([
         "--enable-rpc".into(),
         "--rpc-listen-all=false".into(),

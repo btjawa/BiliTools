@@ -9,6 +9,30 @@
     h1 {
         @apply text-2xl font-semibold;
     }
+    :root {
+        --content-color: #1a1a1a;
+        --desc-color: #888888;
+        --split-color: #e5e5e5;
+        --block-color: #ffffff;
+        --solid-block-color: #ffffff;
+        --button-color: #E4E5E6;
+        --primary-color: rgb(0, 161, 214);
+        --dark-button-color: rgb(233,233,233);
+    }
+    .dark {
+        --content-color: rgb(233,233,233);
+        --desc-color: #a2a7ae;
+        --split-color: #c4c4c433;
+        --block-color: #ffffff0d;
+        --solid-block-color: #24292e;
+        --button-color: #a2a7ae18;
+    }
+    html :is(button, input) {
+        @apply hover:brightness-90;
+    }
+    html.dark :is(button, input) {
+        @apply hover:!brightness-150;
+    }
 }
 
 ::-webkit-scrollbar {
@@ -30,34 +54,6 @@
 
 ::-webkit-scrollbar-thumb:hover {
     background: #80808080;
-}
-
-:root {
-    --content-color: #1a1a1a;
-    --desc-color: #888888;
-    --split-color: #e5e5e5;
-    --block-color: #ffffff;
-    --solid-block-color: #ffffff;
-    --button-color: #E4E5E6;
-    --primary-color: rgb(0, 161, 214);
-    --dark-button-color: rgb(233,233,233);
-}
-
-@media (prefers-color-scheme: light) {
-    button, input {
-        @apply hover:!brightness-95;
-    }
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --content-color: rgb(233,233,233);
-        --desc-color: #a2a7ae;
-        --split-color: #c4c4c433;
-        --block-color: #ffffff0d;
-        --solid-block-color: #24292e;
-        --button-color: #a2a7ae18;
-    }
 }
 
 body {
@@ -97,7 +93,7 @@ img {
 button, input[type='text'], input[type='password'], input[type='number'] {
     @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
     @apply bg-[color:var(--button-color)] text-[color:var(--content-color)];
-    @apply hover:brightness-150 !select-none transition-[filter];
+    @apply !select-none transition-[filter];
 }
 
 .checkbox {
@@ -209,4 +205,12 @@ markdown-style {
     a {
         @apply !text-[var(--primary-color)];
     }
+}
+
+/* 仅用于这个验证；保证容器 relative、子项 absolute */
+.vue-recycle-scroller { position: relative; }
+.vue-recycle-scroller__item-wrapper,
+.vue-recycle-scroller__item-view {
+  position: absolute;
+  left: 0; right: 0; /* 横向时 right 可以保留，布局也会正确 */
 }

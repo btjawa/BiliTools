@@ -54,9 +54,13 @@ export function setEventHook() {
         headers: e.payload
     }));
     events.queueEvent.listen(e => handleEvent(e.payload));
-    events.sidecarError.listen(e => {
+    events.processError.listen(e => {
         const err = e.payload;
         new AppError(err.error, { name: `ProcessError (${err.name})` }).handle();
+    });
+    events.themeEvent.listen(e => {
+        document.documentElement.classList.toggle('dark', e.payload.dark);
+        document.documentElement.style.backgroundColor = e.payload.color ?? 'transparent';
     });
 }
 

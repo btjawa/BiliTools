@@ -14,6 +14,12 @@ use crate::{
     }
 };
 
+#[cfg(all(target_os = "linux", not(debug_assertions)))]
+const EXEC: &str = "/usr/libexec/bilitools/ffmpeg";
+
+#[cfg(not(all(target_os = "linux", not(debug_assertions))))]
+const EXEC: &str = "ffmpeg";
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct StreamInfo {
     duration: u64,
@@ -31,7 +37,7 @@ fn clean_log(raw_log: &[u8]) -> String {
 
 pub async fn test() -> Result<()> {
     let app = get_app_handle();
-    let result = app.shell().sidecar("ffmpeg")?
+    let result = app.shell().sidecar(EXEC)?
         .args(["-version"])
         .output()
         .await?;
@@ -45,7 +51,7 @@ pub async fn test() -> Result<()> {
 async fn get_duration(path: &Path) -> Result<u64> {
     let app = get_app_handle();
     let path = path.to_string_lossy().to_string();
-    let result = app.shell().sidecar("ffmpeg")?
+    let result = app.shell().sidecar(EXEC)?
         .args([
             "-hide_banner", "-nostats",
             "-i", &path, "-c", "copy", "-f", "null", "-"
@@ -92,7 +98,7 @@ pub async fn merge(id: Arc<String>, ext: &str, tx: &Progress, mut cancel: onesho
         "-progress", "pipe:1", &_output, "-y"
     ]);
 
-    let (mut _rx, child) = app.shell().sidecar("ffmpeg")?.args(args).spawn()?;
+    let (mut _rx, child) = app.shell().sidecar(EXEC)?.args(args).spawn()?;
     let mut child = Some(child);
     let mut monitor = Box::pin(monitor(duration, _rx, tx));
     tokio::select! {
@@ -194,7 +200,7 @@ pub async fn convert_audio(id: Arc<String>, mut ext: &str, tx: &Progress, input:
 
     log::info!("Convert args for {id}: \n{args:?}");
 
-    let (mut _rx, _) = app.shell().sidecar("ffmpeg")?.args(args).spawn()?;
+    let (mut _rx, _) = app.shell().sidecar(EXEC)?.args(args).spawn()?;
     monitor(duration, _rx, tx).await?;
     Ok((output, ext.into()))
 }

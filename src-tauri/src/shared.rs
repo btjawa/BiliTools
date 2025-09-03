@@ -105,7 +105,7 @@ impl Theme {
 }
 
 #[derive(Clone, Serialize, Deserialize, Type, Event)]
-pub struct SidecarError {
+pub struct ProcessError {
     pub name: String,
     pub error: String,
 }
@@ -236,10 +236,16 @@ pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
 pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     let app = get_app_handle();
     log::error!("{name}: {}", e.to_string());
-    let _ = SidecarError {
+    let _ = ProcessError {
         name: name.into(), error: e.to_string(),
     }.emit(app);
     e
+}
+
+#[derive(Clone, Serialize, Deserialize, Type, Event)]
+pub struct ThemeEvent {
+    dark: bool,
+    color: Option<&'static str>
 }
 
 #[tauri::command]
@@ -267,17 +273,35 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
         }
     })?;
     window.set_theme(theme.as_tauri())?;
+    let theme = if theme == Theme::Auto {
+        match dark_light::detect() {
+            Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
+            Ok(dark_light::Mode::Light) => tauri::Theme::Light,
+            _ => tauri::Theme::Light,
+        }
+    } else {
+        theme.as_tauri().unwrap_or(tauri::Theme::Light)
+    };
+    ThemeEvent {
+        dark: theme == tauri::Theme::Dark,
+        color: None,
+    }.emit(&window)?;
     let set_default = || {
-        let theme = if theme == Theme::Auto {
-            match dark_light::detect() {
-                Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
-                Ok(dark_light::Mode::Light) => tauri::Theme::Light,
-                _ => tauri::Theme::Light,
-            }
-        } else { theme.as_tauri().unwrap_or(tauri::Theme::Light) };
         window.set_background_color(Some(match theme {
-            tauri::Theme::Dark => Color(32, 32, 32, 128),
-            _ => Color(249, 249, 249, 128),
+            tauri::Theme::Dark => {
+                ThemeEvent {
+                    dark: true,
+                    color: Some("#202020")
+                }.emit(&window)?;
+                Color(32, 32, 32, 128)
+            },
+            _ => {
+                ThemeEvent {
+                    dark: false,
+                    color: Some("#f9f9f9")
+                }.emit(&window)?;
+                Color(249, 249, 249, 128)
+            },
         }))?;
         Ok::<(), anyhow::Error>(())
     };

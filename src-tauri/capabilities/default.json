@@ -38,6 +38,7 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask",
+    "dialog:allow-message",
     "os:allow-arch",
     "os:allow-os-type",
     "clipboard-manager:allow-read-text",

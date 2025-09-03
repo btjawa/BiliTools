@@ -5,20 +5,19 @@
 </h1>
 <div class="flex w-full h-full mt-[22px] flex-1 gap-3 min-h-0">
 	<Transition name="slide">
-	<RecycleScroller
-		v-if="v.listActive" class="w-full"
-        key-field="view_at" :key="tab"
-        :items="v.info.list" :item-size="50"
+	<VList
+		v-if="v.listActive" :key="tab" #default="{ item }"
+		:data="v.info.list?.length ? v.info.list : ['empty']"
 	>
-		<template #before v-if="!v.info.list?.length">
-            <Empty :text="$t('empty')" />
-        </template>
-		<template v-slot="{ item }">
-            <div class="p-4 rounded-lg bg-[var(--block-color)] text-sm h-12">
-                <span>{{ item.title }}</span>
-            </div>
-        </template>
-	</RecycleScroller>
+	<div>
+		<Empty v-if="item === 'empty'" :text="$t('empty')" />
+		<div v-else
+			class="p-4 rounded-lg my-px bg-[var(--block-color)] text-sm h-12"
+		>
+			<span>{{ item.title }}</span>
+		</div>
+	</div>
+	</VList>
 	</Transition>
 	<div class="flex flex-col w-32 gap-2 ml-auto">
 		<div class="tab">
@@ -39,11 +38,12 @@
 
 <script lang="ts" setup>
 import { computed, onActivated, reactive, ref, Transition, watch } from 'vue';
-import { RecycleScroller } from 'vue-virtual-scroller';
 import { getHistory } from '@/services/media/extras';
 import { HistoryInfo } from '@/types/media/extras.d';
-import Empty from '@/components/Empty.vue';
 import { AppError } from '@/services/error';
+import Empty from '@/components/Empty.vue';
+
+import { VList } from 'virtua/vue';
 
 const tab = ref('all');
 const v = reactive({

@@ -1,10 +1,9 @@
 <template>
-<RecycleScroller
-    ref="scrollList" key-field="index"
-    :items="props.list" :item-size="50"
->
-    <template #before v-if="stein_gate">
-    <div class="max-w-full flex justify-center gap-1 mb-2 overflow-auto">
+<VList ref="vlist" :data="list" #default="{ item, index }">
+<div>
+    <div v-if="stein_gate"
+        class="max-w-full flex justify-center gap-1 mb-2 flex-shrink-0 overflow-auto"
+    >
         <button v-for="story in stein_gate.story_list"
             class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
             @click="updateStein(story.edge_id)"
@@ -12,45 +11,43 @@
             <i :class="[$fa.weight, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
         </button>
     </div>
-    </template>
-    <template v-slot="{ item, index }">
     <div
-        class="flex w-full items-center h-12 text-sm p-4 rounded-lg bg-[var(--block-color)] border-2 border-solid border-transparent"
+        class="flex w-full items-center h-12 text-sm p-4 my-px rounded-lg bg-[var(--block-color)] border-2 border-solid border-transparent"
         :class="{ '!border-[var(--primary-color)]': item.isTarget, 'range': inRange(index) }"
         @mouseenter="hoverIndex = index"
     >
         <div class="checkbox">
-            <input type="checkbox" :value="index" v-model="model" @click="click(index)" />
+            <input type="checkbox" :value="index" v-model="checkboxs" @click="click(index)" />
             <i class="fa-solid fa-check"></i>
         </div>
         <span class="min-w-6">{{ index + 1 }}</span>
         <div class="w-px h-full bg-[var(--split-color)] mx-4"></div>
         <span class="flex flex-1 ellipsis text">{{ item.title }}</span>
     </div>
-    </template>
-    <template #after v-if="stein_gate">
-    <div class="w-full flex justify-center gap-1 my-2">
+    <div v-if="stein_gate"
+        class="w-full flex justify-center gap-1 my-2"
+    >
         <template v-for="(question, index) in stein_gate.choices"><button
-            v-if="show(stein_gate, index)"
+            v-if="show(stein_gate, index)" class="mx-1"
             @click="updateStein(question.id)"
         >{{ question.option }}</button></template>
     </div>
-    </template>
-</RecycleScroller>
+</div>
+</VList>
 </template>
 <script lang="ts" setup>
-import { RecycleScroller, RecycleScrollerInstance } from 'vue-virtual-scroller';
 import { MediaInfo, MediaItem } from '@/types/shared.d';
 import { onMounted, onUnmounted, ref } from 'vue';
+import { VList } from "virtua/vue";
 
-const model = defineModel<number[]>();
+const checkboxs = defineModel<number[]>();
 const props = defineProps<{
     stein_gate: MediaInfo['stein_gate'],
     list: MediaItem[],
     updateStein: Function
 }>();
 
-const scrollList = ref<RecycleScrollerInstance>();
+const vlist = ref<InstanceType<typeof VList>>();
 const shiftActive = ref(false);
 const clickIndex = ref(0);
 const hoverIndex = ref(0);
@@ -63,10 +60,10 @@ const keyUp = (e: KeyboardEvent) => {
     if (e.key === 'Shift') shiftActive.value = false;
 }
 
-defineExpose({ scrollList });
+defineExpose({ vlist });
 
 onMounted(() => {
-    clickIndex.value = model.value?.[0] ?? 0;
+    clickIndex.value = checkboxs.value?.[0] ?? 0;
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
 })
@@ -87,7 +84,7 @@ function click(i: number) {
     const end = Math.max(clickIndex.value, i);
     const range: number[] = [];
     for (let i=start; i<=end; i++) range.push(i);
-    model.value?.splice(0, model.value.length, ...range);
+    checkboxs.value?.splice(0, checkboxs.value.length, ...range);
 }
 
 function show(stein_gate: typeof props.stein_gate, index: number) {

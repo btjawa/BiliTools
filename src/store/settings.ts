@@ -42,9 +42,15 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     });
 
-    const isDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-        isDark.value = e.matches;
+    const isDark = ref(false);
+
+    const observer = new MutationObserver(() => {
+        isDark.value = document.documentElement.classList.contains('dark')
+    });
+
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class']
     });
 
     const proxyUrl = computed(() => {

@@ -7,13 +7,11 @@ import App from './App.vue';
 
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
 import Toast, { PluginOptions, POSITION } from "vue-toastification";
-import VueVirtualScroller from 'vue-virtual-scroller';
 import VueDatePicker from '@vuepic/vue-datepicker';
 
 import '@/style.css';
 import '@wcj/markdown-style';
 import "vue-toastification/dist/index.css";
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import '@vuepic/vue-datepicker/dist/main.css';
 
 const ToastOptions: PluginOptions = {
@@ -59,7 +57,6 @@ createApp(App)
     .use(router)
     .use(i18n)
     .use(Toast, ToastOptions)
-    .use(VueVirtualScroller)
     .component('VueDatePicker', VueDatePicker)
     .mount('#app');
 

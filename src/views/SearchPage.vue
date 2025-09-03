@@ -39,15 +39,14 @@
 		<div class="flex mt-3 gap-3 flex-1 min-h-0">
 			<Transition name="slide">
 			<MediaList
-				class="flex-1"
-				:list="v.mediaInfo.list" ref="mediaListRef"
+				:list="v.mediaInfo.list" ref="mediaList"
 				:stein_gate="v.mediaInfo.stein_gate"
 				:update-stein="updateStein"
 				v-model="v.checkboxs"
 				v-if="!v.searching && v.mediaInfo.list.length"
 			/>
 			</Transition>
-			<div class="flex flex-col gap-3 ml-auto w-32">
+			<div class="flex flex-col gap-3 ml-auto min-w-32">
 				<button v-for="v in buttons" @click="v.action">
 					<i :class="[$fa.weight, v.icon]"></i>
 					<span>{{ $t(v.text) }}</span>
@@ -122,7 +121,7 @@ const buttons = [{
 
 const popup = ref<InstanceType<typeof Popup>>();
 const downPage = inject<Ref<InstanceType<typeof DownPage>>>('page');
-const mediaListRef = ref<InstanceType<typeof MediaList>>();
+const mediaList = ref<InstanceType<typeof MediaList>>();
 const topEl = ref<HTMLElement>();
 
 const router = useRouter()
@@ -134,7 +133,7 @@ const updateIndex = () => {
 	const target = raw >= 0 ? raw : v.mediaInfo.list[0]?.index ?? 0;
 	v.checkboxs = [target];
 	requestAnimationFrame(() => {
-		mediaListRef.value?.scrollList?.scrollToItem(target);
+		mediaList.value?.vlist?.scrollToIndex(target);
 	})
 }
 
