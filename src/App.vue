@@ -75,18 +75,20 @@ onMounted(async () => {
 })
 </script>
 
-<style lang="scss">
+<style>
+@reference 'tailwindcss';
+
 .main {
 	@apply absolute right-0 bottom-0 h-[calc(100vh-30px)];
 	@apply flex w-full items-end bg-transparent overflow-visible;
 }
 .page {
 	@apply flex flex-col relative justify-center items-center w-full h-full;
-	@apply text-[color:var(--content-color)] px-6 overflow-hidden;
+	@apply text-(--content-color) px-6 overflow-hidden;
 }
 .loading {
-	@apply absolute w-8 h-8 top-2 right-6 opacity-0 z-[99] pointer-events-none transition-opacity;
-	@apply border-solid border-2 border-[color:var(--solid-block-color)] border-l-[color:var(--content-color)] rounded-full;
+	@apply absolute w-8 h-8 top-2 right-6 opacity-0 z-99 pointer-events-none transition-opacity;
+	@apply border-solid border-2 border-(--solid-block-color) border-l-(--content-color) rounded-full;
 	animation: circle infinite 0.75s linear;
 	&.active { opacity: 1 }
 }
@@ -104,7 +106,7 @@ onMounted(async () => {
 }
 .slide-enter-active,
 .slide-leave-active {
-	transition: transform 0.5s cubic-bezier(0,1,0.6,1), opacity 0.3s;
+	transition: translate 0.5s cubic-bezier(0,1,0.6,1), opacity 0.3s;
 }
 .slide-enter-from,
 .slide-leave-to {

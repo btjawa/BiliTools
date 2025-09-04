@@ -39,15 +39,17 @@ function init(_task: Task) {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .popup {
-    @apply absolute inset-0 bg-black bg-opacity-50;
+    @apply absolute inset-0 bg-black/50;
     @apply pointer-events-none opacity-0 transition-opacity;
     &.active {
         @apply pointer-events-auto opacity-100;
     }
 }
 .container {
-    @apply flex flex-col relative rounded-lg shadow-lg bg-[var(--solid-block-color)];
+    @apply flex flex-col relative rounded-lg shadow-lg bg-(--solid-block-color);
 }
 </style>

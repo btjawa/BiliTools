@@ -36,7 +36,9 @@ const list = {
 
 const tab = ref<keyof typeof list>('general');
 </script>
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 :deep(h3) {
     @apply min-w-32 mr-4 inline-block;
     & + button {

@@ -20,6 +20,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.1.12",
     "@tauri-apps/api": "2.7.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.0",
     "@tauri-apps/plugin-dialog": "^2.3.2",
@@ -50,11 +51,8 @@
     "@tauri-apps/cli": "2.7.0",
     "@types/md5": "^2.3.5",
     "@types/node": "^24.3.1",
-    "autoprefixer": "^10.4.21",
     "pbjs": "^0.0.14",
-    "postcss": "^8.5.6",
-    "sass": "^1.90.0",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2",
     "vite": "^7.1.2",
     "vite-plugin-compression": "^0.5.1",

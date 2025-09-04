@@ -62,7 +62,9 @@ function click(v: string, k: keyof typeof settings.format) {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 h2 {
     @apply mb-2;
 }

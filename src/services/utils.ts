@@ -58,8 +58,8 @@ export function setEventHook() {
     });
     events.themeEvent.listen(e => {
         const list = document.documentElement.classList;
-        list[e.payload.dark ? 'remove' : 'add']('light');
-        list[e.payload.dark ? 'add' : 'remove']('dark');
+        list.toggle('light', !e.payload.dark);
+        list.toggle('dark', e.payload.dark);
         document.documentElement.style.backgroundColor = e.payload.color ?? 'transparent';
     });
 }

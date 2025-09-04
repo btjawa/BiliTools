@@ -1,7 +1,7 @@
 <template>
 <ul @contextmenu.prevent
 	class="flex flex-col py-4 px-2.5 gap-3 h-screen"
-    :class="[os, { 'bg-[var(--block-color)]': $fa.isDark }]"
+    :class="[os, { 'bg-(--block-color)': $fa.isDark }]"
 >
     <li
         v-for="v in list" @click="click(v.path)"
@@ -46,12 +46,14 @@ async function click(path: string) {
 }
 </script>
 
-<style scoped lang="scss">
+<style scoped>
+@reference 'tailwindcss';
+
 li {
 	@apply relative flex items-center justify-center flex-col w-9 h-9;
-    @apply text-[var(--desc-color)] transition-colors text-xl cursor-pointer;
+    @apply text-(--desc-color) transition-colors text-xl cursor-pointer;
     &:hover, &.active {
-        @apply text-[var(--primary-color)];
+        @apply text-(--primary-color);
     }
 }
 ul.macos {

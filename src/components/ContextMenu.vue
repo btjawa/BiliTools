@@ -72,10 +72,12 @@ function close() {
 onMounted(() => document.addEventListener('click', close));
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 ul {
-    @apply overflow-hidden z-[10000] bg-[var(--solid-block-color)];
-    @apply border border-solid border-[var(--split-color)]
+    @apply overflow-hidden z-10000 bg-(--solid-block-color);
+    @apply border border-solid border-(--split-color)
 }
 
 button {

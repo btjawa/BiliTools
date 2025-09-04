@@ -67,8 +67,10 @@ const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
 const app = useAppStore();
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .glow {
-    @apply text-[color:var(--primary-color)] [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md;
+    @apply text-(--primary-color) [text-shadow:var(--primary-color)_0_0_12px] drop-shadow-md;
 }
 </style>

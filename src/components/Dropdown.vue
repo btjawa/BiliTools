@@ -27,12 +27,14 @@ onMounted(() => document.addEventListener('click', close));
 onBeforeUnmount(() => document.removeEventListener('click', close));
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 button:hover i {
   @apply rotate-180;
 }
 .list {
-  @apply bg-[var(--solid-block-color)] border border-solid border-[var(--split-color)] max-h-64;
+  @apply bg-(--solid-block-color) border border-solid border-(--split-color) max-h-64;
   @apply overflow-auto rounded-lg min-w-40 w-max z-10;
   button {
     @apply text-left rounded-none h-[27px];

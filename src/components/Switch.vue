@@ -1,7 +1,7 @@
 <template><button
     @click="model = !model"
     :class="{ 'primary-color active': model }"
-    class="h-fit w-10 p-1 rounded-full"
+    class="h-fit! w-10! p-1! rounded-full!"
 ><div
     class="h-4 w-4 rounded-full"
 ></div></button><br /></template>
@@ -10,17 +10,19 @@
 const model = defineModel();
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 button {
     div {
-        @apply translate-x-0 bg-[var(--desc-color)];
-        transition: transform 0.2s cubic-bezier(0,1,.6,1);
+        @apply translate-x-0 bg-(--desc-color);
+        transition: translate 0.2s cubic-bezier(0,1,.6,1);
     }
     &:hover div {
         @apply scale-110;
     }
     &.active div {
-        @apply translate-x-full bg-[var(--primary-text)];
+        @apply translate-x-full bg-(--primary-text);
     }
 }
 </style>

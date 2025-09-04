@@ -1,8 +1,7 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import viteCompression from "vite-plugin-compression";
-import tailwindcss from 'tailwindcss';
-import autoprefixer from 'autoprefixer';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
 // @ts-expect-error process is a nodejs global
@@ -16,16 +15,10 @@ export default defineConfig({
         isCustomElement: tag => tag === 'markdown-style' || tag === 'gap'
       }
     }
-  }), viteCompression()],
+  }), viteCompression(), tailwindcss()],
 
   resolve: {
     alias: { '@': '/src' }
-  },
-
-  css: {
-    postcss: {
-      plugins: [tailwindcss(), autoprefixer()]
-    }
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

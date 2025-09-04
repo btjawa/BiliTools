@@ -112,17 +112,19 @@ async function exportDb() {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .io button {
     @apply m-0;
     &:nth-of-type(1) {
         @apply min-w-24 max-w-[420px] rounded-r-none;
     }
     &:nth-of-type(2) {
-        @apply bg-[var(--primary-color)] text-[var(--primary-text)] rounded-l-none;
+        @apply bg-(--primary-color) text-(--primary-text) rounded-l-none;
     }
 }
 .db button {
-    @apply w-32;
+    @apply w-40;
 }
 </style>

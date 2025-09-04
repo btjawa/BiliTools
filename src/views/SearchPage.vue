@@ -1,8 +1,8 @@
 <template><div>
 <div ref="topEl" class="w-full h-full flex flex-col justify-center items-center">
-    <div class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-[var(--block-color)] border border-[var(--split-color)]">
+    <div class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-(--block-color) border border-(--split-color)">
         <input
-			v-model="v.searchInput" class="w-full !rounded-2xl"
+			v-model="v.searchInput" class="w-full rounded-2xl"
 			type="text" spellcheck="false" @keydown.enter="search()"
 			:placeholder="$t('search.input', [$t('bilibili')])"
 		/>
@@ -59,7 +59,7 @@
 				</template>
 				<div class="tab">
 					<button v-for="t in v.mediaInfo.sections?.tabs" @click="v.tab = t.id"
-						class="!w-full" :class="{ 'active': v.tab === t.id }"
+						class="w-full!" :class="{ 'active': v.tab === t.id }"
 					>
 						<span>{{ t.name }}</span>
 						<label class="primary-color"></label>

@@ -1,5 +1,5 @@
 <template><div
-    class="progress relative flex-1 rounded-full bg-[var(--button-color)] h-1.5 w-64"
+    class="progress relative flex-1 rounded-full bg-(--button-color) h-1.5 w-64"
     :style="{ '--progress': progress + '%' }"
 ></div></template>
 
@@ -9,8 +9,10 @@ defineProps<{
 }>();
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .progress::after {
-    @apply content-[''] absolute w-[var(--progress)] h-full rounded-full bg-[var(--primary-color)] transition-[width];
+    @apply content-[''] absolute w-(--progress) h-full rounded-full bg-(--primary-color) transition-[width];
 }
 </style>

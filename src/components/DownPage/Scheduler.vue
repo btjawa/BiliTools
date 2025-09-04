@@ -35,7 +35,7 @@
             <span class="w-full ellipsis">{{ task.item.title }}</span>
             <span class="flex-shrink-0">{{ timestamp(task.ts * 1000) }}</span>
         </div>
-        <div class="!flex gap-2 desc w-full text">
+        <div class="flex gap-2 desc w-full text">
         <div class="flex gap-1 max-w-full overflow-auto whitespace-nowrap">
             <span
                 v-if="task.select.media.video || task.select.media.audioVideo"
@@ -72,7 +72,7 @@
             {{ String(task.seq + 1).padStart(2, '0') }}
         </div>
         </div>
-        <div class="flex w-full gap-4 *:flex-shrink-0 items-center">
+        <div class="flex w-full gap-4 *:shrink-0 items-center">
             <button @click="popup?.(task)">
                 <i :class="[$fa.weight, 'fa-list']"></i>
                 <span>{{ $t('down.taskList') }}</span>
@@ -156,9 +156,11 @@ async function event(event: CtrlEvent | 'openFolder', sid: string, id: string | 
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .block {
-    @apply flex flex-col p-3 rounded-lg text-sm bg-[var(--block-color)];
-    @apply border-[var(--split-color)];
+    @apply flex flex-col p-3 rounded-lg text-sm bg-(--block-color);
+    @apply border-(--split-color);
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
 <Transition name="slide">
-<div class="absolute page w-[calc(100vw-56px)] right-0 z-[99]" v-if="active">
+<div class="absolute page w-[calc(100vw-56px)] right-0 z-99" v-if="active">
 <h1 class="w-full">
     <i :class="[$fa.weight, 'fa-sparkles']"></i>
     <span>{{ $t('updater.title') }}</span>
@@ -106,6 +106,8 @@ async function update() {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 
 </style>

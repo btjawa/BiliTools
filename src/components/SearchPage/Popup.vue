@@ -27,7 +27,7 @@
                 :drop="v.extras.misc.subtitles"
                 v-model="v.subtitle"
             />
-            <VueDatePicker class="!w-40"
+            <VueDatePicker class="w-40!"
                 v-if="id === 'history'"
                 v-model="v.date"
                 format="yyyy-MM-dd"
@@ -36,8 +36,8 @@
                 :locale="$i18n.locale"
                 :dark="$fa.isDark"
                 :ui="{
-                    input: '!text-sm !bg-[var(--block-color)] !rounded-lg !h-8 ',
-                    menu: '!text-sm',
+                    input: 'text-sm! bg-(--block-color)! rounded-lg! h-8! ',
+                    menu: 'text-sm!',
                 }"
             />
             </template>
@@ -243,9 +243,11 @@ function close() {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .popup {
-    @apply absolute inset-0 mx-6 bg-[var(--block-color)];
+    @apply absolute inset-0 mx-6 bg-(--block-color);
     @apply w-[calc(100%-48px)];
 }
 hr {
@@ -255,7 +257,7 @@ button {
     @apply flex-shrink-0;
     @apply border-2 border-solid border-transparent;
     &.selected {
-        @apply border-[var(--primary-color)];
+        @apply border-(--primary-color);
     }
 }
 </style>

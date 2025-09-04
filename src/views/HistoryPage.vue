@@ -12,7 +12,7 @@
 	<div>
 		<Empty v-if="item === 'empty'" :text="$t('empty')" />
 		<div v-else
-			class="p-4 rounded-lg my-px bg-[var(--block-color)] text-sm h-12"
+			class="p-4 rounded-lg my-px bg-(--block-color) text-sm h-12"
 		>
 			<span>{{ item.title }}</span>
 		</div>
@@ -73,7 +73,9 @@ async function refresh() {
 onActivated(() => refresh());
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .tab button {
   @apply w-32;
 }

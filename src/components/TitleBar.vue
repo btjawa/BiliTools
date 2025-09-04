@@ -2,15 +2,15 @@
 <div data-tauri-drag-region @dblclick="appWindow.toggleMaximize()" @contextmenu.prevent
 	class="titlebar absolute right-0 h-[30px] w-[calc(100vw-56px)] bg-transparent"
 >
-    <div v-if="osType() !== 'macos'" class='relative z-[100] float-right'>
+    <div v-if="osType() !== 'macos'" class='relative z-100 float-right'>
         <div class="button translate-y-[-5px]" @click="appWindow.minimize()">
-            <div class="!h-[1px]"></div>
+            <div class="h-px!"></div>
         </div>
         <div class="button" @click="appWindow.toggleMaximize()">
             <div v-if="!maxed" :style='`mask-image:url("${icons.max}")`'></div>
             <div v-else :style='`mask-image:url("${icons.unmax}")`'></div>
         </div>
-        <div class="button hover:!bg-[color:#c42b1c]" @click="appWindow.close()">
+        <div class="button hover:bg-[#c42b1c]!" @click="appWindow.close()">
             <div :style='`mask-image:url("${icons.close}")`'></div>
         </div>
     </div>
@@ -39,15 +39,16 @@ onMounted(() => {
 })
 </script>
 
-<style scoped lang="scss">
+<style scoped>
+@reference 'tailwindcss';
+
 .button {
     @apply inline-flex justify-center items-center transition-all;
-    @apply hover:bg-[color:var(--block-color)];
+    @apply hover:bg-(--block-color);
 	width: 45px;
 	height: 29px;
     & > div {
-        @apply w-2.5 h-2.5;
-        background-color: var(--content-color);
+        @apply w-2.5 h-2.5 bg-(--content-color);
         mask-repeat: no-repeat;
         mask-size: cover;
     }

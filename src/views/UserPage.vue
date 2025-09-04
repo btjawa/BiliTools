@@ -1,8 +1,8 @@
-<template>
-<div class="flex h-fit w-fit m-auto p-0 bg-[var(--block-color)] rounded-lg" :class="{ 'flex-row': !user.isLogin }">
+<template><div>
+<div class="flex h-fit w-fit m-auto bg-(--block-color) rounded-lg" :class="{ 'flex-row': !user.isLogin }">
 <div v-if="user.isLogin" class="max-w-7xl">
     <div class="relative">
-        <div class="absolute w-full h-full z-10 bg-gradient-to-b from-transparent to-black/50"></div>
+        <div class="absolute w-full h-full z-10 bg-linear-to-b from-transparent to-black/50"></div>
         <img class="z-0" :src="user.topPhoto"/>
     </div>
     <div class="flex p-6 gap-4 items-end">
@@ -30,7 +30,7 @@
     </div>
 </div>
 <template v-else>
-<div class="flex flex-col items-center gap-4 m-16">
+<div class="flex flex-col items-center gap-4 m-16 mr-8">
     <h1>{{ $t('user.scan') }}</h1>
     <div class="relative flex w-[160px] p-2 rounded-lg bg-white">
         <img v-if="v.scanStatus === -1"
@@ -41,7 +41,7 @@
             class="absolute flex flex-col items-center justify-center gap-2 w-36 h-36 bg-white cursor-pointer"
         >
             <i
-                class="fa-solid text-[var(--primary-color)] text-2xl"
+                class="fa-solid text-(--primary-color) text-2xl"
                 :class="{ 'fa-arrow-rotate-right': v.scanStatus === 86038, 'fa-check': v.scanStatus === 86090 }"
             ></i>
             <span class="desc m-0">{{ $t('user.info.' + v.scanStatus) }}</span>
@@ -50,7 +50,7 @@
     </div>
     <span class="desc">{{ $t('user.getScan') }}</span>
 </div>
-<div class="flex flex-col items-center gap-4 mr-16">
+<div class="flex flex-col items-center gap-4 m-16 ml-8">
     <div class="flex gap-8 tabs">
         <h1 @click="v.tab = 0" :class="{ 'active': !v.tab }">{{ $t('user.pwd') }}</h1>
         <h1 @click="v.tab = 1" :class="{ 'active':  v.tab }">{{ $t('user.sms') }}</h1>
@@ -86,7 +86,7 @@
 </div>
 </template>
 </div>
-</template>
+</div></template>
 
 <script lang="ts" setup>
 import { onActivated, onDeactivated, reactive, ref } from 'vue';
@@ -160,7 +160,9 @@ onActivated(() => !user.isLogin && req('init'));
 onDeactivated(commands.stopLogin);
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 h1 {
     @apply text-lg;
 }
@@ -170,11 +172,11 @@ h1 {
 .tabs h1 {
     @apply cursor-pointer;
     &.active {
-        @apply text-[var(--primary-color)];
+        @apply text-(--primary-color);
     }
 }
 .form {
-    @apply rounded-lg border border-solid border-[var(--split-color)];
+    @apply rounded-lg border border-solid border-(--split-color);
     & > div {
         @apply px-5 py-2.5;
     }

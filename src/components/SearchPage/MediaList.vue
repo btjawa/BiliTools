@@ -12,8 +12,8 @@
         </button>
     </div>
     <div
-        class="flex w-full items-center h-12 text-sm p-4 my-px rounded-lg bg-[var(--block-color)] border-2 border-solid border-transparent"
-        :class="{ '!border-[var(--primary-color)]': item.isTarget, 'range': inRange(index) }"
+        class="flex w-full items-center h-12 text-sm p-4 my-px rounded-lg bg-(--block-color) border-2 border-solid border-transparent"
+        :class="{ 'border-(--primary-color)!': item.isTarget, 'range': inRange(index) }"
         @mouseenter="hoverIndex = index"
     >
         <div class="checkbox">
@@ -21,7 +21,7 @@
             <i class="fa-solid fa-check"></i>
         </div>
         <span class="min-w-6">{{ index + 1 }}</span>
-        <div class="w-px h-full bg-[var(--split-color)] mx-4"></div>
+        <div class="w-px h-full bg-(--split-color) mx-4"></div>
         <span class="flex flex-1 ellipsis text">{{ item.title }}</span>
     </div>
     <div v-if="stein_gate"
@@ -79,12 +79,17 @@ const inRange = (i: number) =>
     shiftActive.value;
 
 function click(i: number) {
-    if (!shiftActive.value) return;
-    const start = Math.min(clickIndex.value, i);
-    const end = Math.max(clickIndex.value, i);
+    const click = clickIndex.value;
+    if (!shiftActive.value) {
+        clickIndex.value = i;
+        checkboxs.value?.push(i);
+        return;
+    }
+    const start = Math.min(click, i);
+    const end = Math.max(click, i);
     const range: number[] = [];
     for (let i=start; i<=end; i++) range.push(i);
-    checkboxs.value?.splice(0, checkboxs.value.length, ...range);
+    checkboxs.value = range;
 }
 
 function show(stein_gate: typeof props.stein_gate, index: number) {
@@ -97,7 +102,9 @@ function show(stein_gate: typeof props.stein_gate, index: number) {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
+@reference 'tailwindcss';
+
 .range {
     background: color-mix(in srgb, var(--primary-color) 15%, var(--block-color));
     @apply transition-[background];
