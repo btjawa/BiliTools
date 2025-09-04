@@ -3,13 +3,13 @@
 use std::{env, path::PathBuf, sync::Arc};
 use tauri::async_runtime;
 use serde::Serialize;
-use anyhow::anyhow;
 use specta::Type;
 use tokio::fs;
 
 // Re-export for lib.rs to register commands
 pub use crate::{
     services::{
+        self,
         login::{
             self, stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie
         },
@@ -22,13 +22,14 @@ pub use crate::{
         ffmpeg,
     },
     storage::{
+        self,
         config::{self, CacheKey},
         cookies,
         archive,
         db,
     },
     shared::{
-        self, set_window, get_app_handle, SECRET, READY, HEADERS
+        self, set_window, get_app_handle, READY, HEADERS
     },
     errors::{TauriResult, TauriError},
 };
@@ -68,10 +69,7 @@ pub async fn get_size(key: CacheKey, event: tauri::ipc::Channel<u64>) -> TauriRe
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn clean_cache(key: CacheKey, secret: String) -> TauriResult<()> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
-    }
+pub async fn clean_cache(key: CacheKey) -> TauriResult<()> {
     let path = config::read().get_cache(&key)?;
     if key == CacheKey::Database {
         db::close_db().await?;
@@ -95,10 +93,7 @@ pub async fn clean_cache(key: CacheKey, secret: String) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn open_cache(key: CacheKey, secret: String) -> TauriResult<()> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
-    }
+pub async fn open_cache(key: CacheKey) -> TauriResult<()> {
     let path = config::read().get_cache(&key)?;
     tauri_plugin_opener::open_path(path, None::<&str>)?;
     Ok(())
@@ -106,49 +101,34 @@ pub async fn open_cache(key: CacheKey, secret: String) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn config_write(settings: serde_json::Map<String, serde_json::Value>, secret: String) -> TauriResult<()> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
-    }
+pub async fn config_write(settings: serde_json::Map<String, serde_json::Value>) -> TauriResult<()> {
     config::write(settings).await?;
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn db_export(output: PathBuf, secret: String) -> TauriResult<()> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
-    }
+pub async fn db_export(output: PathBuf) -> TauriResult<()> {
     db::export(output).await?;
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn db_import(input: PathBuf, secret: String) -> TauriResult<()> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
-    }
+pub async fn db_import(input: PathBuf) -> TauriResult<()> {
     db::import(input).await?;
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn ready() -> TauriResult<String> {
+pub async fn init(app: tauri::AppHandle) -> TauriResult<InitData> {
     if READY.set(()).is_err() {
         #[cfg(not(debug_assertions))]
         return Ok("403 Forbidden".into());
-    }
-    Ok(SECRET.clone())
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
+    } else {
+        storage::init().await?;
+        services::init().await?;
     }
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
@@ -159,9 +139,10 @@ pub async fn init(app: tauri::AppHandle, secret: String) -> TauriResult<InitData
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn init_login(secret: String) -> TauriResult<()> {
-    if secret != *SECRET {
-        return Err(anyhow!("403 Forbidden").into())
+pub async fn init_login() -> TauriResult<()> {
+    if READY.set(()).is_err() {
+        #[cfg(not(debug_assertions))]
+        return Ok("403 Forbidden".into());
     }
     login::stop_login();
     login::get_buvid().await?;

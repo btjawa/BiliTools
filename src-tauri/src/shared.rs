@@ -73,7 +73,6 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
 pub static HEADERS: LazyLock<Headers>      = LazyLock::new(Headers::new);
 pub static READY: LazyLock<OnceCell<()>>   = LazyLock::new(OnceCell::new);
 pub static DATABASE_URL: LazyLock<String>  = LazyLock::new(|| format!("sqlite://{}", STORAGE_PATH.to_string_lossy()));
-pub static SECRET: LazyLock<String>        = LazyLock::new(|| random_string(8));
 pub static STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKING_PATH.join("Storage"));
 pub static WORKING_PATH: LazyLock<PathBuf> = LazyLock::new(||
     get_app_handle().path().app_data_dir().expect("Failed to get app_data_dir")

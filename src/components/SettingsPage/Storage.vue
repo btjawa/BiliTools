@@ -75,12 +75,12 @@ async function getSize(type: CacheKey) {
 async function cleanCache(type: CacheKey) {
     const result = await dialog.ask(i18n.global.t('settings.confirm'), { 'kind': 'warning' });
     if (!result) return;
-    await commands.cleanCache(type, app.secret);
+    await commands.cleanCache(type);
     await getSize(type);
 }
 
 async function openCache(type: CacheKey) {
-    await commands.openCache(type, app.secret);
+    await commands.openCache(type);
 }
 
 async function getFolder(type: typeof pathList[number]) {
@@ -97,7 +97,7 @@ async function importDb() {
         defaultPath: settings.down_dir
     });
     if (!path) return;
-    const result = await commands.dbImport(path, app.secret);
+    const result = await commands.dbImport(path);
     if (result.status === 'error') throw result.error;
     await relaunch();
 }
@@ -107,7 +107,7 @@ async function exportDb() {
         defaultPath: `${settings.down_dir}/Storage_${Date.now()}`
     });
     if (!path) return;
-    const result = await commands.dbExport(path, app.secret);
+    const result = await commands.dbExport(path);
     if (result.status === 'error') throw result.error;
 }
 </script>
@@ -119,7 +119,7 @@ async function exportDb() {
         @apply min-w-24 max-w-[420px] rounded-r-none;
     }
     &:nth-of-type(2) {
-        @apply bg-[var(--primary-color)] rounded-l-none;
+        @apply bg-[var(--primary-color)] text-[var(--primary-text)] rounded-l-none;
     }
 }
 .db button {

@@ -1,6 +1,6 @@
 <template><button
     @click="model = !model"
-    :class="{ 'active': model }"
+    :class="{ 'primary-color active': model }"
     class="h-fit w-10 p-1 rounded-full"
 ><div
     class="h-4 w-4 rounded-full"
@@ -19,11 +19,8 @@ button {
     &:hover div {
         @apply scale-110;
     }
-    &.active {
-        @apply bg-[var(--primary-color)];
-        div {
-            @apply translate-x-full bg-[var(--dark-button-color)];
-        }
+    &.active div {
+        @apply translate-x-full bg-[var(--primary-text)];
     }
 }
 </style>

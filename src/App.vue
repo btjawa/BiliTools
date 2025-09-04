@@ -25,15 +25,15 @@ import { SearchPage } from './views';
 
 import { fetchUser, activateCookies } from '@/services/login';
 import { setEventHook, waitPage } from '@/services/utils';
-import { AppError } from '@/services/error';
 import { commands } from '@/services/backend';
+import { AppError } from '@/services/error';
 import * as clipboard from '@/services/clipboard';
 
 const page = ref();
+const updater = ref();
 const contextMenu = ref<InstanceType<typeof ContextMenu>>();
-const updater = ref<InstanceType<typeof Updater>>();
-const router = useRouter();
 
+const router = useRouter();
 const settings = useSettingsStore();
 const app = useAppStore();
 const context = getCurrentInstance()?.appContext!;
@@ -60,18 +60,13 @@ onMounted(async () => {
 	router.push('/');
 	setEventHook();
 
-	const ready = await commands.ready();
-	if (ready.status === 'error') throw new AppError(ready.error);
-	const secret = ready.data;
-	app.secret = secret;
-
-	const init = await commands.init(secret);
+	const init = await commands.init();
 	if (init.status === 'error') throw new AppError(init.error);
 	const { config, ...initData } = init.data;
 	app.$patch({ ...initData });
 	settings.$patch(config);
 
-	const initLogin = await commands.initLogin(secret);
+	const initLogin = await commands.initLogin();
 	if (initLogin.status === 'error') throw new AppError(initLogin.error);
 
 	await fetchUser();

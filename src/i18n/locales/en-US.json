@@ -169,7 +169,7 @@
     },
     "search": {
         "input": "{0} link/AV/BV/SS/EP/AU/AM/SID/FID ...",
-        "suggest": "What do you want to search?",
+        "suggest": "What would you like to search for?",
         "autoDetect": "Auto Detect",
         "general": "General",
         "advanced": "Advanced",

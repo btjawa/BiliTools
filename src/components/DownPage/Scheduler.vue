@@ -1,5 +1,5 @@
 <template>
-<div class="block gap-0.5 my-px">
+<div class="block gap-0.5 my-px border">
     <div class="flex mb-2.5 mx-[14px] text items-center">
         <i :class="[$fa.weight, 'fa-id-badge']"></i>
         <span class="mr-auto">{{
@@ -28,7 +28,7 @@
     <Empty v-if="!item.list.length" :text="$t('down.empty')" />
     <div
         v-for="task in item.list.map(v => queue.tasks[v])"
-        class="block gap-1.5 px-4 border-2 border-solid border-transparent"
+        class="block gap-1.5 px-4 border-2"
         :style="{ 'border-color': getBorder(task.id) }"
     >
         <div class="flex w-full text">
@@ -121,7 +121,9 @@ const buttons = computed(() => (task?: Task) => ({
         pause: 'fa-pause',
         resume: 'fa-play',
     }),
-    openFolder: 'fa-folder-open',
+    ...(task?.state !== 'pending' && {
+        openFolder: 'fa-folder-open',
+    }),
     cancel: 'fa-trash',
 }))
 
@@ -141,7 +143,7 @@ function getBorder(id: string) {
         case 'paused': return '#ffc107';
         case 'failed': return '#ff5252';
         case 'completed': return '#4caf50';
-        default: return 'transparent';
+        default: return 'var(--split-color)';
     }
 }
 
@@ -157,5 +159,6 @@ async function event(event: CtrlEvent | 'openFolder', sid: string, id: string | 
 <style lang="scss" scoped>
 .block {
     @apply flex flex-col p-3 rounded-lg text-sm bg-[var(--block-color)];
+    @apply border-[var(--split-color)];
 }
 </style>

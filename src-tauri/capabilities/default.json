@@ -48,7 +48,7 @@
     "http:allow-fetch-send",
     "http:allow-fetch-cancel",
     {
-      "identifier": "http:default",
+      "identifier": "http:allow-fetch",
       "allow": [
         { "url": "https://*.bilibili.com/*" },
         { "url": "https://*.hdslb.com/*" },

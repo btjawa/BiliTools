@@ -56,17 +56,17 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async configWrite(settings: Partial<{ [key in string]: JsonValue }>, secret: string) : Promise<Result<null, TauriError>> {
+async configWrite(settings: Partial<{ [key in string]: JsonValue }>) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings, secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("config_write", { settings }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async openCache(key: CacheKey, secret: string) : Promise<Result<null, TauriError>> {
+async openCache(key: CacheKey) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("open_cache", { key, secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("open_cache", { key }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -80,25 +80,25 @@ async getSize(key: CacheKey, event: TAURI_CHANNEL<number>) : Promise<Result<null
     else return { status: "error", error: e  as any };
 }
 },
-async cleanCache(key: CacheKey, secret: string) : Promise<Result<null, TauriError>> {
+async cleanCache(key: CacheKey) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { key, secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("clean_cache", { key }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async dbImport(input: string, secret: string) : Promise<Result<null, TauriError>> {
+async dbImport(input: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("db_import", { input, secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("db_import", { input }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async dbExport(output: string, secret: string) : Promise<Result<null, TauriError>> {
+async dbExport(output: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("db_export", { output, secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("db_export", { output }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -144,25 +144,17 @@ async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async ready() : Promise<Result<string, TauriError>> {
+async init() : Promise<Result<InitData, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("ready") };
+    return { status: "ok", data: await TAURI_INVOKE("init") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async init(secret: string) : Promise<Result<InitData, TauriError>> {
+async initLogin() : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("init", { secret }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async initLogin(secret: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("init_login", { secret }) };
+    return { status: "ok", data: await TAURI_INVOKE("init_login") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

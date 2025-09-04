@@ -10,7 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "enableGTKAppId": true,
     "macOSPrivateApi": true,
     "security": {
       "csp": null

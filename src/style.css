@@ -10,14 +10,18 @@
         @apply text-2xl font-semibold;
     }
     :root {
-        --content-color: #1a1a1a;
-        --desc-color: #888888;
-        --split-color: #e5e5e5;
-        --block-color: #ffffff;
-        --solid-block-color: #ffffff;
-        --button-color: #E4E5E6;
         --primary-color: rgb(0, 161, 214);
-        --dark-button-color: rgb(233,233,233);
+        --primary-text: rgb(233, 233, 233);
+    }
+    .light {
+        --content-color: #1a1a1a;
+        --desc-color: #9e9e9e;
+        --split-color: #e0e0e0;
+        --block-color: #fafafa;
+        --solid-block-color: #fafafa;
+        --button-color: #00000009;
+        --solid-button-color: #00000006;
+        --scroller-color: rgb(87, 193, 228);
     }
     .dark {
         --content-color: rgb(233,233,233);
@@ -26,9 +30,11 @@
         --block-color: #ffffff0d;
         --solid-block-color: #24292e;
         --button-color: #a2a7ae18;
+        --solid-button-color: #a2a7ae10;
+        --scroller-color: rgb(0, 106, 141);
     }
-    html :is(button, input) {
-        @apply hover:brightness-90;
+    html.light :is(button, input) {
+        @apply hover:brightness-[.98];
     }
     html.dark :is(button, input) {
         @apply hover:!brightness-150;
@@ -36,24 +42,19 @@
 }
 
 ::-webkit-scrollbar {
-    width: 7.5px;
-    height: 7.5px;
-    border-radius: 6px;
-    visibility: hidden;
-}
-
-::-webkit-scrollbar-track {
-    /* background: #58585c; */
-    border-radius: 6px;
+    @apply w-1.5;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #808080;
-    border-radius: 6px;
+    @apply rounded-md bg-[var(--scroller-color)];
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #80808080;
+    @apply bg-[var(--primary-color)];
+}
+
+::selection {
+    @apply bg-[var(--scroller-color)];
 }
 
 body {
@@ -69,12 +70,6 @@ body {
     padding: 0;
     text-rendering: optimizeLegibility;
     user-select: none;
-}
-input {
-    background: none;
-    outline: none;
-    border: none;
-    margin: 0;
 }
 
 a {
@@ -92,7 +87,7 @@ img {
 
 button, input[type='text'], input[type='password'], input[type='number'] {
     @apply relative appearance-none border-0 outline-0 h-8 rounded-lg text-sm px-2.5 py-1.5 leading-none;
-    @apply bg-[color:var(--button-color)] text-[color:var(--content-color)];
+    @apply bg-[var(--button-color)] text-[var(--content-color)];
     @apply !select-none transition-[filter];
 }
 
@@ -100,15 +95,16 @@ button, input[type='text'], input[type='password'], input[type='number'] {
     @apply relative flex h-4 w-4 mr-4;
     input[type='checkbox'] {
         @apply absolute appearance-none h-4 w-4 rounded-[4px];
-        @apply bg-[color:var(--button-color)];
-        @apply hover:brightness-150 transition !select-none;
+        @apply border border-[var(--split-color)];
+        @apply bg-[var(--solid-button-color)];
+        @apply transition-colors;
     }
     i { 
         @apply invisible absolute pointer-events-none text-xs left-[3px] top-[0.5px];
-        @apply text-[color:var(--dark-button-color)];
+        @apply text-[var(--primary-text)];
     }
     input[type='checkbox']:checked {
-        @apply bg-[color:var(--primary-color)];
+        @apply bg-[var(--primary-color)];
         & + i {
             @apply visible;
         }
@@ -121,7 +117,7 @@ button, input[type='text'], input[type='password'], input[type='number'] {
 
 .tab button {
     @apply pr-0 w-48 flex items-center justify-end gap-2 bg-transparent;
-    @apply hover:bg-[color:var(--button-color)];
+    @apply border-none hover:bg-[var(--solid-button-color)];
     i {
         @apply w-4;
     }
@@ -129,7 +125,7 @@ button, input[type='text'], input[type='password'], input[type='number'] {
         @apply w-[3px] rounded-md h-4 invisible;
     }
     &.active {
-        @apply bg-[color:var(--button-color)];
+        @apply bg-[var(--button-color)] text-[var(--primary-color)];
         label {
             @apply visible;
         }
@@ -141,7 +137,7 @@ button {
 }
 
 i.question {
-    @apply hover:cursor-pointer hover:brightness-[85%] text-[color:var(--desc-color)];
+    @apply hover:cursor-pointer hover:brightness-[85%] text-[var(--desc-color)];
 }
 
 i + span, span + i {
@@ -173,7 +169,7 @@ i + span, span + i {
 }
 
 .primary-color {
-    color: var(--dark-button-color);
+    color: var(--primary-text);
     background-color: var(--primary-color);
 }
 
@@ -205,12 +201,4 @@ markdown-style {
     a {
         @apply !text-[var(--primary-color)];
     }
-}
-
-/* 仅用于这个验证；保证容器 relative、子项 absolute */
-.vue-recycle-scroller { position: relative; }
-.vue-recycle-scroller__item-wrapper,
-.vue-recycle-scroller__item-view {
-  position: absolute;
-  left: 0; right: 0; /* 横向时 right 可以保留，布局也会正确 */
 }

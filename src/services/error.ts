@@ -1,6 +1,26 @@
-import StackTrace from "stacktrace-js";
+import { SourceMapConsumer, RawSourceMap, MappedPosition } from 'source-map-js';
+import StackTrace from 'stacktrace-js';
 import { TauriError } from "./backend";
 import { AppLog } from "./utils";
+
+const cache = new Map<string, SourceMapConsumer>();
+if (import.meta.env.PROD) getConsumer(import.meta.url);
+
+async function getConsumer(url: string) {
+    if (cache.has(url)) {
+        return cache.get(url)!;
+    }
+    try {
+        const resp = await window.fetch(url + '.map');
+        if (!resp.ok) throw null;
+        const map = await resp.json() as RawSourceMap;
+        const consumer = new SourceMapConsumer(map);
+        cache.set(url, consumer);
+        return consumer;
+    } catch(_) {
+        return null
+    };
+}
 
 export class AppError extends Error {
     original?: Error;
@@ -39,19 +59,35 @@ export class AppError extends Error {
         };
     }
     async handle() {
-        let frames: StackTrace.StackFrame[] = [];
-        try {
-            frames = await StackTrace.fromError(this.original ?? this);
-        } catch(_) {}
-        const filtered = frames.filter(f =>
-            f.fileName && !f.fileName.includes('/node_modules')
-        );
-        console.log('Got StackFrame for ' + this.message + '\n', filtered);
-        const stack = filtered.map(v => {
-            const file = v.fileName?.match(/^(?:https?|file):\/\/[^/]+(\/[^\s?#]*)/)?.[1] ?? '<anonymous>';
-            const path = `${file}:${v.lineNumber}:${v.columnNumber}`;
-            return `    at ${path}`;
-        }).join('\n');
-        return AppLog(`${this.name}: ${this.message}\n` + stack, 'error');
+        const frames = await StackTrace.fromError(this.original ?? this);
+        if (import.meta.env.DEV) {
+            console.log('Got StackFrames for ' + this.message + '\n', frames);
+            const stack = (this.original ?? this).stack;
+            return AppLog(stack ?? '', 'error');
+        }
+        const stack: string[] = [];
+        const raw: MappedPosition[] = [];
+        for (const v of frames.filter(v => v.fileName)) {
+            const f = v.fileName!;
+            const l = v.lineNumber;
+            const c = v.columnNumber;
+            const consumer = await getConsumer(new URL(f, import.meta.url).href);
+            if (consumer && l && c) {
+                const orig = consumer.originalPositionFor({
+                    line: l, column: c, bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+                });
+                if (orig.source.startsWith('/node_modules')) {
+                    continue;
+                }
+                let line = `${orig.source}:${orig.line}:${orig.column}`;
+                if (orig.name) line += ` (${orig.name})`;
+                stack.push('    at ' + line);
+                raw.push(orig)
+            } else {
+                stack.push('<anonymous>');
+            }
+        }
+        console.log('Got MappedPositions for ' + this.message + '\n', raw);
+        return AppLog(`${this.name}: ${this.message}\n` + stack.join('\n'), 'error');
     }
 }

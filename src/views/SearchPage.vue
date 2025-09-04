@@ -1,6 +1,6 @@
 <template><div>
-	<div ref="topEl" class="w-full h-full flex flex-col justify-center items-center">
-    <div class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-[var(--block-color)]">
+<div ref="topEl" class="w-full h-full flex flex-col justify-center items-center">
+    <div class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-[var(--block-color)] border border-[var(--split-color)]">
         <input
 			v-model="v.searchInput" class="w-full !rounded-2xl"
 			type="text" spellcheck="false" @keydown.enter="search()"
@@ -69,8 +69,8 @@
 		</div>
 	</div>
 	</Transition>
-	</div>
-	<Popup ref="popup" :fmt="initPopup" :close="() => v.anim.reverse()" :emit />
+</div>
+<Popup ref="popup" :fmt="initPopup" :close="() => v.anim.reverse()" :emit />
 </div></template>
 
 <script setup lang="ts">

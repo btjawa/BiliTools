@@ -39,7 +39,6 @@
     "p-limit": "^7.0.0",
     "pinia": "^3.0.3",
     "qrcode-generator": "^2.0.4",
-    "source-map-support": "^0.5.21",
     "stacktrace-js": "^2.0.2",
     "virtua": "^0.42.0",
     "vue": "3.5.18",
@@ -50,6 +49,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "2.7.0",
     "@types/md5": "^2.3.5",
+    "@types/node": "^24.3.1",
     "autoprefixer": "^10.4.21",
     "pbjs": "^0.0.14",
     "postcss": "^8.5.6",

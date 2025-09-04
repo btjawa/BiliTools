@@ -79,6 +79,6 @@ ul {
 }
 
 button {
-    @apply rounded-none text-left;
+    @apply border-none rounded-none text-left;
 }
 </style>

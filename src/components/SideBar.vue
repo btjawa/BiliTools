@@ -1,7 +1,7 @@
 <template>
 <ul @contextmenu.prevent
-	class="flex flex-col py-4 px-2.5 gap-3 h-screen "
-    :class="[osType() === 'macos' ? 'pt-[36px]' : 'bg-[var(--block-color)]']"
+	class="flex flex-col py-4 px-2.5 gap-3 h-screen"
+    :class="[os, { 'bg-[var(--block-color)]': $fa.isDark }]"
 >
     <li
         v-for="v in list" @click="click(v.path)"
@@ -21,6 +21,7 @@ import router from '@/router';
 
 const user = useUserStore();
 const settings = useSettingsStore();
+const os = osType();
 
 const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
 
@@ -52,5 +53,8 @@ li {
     &:hover, &.active {
         @apply text-[var(--primary-color)];
     }
+}
+ul.macos {
+    @apply pt-[36px];
 }
 </style>

@@ -1,7 +1,6 @@
 import { useSettingsStore, useAppStore } from "@/store";
 import { TYPE, useToast } from "vue-toastification";
 import { MediaType } from '@/types/shared.d';
-import { MutationType } from 'pinia';
 import { Ref, watch } from "vue";
 import i18n from '@/i18n';
 
@@ -43,13 +42,12 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
 export function setEventHook() {
     const app = useAppStore();
     const settings = useSettingsStore();
-    settings.$subscribe(async (mutation, state) => {
-        if (mutation.type === MutationType.direct)
-        commands.configWrite(state, app.secret);
-        i18n.global.locale.value = state.language;
-        commands.setWindow(state.theme);
-        commands.updateMaxConc(state.max_conc);
-    });
+    watch(settings.$state, (v) => {
+        i18n.global.locale.value = v.language;
+        commands.configWrite(v);
+        commands.setWindow(v.theme);
+        commands.updateMaxConc(v.max_conc);
+    }, { deep: true });
     events.headersData.listen(e => app.$patch({
         headers: e.payload
     }));
@@ -59,7 +57,9 @@ export function setEventHook() {
         new AppError(err.error, { name: `ProcessError (${err.name})` }).handle();
     });
     events.themeEvent.listen(e => {
-        document.documentElement.classList.toggle('dark', e.payload.dark);
+        const list = document.documentElement.classList;
+        list[e.payload.dark ? 'remove' : 'add']('light');
+        list[e.payload.dark ? 'add' : 'remove']('dark');
         document.documentElement.style.backgroundColor = e.payload.color ?? 'transparent';
     });
 }

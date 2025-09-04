@@ -5,7 +5,7 @@ pub mod shared;
 pub mod errors;
 
 use tauri_specta::{collect_commands, collect_events, Builder};
-use tauri::{async_runtime, Manager};
+use tauri::Manager;
 use commands::*;
 
 #[cfg(debug_assertions)]
@@ -17,8 +17,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         let bt = std::backtrace::Backtrace::force_capture();
         log::error!("Panicked: {e}");
         log::error!("Backtrace:\n{bt:?}");
-        eprintln!("Panicked: {e}");
-        eprintln!("Backtrace:\n{bt:?}");
     }));
     let builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
@@ -26,7 +24,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
             config_write, open_cache, get_size, clean_cache, db_import, db_export, // Settings
             submit_task, process_queue, open_folder, ctrl_event, update_max_conc, // Queue
-            ready, init, init_login, set_window, // Basics
+            init, init_login, set_window, // Basics
         ])
         .events(collect_events![
             shared::HeadersData, shared::ProcessError, shared::ThemeEvent, queue::runtime::QueueEvent
@@ -79,16 +77,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             let version = &app.package_info().version;
             log::info!("BiliTools v{}", version);
             builder.mount_events(app);
+            shared::APP_HANDLE.set(app.app_handle().clone())?;
             if let Some(window) = app.get_webview_window("main") {
                 #[cfg(debug_assertions)]
                 window.open_devtools();
-                let _ = shared::set_window(window, shared::Theme::Auto);
             }
-            let _ = shared::APP_HANDLE.set(app.app_handle().clone());
-            async_runtime::spawn(async move {
-                let _ = storage::init().await;
-                let _ = services::init().await;
-            });
             Ok(())
         })
         .run(tauri::generate_context!())

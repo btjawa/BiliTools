@@ -192,7 +192,7 @@ pub async fn delete(name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn check_waiting() -> Result<()> {
+async fn check_waiting() -> Result<()> {
     let pool = get_db().await?;
     let (sql, values) = Query::select()
         .expr(Expr::col(Schedulers::Name))
@@ -210,6 +210,7 @@ pub async fn check_waiting() -> Result<()> {
 }
 
 pub async fn load() -> Result<()> {
+    check_waiting().await?;
     let pool = get_db().await?;
     let (sql, values) = Query::select()
         .columns([

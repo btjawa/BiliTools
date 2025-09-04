@@ -3,6 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import viteCompression from "vite-plugin-compression";
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
+import path from 'node:path';
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -50,6 +51,14 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        sourcemapPathTransform: (rel, src) => '/' + path.relative(
+          process.cwd(),
+          path.resolve(path.dirname(src), rel)
+        ).replace(/\\/g, '/')
+      }
+    },
     target: 'ESNext',
   }
 });

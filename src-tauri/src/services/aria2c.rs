@@ -9,10 +9,9 @@ use serde_json::{json, Value};
 use tauri_specta::Event;
 
 use crate::{
-    config, errors::TauriError, shared::{
-        get_app_handle, ProcessError, SECRET, USER_AGENT, WORKING_PATH
-    }, TauriResult,
-    queue::runtime::Progress,
+    config, errors::TauriError, queue::runtime::Progress, shared::{
+        get_app_handle, random_string, ProcessError, USER_AGENT, WORKING_PATH
+    }, TauriResult
 };
 
 static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(||
@@ -199,7 +198,8 @@ pub async fn init() -> Result<()> {
     log::info!("Found a free port for aria2c: {port}");
     drop(l);
 
-    ARIA2_RPC.update(port, SECRET.clone()).await?;
+    let secret = random_string(8);
+    ARIA2_RPC.update(port, secret.clone()).await?;
 
     let app = get_app_handle();
     let session_file = WORKING_PATH.join("aria2.session");
@@ -224,7 +224,7 @@ pub async fn init() -> Result<()> {
         format!("--save-session={session_file}"),
         format!("--user-agent={USER_AGENT}"),
         format!("--rpc-listen-port={port}"),
-        format!("--rpc-secret={}", &*SECRET),
+        format!("--rpc-secret={secret}"),
         format!("--log={log_file}"),
     ]).spawn()?;
     async_runtime::spawn(async move {

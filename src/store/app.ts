@@ -5,7 +5,6 @@ export const useAppStore = defineStore('app', {
     state: () => ({
         version: String(),
         hash: String(),
-        secret: String(),
         inited: false,
         headers: {} as HeadersData,
         cache: {

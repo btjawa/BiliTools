@@ -1,4 +1,3 @@
-import { GeetestOptions, initGeetest } from '@/lib/geetest';
 import { useSettingsStore } from "@/store";
 import { tryFetch } from "./utils";
 import { AppError } from './error';
@@ -10,6 +9,45 @@ declare global {
         deviceMemory?: number,
         cpuClass?: number,
     }
+    interface Window {
+        initGeetest: (config: GeetestOptions, callback: (captchaObj: CaptchaInstance) => void) => void
+    }
+}
+
+export interface GeetestOptions {
+    gt: string;
+    challenge: string;
+    offline: boolean;
+    new_captcha: boolean;
+    product?: 'float' | 'popup' | 'custom' | 'bind';
+    width?: string;
+    lang?: 'zh-cn' | 'zh-hk' | 'zh-tw' | 'en' | 'ja' | 'ko' | 'id' | 'ru' | 'ar' | 'es' | 'pt-pt' | 'fr' | 'de' | 'th' | 'tr' | 'vi' | 'ta' | 'it' | 'bn' | 'mr';
+    https?: boolean;
+    timeout?: number;
+    remUnit?: number;
+    zoomEle?: string;
+    hideSuccess?: boolean;
+    hideClose?: boolean;
+    hideRefresh?: boolean;
+    api_server?: string;
+    api_server_v3?: string[];
+}
+
+export interface CaptchaInstance {
+    appendTo(position: string | HTMLElement): this;
+    bindForm(position: string | HTMLElement): this;
+    getValidate(): {
+        geetest_challenge: string;
+        geetest_validate: string;
+        geetest_seccode: string;
+    };
+    reset(): this;
+    verify(): this;
+    onReady(callback: () => void): this;
+    onSuccess(callback: () => void): this;
+    onError(callback: (error: { error_code: number; msg: string }) => void): this;
+    onClose(callback: () => void): this;
+    destroy(): this;
 }
 
 // Reference https://github.com/SocialSisterYi/bilibili-API-collect/issues/933#issue-2073916390
@@ -101,7 +139,7 @@ export async function wbi(params: { [key: string]: string | number | object }) {
 export async function captcha(gt: string, challenge: string): Promise<Types.Captcha> {
     const lang = useSettingsStore().language;
     return new Promise(async (resolve, reject) => {
-        initGeetest({
+        window.initGeetest({
             gt,
             challenge,
             offline: false,

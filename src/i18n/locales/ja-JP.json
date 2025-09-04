@@ -169,7 +169,7 @@
     },
     "search": {
         "input": "{0} リンク/AV/BV/SS/EP/AU/AM/SID/FID ...",
-        "suggest": "何を検索しますか？",
+        "suggest": "何を検索したいか？",
         "autoDetect": "自動検出",
         "general": "通常",
         "advanced": "詳細",
