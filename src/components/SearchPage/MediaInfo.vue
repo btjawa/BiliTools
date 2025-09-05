@@ -1,5 +1,5 @@
 <template><div class="flex w-full min-h-36 h-36 bg-(--block-color) rounded-lg p-4 gap-4">
-    <img :src="cover" class="object-cover rounded-lg" />
+    <Image :src="info.nfo.thumbs[0].url + '@112h'" :height="112" :ratio="16/10" />
     <div class="text flex flex-col flex-1 min-w-0">
         <h2 class="text-lg ellipsis">{{ info.nfo.showtitle }}</h2>
         <div class="text-xs flex flex-wrap gap-3 mt-1.5 text-(--desc-color)">
@@ -11,25 +11,24 @@
         </div>
         <span class="text-sm line-clamp-3 mt-1.5 ellipsis">{{ info.desc }}</span>
     </div>
-    <div v-if="avatar" @click="open('https://space.bilibili.com/' + info.nfo.upper?.mid)"
-        class="flex flex-col items-center cursor-pointer"
+    <a v-if="props.info.nfo.upper?.avatar"
+        @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
+        class="flex flex-col items-center cursor-pointer min-w-16"
     >
-        <img :src="avatar" class="w-9 rounded-full" />
-        <span class="text-xs ellipsis max-w-16 mt-1">{{ info.nfo.upper?.name }}</span>
-    </div>
+        <Image :src="props.info.nfo.upper.avatar + '@64h'" :height="36" class="rounded-full!" />
+        <span class="text-xs ellipsis mt-1">{{ info.nfo.upper?.name }}</span>
+    </a>
 </div></template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { getBlob, stat } from '@/services/utils';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { MediaInfo } from '@/types/shared.d';
+import { stat } from '@/services/utils';
+import Image from '../Image.vue';
 
 const props = defineProps<{
     info: MediaInfo,
-    open: (path: string) => void
 }>();
-const avatar = ref(String());
-const cover = ref(String());
 
 const iconMap = {
     'play': 'bcc-icon-icon_list_player_x1',
@@ -40,13 +39,6 @@ const iconMap = {
     'favorite': 'bcc-icon-icon_action_collection_n_x',
     'share': 'bcc-icon-icon_action_share_n_x'
 }
-
-onMounted(async () => {
-    avatar.value = props.info.nfo.upper?.avatar
-    ? await getBlob(props.info.nfo.upper.avatar + '@64h')
-    : '';
-    cover.value = await getBlob(props.info.nfo.thumbs[0].url);
-})
 </script>
 
 <style scoped>

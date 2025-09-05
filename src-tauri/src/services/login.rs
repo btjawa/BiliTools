@@ -1,5 +1,5 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, LazyLock};
-use tauri::{http::{header, StatusCode}, Url};
+use tauri::http::{header, StatusCode};
 use serde::{Serialize, Deserialize};
 use tokio::time::{sleep, Duration};
 use anyhow::{Context, Result};
@@ -354,16 +354,7 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
         .await.context("Failed to decode password login response")?;
     if let Some(data) = body.data {
         if data.refresh_token.is_empty() || data.status != 0 {
-            let _tmp_code = Url::parse(&data.url).ok().and_then(|url| {
-                url.clone().query_pairs()
-                .find(|(key, _)| key == "tmp_token")
-                .map(|(_, value)| value.to_string())
-            }).unwrap_or_default();
-            let _request_id = Url::parse(&data.url).ok().and_then(|url| {
-                url.clone().query_pairs()
-                .find(|(key, _)| key == "request_id")
-                .map(|(_, value)| value.to_string())
-            }).unwrap_or_default();
+            return Err(TauriError::new(data.message, Some(data.status)));
         }
         for cookie in cookies {
             cookies::insert(cookie).await?;

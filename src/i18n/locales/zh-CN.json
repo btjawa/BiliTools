@@ -177,7 +177,35 @@
     },
     "history": {
         "title": "历史记录",
-        "refresh": "刷新"
+        "refresh": "刷新",
+        "keyword": "关键词",
+        "moreFilters": "更多筛选",
+        "download": "跳转下载",
+        "placeholder": "开始日期 - 结束日期",
+        "filter": {
+            "apply": "应用筛选",
+            "duration": {
+                "all": "全部时长",
+                "under10": "10分钟以下",
+                "10to30": "10-30分钟",
+                "30to60": "30-60分钟",
+                "over60": "60分钟以上"
+            },
+            "time": {
+                "all": "全部时间",
+                "today": "今天",
+                "yesterday": "昨天",
+                "week": "近一周",
+                "custom": "自定义"
+            },
+            "device": {
+                "all": "全部设备",
+                "pc": "PC",
+                "phone": "手机",
+                "pad": "平板",
+                "tv": "TV"
+            }
+        }
     },
     "down": {
         "title": "下载",

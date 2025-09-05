@@ -7,7 +7,10 @@
         v-for="v in list" @click="click(v.path)"
         :class="{ 'active': $route.path === v.path, 'mt-auto': v.path === 'theme' }"
     >
-        <img v-if="v.path === '/user-page'" class="w-9 h-9 rounded-full" :src="v.icon" />
+        <template v-if="v.path === '/user-page'">
+            <Image v-if="user.isLogin" :src="v.icon" class="rounded-full!" />
+            <img v-else class="w-9 h-9 rounded-full" :src="v.icon" />
+        </template>
         <i v-else :class="[$route.path === v.path ? 'fa-solid' : 'fa-light', v.icon]"></i>
     </li>
 </ul></template>
@@ -18,6 +21,7 @@ import { type as osType } from '@tauri-apps/plugin-os';
 import { useUserStore, useSettingsStore } from "@/store";
 import Updater from './Updater.vue';
 import router from '@/router';
+import Image from './Image.vue';
 
 const user = useUserStore();
 const settings = useSettingsStore();

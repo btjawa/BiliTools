@@ -123,25 +123,39 @@ export interface Subtitle {
   subtitle_url: string;
 }
 
-export interface HistoryInfo {
+export interface HistoryCursorInfo {
   code: number;
   message: number;
   ttl: number;
   data: {
-    cursor: HistoryCursor,
+    cursor: {
+      max: number;
+      view_at: number;
+      business: string;
+      ps: number;
+    },
     list: HistoryItem[],
-    tab: {
-      type: string;
-      name: string;
-    }[]
+    tab: HistoryTab[]
   }
 }
 
-export interface HistoryCursor {
-  max: number;
-  view_at: number;
-  business: string;
-  ps: number;
+export interface HistorySearchInfo {
+  code: number;
+  message: number;
+  ttl: number;
+  data: {
+    has_more: boolean;
+    page: {
+      pn: number;
+      total: number;
+    };
+    list: HistoryItem[];
+  }
+}
+
+export interface HistoryTab {
+  type: string;
+  name: string;
 }
 
 export interface HistoryItem {
@@ -169,7 +183,6 @@ export interface HistoryItem {
   badge: string;
   show_title: string;
   duration: number;
-  current: string;
   total: number;
   new_desc: string;
   is_finish: number;

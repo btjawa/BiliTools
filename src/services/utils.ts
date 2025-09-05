@@ -306,7 +306,7 @@ export function duration(num: number) {
 }
 
 export function timestamp(ts: number, zone?: string) {
-    const date = new Date(ts);
+    const date = new Date(ts * 1000);
     const formatter = new Intl.DateTimeFormat('zh-CN', {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',

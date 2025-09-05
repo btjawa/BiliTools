@@ -9,13 +9,13 @@
             <button
                 @click="processQueue(); tab = 'doing'"
                 v-if="item.sid === '__waiting__' && item.list.length"
-                class="ml-auto w-fit"
+                class="ml-auto w-fit primary-color"
             >
                 <i :class="[$fa.weight, 'fa-download']"></i>
                 <span>{{ $t('down.processQueue') }}</span>
             </button>
             <template v-if="item.sid !== '__waiting__'">
-            <span class="mr-2 ml-auto">{{ timestamp(item.ts) }}</span>
+            <span class="mr-2 ml-auto">{{ timestamp(item.ts / 1000) }}</span>
             <button
                 @click="event(k, item.sid, null)"
                 v-for="(v, k) in buttons()"
@@ -33,7 +33,7 @@
     >
         <div class="flex w-full text">
             <span class="w-full ellipsis">{{ task.item.title }}</span>
-            <span class="flex-shrink-0">{{ timestamp(task.ts * 1000) }}</span>
+            <span class="flex-shrink-0">{{ timestamp(task.ts) }}</span>
         </div>
         <div class="flex gap-2 desc w-full text">
         <div class="flex gap-1 max-w-full overflow-auto whitespace-nowrap">

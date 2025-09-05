@@ -11,7 +11,7 @@
     >
     <div>
         <Empty v-if="item == 'empty'" :text="$t('down.empty')" />
-        <Scheduler v-else v-model="tab" :item :popup="popup?.init" />
+        <Scheduler v-else v-model="tab" :item :popup="initPopup" />
     </div>
     </VList>
     </Transition>
@@ -22,17 +22,31 @@
         <label class="primary-color"></label>
     </button>
     </div>
-    <Popup ref="popup" />
+    <div class="popup" :class="{ 'active': v.popup }">
+    <Transition name="slide">
+    <div class="pr-16" v-if="v.popup">
+        <button class="close" @click="v.popup = false">
+            <i :class="[$fa.weight, 'fa-close']"></i>
+        </button>
+        <div v-for="v of v.task?.subtasks" class="flex w-full gap-4 items-center">
+            <span class="flex-shrink-0 min-w-28">{{ $t('taskType.' + v.type) }}</span>
+            <span class="w-16">{{ stat(v.id).toFixed(2) }}%</span>
+            <ProgressBar :progress="stat(v.id)" />
+        </div>
+    </div>
+    </Transition>
+    </div>
 </div>
 </div></template>
 
 <script setup lang="ts">
 import { useQueueStore } from '@/store';
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { VList } from 'virtua/vue';
 
-import { Popup, Scheduler } from '@/components/DownPage';
-import { Empty } from '@/components';
+import { Empty, ProgressBar } from '@/components';
+import { Scheduler } from '@/components/DownPage';
+import { Task } from '@/types/shared.d';
 
 const tabs = {
     waiting: 'fa-stopwatch',
@@ -46,7 +60,20 @@ const queueData = computed(() => queue[tab.value].map(v => queue.schedulers[v]))
 
 const tab = ref<Key>('waiting');
 const queue = useQueueStore();
-const popup = ref<InstanceType<typeof Popup>>();
+const v = reactive({
+    popup: false,
+    task: {} as Task
+});
 
 defineExpose({ tab });
+
+function initPopup(_task: Task) {
+    v.popup = true;
+    v.task = _task;
+}
+
+const stat = (id: string) => {
+    const stat = v.task?.status[id];
+    return (stat ? (stat?.chunk / stat?.content || 0) : 0) * 100;
+}
 </script>

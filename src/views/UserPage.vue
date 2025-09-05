@@ -1,19 +1,22 @@
 <template><div>
-<div class="flex h-fit w-fit m-auto bg-(--block-color) rounded-lg" :class="{ 'flex-row': !user.isLogin }">
-<div v-if="user.isLogin" class="max-w-7xl">
+<div class="flex h-fit max-w-7xl m-auto bg-(--block-color) rounded-lg" :class="{
+    'flex-row w-fit': !user.isLogin,
+    'w-full': user.isLogin,
+}">
+<div v-if="user.isLogin" class="w-full">
     <div class="relative">
         <div class="absolute w-full h-full z-10 bg-linear-to-b from-transparent to-black/50"></div>
-        <img class="z-0" :src="user.topPhoto"/>
+        <Image class="z-0 rounded-b-none" :src="user.topPhoto" :ratio="856/170" />
     </div>
     <div class="flex p-6 gap-4 items-end">
         <div class="relative w-fit">
-            <img class="rounded-full" :src="user.avatar">
+            <Image class="rounded-full!" :height="100" :src="user.avatar" />
             <img class="absolute w-7 right-0 bottom-0" v-if="user.vipLabel" src="@/assets/img/user/big-vip.svg">
         </div>
         <div class="flex flex-col gap-1 self-center">
             <div class="flex gap-2 items-center">
                 <h1 class="text-2xl font-bold">{{ user.name }}</h1>
-                <img class="h-5" v-if="user.vipLabel" :src="user.vipLabel">
+                <Image class="h-5" v-if="user.vipLabel" :height="24" :ratio="274/66" :src="user.vipLabel" />
             </div>
             <span class="text-sm">{{ user.desc }}</span>
         </div>
@@ -30,7 +33,7 @@
     </div>
 </div>
 <template v-else>
-<div class="flex flex-col items-center gap-4 m-16 mr-8">
+<div class="flex flex-col items-center gap-4 m-16 mr-8 w-fit">
     <h1>{{ $t('user.scan') }}</h1>
     <div class="relative flex w-[160px] p-2 rounded-lg bg-white">
         <img v-if="v.scanStatus === -1"
@@ -72,7 +75,7 @@
         <div>
             <span>{{ v.tab ? $t('user.code') : $t('user.password') }}</span>
             <input
-                type="text" spellcheck="false"
+                :type="v.tab ? 'text' : 'password'" spellcheck="false"
                 :placeholder="$t('user.input', [v.tab ? $t('user.code') : $t('user.password')])"
                 v-model="form[2]"
             />
@@ -92,7 +95,7 @@
 import { onActivated, onDeactivated, reactive, ref } from 'vue';
 import { useUserStore } from '@/store';
 import { useRouter } from 'vue-router';
-import Dropdown from '@/components/Dropdown.vue';
+import { Dropdown, Image } from '@/components';
 
 import { commands } from '@/services/backend';
 import * as login from '@/services/login';

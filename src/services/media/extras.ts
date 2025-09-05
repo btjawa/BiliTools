@@ -102,7 +102,7 @@ export async function getNfo(item: Types.MediaItem, nfo: Types.MediaNfo, type: '
         addAttr(el, { preview: v.url });
     })
     add('runtime', Math.round(item.duration / 60));
-    add('premiered', timestamp(item.pubtime * 1000, 'Asia/Shanghai').split('\u0020')[0]);
+    add('premiered', timestamp(item.pubtime, 'Asia/Shanghai').split('\u0020')[0]);
     if (nfo.upper?.name) {
         add('director', nfo.upper.name);
     }
@@ -151,9 +151,24 @@ export async function getDanmaku(item: Types.MediaItem, date?: false | string) {
     return new TextEncoder().encode('<?xml version="1.0" encoding="UTF-8"?>' + xml);
 }
 
-export async function getHistory(view_at: number) {
-    const params = { ps: 20, view_at };
-    const response = await tryFetch('https://api.bilibili.com/x/web-interface/history/cursor', { params });
-    const body = response as Resps.HistoryInfo;
+export async function getHistoryCursor() {
+    const response = await tryFetch('https://api.bilibili.com/x/web-interface/history/cursor', { params: {
+        ps: 1, view_at: 0
+    }});
+    const body = response as Resps.HistoryCursorInfo;
     return body.data;
+}
+
+export async function getHistorySearch(params: {
+    pn: number, keyword: string,
+    business: string,
+    add_time_start: number,
+    add_time_end: number,
+    arc_max_duration: number,
+    arc_min_duration: number,
+    device_type: number,
+}) {
+    const response = await tryFetch('https://api.bilibili.com/x/web-interface/history/search', { params });
+    const body = response as Resps.HistorySearchInfo;
+    return body.data.list;
 }

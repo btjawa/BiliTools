@@ -35,7 +35,7 @@
 	</Transition>
 	<Transition>
 	<div class="flex flex-col flex-1 mt-3 w-full min-h-0" v-if="v.listActive">
-		<MediaInfo :info="v.mediaInfo" :open="openUrl" />
+		<MediaInfo :info="v.mediaInfo" />
 		<div class="flex mt-3 gap-3 flex-1 min-h-0">
 			<Transition name="slide">
 			<MediaList
@@ -55,7 +55,7 @@
 					v-if="v.mediaInfo.type === 'favorite' || v.mediaInfo.type === 'musicList'"
 				>
 					<span>{{ $t('page') }}</span>
-					<input type="number" min="1" v-model="v.pageIndex" />
+					<input type="number" v-model="v.pageIndex" @input="handlePage" />
 				</template>
 				<div class="tab">
 					<button v-for="t in v.mediaInfo.sections?.tabs" @click="v.tab = t.id"
@@ -79,7 +79,6 @@ import { Dropdown, Empty } from '@/components';
 import DownPage from './DownPage.vue';
 
 import { inject, nextTick, reactive, Ref, ref, watch } from 'vue';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import * as log from '@tauri-apps/plugin-log';
 import { useRouter } from 'vue-router';
 import pLimit from 'p-limit';
@@ -149,14 +148,6 @@ watch(() => v.checkboxs.length, (len) => {
 	if (len > 30) AppLog(i18n.global.t('error.selectLimit'), 'warning');
 });
 
-watch(() => v.pageIndex, async (pn) => {
-	v.searching = true;
-	const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
-	Object.assign(v.mediaInfo, result);
-	v.searching = false;
-	updateIndex();
-})
-
 defineExpose({ search });
 async function search(overrideInput?: string) {
 	if (overrideInput) try {
@@ -189,6 +180,18 @@ async function search(overrideInput?: string) {
 		await nextTick();
 		v.searching = false;
 	}
+}
+
+async function handlePage() {
+	if (v.pageIndex < 1) {
+		v.pageIndex = 1;
+	}
+	const pn = v.pageIndex;
+	v.searching = true;
+	const result = await data.getMediaInfo(String(v.mediaInfo.id), v.mediaInfo.type, { pn });
+	Object.assign(v.mediaInfo, result);
+	v.searching = false;
+	updateIndex();
 }
 
 async function updateStein(edge_id: number) {

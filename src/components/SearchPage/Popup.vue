@@ -1,5 +1,5 @@
 <template><Transition name="slide">
-<div class="popup flex flex-col rounded-t-xl px-6 py-3 overflow-auto" v-if="v.active">
+<div class="el flex flex-col rounded-t-xl px-6 py-3 overflow-auto" v-if="v.active">
     <div class="absolute flex items-center right-4 top-4">
         <i :class="[$fa.weight, 'fa-info-circle']"></i>
         <span class="desc">{{ $t('popup.popupLint') }}</span>
@@ -27,7 +27,7 @@
                 :drop="v.extras.misc.subtitles"
                 v-model="v.subtitle"
             />
-            <VueDatePicker class="w-40!"
+            <VueDatePicker
                 v-if="id === 'history'"
                 v-model="v.date"
                 format="yyyy-MM-dd"
@@ -35,10 +35,6 @@
                 :max-date="new Date()"
                 :locale="$i18n.locale"
                 :dark="$fa.isDark"
-                :ui="{
-                    input: 'text-sm! bg-(--block-color)! rounded-lg! h-8! ',
-                    menu: 'text-sm!',
-                }"
             />
             </template>
         </div>
@@ -246,9 +242,8 @@ function close() {
 <style scoped>
 @reference 'tailwindcss';
 
-.popup {
-    @apply absolute inset-0 mx-6 bg-(--block-color);
-    @apply w-[calc(100%-48px)];
+.el {
+    @apply absolute inset-0 mx-6 w-[calc(100%-48px)] bg-(--block-color);
 }
 hr {
     @apply my-2.5;
@@ -259,11 +254,5 @@ button {
     &.selected {
         @apply border-(--primary-color);
     }
-}
-</style>
-
-<style>
-.dp__theme_dark {
-    --dp-border-color: var(--block-color) !important;
 }
 </style>

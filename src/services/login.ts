@@ -4,7 +4,7 @@ import { info } from "@tauri-apps/plugin-log";
 import qrcode from "qrcode-generator";
 import JSEncrypt from "jsencrypt";
 
-import { tryFetch, getBlob } from "./utils";
+import { tryFetch } from "./utils";
 import { commands } from "./backend";
 import { AppError } from "./error";
 import * as auth from "./auth";
@@ -23,11 +23,11 @@ export async function fetchUser() {
     }) as Types.UserInfo).data;
     const stat = (await tryFetch('https://api.bilibili.com/x/web-interface/nav/stat') as Types.UserStatResp).data;
     user.$patch({
-        avatar: await getBlob(info.face + '@100w_100h'),
+        avatar: info.face + '@100w_100h',
         name: info.name, desc: info.sign,
         mid: info.mid, level: info.level,
-        vipLabel: await getBlob(info.vip?.label?.img_label_uri_hans_static),
-        topPhoto: await getBlob(info.top_photo_v2.l_img + '@170h'),
+        vipLabel: info.vip?.label?.img_label_uri_hans_static,
+        topPhoto: info.top_photo_v2.l_img + '@170h',
         stat: {
             coins: info.coins,
             following: stat.following,

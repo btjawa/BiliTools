@@ -6,3 +6,4 @@ export { default as Switch } from './Switch.vue';
 export { default as TitleBar } from './TitleBar.vue';
 export { default as Updater } from './Updater.vue';
 export { default as ProgressBar } from './ProgressBar.vue';
+export { default as Image } from './Image.vue';
