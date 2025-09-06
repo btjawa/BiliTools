@@ -177,7 +177,35 @@
     },
     "history": {
         "title": "歷史記錄",
-        "refresh": "重新整理"
+        "refresh": "重新整理",
+        "keyword": "關鍵字",
+        "moreFilters": "更多篩選",
+        "download": "前往下載",
+        "placeholder": "開始日期 - 結束日期",
+        "filter": {
+            "apply": "套用篩選",
+            "duration": {
+                "all": "全部時長",
+                "under10": "10 分鐘以下",
+                "10to30": "10–30 分鐘",
+                "30to60": "30–60 分鐘",
+                "over60": "60 分鐘以上"
+            },
+            "time": {
+                "all": "全部時間",
+                "today": "今天",
+                "yesterday": "昨天",
+                "week": "近一週",
+                "custom": "自訂"
+            },
+            "device": {
+                "all": "所有裝置",
+                "pc": "PC",
+                "phone": "手機",
+                "pad": "平板",
+                "tv": "TV"
+            }
+        }
     },
     "down": {
         "title": "下載",

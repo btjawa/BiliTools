@@ -177,7 +177,35 @@
     },
     "history": {
         "title": "履歴",
-        "refresh": "更新"
+        "refresh": "更新",
+        "keyword": "キーワード",
+        "moreFilters": "詳細フィルター",
+        "download": "ダウンロードへ",
+        "placeholder": "開始日 - 終了日",
+        "filter": {
+            "apply": "適用",
+            "duration": {
+                "all": "すべての長さ",
+                "under10": "10 分未満",
+                "10to30": "10–30 分",
+                "30to60": "30–60 分",
+                "over60": "60 分以上"
+            },
+            "time": {
+                "all": "すべての期間",
+                "today": "今日",
+                "yesterday": "昨日",
+                "week": "直近 1 週間",
+                "custom": "カスタム"
+            },
+            "device": {
+                "all": "すべてのデバイス",
+                "pc": "PC",
+                "phone": "スマホ",
+                "pad": "タブレット",
+                "tv": "TV"
+            }
+        }
     },
     "down": {
         "title": "ダウンロード",

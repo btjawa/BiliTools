@@ -177,7 +177,35 @@
     },
     "history": {
         "title": "History",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "keyword": "Keyword",
+        "moreFilters": "More Filters",
+        "download": "Download",
+        "placeholder": "Start Date - End Date",
+        "filter": {
+            "apply": "Apply Filters",
+            "duration": {
+                "all": "All Durations",
+                "under10": "Under 10 min",
+                "10to30": "10–30 min",
+                "30to60": "30–60 min",
+                "over60": "Over 60 min"
+            },
+            "time": {
+                "all": "All Time",
+                "today": "Today",
+                "yesterday": "Yesterday",
+                "week": "Last 7 Days",
+                "custom": "Custom"
+            },
+            "device": {
+                "all": "All Devices",
+                "pc": "PC",
+                "phone": "Phone",
+                "pad": "Tablet",
+                "tv": "TV"
+            }
+        }
     },
     "down": {
         "title": "Downloads",

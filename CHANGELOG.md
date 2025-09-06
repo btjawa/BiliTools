@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0-7] - 2025-09-06
+
+## 更新
+
+- [`c7be98d`](https://github.com/btjawa/BiliTools/commit/c7be98d068f48601b9401a765f21eade5368547d) 支持 Linux -> Debian 系统 ([#97](https://github.com/btjawa/BiliTools/issues/97))
+- [`db6ade4`](https://github.com/btjawa/BiliTools/commit/db6ade470b06ad9a32aad09d4c57a757089c6fd7) 支持自动迁移数据库 ([#154](https://github.com/btjawa/BiliTools/issues/154))
+- [`db6ade4`](https://github.com/btjawa/BiliTools/commit/db6ade470b06ad9a32aad09d4c57a757089c6fd7) 支持更详细的错误栈追踪 & 微调调色方案
+- [`d042886`](https://github.com/btjawa/BiliTools/commit/d042886641ea95f646ce985a6ebd2caf7c405439) 支持解析历史记录 ([#107](https://github.com/btjawa/BiliTools/pull/107))
+
+## 修复
+
+- [`cc74e3b`](https://github.com/btjawa/BiliTools/commit/cc74e3bbb06d6424b63d4356791502ef6d5738e4) 修复 FLAC 在 MKV 下的混流问题 ([#151](https://github.com/btjawa/BiliTools/issues/151))
+- [`6c347a5`](https://github.com/btjawa/BiliTools/commit/6c347a5b8c46d8990b24eeb30a331d7dc9105441) 适配多种合集的解析方案 ([#158](https://github.com/btjawa/BiliTools/issues/158), [#159](https://github.com/btjawa/BiliTools/issues/159))
+
 ## [1.4.0-6] - 2025-09-02
 
 ## 更新

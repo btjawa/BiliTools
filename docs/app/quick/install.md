@@ -1,5 +1,5 @@
 <script setup>
-const APP_VERSION = '1.4.0-6';
+const APP_VERSION = '1.4.0-7';
 </script>
 
 # 下载 & 安装
@@ -36,6 +36,21 @@ const APP_VERSION = '1.4.0-6';
 
 ## <i class="fa-brands fa-linux"></i> Linux
 
-> [!INFO]
-> 由于 `AppImage` 的局限性，我们正在寻找新的打包方案<br>
-> 可在此 Issue 跟踪进度：[#97](https://github.com/btjawa/BiliTools/issues/97)
+> [!WARNING]
+> 尚未验证版本低于 Ubuntu 22.04 的机器可否正常运行<br>
+
+运行以下命令安装依赖：
+
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+```
+
+| x64 (x86-64, amd64) | arm64 (aarch64) |
+| ------------------- | --------------- |
+| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/bilitools_${APP_VERSION}_amd64.deb`">GitHub Releases</a> | / |
+
+下载后，定位到下载目录并使用 apt 安装 deb 包：
+
+```bash
+sudo apt-get install -y ./bilitools_x.y.z_amd64.deb
+```

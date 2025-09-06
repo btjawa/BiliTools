@@ -122,28 +122,24 @@ pub async fn db_import(input: PathBuf) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn init(app: tauri::AppHandle) -> TauriResult<InitData> {
-    if READY.set(()).is_err() {
-        #[cfg(not(debug_assertions))]
-        return Ok("403 Forbidden".into());
-    } else {
-        storage::init().await?;
-        services::init().await?;
-    }
+pub async fn meta(app: tauri::AppHandle) -> TauriResult<InitData> {
+    storage::init().await?;
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
     let config = config::read();
-    queue::runtime::TASK_MANAGER.snapshot(true).await?;
     Ok(InitData { version, hash, config })
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn init_login() -> TauriResult<()> {
+pub async fn init() -> TauriResult<()> {
     if READY.set(()).is_err() {
         #[cfg(not(debug_assertions))]
-        return Ok("403 Forbidden".into());
+        return Err(anyhow::anyhow!("403 Forbidden").into());
+    } else {
+        services::init().await?;
     }
+    queue::runtime::TASK_MANAGER.snapshot(true).await?;
     login::stop_login();
     login::get_buvid().await?;
     login::get_bili_ticket().await?;

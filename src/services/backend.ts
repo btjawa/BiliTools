@@ -5,52 +5,25 @@
 
 
 export const commands = {
-async stopLogin() : Promise<void> {
-    await TAURI_INVOKE("stop_login");
-},
-async exit() : Promise<Result<number, TauriError>> {
+async meta() : Promise<Result<InitData, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("exit") };
+    return { status: "ok", data: await TAURI_INVOKE("meta") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async smsLogin(cid: number, tel: string, code: string, captchaKey: string) : Promise<Result<number, TauriError>> {
+async init() : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("sms_login", { cid, tel, code, captchaKey }) };
+    return { status: "ok", data: await TAURI_INVOKE("init") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async pwdLogin(username: string, encodedPwd: string, token: string, challenge: string, validate: string, seccode: string) : Promise<Result<number, TauriError>> {
+async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("pwd_login", { username, encodedPwd, token, challenge, validate, seccode }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async switchCookie(switchCode: string) : Promise<Result<number, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("switch_cookie", { switchCode }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async scanLogin(qrcodeKey: string, event: TAURI_CHANNEL<number>) : Promise<Result<number, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("scan_login", { qrcodeKey, event }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("refresh_cookie", { refreshCsrf }) };
+    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -104,6 +77,57 @@ async dbExport(output: string) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async stopLogin() : Promise<void> {
+    await TAURI_INVOKE("stop_login");
+},
+async exit() : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("exit") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async smsLogin(cid: number, tel: string, code: string, captchaKey: string) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("sms_login", { cid, tel, code, captchaKey }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async pwdLogin(username: string, encodedPwd: string, token: string, challenge: string, validate: string, seccode: string) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pwd_login", { username, encodedPwd, token, challenge, validate, seccode }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async switchCookie(switchCode: string) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("switch_cookie", { switchCode }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async scanLogin(qrcodeKey: string, event: TAURI_CHANNEL<number>) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("scan_login", { qrcodeKey, event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("refresh_cookie", { refreshCsrf }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async submitTask(task: Task) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("submit_task", { task }) };
@@ -139,30 +163,6 @@ async ctrlEvent(event: CtrlEvent, sid: string, list: string[]) : Promise<Result<
 async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("update_max_conc", { newConc }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async init() : Promise<Result<InitData, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("init") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async initLogin() : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("init_login") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

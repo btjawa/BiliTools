@@ -60,14 +60,15 @@ onMounted(async () => {
 	router.push('/');
 	setEventHook();
 
-	const init = await commands.init();
-	if (init.status === 'error') throw new AppError(init.error);
-	const { config, ...initData } = init.data;
+	const [meta, init] = await Promise.all([
+		commands.meta(),
+		commands.init(),
+	]);
+	if (meta.status === 'error') throw new AppError(meta.error);
+	const { config, ...initData } = meta.data;
 	app.$patch({ ...initData });
 	settings.$patch(config);
-
-	const initLogin = await commands.initLogin();
-	if (initLogin.status === 'error') throw new AppError(initLogin.error);
+	if (init.status === 'error') throw new AppError(init.error);
 
 	await fetchUser();
 	await activateCookies();

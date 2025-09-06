@@ -21,10 +21,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
         .commands(collect_commands![
+            meta, init, set_window, config_write, open_cache, get_size, clean_cache, db_import, db_export, // Essentials
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            config_write, open_cache, get_size, clean_cache, db_import, db_export, // Settings
             submit_task, process_queue, open_folder, ctrl_event, update_max_conc, // Queue
-            init, init_login, set_window, // Basics
         ])
         .events(collect_events![
             shared::HeadersData, shared::ProcessError, shared::ThemeEvent, queue::runtime::QueueEvent
@@ -78,8 +77,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             log::info!("BiliTools v{}", version);
             builder.mount_events(app);
             shared::APP_HANDLE.set(app.app_handle().clone())?;
+            #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {
-                #[cfg(debug_assertions)]
                 window.open_devtools();
             }
             Ok(())

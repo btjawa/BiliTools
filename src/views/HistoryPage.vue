@@ -153,7 +153,7 @@ const p = reactive({
 	device_type: 0,
 })
 
-const coverCache = reactive<Record<string, string>>({});
+const coverCache = ref<Record<string, string>>({});
 
 const filters = {
 	duration: ['all', 'under10', '10to30', '30to60', 'over60'] as const,
@@ -187,7 +187,9 @@ async function update() {
 }
 
 async function refresh() {
-	for (const k in coverCache) delete coverCache[k];
+	for (const k in coverCache.value) {
+		delete coverCache.value[k];
+	}
 	Object.assign(v.select, {
 		duration: 'all',
 		time: 'all',
