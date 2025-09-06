@@ -158,7 +158,7 @@ async fn handle_danmaku(
     let id = subtask.id.clone();
     
     let prog = Progress::new(parent.clone(), id.clone());
-    prog.send(3, 1).await?;
+    prog.send(1, 0).await?;
 
     let danmaku = request_frontend::<Vec<u8>>(
         parent, Some(id.clone()), RequestAction::GetDanmaku
@@ -177,7 +177,6 @@ async fn handle_danmaku(
 
     if !config::read().convert.danmaku {
         fs::copy(&xml, get_unique_path(PathBuf::from(format!("{output_file}.xml")))).await?;
-        prog.send(2, 2).await?;
         return Ok(()); 
     }
     const NAME: &str = "DanmakuFactory";
@@ -188,7 +187,6 @@ async fn handle_danmaku(
     const EXEC: &str = "DanmakuFactory";
 
 
-    prog.send(3, 2).await?;
     let (mut _rx, child) = get_app_handle().shell().sidecar(EXEC)?
         .args([
             "-i", xml.to_string_lossy().as_ref(),
@@ -234,7 +232,7 @@ async fn handle_danmaku(
 
     fs::copy(&ass, get_unique_path(PathBuf::from(format!("{output_file}.ass")))).await?;
     fs::remove_file(&xml).await?;
-    prog.send(3, 3).await?;
+    prog.send(1, 1).await?;
     Ok(())
 }
 

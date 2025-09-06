@@ -116,7 +116,13 @@ async function handleMedia(task: Types.Task) {
 
 async function handleDanmaku(task: Types.Task, subtask: Types.SubTask) {
     const { select, item } = task;
-    return await extras.getDanmaku(item, subtask.type === 'liveDanmaku' ? false : select.danmaku.history);
+    const type = subtask.type === 'liveDanmaku' ? false : select.danmaku.history;
+    return await extras.getDanmaku((content, chunk) => handleEvent({
+        type: 'progress',
+        parent: task.id,
+        id: subtask.id,
+        status: { content, chunk }
+    }), item, type);
 }
 async function handleThumbs(task: Types.Task) {
     const { select, nfo } = task;
@@ -241,6 +247,7 @@ export async function handleEvent(event: backend.QueueEvent) {
     } else if (type === 'progress') {
         const status = queue.tasks?.[event.parent]?.status?.[event.id];
         if (status) Object.assign(status, event.status);
+        console.log(status, event);
     } else if (type === 'request') {
         const task = queue.tasks[event.parent];
         const subtask = task.subtasks.find(v => v.id === event.subtask);

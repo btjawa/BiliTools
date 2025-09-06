@@ -82,17 +82,33 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
         }
         if (data.ugc_season) {
             const target = data.ugc_season.sections.find(v => v.episodes.some(v => v.aid === data.aid));
-            if (target) list = target.episodes.map(map);
-            sections = {
-                target: target?.id ?? data.ugc_season.sections[0].id,
-                tabs: data.ugc_season.sections.map(v => ({
-                    id: v.id, name: v.title
-                })),
-                data: data.ugc_season.sections?.reduce<Record<number, Types.MediaItem[]>>((acc, { id, episodes }) => {
-                    if (!acc[id]) acc[id]= [];
-                    acc[id].push(...episodes.map(map));
-                    return acc;
-                }, {})
+            if (!target) throw new AppError(`No ugc season for target ${data.aid} found`);
+            const ep = target.episodes.find(v => v.aid === data.aid)!;
+            if (target.episodes.some(v => (v.pages.length ?? 0) > 1)) {
+                // fallback to pages
+                sections = {
+                    target: ep.aid,
+                    tabs: target.episodes.map(v => ({
+                        id: v.aid, name: v.title
+                    })),
+                    data: {
+                        [ep.aid]: list
+                    }
+                }
+
+            } else {
+                list = target.episodes.map(map);
+                sections = {
+                    target: target.id,
+                    tabs: data.ugc_season.sections.map(v => ({
+                        id: v.id, name: v.title
+                    })),
+                    data: data.ugc_season.sections?.reduce<Record<number, Types.MediaItem[]>>((acc, { id, episodes }) => {
+                        if (!acc[id]) acc[id] = [];
+                        acc[id].push(...episodes.map(map));
+                        return acc;
+                    }, {})
+                }
             }
         }
         if (data.rights.is_stein_gate) {

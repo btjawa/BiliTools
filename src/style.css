@@ -95,7 +95,7 @@
     background-color: var(--primary-color);
   }
   .checkbox {
-    @apply relative flex h-4 w-4 mr-4;
+    @apply relative flex h-4 w-4 mr-4 items-center justify-center;
     input[type='checkbox'] {
       @apply absolute appearance-none h-4 w-4 rounded-sm outline-0;
       @apply border border-(--split-color);
@@ -103,7 +103,7 @@
       @apply transition-colors;
     }
     i { 
-      @apply invisible absolute pointer-events-none text-xs left-[3px] top-[0.5px];
+      @apply invisible z-10 pointer-events-none text-xs;
       @apply text-(--primary-text);
     }
     input[type='checkbox']:checked {
@@ -122,7 +122,7 @@
         @apply w-4;
       }
       label {
-        @apply w-[3px] rounded-md h-4 invisible;
+        @apply w-[3px] rounded-md h-4 invisible shrink-0;
       }
       &.active {
         @apply bg-(--button-color) text-(--primary-color);

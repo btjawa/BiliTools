@@ -46,8 +46,8 @@
 				v-if="!v.searching && v.mediaInfo.list.length"
 			/>
 			</Transition>
-			<div class="flex flex-col gap-3 ml-auto min-w-32">
-				<button v-for="v in buttons" @click="v.action">
+			<div class="flex flex-col gap-3 ml-auto min-w-32 max-w-48 pb-6">
+				<button v-for="v in buttons" @click="v.action" class="shrink-0">
 					<i :class="[$fa.weight, v.icon]"></i>
 					<span>{{ $t(v.text) }}</span>
 				</button>
@@ -57,11 +57,11 @@
 					<span>{{ $t('page') }}</span>
 					<input type="number" v-model="v.pageIndex" @input="handlePage" />
 				</template>
-				<div class="tab">
-					<button v-for="t in v.mediaInfo.sections?.tabs" @click="v.tab = t.id"
+				<div class="tab overflow-auto">
+					<button v-for="t in v.mediaInfo.sections?.tabs" @click="updateTab(t.id)"
 						class="w-full!" :class="{ 'active': v.tab === t.id }"
 					>
-						<span>{{ t.name }}</span>
+						<span class="ellipsis">{{ t.name }}</span>
 						<label class="primary-color"></label>
 					</button>
 				</div>
@@ -127,7 +127,7 @@ const router = useRouter()
 const user = useUserStore();
 const settings = useSettingsStore();
 
-const updateIndex = () => {
+function updateIndex() {
 	const raw = v.mediaInfo.list.findIndex(v => v.isTarget);
 	const target = raw >= 0 ? raw : v.mediaInfo.list[0]?.index ?? 0;
 	v.checkboxs = [target];
@@ -136,13 +136,25 @@ const updateIndex = () => {
 	})
 }
 
-watch(() => v.tab, async (t) => {
+async function updateTab(t: number) {
+	v.tab = t;
 	v.searching = true;
-	v.mediaInfo.list = v.mediaInfo.sections?.data[t] ?? v.mediaInfo.list;
+	if (!v.mediaInfo.sections) return;
+	const list = v.mediaInfo.sections.data[t];
+	if (list) {
+		v.mediaInfo.list = list;
+	} else {
+		const info = await data.getMediaInfo(`av${t}`, v.mediaInfo.type);
+		const target = info.sections?.target ?? 0;
+		const list = info.sections?.data[target];
+		if (target && list) {
+			v.mediaInfo.sections.data[target] = list
+		}
+	}
 	await nextTick(); // trigger v-if
 	v.searching = false;
 	updateIndex();
-});
+}
 
 watch(() => v.checkboxs.length, (len) => {
 	if (len > 30) AppLog(i18n.global.t('error.selectLimit'), 'warning');

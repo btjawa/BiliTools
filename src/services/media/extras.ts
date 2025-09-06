@@ -126,7 +126,7 @@ export async function getNfo(item: Types.MediaItem, nfo: Types.MediaNfo, type: '
     return new TextEncoder().encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + xml);
 }
 
-export async function getDanmaku(item: Types.MediaItem, date?: false | string) {
+export async function getDanmaku(cb: (content: number, chunk: number) => void, item: Types.MediaItem, date?: false | string) {
     if (!item.aid || !item.cid) throw new AppError('No aid or cid found');
     const oid = item.cid;
     if (date) {
@@ -139,7 +139,9 @@ export async function getDanmaku(item: Types.MediaItem, date?: false | string) {
     const user = useUserStore();
     const url = user.isLogin ? 'https://api.bilibili.com/x/v2/dm/wbi/web/seg.so' : 'https://api.bilibili.com/x/v2/dm/web/seg.so';
     const content = Math.ceil((item.duration ?? 0) / 360);
+    cb(content + 1, 1);
     for (let i = 1; i <= content; i++) {
+        cb(content + 1, i)
         const params = {
             type: 1, oid, pid: item.aid, segment_index: i,
         }

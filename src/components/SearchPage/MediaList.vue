@@ -80,9 +80,14 @@ const inRange = (i: number) =>
 
 function click(i: number) {
     const click = clickIndex.value;
-    if (!shiftActive.value) {
+    if (!shiftActive.value && checkboxs.value) {
         clickIndex.value = i;
-        checkboxs.value?.push(i);
+        const idx = checkboxs.value?.indexOf(i);
+        if (idx === -1) {
+            checkboxs.value?.push(i);
+        } else {
+            checkboxs.value?.splice(idx, 1);
+        }
         return;
     }
     const start = Math.min(click, i);

@@ -29,6 +29,12 @@ export interface UgcInfo {
     part: string;
     duration: number;
   };
+  pages: {
+    cid: number;
+    page: number;
+    part: string;
+    duration: number;
+  }[];
   bvid: string;
 }
 
