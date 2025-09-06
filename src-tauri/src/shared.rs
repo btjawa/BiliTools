@@ -105,10 +105,11 @@ impl Theme {
 }
 
 // Window effect configuration
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum WindowEffect {
     /// Auto window effect based on platform
+    #[default]
     Auto,
     /// Mica effect (Windows 11+)
     Mica,
@@ -118,12 +119,6 @@ pub enum WindowEffect {
     Sidebar,
     /// No window effect
     None,
-}
-
-impl Default for WindowEffect {
-    fn default() -> Self {
-        WindowEffect::Auto
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Type, Event)]

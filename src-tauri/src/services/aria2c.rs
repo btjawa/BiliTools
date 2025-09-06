@@ -256,7 +256,7 @@ pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> Tau
     let url = reqwest::Url::parse(&urls[0])?;
     let name = url.path_segments()
         .ok_or(anyhow!("Failed to get path segments: {url:?}"))?
-        .last().ok_or(anyhow!("Failed to get file name: {url:?}"))?;
+        .next_back().ok_or(anyhow!("Failed to get file name: {url:?}"))?;
     let output = dir.join(name);
 
     match ARIA2_RPC.request::<Aria2TellStatus>("tellStatus", vec![json!(gid)]).await {
