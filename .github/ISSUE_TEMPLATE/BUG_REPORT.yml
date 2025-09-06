@@ -14,7 +14,7 @@ body:
         2. 请确保没有重复的 Issue / Discussion。
         3. 请确保这是 BiliTools 的问题，而不是其他原因。对于其他原因，您可以发起 [Discussion](https://github.com/btjawa/BiliTools/discussions/new/choose)
         4. 请确保您已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
-        <br>
+        
         Thank you for reporting bugs! Before submitting, please read the following points:
         1. **The title should summarize the topic, CANNOT be left blank, while keeping the existing prefix.**
         2. Make sure there are no duplicate issues or discussions.
@@ -25,6 +25,7 @@ body:
       label: BiliTools version / BiliTools 版本
       description: |
         Please use the exact version code.
+
         请使用确切的版本号。
       placeholder: v1.x.x
     validations:
@@ -34,11 +35,16 @@ body:
       label: Download link / 下载的资源链接
       description: |
         This can be a URL, or AV / BV number, etc.
+
         可以是 URL 链接，或是 AV / BV 号等。
 
   - type: textarea
     attributes:
       label: Describe the bug / 问题描述
+      description: |
+        Please describe the problem as detailed as possible, as this will help us better solve the problem.
+
+        请尽可能详细的描述问题，这有助于我们更好的解决问题。
     validations:
       required: true
 
@@ -47,6 +53,7 @@ body:
       label: System type / 系统类型
       description: |
         For Linux, Please add your distribution and version in Reproduction.
+
         对于 Linux, 请在“复现步骤”中添加你的发行版与版本。
       options:
         - Windows 10
@@ -62,6 +69,7 @@ body:
       label: Reproduction / 复现步骤
       description: |
         How to reproduce the problem you ran into?
+
         如何复现你提到的问题？
     validations:
       required: true
@@ -71,13 +79,20 @@ body:
       label: Logs / 日志
       description: |
         Please upload your logs. DO NOT paste the log text directly.
+
         请上传你的日志文件。不要直接粘贴日志文本。
 
         Windows: %LOCALAPPDATA%\com.btjawa.bilitools\logs
+
         macOS: $HOME/Library/Logs/com.btjawa.bilitools
+
         Linux:
+
           $XDG_CONFIG_HOME/com.btjawa.bilitools/logs
+
           or:
+
           $HOME/.config/com.btjawa.bilitools/logs
+
     validations:
       required: true
