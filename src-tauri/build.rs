@@ -11,9 +11,9 @@ fn main() {
         use std::{fs, path::PathBuf};
         let out = PathBuf::from("./target/debug");
         let _ = fs::create_dir_all(&out);
-        let _ = fs::copy("./binaries/aria2c-x86_64-unknown-linux-gnu", &out.join("aria2c"));
-        let _ = fs::copy("./binaries/ffmpeg-x86_64-unknown-linux-gnu", &out.join("ffmpeg"));
-        let _ = fs::copy("./binaries/DanmakuFactory-x86_64-unknown-linux-gnu", &out.join("DanmakuFactory"));
+        let _ = fs::copy("./binaries/aria2c-x86_64-unknown-linux-gnu", out.join("aria2c"));
+        let _ = fs::copy("./binaries/ffmpeg-x86_64-unknown-linux-gnu", out.join("ffmpeg"));
+        let _ = fs::copy("./binaries/DanmakuFactory-x86_64-unknown-linux-gnu", out.join("DanmakuFactory"));
     }
 
     tauri_build::build()
