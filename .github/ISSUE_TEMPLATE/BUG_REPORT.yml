@@ -5,22 +5,21 @@ labels: ["bug", "needs triage"]
 assignees: []
 
 body:
-  - type: checkboxes
+  - type: markdown
     attributes:
-      label: Please confirm before submitting
-      options:
-        - label: |
-            I'm sure there are no duplicate issues or discussions.
-            我确定没有重复的 Issue 或 Discussion。
-          required: true
-        - label: |
-            I'm sure it's BiliTools' problem and not something else.
-            我确定这是 BiliTools 的问题，而不是其他个人因素、网络因素等原因。
-          required: true
-        - label: |
-            I have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
-            我已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
-          required: true
+      value: |
+        ## First of all
+        感谢您愿意反馈 bug！在提交问题前，请先阅读以下几点：
+        1. **标题应简要概述主题，不可留空，同时保留模板中已有前缀。**
+        2. 请确保没有重复的 Issue / Discussion。
+        3. 请确保这是 BiliTools 的问题，而不是其他原因。对于其他原因，您可以发起 [Discussion](https://github.com/btjawa/BiliTools/discussions/new/choose)
+        4. 请确保您已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
+        <br>
+        Thank you for reporting bugs! Before submitting, please read the following points:
+        1. **The title should summarize the topic, CANNOT be left blank, while keeping the existing prefix.**
+        2. Make sure there are no duplicate issues or discussions.
+        3. Make sure it's BiliTools' problem and not something else.
+        4. Make sure you have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
   - type: textarea
     attributes:
       label: BiliTools version / BiliTools 版本
@@ -46,12 +45,15 @@ body:
   - type: dropdown
     attributes:
       label: System type / 系统类型
+      description: |
+        For Linux, Please add your distribution and version in Reproduction.
+        对于 Linux, 请在“复现步骤”中添加你的发行版与版本。
       options:
         - Windows 10
         - Windows 11
         - macOS M-series Chip
         - macOS Intel Chip
-        - Linux (Please add your distribution in Reproduction)
+        - Linux
     validations:
       required: true
 
@@ -68,10 +70,14 @@ body:
     attributes:
       label: Logs / 日志
       description: |
-        Please upload your logs.
-        请上传你的日志文件。
+        Please upload your logs. DO NOT paste the log text directly.
+        请上传你的日志文件。不要直接粘贴日志文本。
 
         Windows: %LOCALAPPDATA%\com.btjawa.bilitools\logs
         macOS: $HOME/Library/Logs/com.btjawa.bilitools
+        Linux:
+          $XDG_CONFIG_HOME/com.btjawa.bilitools/logs
+          or:
+          $HOME/.config/com.btjawa.bilitools/logs
     validations:
       required: true

@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/logo.svg" width=500 />
+<img src=".github/logo.svg" width=500 />
 
 <h1>BiliTools - 哔哩哔哩工具箱</h1>
 
@@ -32,7 +32,7 @@
 
 | 暗色 | 亮色 |
 | -------------------------- | ---------------------------- |
-| ![Dark](./assets/dark.png) | ![Light](./assets/light.png) |
+| ![Dark](.github/dark.png) | ![Light](.github/light.png) |
 
 > [!IMPORTANT]
 > 本项目基于用户账号解析资源，因此你需要订阅大会员、或是购买对应内容后才能解析对应资源

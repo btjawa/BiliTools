@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/logo.svg" width=500 />
+<img src=".github/logo.svg" width=500 />
 
 <h1>BiliTools - A Bilibili Toolbox</h1>
 

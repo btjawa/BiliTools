@@ -9,116 +9,125 @@
 > 
 > If you'd like to contribute versions in other languages, feel free to submit a Pull Request or Issue!
 
-感谢您有意为 BiliTools 做出贡献！
+感谢您有兴趣为 BiliTools 做出贡献！
 
-无论是报告 bug、提出建议、改进文档、亦或是提交代码，我们都非常欢迎。
+无论是报告 bug、提交代码、改进文档、亦或是提出建议，我们都非常欢迎。
 
-## 总览
+## 问题报告
 
-本项目是一个公益、开源的 [哔哩哔哩](https://www.bilibili.com) 工具箱，旨在学习技术与测试代码。
+**请不要在 Issues 中提交与项目无关的内容。**
 
-本项目遵循 [GPL-3.0-or-later](/LICENSE) 开源协议，任何形式的二次分发必须 **继续开源、遵守相同协议、保留原作者及版权信息**。
+如果您准备提交功能请求或是报告 bug，请创建 [Issue](https://github.com/btjawa/BiliTools/issues/new/choose)。
 
-本项目基于 [Tauri v2](https://v2.tauri.app) 框架构建，采用 “前后端分离” 架构：
-- 前端由 [Vite](https://vitejs.dev/) + [Vue3](https://vuejs.org/) 构建，负责用户界面与交互
-- 后端使用 [Rust](https://www.rust-lang.org/) 实现本地功能逻辑，通过 IPC 通道与前端通信
+对于一般性问题（如 *xxx无法下载*、*xxx报错* 等）或是求助，请发起 [Discussion](https://github.com/btjawa/BiliTools/discussions/new/choose)。
 
-## 目录结构
+- 请尽可能清晰而准确的描述您的需求或问题，对于错误，请提供尽可能详细的复现步骤。**如果没有充足的错误信息，我们将很难排查问题。**
+- 请您耐心等待：我们的时间与精力有限，同时鉴于本项目免费公益的性质，我们无法保证您的问题可被快速处理。
 
-- `src/` 前端源代码
-  - `assets/` 静态资源
-  - `components/` 各 Vue 组件
-  - `views/` 页面入口
-  - `lib/` 静态库
-  - `proto/` ProtoBuf 相关
-  - `router/` 页面导航路由
-  - `services/` 前端逻辑 (API 请求，推送队列与同步状态等)
-  - `store/` Pinia 全局响应式状态管理
-  - `i18n/` 多语言支持
-    - `locales` 多语言翻译
-  - `types/` TS 类型声明
-- `src-tauri`
-  - `binaries/` Sidecar
-  - `capabilities/` Tauri 运行时权限
-  - `src/` 后端源代码
-    - `services/` 后端服务 (aria2c, ffmpeg, login, queue)
-    - `storage/` 数据持久化 (config, cookies, archive)
-- `scripts/` 构建工具脚本
+## Pull Request
 
-## Issue 与 Discussion
+**提交 PR 时请提交至主仓库的 `dev` 分支，不要提交至 `master` 分支。**
 
-如果您准备提交 **代码相关问题或建议**（如功能请求、BUG 反馈等）请提交 **Issue**。
+所有提交信息都应遵循 [约定式提交](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 规范，例：
+- `feat: add notifications support for macOS`
+- `fix: ffmpeg path handling issue`
+- `chore: cleanup unused assets`
+- `refactor: simplify error handling`
+- `docs: update install guide`
+- `pref: improve playurl parsing speed`
 
-对于 **一般性问题**（如 *xxx无法下载*、*xxx报错* 等）请优先发起 **Discussion**。
-
-### Issue
-
-[创建 Issue](https://github.com/btjawa/BiliTools/issues/new/choose) 时，根据对应的需求选择对应的模板，并按照指示填写足够的信息。
-
-根据对应模板的指示填写足够的信息，例如上传足够的日志或截图。
-
-我们会优先处理 *实现参考* 或 *复现步骤* 足够的 Issue。
-
-1. 标题应简要概述主题，**不可留空**，同时保留模板中已有前缀。
-2. 强烈建议将日志作为文件上传，而不是粘贴日志文本，后者不便阅读。
-
-### Discussion
-
-[发起 Discussion](https://github.com/btjawa/BiliTools/discussions/new/choose) 时，根据对应的需求选择对应的模板。
-
-1. 标题应简要概述主题，**不可留空**。
-2. 正文部分需描述清楚问题，请尽量详细以便于社区帮助您。
+1. [Fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) 并克隆仓库
+2. 为更改创建一个新分支
+3. 遵循上述的提交信息规范来提交更改
+4. 将分支推送到您的 Fork，随后在主仓库打开 Pull Request
 
 ## 开发向导
 
-### 准备
+请按照 [Tauri 官方文档](https://v2.tauri.app/start/prerequisites/) 配置你的环境。以下依赖有版本要求：
+ - [Rust 1.80.0+](https://www.rust-lang.org/tools/install)
+ - [Node.js 20.0+](https://nodejs.org/en/download)
 
-如总览所述，您需要准备以下环境：
+### App 开发
 
-- [Rust 1.80.0+](https://www.rust-lang.org/tools/install)
-- [Node.js 20.0+](https://nodejs.org/en/download)
+在定位到项目根目录后：
 
-参考 Tauri 官方文档进行完整配置：[Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
-
-克隆项目并安装依赖：
+- 安装前端依赖
 
 ```bash
-$ git clone https://github.com/btjawa/BiliTools.git
-$ cd BiliTools
-$ npm install
+npm install
 ```
 
-启动开发服务器与实例：
+- 对于 **Ubuntu**，安装以下依赖
+
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+```
+
+- 启动开发服务器
 
 ```bash
 npm run tauri dev
 ```
 
-### 分支策略
+- 构建项目
 
-- `dev`：开发分支，存储开发中、且不稳定的代码，提交新功能与修复
-- `master`：稳定分支，仅在发布版本时合并
+```bash
+npm run tauri build
+```
 
-**提交 PR 时请提交至主仓库的 `dev` 分支，切勿提交至 `master` 分支。**
+### 文档开发
 
-### 提交规范
+本项目使用 [Vitepress](https://vitepress.dev/) 托管文档，位于 `docs` 文件夹内，使用单独的 `package.json`。
 
-所有提交信息都应遵循 [约定式提交](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 规范。
+在定位到 `docs` 目录后：
 
-例：
-- `feat: notifications for Linux`
-- `fix: increase aria2c polling interval`
-- `chore: cleanup unused assets`
+- 安装依赖
 
-### 代码风格 & 技术选型
+```bash
+npm install
+```
 
-#### 前端
+- 启动文档开发服务器
+
+```bash
+npm run docs:dev
+```
+
+- 构建文档
+
+```bash
+npm run docs:build
+```
+
+### 贡献更改
+
+在提交更改前，请至少进行以下质量及编译检查，并确保尽数通过：
+
+- 在 `./` 目录下：
+
+```bash
+npm run build
+```
+
+- 在 `./src-tauri` 目录下：
+
+```bash
+cargo clippy
+```
+
+确保代码合格后，请参考 [Pull Request](#pull-request) 进行贡献。
+
+非常感谢您对本项目做出的贡献！
+
+## 技术选型 & 代码风格
+
+### 前端
 
 我们推荐优先使用 [TypeScript](https://www.typescriptlang.org/) 而非传统 [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)。
 
 TypeScript 相比后者具有更强的类型系统，有助于在开发阶段修复潜在错误，提升可维护性。
 
-例如：
+例：
 
 - 使用 `.ts` 文件而不是 `.js` 文件。
 - 在 `.vue` 文件中，为 `<script>` 标签添加 `lang="ts"` 属性:
@@ -129,7 +138,7 @@ TypeScript 相比后者具有更强的类型系统，有助于在开发阶段修
 
 Vue 开发时，请使用 `Composition API` 而不是 `Options API`。
 
-例如：
+例：
 
 - 为 `<script>` 标签添加 `setup` 属性：
 ```html
@@ -137,13 +146,13 @@ Vue 开发时，请使用 `Composition API` 而不是 `Options API`。
 </script>
 ```
 
-#### 后端
+### 后端
 
 尽可能使用 `anyhow::Result` 代替标准库的 Result，同时请尽可能少的使用 `unwrap()` ，而是使用 `?` 冒泡向上传递错误。
 
 对于关键逻辑，请使用 `anyhow::Context` 添加报错上下文。
 
-#### 关于 AI
+## 关于 AI
 
 请不要提交完全由 AI 生成，且未经您本人理解、 测试与检查的代码。
 
@@ -154,15 +163,3 @@ AI 工具可以辅助您更高效的开发，但请不要让 AI 负责编写全�
 - 符合项目整体的代码风格；
 - 经过充分测试、检查与验证；
 - 可以由您本人清楚解释其实现逻辑。
-
-## 贡献更改
-
-在打开 Pull Request 前，请至少进行以下质量及编译检查：
-
-- 在 `./` 目录下：
-  - `npm run build`
-
-- 在 `./src-tauri` 目录下：
-  - `cargo clippy`
-
-请确保检查尽数通过后，再进行贡献。

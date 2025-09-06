@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/logo.svg" width=500 />
+<img src=".github/logo.svg" width=500 />
 
 <h1>BiliTools - Bilibili ツールボックス</h1>
 
@@ -30,10 +30,6 @@
 - 🧾 その他情報：[https://btjawa.top/bilitools](https://btjawa.top/bilitools)
 
 - 🚀 ダウンロード：[Releases](https://github.com/btjawa/BiliTools/releases)
-
-| ダーク | ライト |
-| -------------------------- | ---------------------------- |
-| ![Dark](./assets/dark.png) | ![Light](./assets/light.png) |
 
 > [!IMPORTANT] 
 > **本プロジェクトは [ビリビリ中国版](https://www.bilibili.com) を対象としています。[ビリビリ海外版](https://www.bilibili.tv) には対応していません。**<br>
