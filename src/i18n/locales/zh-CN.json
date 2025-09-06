@@ -231,6 +231,14 @@
             "dark": "深色",
             "auto": "遵循系统"
         },
+        "window_effect": {
+            "name": "窗口效果",
+            "auto": "自动",
+            "mica": "Mica",
+            "acrylic": "Acrylic", 
+            "sidebar": "Sidebar",
+            "none": "无"
+        },
         "clipboard": {
             "name": "监听剪贴板",
             "desc": "若启用，则会自动检测剪贴板中的哔哩哔哩链接并搜索。"

@@ -58,6 +58,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         notify: true,
         temp_dir: get_app_handle().path().temp_dir().expect("Failed to get temp_dir"),
         theme: Theme::Auto,
+        window_effect: WindowEffect::Auto,
         organize: SettingsOrganize {
             auto_rename: true,
             top_folder: true,
@@ -100,6 +101,28 @@ impl Theme {
             Theme::Dark => Some(tauri::Theme::Dark),
             Theme::Auto => None,
         }
+    }
+}
+
+// Window effect configuration
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum WindowEffect {
+    /// Auto window effect based on platform
+    Auto,
+    /// Mica effect (Windows 11+)
+    Mica,
+    /// Acrylic effect (Windows 10+)
+    Acrylic,
+    /// Sidebar effect (macOS)
+    Sidebar,
+    /// No window effect
+    None,
+}
+
+impl Default for WindowEffect {
+    fn default() -> Self {
+        WindowEffect::Auto
     }
 }
 
@@ -249,8 +272,8 @@ pub struct ThemeEvent {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriResult<()> {
-    use tauri::{utils::{config::WindowEffectsConfig, WindowEffect}, window::Color};
+pub fn set_window(window: tauri::WebviewWindow, theme: Theme, window_effect: WindowEffect) -> crate::TauriResult<()> {
+    use tauri::{utils::{config::WindowEffectsConfig, WindowEffect as TauriWindowEffect}, window::Color};
     use tauri_plugin_os::Version;
     #[cfg(target_os = "windows")]
     window.with_webview(|webview| unsafe {
@@ -304,29 +327,57 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
         }))?;
         Ok::<(), anyhow::Error>(())
     };
-    match tauri_plugin_os::platform() {
-        "windows" => if let Version::Semantic(_, _, patch) = tauri_plugin_os::version() {
-            if patch >= 22000 {
-                window.set_effects(WindowEffectsConfig {
-                    effects: vec![WindowEffect::Mica],
+
+    // Apply window effects based on user preference
+    match window_effect {
+        WindowEffect::Auto => {
+            // Keep original auto behavior based on platform
+            match tauri_plugin_os::platform() {
+                "windows" => if let Version::Semantic(_, _, patch) = tauri_plugin_os::version() {
+                    if patch >= 22000 {
+                        window.set_effects(WindowEffectsConfig {
+                            effects: vec![TauriWindowEffect::Mica],
+                            ..Default::default()
+                        })?
+                    } else if !(18362..=22000).contains(&patch) {
+                        window.set_effects(WindowEffectsConfig {
+                            effects: vec![TauriWindowEffect::Acrylic],
+                            ..Default::default()
+                        })?
+                    } else {
+                        set_default()?
+                    }
+                } else {
+                    set_default()?
+                },
+                "macos" => window.set_effects(WindowEffectsConfig {
+                    effects: vec![TauriWindowEffect::Sidebar],
                     ..Default::default()
-                })?
-            } else if !(18362..=22000).contains(&patch) {
-                window.set_effects(WindowEffectsConfig {
-                    effects: vec![WindowEffect::Acrylic],
-                    ..Default::default()
-                })?
-            } else if patch < 22621 {
-                set_default()?
+                })?,
+                _ => set_default()?
             }
-        } else {
-            set_default()?
         },
-        "macos" => window.set_effects(WindowEffectsConfig {
-            effects: vec![WindowEffect::Sidebar],
-            ..Default::default()
-        })?,
-        _ => set_default()?
+        WindowEffect::Mica => {
+            window.set_effects(WindowEffectsConfig {
+                effects: vec![TauriWindowEffect::Mica],
+                ..Default::default()
+            })?
+        },
+        WindowEffect::Acrylic => {
+            window.set_effects(WindowEffectsConfig {
+                effects: vec![TauriWindowEffect::Acrylic],
+                ..Default::default()
+            })?
+        },
+        WindowEffect::Sidebar => {
+            window.set_effects(WindowEffectsConfig {
+                effects: vec![TauriWindowEffect::Sidebar],
+                ..Default::default()
+            })?
+        },
+        WindowEffect::None => {
+            set_default()?
+        }
     }
     Ok(())
 }

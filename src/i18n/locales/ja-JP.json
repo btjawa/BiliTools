@@ -231,6 +231,14 @@
             "dark": "ダーク",
             "auto": "システムに従う"
         },
+        "window_effect": {
+            "name": "ウィンドウ効果",
+            "auto": "自動",
+            "mica": "Mica",
+            "acrylic": "Acrylic",
+            "sidebar": "Sidebar",
+            "none": "効果なし"
+        },
         "clipboard": {
             "name": "クリップボード監視",
             "desc": "有効時、クリップボードの Bilibili リンクを自動検出して検索します。"

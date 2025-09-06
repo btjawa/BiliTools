@@ -45,7 +45,7 @@ export function setEventHook() {
     watch(settings.$state, (v) => {
         i18n.global.locale.value = v.language;
         commands.configWrite(v);
-        commands.setWindow(v.theme);
+        commands.setWindow(v.theme, v.window_effect);
         commands.updateMaxConc(v.max_conc);
     }, { deep: true });
     events.headersData.listen(e => app.$patch({

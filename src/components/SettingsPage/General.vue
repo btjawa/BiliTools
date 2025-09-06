@@ -21,6 +21,18 @@
         v-model="settings.theme"
     />
 </section>
+<section>
+    <h3>
+        <i class="fa-solid fa-window-maximize"></i>
+        <span>{{ $t('settings.window_effect.name') }}</span>
+    </h3>
+    <Dropdown
+        :drop="['auto', 'mica', 'acrylic', 'sidebar', 'none'].map(id => ({
+            id, name: $t('settings.window_effect.' + id)
+        }))"
+        v-model="settings.window_effect"
+    />
+</section>
 <hr />
 <section>
     <h3>
