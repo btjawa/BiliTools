@@ -9,7 +9,7 @@ use specta::Type;
 use sqlx::Row;
 
 use super::db::{get_db, TableSpec};
-use crate::shared::{get_app_handle, Theme, CONFIG};
+use crate::shared::{get_app_handle, Theme, WindowEffect, CONFIG};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +37,7 @@ pub struct Settings {
     pub notify: bool,
     pub temp_dir: PathBuf,
     pub theme: Theme,
+    pub window_effect: WindowEffect,
     pub organize: SettingsOrganize,
     pub proxy: SettingsProxy,
 }

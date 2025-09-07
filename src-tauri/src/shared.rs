@@ -1,4 +1,4 @@
-use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry};
+use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry, utils::WindowEffect as TauriWindowEffect, Theme as TauriTheme};
 use std::{collections::BTreeMap, path::PathBuf, sync::{Arc, LazyLock}};
 use tauri_plugin_http::reqwest::{Client, Proxy};
 use rand::{distr::Alphanumeric, Rng};
@@ -58,6 +58,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         notify: true,
         temp_dir: get_app_handle().path().temp_dir().expect("Failed to get temp_dir"),
         theme: Theme::Auto,
+        window_effect: WindowEffect::Auto,
         organize: SettingsOrganize {
             auto_rename: true,
             top_folder: true,
@@ -94,11 +95,58 @@ pub enum Theme {
 }
 
 impl Theme {
-    pub fn as_tauri(&self) -> Option<tauri::Theme> {
+    pub fn as_tauri(&self) -> TauriTheme {
         match self {
-            Theme::Light => Some(tauri::Theme::Light),
-            Theme::Dark => Some(tauri::Theme::Dark),
-            Theme::Auto => None,
+            Theme::Light => TauriTheme::Light,
+            Theme::Dark => TauriTheme::Dark,
+            Theme::Auto => match dark_light::detect() {
+                Ok(dark_light::Mode::Dark) => TauriTheme::Dark,
+                Ok(dark_light::Mode::Light) => TauriTheme::Light,
+                _ => TauriTheme::Light,
+            },
+        }
+    }
+}
+
+// Window effect configuration
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Type, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum WindowEffect {
+    /// Auto window effect based on platform
+    #[default]
+    Auto,
+    /// Mica effect (Windows 11+)
+    Mica,
+    /// Acrylic effect (Windows 10+)
+    Acrylic,
+    /// Sidebar effect (macOS)
+    Sidebar,
+    /// No window effect
+    None,
+}
+
+impl WindowEffect {
+    pub fn as_tauri(&self) -> Option<TauriWindowEffect> {
+        match self {
+            WindowEffect::Auto => match tauri_plugin_os::platform() {
+                "windows" => if let tauri_plugin_os::Version::Semantic(_, _, patch) = tauri_plugin_os::version() {
+                    if patch >= 22000 {
+                        Some(TauriWindowEffect::Mica)
+                    } else if !(18362..=22000).contains(&patch) {
+                        Some(TauriWindowEffect::Acrylic)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                },
+                "macos" => Some(TauriWindowEffect::Sidebar),
+                _ => None
+            },
+            WindowEffect::Mica => Some(TauriWindowEffect::Mica),
+            WindowEffect::Acrylic => Some(TauriWindowEffect::Acrylic),
+            WindowEffect::Sidebar => Some(TauriWindowEffect::Sidebar),
+            WindowEffect::None => None,
         }
     }
 }
@@ -241,19 +289,16 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     e
 }
 
-#[derive(Clone, Serialize, Deserialize, Type, Event)]
-pub struct ThemeEvent {
-    dark: bool,
-    color: Option<&'static str>
-}
-
 #[tauri::command]
 #[specta::specta]
-pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriResult<()> {
-    use tauri::{utils::{config::WindowEffectsConfig, WindowEffect}, window::Color};
-    use tauri_plugin_os::Version;
-    #[cfg(target_os = "windows")]
-    window.with_webview(|webview| unsafe {
+pub fn set_window(
+    window: tauri::WebviewWindow,
+    theme: Theme,
+    window_effect: WindowEffect
+) -> crate::TauriResult<(bool, Option<&'static str>)> {
+    use tauri::{utils::config::WindowEffectsConfig, window::Color};
+    #[cfg(target_os = "windows")] {
+    let init_webview = |webview: tauri::webview::PlatformWebview| unsafe {
         use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
         use windows::core::Interface;
         let settings = webview.controller().CoreWebView2()
@@ -264,69 +309,41 @@ pub fn set_window(window: tauri::WebviewWindow, theme: Theme) -> crate::TauriRes
             }).ok();
         if let Some(s) = settings {
             #[cfg(not(debug_assertions))]
-            let _ = s.SetAreBrowserAcceleratorKeysEnabled(false);
-            let _ = s.SetAreDefaultContextMenusEnabled(false);
-            let _ = s.SetIsPasswordAutosaveEnabled(false);
-            let _ = s.SetIsGeneralAutofillEnabled(false);
-            let _ = s.SetIsZoomControlEnabled(false);
+            s.SetAreBrowserAcceleratorKeysEnabled(false)?;
+            s.SetAreDefaultContextMenusEnabled(false)?;
+            s.SetIsPasswordAutosaveEnabled(false)?;
+            s.SetIsGeneralAutofillEnabled(false)?;
+            s.SetIsZoomControlEnabled(false)?;
         }
-    })?;
-    window.set_theme(theme.as_tauri())?;
-    let theme = if theme == Theme::Auto {
-        match dark_light::detect() {
-            Ok(dark_light::Mode::Dark) => tauri::Theme::Dark,
-            Ok(dark_light::Mode::Light) => tauri::Theme::Light,
-            _ => tauri::Theme::Light,
-        }
-    } else {
-        theme.as_tauri().unwrap_or(tauri::Theme::Light)
+        Ok::<(), crate::TauriError>(())
     };
-    ThemeEvent {
-        dark: theme == tauri::Theme::Dark,
-        color: None,
-    }.emit(&window)?;
-    let set_default = || {
-        window.set_background_color(Some(match theme {
-            tauri::Theme::Dark => {
-                ThemeEvent {
-                    dark: true,
-                    color: Some("#202020")
-                }.emit(&window)?;
-                Color(32, 32, 32, 128)
-            },
-            _ => {
-                ThemeEvent {
-                    dark: false,
-                    color: Some("#f9f9f9")
-                }.emit(&window)?;
-                Color(249, 249, 249, 128)
-            },
-        }))?;
-        Ok::<(), anyhow::Error>(())
-    };
-    match tauri_plugin_os::platform() {
-        "windows" => if let Version::Semantic(_, _, patch) = tauri_plugin_os::version() {
-            if patch >= 22000 {
-                window.set_effects(WindowEffectsConfig {
-                    effects: vec![WindowEffect::Mica],
-                    ..Default::default()
-                })?
-            } else if !(18362..=22000).contains(&patch) {
-                window.set_effects(WindowEffectsConfig {
-                    effects: vec![WindowEffect::Acrylic],
-                    ..Default::default()
-                })?
-            } else if patch < 22621 {
-                set_default()?
-            }
-        } else {
-            set_default()?
+    window.with_webview(move |webview| {
+        let _ = init_webview(webview).map_err(|e| process_err(e, "set_window"));
+    })? }
+    let theme = theme.as_tauri();
+    let is_dark = theme == TauriTheme::Dark;
+    window.set_theme(Some(theme))?;
+    match window_effect.as_tauri() {
+        Some(v) => {
+            window.set_background_color(Some(Color(0,0,0,0)))?;
+            window.set_effects(WindowEffectsConfig {
+                effects: vec![v],
+                ..Default::default()
+            })?;
+            Ok((is_dark, None))
         },
-        "macos" => window.set_effects(WindowEffectsConfig {
-            effects: vec![WindowEffect::Sidebar],
-            ..Default::default()
-        })?,
-        _ => set_default()?
+        None => {
+            let (hex, rgb) = if is_dark {
+                ("#202020", Color(32,32,32,128))
+            } else {
+                ("#f9f9f9", Color(249,249,249,128))
+            };
+            window.set_background_color(Some(rgb))?;
+            window.set_effects(WindowEffectsConfig {
+                effects: vec![],
+                ..Default::default()
+            })?;
+            Ok((is_dark, Some(hex)))
+        }
     }
-    Ok(())
 }

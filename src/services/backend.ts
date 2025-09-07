@@ -21,9 +21,9 @@ async init() : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async setWindow(theme: Theme) : Promise<Result<null, TauriError>> {
+async setWindow(theme: Theme, windowEffect: WindowEffect) : Promise<Result<[boolean, string | null], TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme }) };
+    return { status: "ok", data: await TAURI_INVOKE("set_window", { theme, windowEffect }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -176,13 +176,11 @@ async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
 export const events = __makeEvents__<{
 headersData: HeadersData,
 processError: ProcessError,
-queueEvent: QueueEvent,
-themeEvent: ThemeEvent
+queueEvent: QueueEvent
 }>({
 headersData: "headers-data",
 processError: "process-error",
-queueEvent: "queue-event",
-themeEvent: "theme-event"
+queueEvent: "queue-event"
 })
 
 /** user-defined constants **/
@@ -212,7 +210,7 @@ export type QueueData = { waiting: string[]; doing: string[]; complete: string[]
 export type QueueEvent = { type: "snapshot"; init: boolean; queue: QueueData; tasks?: Partial<{ [key in string]: Task }> | null; schedulers?: Partial<{ [key in string]: SchedulerView }> | null } | { type: "state"; parent: string; state: TaskState } | { type: "progress"; parent: string; id: string; status: SubTaskStatus } | { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "error"; parent: string; id?: string | null; message: string; code: number | null }
 export type RequestAction = "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary"
 export type SchedulerView = { sid: string; ts: number; list: string[] }
-export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; organize: SettingsOrganize; proxy: SettingsProxy }
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy }
 export type SettingsConvert = { danmaku: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { series: string; item: string; file: string }
@@ -239,7 +237,27 @@ export type Theme =
  * Auto theme.
  */
 "auto"
-export type ThemeEvent = { dark: boolean; color: string | null }
+export type WindowEffect = 
+/**
+ * Auto window effect based on platform
+ */
+"auto" | 
+/**
+ * Mica effect (Windows 11+)
+ */
+"mica" | 
+/**
+ * Acrylic effect (Windows 10+)
+ */
+"acrylic" | 
+/**
+ * Sidebar effect (macOS)
+ */
+"sidebar" | 
+/**
+ * No window effect
+ */
+"none"
 
 /** tauri-specta globals **/
 

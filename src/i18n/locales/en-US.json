@@ -231,6 +231,14 @@
             "dark": "Dark",
             "auto": "Follow System"
         },
+        "window_effect": {
+            "name": "Window Effect",
+            "auto": "Auto",
+            "mica": "Mica",
+            "acrylic": "Acrylic",
+            "sidebar": "Sidebar",
+            "none": "None"
+        },
         "clipboard": {
             "name": "Clipboard Monitor",
             "desc": "If enabled, auto-detect Bilibili links in the clipboard and search."

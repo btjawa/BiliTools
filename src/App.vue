@@ -60,14 +60,12 @@ onMounted(async () => {
 	router.push('/');
 	setEventHook();
 
-	const [meta, init] = await Promise.all([
-		commands.meta(),
-		commands.init(),
-	]);
+	const meta = await commands.meta();
 	if (meta.status === 'error') throw new AppError(meta.error);
 	const { config, ...initData } = meta.data;
 	app.$patch({ ...initData });
 	settings.$patch(config);
+	const init = await commands.init();
 	if (init.status === 'error') throw new AppError(init.error);
 
 	await fetchUser();

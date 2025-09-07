@@ -231,6 +231,14 @@
             "dark": "深色",
             "auto": "跟隨系統"
         },
+        "window_effect": {
+            "name": "視窗效果",
+            "auto": "自動",
+            "mica": "Mica",
+            "acrylic": "Acrylic",
+            "sidebar": "Sidebar",
+            "none": "無"
+        },
         "clipboard": {
             "name": "監聽剪貼簿",
             "desc": "若啟用，則會自動檢測剪貼簿中的嗶哩嗶哩連結並搜尋。"

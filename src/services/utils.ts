@@ -42,11 +42,23 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
 export function setEventHook() {
     const app = useAppStore();
     const settings = useSettingsStore();
-    watch(settings.$state, (v) => {
+    watch(settings.$state, async (v) => {
         i18n.global.locale.value = v.language;
-        commands.configWrite(v);
-        commands.setWindow(v.theme);
-        commands.updateMaxConc(v.max_conc);
+        const result = await Promise.all([
+            commands.setWindow(v.theme, v.window_effect),
+            commands.updateMaxConc(v.max_conc),
+            commands.configWrite(v),
+        ]);
+        for (const r of result) {
+            if (r.status === 'error') new AppError(r.error).handle();
+        }
+        if (result[0].status !== 'ok') return;
+        const [dark, color] = result[0].data;
+        const list = document.documentElement.classList;
+        list.toggle('light', !dark);
+        list.toggle('dark', dark);
+        document.documentElement.style.backgroundColor = color ?? 'transparent';
+
     }, { deep: true });
     events.headersData.listen(e => app.$patch({
         headers: e.payload
@@ -55,12 +67,6 @@ export function setEventHook() {
     events.processError.listen(e => {
         const err = e.payload;
         new AppError(err.error, { name: `ProcessError (${err.name})` }).handle();
-    });
-    events.themeEvent.listen(e => {
-        const list = document.documentElement.classList;
-        list.toggle('light', !e.payload.dark);
-        list.toggle('dark', e.payload.dark);
-        document.documentElement.style.backgroundColor = e.payload.color ?? 'transparent';
     });
 }
 
