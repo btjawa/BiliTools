@@ -43,7 +43,7 @@
 
 ## 开发向导
 
-请按照 [Tauri 官方文档](https://v2.tauri.app/start/prerequisites/) 配置你的环境。以下依赖有版本要求：
+请按照 [Tauri 官方文档](https://v2.tauri.app/start/prerequisites/) 配置您的环境。以下依赖有版本要求：
  - [Rust 1.80.0+](https://www.rust-lang.org/tools/install)
  - [Node.js 20.0+](https://nodejs.org/en/download)
 

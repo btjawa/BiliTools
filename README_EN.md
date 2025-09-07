@@ -130,12 +130,11 @@ Your support will be a great motivation for [me](https://github.com/btjawa) to k
 
 <hr />
 
-This project is intended to study and testing code.
+**This project is intended to study and testing code. DO NOT ABUSE IT!**
 
-**Users must assume all risks themselves and MUST NOT ABUSE IT!**
+We **strongly oppose and do not condone** any form of piracy, unauthorized redistribution, illicit activities, or other illegal uses.
 
-- Any individual who uses this project for **any illegal, Infringing, or malicious purposes, or in ways that cause negative consequences or abuse**:
-  - All responsibilities and consequences are unrelated to [me](https://github.com/btjawa), and **I take no responsibility**.
+- Any consequences arising from the use of this project (including but not limited to illegal use, account restrictions, or other losses) are solely the responsibility of the user and have no relation to [the author](https://github.com/btjawa), who assumes no liability.
 - This project is free and open-source, I have not obtained any financial gain from it.
 - This project does not bypass authentications, crack paid resources, or conduct any other illegal activities.
 - All data generated and acquired will be stored locally using `SQLite`:
@@ -144,8 +143,7 @@ This project is intended to study and testing code.
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- The names and logos of “哔哩哔哩” and “Bilibili”, as well as related graphics, are registered trademarks or trademarks of Shanghai Kuanyu Digital Technology Co., Ltd.
-- This project has no affiliation, cooperation, or authorization relationship with Bilibili or its associated companies.
+- The names and logos of “哔哩哔哩” and “Bilibili”, as well as related graphics, are registered trademarks or trademarks of Shanghai Hode Information Technology Co., Ltd.
+- This project has no affiliation, cooperation, authorization, or endorsement relationship with Bilibili or its associated companies.
 - The copyright of any content obtained through this project belongs to the original rights holders. Please comply with relevant laws, regulations, and platform service agreements.
-- The references to Bilibili-related names and logos in this project are for descriptive and identification purposes only, and do not constitute endorsement or authorization of the trademark or brand.
 - If there is any infringement, feel free to [contact](mailto:btj2407@gmail.com) us.
