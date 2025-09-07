@@ -26,7 +26,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             submit_task, process_queue, open_folder, ctrl_event, update_max_conc, // Queue
         ])
         .events(collect_events![
-            shared::HeadersData, shared::ProcessError, shared::ThemeEvent, queue::runtime::QueueEvent
+            shared::HeadersData, shared::ProcessError, queue::runtime::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

@@ -21,7 +21,7 @@ async init() : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async setWindow(theme: Theme, windowEffect: WindowEffect) : Promise<Result<null, TauriError>> {
+async setWindow(theme: Theme, windowEffect: WindowEffect) : Promise<Result<[boolean, string | null], TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_window", { theme, windowEffect }) };
 } catch (e) {
@@ -176,13 +176,11 @@ async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
 export const events = __makeEvents__<{
 headersData: HeadersData,
 processError: ProcessError,
-queueEvent: QueueEvent,
-themeEvent: ThemeEvent
+queueEvent: QueueEvent
 }>({
 headersData: "headers-data",
 processError: "process-error",
-queueEvent: "queue-event",
-themeEvent: "theme-event"
+queueEvent: "queue-event"
 })
 
 /** user-defined constants **/
@@ -239,7 +237,6 @@ export type Theme =
  * Auto theme.
  */
 "auto"
-export type ThemeEvent = { dark: boolean; color: string | null }
 export type WindowEffect = 
 /**
  * Auto window effect based on platform
