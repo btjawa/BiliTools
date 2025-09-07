@@ -81,6 +81,10 @@
 }
 
 @layer components {
+  .page {
+    @apply flex flex-col relative justify-center items-center w-full h-full;
+    @apply text-(--content-color) px-6 overflow-hidden;
+  }
   .ellipsis {
     @apply inline-block text-ellipsis overflow-hidden break-words whitespace-nowrap;
   }

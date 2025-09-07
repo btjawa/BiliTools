@@ -4,14 +4,14 @@ layout: home
 
 hero:
   name: "BiliTools"
-  text: "简约 & 轻量的\n哔哩哔哩工具箱"
-  tagline: 基于 Tauri & Typescript & Rust 构建
+  text: "Simple & Light-weight\nBilibili Toolbox"
+  tagline: Powered by Tauri & Typescript & Rust
   actions:
     - theme: brand
-      text: 快速开始
+      text: Quick start
       link: ./quick/about
     - theme: alt
-      text: 博客 / 其他信息
+      text: Other infos
       link: https://blog.btjawa.top/posts/bilitools
     - theme: alt
       text: GitHub
@@ -22,16 +22,16 @@ hero:
 
 features:
   - icon: "<i class='fa-solid fa-cloud'></i>"
-    title: 轻量
-    details: 得益于 Tauri 框架及 WebView2 的灵活性，应用本体仅有 ~30 MB。
+    title: Light-weight
+    details: With the power of Tauri & WebView2 frameworks, the App weighs in at only ~ 30 MB.
   - icon: "<i class='fa-solid fa-umbrella'></i>"
-    title: 简约
-    details: 界面轻盈简洁，支持明暗主题，开箱即用。
+    title: Simple
+    details: Clean interface with multiple themes, ready for out-of-the-box.
   - icon: "<i class='fa-solid fa-window-restore'></i>"
-    title: 功能
-    details: 从番剧到收藏夹，弹幕到 NFO，尽数支持。
+    title: Features
+    details: From bangumi to favorites, NFO to danmaku, fully supported.
   - icon: "<i class='fa-solid fa-earth-americas'></i>"
-    title: 国际化
-    details: "支持简体中文、繁体中文、英语与日语。"
+    title: Internationalization
+    details: "Supports Simplified / Traditional Chinese, English and Japanese."
 ---
 

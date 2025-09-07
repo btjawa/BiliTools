@@ -81,10 +81,6 @@ onMounted(async () => {
 	@apply absolute right-0 bottom-0 h-[calc(100vh-30px)];
 	@apply flex w-full items-end bg-transparent overflow-visible;
 }
-.page {
-	@apply flex flex-col relative justify-center items-center w-full h-full;
-	@apply text-(--content-color) px-6 overflow-hidden;
-}
 .loading {
 	@apply absolute w-8 h-8 top-2 right-6 opacity-0 z-99 pointer-events-none transition-opacity;
 	@apply border-solid border-2 border-(--solid-block-color) border-l-(--content-color) rounded-full;

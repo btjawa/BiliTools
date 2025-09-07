@@ -12,7 +12,7 @@ sudo xattr -r -d com.apple.quarantine /Applications/BiliTools.app
 
 有以下几种解决方案：
 
-- 检查你下载的版本是否匹配你的平台，参见 [下载 & 安装](/quick/install)
+- 检查你下载的版本是否匹配你的平台，参见 [下载 & 安装](./quick/install)
 - 在 <code><i class="fa-brands fa-apple"></i> > 系统设置 > 网络 > 防火墙</code> 中临时禁用防火墙后，重试应用是否恢复正常
 - 若以上方案均无效，打开 `终端` 运行以下命令尝试为 Sidecar 加权，随后重启系统：
 

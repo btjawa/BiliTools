@@ -67,7 +67,7 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 ### 最大并发下载数
 
 > [!WARNING]
-> 若该值较高，可能导致 [风控](/guide/risk) 概率上升。
+> 若该值较高，可能导致 [风控](./guide/risk) 概率上升。
 
 控制最大并发处理任务的数量。
 

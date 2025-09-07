@@ -297,8 +297,8 @@ pub fn set_window(
     window_effect: WindowEffect
 ) -> crate::TauriResult<(bool, Option<&'static str>)> {
     use tauri::{utils::config::WindowEffectsConfig, window::Color};
-    #[cfg(target_os = "windows")] {
-    let init_webview = |webview: tauri::webview::PlatformWebview| unsafe {
+    #[cfg(target_os = "windows")]
+    window.with_webview(move |webview| { let _ = || unsafe {
         use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
         use windows::core::Interface;
         let settings = webview.controller().CoreWebView2()
@@ -316,10 +316,7 @@ pub fn set_window(
             s.SetIsZoomControlEnabled(false)?;
         }
         Ok::<(), crate::TauriError>(())
-    };
-    window.with_webview(move |webview| {
-        let _ = init_webview(webview).map_err(|e| process_err(e, "set_window"));
-    })? }
+    }.map_err(|e| process_err(e, "set_window")); })?;
     let theme = theme.as_tauri();
     let is_dark = theme == TauriTheme::Dark;
     window.set_theme(Some(theme))?;
@@ -334,9 +331,9 @@ pub fn set_window(
         },
         None => {
             let (hex, rgb) = if is_dark {
-                ("#202020", Color(32,32,32,128))
+                ("#202020", Color(32,32,32,255))
             } else {
-                ("#f9f9f9", Color(249,249,249,128))
+                ("#f9f9f9", Color(249,249,249,255))
             };
             window.set_background_color(Some(rgb))?;
             window.set_effects(WindowEffectsConfig {
