@@ -37,15 +37,31 @@
         </div>
         <div class="flex gap-2 desc w-full text">
         <div class="flex gap-1 max-w-full overflow-auto whitespace-nowrap">
-            <span
-                v-if="task.select.media.video || task.select.media.audioVideo"
-                v-for="k in (['res', 'enc'] as const)"
-            >
-                <template v-if="task.select[k]">{{ $t(`quality.${k}.${task.select[k]}`) }}</template>
-            </span>
-            <span v-if="(task.select.media.audio || task.select.media.audioVideo)">
-                {{ $t(`quality.abr.${task.select.abr}`) }}
-            </span>
+            <template v-if="(task.select.media.video || task.select.media.audioVideo)">
+                <Dropdown class="flat min-w-0! mr-1 primary-color"
+                    v-if="tab === 'waiting'"
+                    :drop="(cache.get(task.id)?.res ?? [task.select.res]).map(id => ({
+                        id, name: $t(`quality.res.${id}`)
+                    }))"
+                    v-model="queue.tasks[task.id].select.res"
+                    @click.once="dropdown(task)"
+                    @click="commands.updateSelect(task.id, task.select)"
+                />
+                <span v-else>{{ $t(`quality.res.${task.select.res}`) }}</span>
+                <span>{{ $t(`quality.enc.${task.select.enc}`) }}</span>
+            </template>
+            <template v-if="(task.select.media.audio || task.select.media.audioVideo)">
+                <Dropdown class="flat min-w-0! mr-1 primary-color"
+                    v-if="tab === 'waiting'"
+                    :drop="(cache.get(task.id)?.abr ?? [task.select.abr]).map(id => ({
+                        id, name: $t(`quality.abr.${id}`)
+                    }))"
+                    v-model="queue.tasks[task.id].select.abr"
+                    @click.once="dropdown(task)"
+                    @click="commands.updateSelect(task.id, task.select)"
+                />
+                <span v-else>{{ $t(`quality.abr.${task.select.abr}`) }}</span>
+            </template>
             <span v-if="Object.entries(task.select.media).some(([_, k]) => k)">
                 {{ $t(`quality.fmt.${task.select.fmt}`) }}
             </span>
@@ -98,9 +114,10 @@ import { Scheduler, Task } from '@/types/shared.d';
 import { processQueue } from '@/services/queue';
 import { timestamp } from '@/services/utils';
 import { useQueueStore } from '@/store';
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 
-import { Empty, ProgressBar } from '@/components';
+import { Dropdown, Empty, ProgressBar } from '@/components';
+import { getPlayUrl } from '@/services/media/data';
 
 defineProps<{
     item: Scheduler,
@@ -108,7 +125,12 @@ defineProps<{
 }>();
 
 const queue = useQueueStore();
-const tab = defineModel<string>();
+const tab = defineModel<'waiting' | 'doing' | 'complete'>();
+
+const cache = reactive(new Map<string, {
+    res: number[];
+    abr: number[];
+}>());
 
 const buttons = computed(() => (task?: Task) => ({
     ...(task?.state === 'active' && {
@@ -148,11 +170,21 @@ function getBorder(id: string) {
 }
 
 async function event(event: CtrlEvent | 'openFolder', sid: string, id: string | null) {
+    if (event === 'cancel' && id) cache.delete(id);
     const sch = queue.schedulers[sid];
     const result = event === 'openFolder'
         ? await commands.openFolder(sid, id)
         : await commands.ctrlEvent(event, sid, id ? [id] : sch.list);
     if (result.status === 'error') throw result.error;
+}
+
+async function dropdown(task: Task) {
+    const { item, select, id } = task;
+    const playurl = await getPlayUrl(item, item.type, select.fmt);
+    cache.set(id, {
+        res: [...new Set(playurl.video?.map(v => v.id) ?? [])],
+        abr: [...new Set(playurl.audio?.map(v => v.id) ?? [])],
+    });
 }
 </script>
 

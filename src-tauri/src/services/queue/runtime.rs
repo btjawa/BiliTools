@@ -19,7 +19,7 @@ use crate::{
     }, storage::schedulers
 };
 
-use super::types::{SubTaskStatus, TaskState, QueueType};
+use super::types::{SubTaskStatus, TaskState, QueueType, PopupSelect};
 
 pub static TASK_MANAGER: LazyLock<TaskManager> = LazyLock::new(TaskManager::new);
 
@@ -347,7 +347,7 @@ pub struct Scheduler {
     pub ts: i64,
     pub list: RwLock<Vec<Arc<String>>>,
     pub folder: PathBuf,
-    ctrls: RwLock<HashMap<Arc<String>, Sender<CtrlEvent>>>,
+    ctrls: RwLock<HashMap<Arc<String>, (Sender<CtrlEvent>, Receiver<CtrlEvent>)>>,
     inited: OnceCell<()>,
 }
 
@@ -362,9 +362,8 @@ impl Scheduler {
     pub fn new(sid: Arc<String>, list: Vec<Arc<String>>, folder: PathBuf) -> Arc<Self> {
         let mut map = HashMap::new();
         for id in &list {
-            map.entry(id.clone()).or_insert_with(|| {
-                let (tx, _rx) = channel::<CtrlEvent>(8); tx
-            });
+            let (tx, rx) = channel::<CtrlEvent>(8);
+            map.insert(id.clone(), (tx, rx));
         }
         Arc::new(Self {
             sid,
@@ -378,7 +377,9 @@ impl Scheduler {
 
     async fn get_ctrl(&self, id: &Arc<String>) -> Result<Sender<CtrlEvent>> {
         let ctrls = self.ctrls.read().await;
-        ctrls.get(id).cloned().ok_or(anyhow!("Failed to get ctrl for {id}"))
+        ctrls.get(id)
+            .map(|(tx, _)| tx.clone())
+            .ok_or(anyhow!("Failed to get ctrl for {id}"))
     }
 
     async fn dispatch(self: Arc<Self>) -> TauriResult<()> {
@@ -417,7 +418,9 @@ impl Scheduler {
         for h in handles {
             h.await??;
         }
-        TASK_MANAGER.move_scheduler(&self.sid, QueueType::Doing, QueueType::Complete).await?;
+        if !self.list.read().await.is_empty() {
+            TASK_MANAGER.move_scheduler(&self.sid, QueueType::Doing, QueueType::Complete).await?;
+        }
         Ok(())
     }
 
@@ -430,7 +433,11 @@ impl Scheduler {
     where
         F: FnOnce(Receiver<CtrlEvent>) -> Pin<Box<dyn Future<Output = TauriResult<()>> + Send>> + Send + 'static,
     {
-        let tx = self.get_ctrl(parent).await?;
+        let tx = if let Ok(tx) = self.get_ctrl(parent).await {
+            tx
+        } else {
+            return Ok(())
+        };
         let task_rx = tx.subscribe();
         let mut rx = tx.subscribe();
         let mut paused = false;
@@ -540,9 +547,9 @@ pub async fn request_frontend<T: DeserializeOwned + Send + 'static>(
 #[specta::specta]
 pub async fn process_queue(sid: Arc<String>, folder: String) -> TauriResult<()> {
     let scheduler = TASK_MANAGER.plan_scheduler(&sid, &folder).await?;
-    scheduler.dispatch().await?;
+    scheduler.clone().dispatch().await?;
     #[cfg(target_os = "windows")]
-    if config::read().notify {
+    if config::read().notify && !scheduler.list.read().await.is_empty() {
         notify_rust::Notification::new()
             .app_id("com.btjawa.bilitools")
             .summary("BiliTools")
@@ -585,7 +592,9 @@ pub async fn ctrl_event(event: CtrlEvent, sid: Arc<String>, list: Vec<Arc<String
         });
     }
     for id in list.iter() {
-        let _ = sch.get_ctrl(id).await?.send(event.clone());
+        if let Ok(ctrl) = sch.get_ctrl(id).await {
+            let _ = ctrl.send(event.clone());
+        }
         TASK_MANAGER.state(id, match event {
             CtrlEvent::Pause => TaskState::Paused,
             CtrlEvent::Resume => TaskState::Active,
@@ -602,5 +611,14 @@ pub async fn ctrl_event(event: CtrlEvent, sid: Arc<String>, list: Vec<Arc<String
 #[specta::specta]
 pub async fn update_max_conc(new_conc: usize) -> TauriResult<()> {
     TASK_MANAGER.update_max_conc(new_conc).await;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn update_select(id: Arc<String>, select: Arc<PopupSelect>) -> TauriResult<()> {
+    if let Some(task) = TASK_MANAGER.get_task(&id).await {
+        task.write().await.select = select;
+    }
     Ok(())
 }

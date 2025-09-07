@@ -408,7 +408,6 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
         let urls = request_frontend::<MediaUrls>(
             id.clone(), None, RequestAction::RefreshUrls
         ).await?;
-        guard.select = urls.select.clone();
         guard.subtasks = urls.subtasks.clone();
         Some(urls)
     } else {

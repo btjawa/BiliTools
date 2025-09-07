@@ -1,11 +1,11 @@
 <template><div class="relative w-fit min-w-40 inline-block">
-  <button type="button" @click="active = !active" ref="button" class="w-full flex items-center">
+  <button @click="active = !active" ref="button" class="w-full flex items-center">
     <span class="w-full text-left">{{ drop.find(v => v.id == model)?.name }}</span>
     <i class="fa-solid fa-triangle text-[10px] transition-transform"></i>
   </button>
   <Transition>
   <div v-if="active" class="list fixed flex flex-col shadow-lg mt-1">
-    <button v-for="v in drop" @click="model = v.id" type="button">{{ v.name }}</button>
+    <button v-for="v in drop" @click="model = v.id" :key="v.id">{{ v.name }}</button>
   </div>
   </Transition>
 </div></template>
@@ -39,5 +39,8 @@ button:hover i {
   button {
     @apply text-left rounded-none h-[27px];
   }
+}
+.flat > button {
+  @apply h-5 p-0 bg-transparent;
 }
 </style>

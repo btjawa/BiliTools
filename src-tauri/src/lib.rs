@@ -23,7 +23,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .commands(collect_commands![
             meta, init, set_window, config_write, open_cache, get_size, clean_cache, db_import, db_export, // Essentials
             stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            submit_task, process_queue, open_folder, ctrl_event, update_max_conc, // Queue
+            submit_task, process_queue, open_folder, ctrl_event, update_max_conc, update_select // Queue
         ])
         .events(collect_events![
             shared::HeadersData, shared::ProcessError, queue::runtime::QueueEvent

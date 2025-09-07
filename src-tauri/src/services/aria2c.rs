@@ -294,7 +294,7 @@ pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> Tau
         }
         tx.send(content, chunk).await?;
         if data.status.as_str() == "complete" {
-            tx.send(content, content).await?;
+            tx.send(1, 1).await?;
             break;
         }
         sleep(Duration::from_millis(500)).await;

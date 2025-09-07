@@ -44,6 +44,7 @@ function urlFilter(urls: string[]) {
 }
 
 async function handleMedia(task: Types.Task) {
+    console.log({...task})
     const { select, item } = task;
     const playUrl = await getPlayUrl(item, item.type, select.fmt);
     let video: Types.PlayUrlResult = null as any;
@@ -105,10 +106,10 @@ async function handleMedia(task: Types.Task) {
         audioUrls = urlFilter(audioUrls);
     }
 
+    backend.commands.updateSelect(task.id, select);
     return {
         videoUrls,
         audioUrls,
-        select,
         subtasks: task.subtasks,
         folder: buildPaths('item', task),
     }

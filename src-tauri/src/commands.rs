@@ -15,7 +15,7 @@ pub use crate::{
         },
         queue::{
             self, runtime::{
-                submit_task, process_queue, open_folder, ctrl_event, update_max_conc
+                submit_task, process_queue, open_folder, ctrl_event, update_max_conc, update_select
             }
         },
         aria2c,

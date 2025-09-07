@@ -60,7 +60,7 @@
     </div>
     <div class="w-96 flex flex-col form">
         <div class="flex">
-            <Dropdown v-if="v.tab" class="dropdown inline-block min-w-[52px]"
+            <Dropdown v-if="v.tab" class="flat min-w-[52px]"
                 :drop="v.countries" v-model="v.cid"
             />
             <span v-else>{{ $t('user.account') }}</span>
@@ -168,9 +168,6 @@ onDeactivated(commands.stopLogin);
 
 h1 {
     @apply text-lg;
-}
-:deep(.dropdown > button) {
-    @apply h-5 p-0 bg-transparent;
 }
 .tabs h1 {
     @apply cursor-pointer;

@@ -167,6 +167,14 @@ async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async updateSelect(id: string, select: PopupSelect) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_select", { id, select }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
