@@ -8,7 +8,7 @@ use tauri::http::StatusCode;
 use crate::{
     TauriResult, TauriError,
     shared::{
-        get_app_handle, get_unique_path, init_client
+        get_app_handle, get_unique_path, init_client, WORKING_PATH
     },
     aria2c, ffmpeg, config,
     queue::{
@@ -186,9 +186,14 @@ async fn handle_danmaku(
     #[cfg(not(all(target_os = "linux", not(debug_assertions))))]
     const EXEC: &str = "DanmakuFactory";
 
+    let cfg = WORKING_PATH.join("DanmakuFactory.json");
+    if !cfg.exists() {
+        fs::write(&cfg, &[]).await?;
+    }
 
     let (mut _rx, child) = get_app_handle().shell().sidecar(EXEC)?
         .args([
+            "-c", cfg.to_string_lossy().as_ref(),
             "-i", xml.to_string_lossy().as_ref(),
             "-o", ass.to_string_lossy().as_ref(),
         ]).spawn()?;
@@ -312,6 +317,7 @@ async fn handle_merge(
     }?;
 
     let output_file = get_unique_path(ptask.folder.join(format!("{}.{}", &ptask.filename, ext)));
+    log::info!("{output_file:?}");
 
     fs::copy(&path, output_file).await?;
     fs::remove_file(path).await?;

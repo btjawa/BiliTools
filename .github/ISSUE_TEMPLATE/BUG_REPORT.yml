@@ -86,13 +86,7 @@ body:
 
         macOS: $HOME/Library/Logs/com.btjawa.bilitools
 
-        Linux:
-
-          $XDG_CONFIG_HOME/com.btjawa.bilitools/logs
-
-          or:
-
-          $HOME/.config/com.btjawa.bilitools/logs
+        Linux: $HOME/.local/share/com.btjawa.bilitools/logs
 
     validations:
       required: true

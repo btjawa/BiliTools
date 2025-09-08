@@ -44,7 +44,6 @@ function urlFilter(urls: string[]) {
 }
 
 async function handleMedia(task: Types.Task) {
-    console.log({...task})
     const { select, item } = task;
     const playUrl = await getPlayUrl(item, item.type, select.fmt);
     let video: Types.PlayUrlResult = null as any;
@@ -194,7 +193,9 @@ function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.Task,
         } else {
             return String(data[k as keyof typeof data] ?? '');
         }
-    })).replace(/[\/\\:*?"<>|]/g, "_");
+    }))
+        .replace(/[\/\\:*?"<>|]/g, "_")
+        .replace(/\.+$/, ''); // #165
 }
 
 async function handleTask(task: Types.Task, type: backend.RequestAction, subtask?: Types.SubTask) {
@@ -248,7 +249,6 @@ export async function handleEvent(event: backend.QueueEvent) {
     } else if (type === 'progress') {
         const status = queue.tasks?.[event.parent]?.status?.[event.id];
         if (status) Object.assign(status, event.status);
-        console.log(status, event);
     } else if (type === 'request') {
         const task = queue.tasks[event.parent];
         const subtask = task.subtasks.find(v => v.id === event.subtask);
@@ -269,7 +269,6 @@ export async function processQueue() {
     try {
         const queue = useQueueStore();
         const snapshot = queue.tasks[queue.schedulers[queue.waiting[0]].list[0]];
-        console.log(queue.tasks, queue.waiting)
         const folder = buildPaths('series', snapshot);
         const sid = randomString(8);
         const result = await backend.commands.processQueue(sid, folder);

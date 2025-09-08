@@ -42,7 +42,7 @@ const APP_VERSION = '1.4.0-7';
 运行以下命令安装依赖：
 
 ```bash
-sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+sudo apt-get install -y libssl3 zlib1g libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 ```
 
 | x64 (x86-64, amd64) | arm64 (aarch64) |

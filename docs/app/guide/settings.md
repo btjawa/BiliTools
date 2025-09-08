@@ -111,6 +111,12 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
 
 在使用诸如 PotPlayer 的播放器时，挂载转换过的字幕就可以在观看时享受弹幕了。
 
+可编辑（或创建）以下文件来自定义 DanmakuFactory 配置：
+
+> Windows: `%AppData%\com.btjawa.bilitools\DanmakuFactory.json`<br>
+> macOS: `$HOME/Library/Application Support/com.btjawa.bilitools/DanmakuFactory.json`<br>
+> Linux: `$HOME/.local/share/com.btjawa.bilitools/DanmakuFactory.json`
+
 ### 将音频转换为 MP3 格式
 
 > [!WARNING]

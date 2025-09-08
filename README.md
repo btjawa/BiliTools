@@ -141,7 +141,7 @@
 - 本项目不会绕过身份验证机制、破解付费资源或实施其他非法行为
 - 本项目产生与获取的所有数据将使用 `SQLite` 格式明文存储于用户本地：
 
-> Windows: `%AppData%\com.btjawa.bilitools`<br>
+> Windows: `%APPDATA%\com.btjawa.bilitools`<br>
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 

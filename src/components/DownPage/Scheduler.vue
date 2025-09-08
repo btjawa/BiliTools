@@ -38,7 +38,7 @@
         <div class="flex gap-2 desc w-full text">
         <div class="flex gap-1 max-w-full overflow-auto whitespace-nowrap">
             <template v-if="(task.select.media.video || task.select.media.audioVideo)">
-                <Dropdown class="flat min-w-0! mr-1 primary-color"
+                <Dropdown class="flat min-w-0! mr-1"
                     v-if="tab === 'waiting'"
                     :drop="(cache.get(task.id)?.res ?? [task.select.res]).map(id => ({
                         id, name: $t(`quality.res.${id}`)
@@ -51,7 +51,7 @@
                 <span>{{ $t(`quality.enc.${task.select.enc}`) }}</span>
             </template>
             <template v-if="(task.select.media.audio || task.select.media.audioVideo)">
-                <Dropdown class="flat min-w-0! mr-1 primary-color"
+                <Dropdown class="flat min-w-0! mr-1"
                     v-if="tab === 'waiting'"
                     :drop="(cache.get(task.id)?.abr ?? [task.select.abr]).map(id => ({
                         id, name: $t(`quality.abr.${id}`)
