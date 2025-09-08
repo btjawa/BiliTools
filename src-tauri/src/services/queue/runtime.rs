@@ -341,13 +341,15 @@ pub enum CtrlEvent {
     Cancel,
 }
 
+type CtrlChannels = (Sender<CtrlEvent>, Receiver<CtrlEvent>);
+
 #[derive(Debug)]
 pub struct Scheduler {
     pub sid: Arc<String>,
     pub ts: i64,
     pub list: RwLock<Vec<Arc<String>>>,
     pub folder: PathBuf,
-    ctrls: RwLock<HashMap<Arc<String>, (Sender<CtrlEvent>, Receiver<CtrlEvent>)>>,
+    ctrls: RwLock<HashMap<Arc<String>, CtrlChannels>>,
     inited: OnceCell<()>,
 }
 
