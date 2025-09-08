@@ -19,7 +19,9 @@ export const useUserStore = defineStore('user', {
     getters: {
         isLogin: (s) => !!s.mid,
         getAvatar(s): string {
-            return this.isLogin ? s.avatar : new URL('@/assets/img/user/default-avatar.jpg', import.meta.url).href;
+            if (this.isLogin) return s.avatar;
+            const randomNum = Math.floor(Math.random() * 13) + 1;
+            return `/src/assets/img/user/default-avatar/default-avatar-${randomNum}.jpg`;
         }
     }
 });
