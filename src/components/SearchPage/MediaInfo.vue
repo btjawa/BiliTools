@@ -9,7 +9,9 @@
             </div>
             </template>
         </div>
-        <span class="text-sm line-clamp-3 mt-1.5 ellipsis">{{ info.desc }}</span>
+        <div class="flex-1 overflow-auto mt-1.5">
+            <span class="text-sm">{{ info.desc }}</span>
+        </div>
     </div>
     <a v-if="props.info.nfo.upper?.avatar"
         @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
@@ -44,8 +46,7 @@ const iconMap = {
 <style scoped>
 @reference 'tailwindcss';
 
-h2 ~ span {
+h2 ~ div span {
     @apply whitespace-pre-wrap;
-    display: -webkit-box;
 }
 </style>
