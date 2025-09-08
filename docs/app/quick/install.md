@@ -16,7 +16,7 @@ const APP_VERSION = '1.4.0-7';
 > 暂不支持 Windows ARM 平台，不支持 Windows 7<br>
 > 若未安装 `WebView2 运行时`，请前往 [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2) 获取并安装
 
-| x64 (x86-64, amd64) | arm64 (aarch64) |
+| x64 | arm64 |
 | ------------------- | --------------- |
 | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/BiliTools_${APP_VERSION}_x64-setup.exe`">GitHub Releases</a> | / |
 
@@ -25,10 +25,10 @@ const APP_VERSION = '1.4.0-7';
 ## <i class="fa-brands fa-apple"></i> macOS
 
 > [!Warning]
-> 尚未验证版本低于 macOS 11.0 的机器可否正常运行<br>
+> 支持 macOS 11.0 及以上版本<br>
 > **切勿** 直接下载 `tar.gz` 包使用，请下载 `dmg` 镜像
 
-| Intel 芯片 (x64, amd64) | M 系列芯片 (arm64, aarch64) |
+| Intel 芯片 | Apple M 芯片 |
 | ----------------------- | -------------------------- |
 | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/BiliTools_${APP_VERSION}_x64.dmg`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/BiliTools_${APP_VERSION}_aarch64.dmg`">GitHub Releases</a> |
 
@@ -36,18 +36,14 @@ const APP_VERSION = '1.4.0-7';
 
 ## <i class="fa-brands fa-linux"></i> Linux
 
+### <i class="fa-brands fa-debian"></i> Debian / <i class="fa-brands fa-ubuntu"></i> Ubuntu
+
 > [!WARNING]
-> 尚未验证版本低于 Ubuntu 22.04 的机器可否正常运行<br>
+> 支持 Ubuntu 22.04 及以上版本，Debian 12 及以上版本<br>
 
-运行以下命令安装依赖：
-
-```bash
-sudo apt-get install -y libssl3 zlib1g libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-```
-
-| x64 (x86-64, amd64) | arm64 (aarch64) |
+| x64 | arm64 |
 | ------------------- | --------------- |
-| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/bilitools_${APP_VERSION}_amd64.deb`">GitHub Releases</a> | / |
+| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/bilitools_${APP_VERSION}_amd64.deb`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/bilitools_${APP_VERSION}_ard64.deb`">GitHub Releases</a> |
 
 下载后，定位到下载目录并使用 apt 安装 deb 包：
 

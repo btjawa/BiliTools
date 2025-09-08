@@ -9,7 +9,7 @@ hero:
   actions:
     - theme: brand
       text: 快速开始
-      link: ./quick/about
+      link: /quick/about
     - theme: alt
       text: 博客 / 其他信息
       link: https://blog.btjawa.top/posts/bilitools

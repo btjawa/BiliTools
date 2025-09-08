@@ -9,7 +9,7 @@ hero:
   actions:
     - theme: brand
       text: Quick start
-      link: ./quick/about
+      link: /quick/about
     - theme: alt
       text: Other infos
       link: https://blog.btjawa.top/posts/bilitools
