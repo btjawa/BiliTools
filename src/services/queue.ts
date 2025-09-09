@@ -58,10 +58,18 @@ async function handleMedia(task: Types.Task) {
     }
     if (select.media.video || select.media.audioVideo) {
         if (!playUrl.video) throw new AppError('No videos found');
-        const res = getDefaultQuality(playUrl.video.map(v => v.id), 'res', select);
+        const resArr = playUrl.video.map(v => v.id);
+        const res = getDefaultQuality(resArr, 'res', select);
         const videos = playUrl.video.filter(v => v.id === res);
-        const enc = getDefaultQuality(playUrl.video.map(v => v.codecid).filter(Boolean) as number[], 'enc', select);
-        const _video = videos.find(v => v.codecid === enc);
+        const encArr = playUrl.video.map(v => v.codecid).filter(Boolean) as number[];
+        let enc = getDefaultQuality(encArr, 'enc', select);
+        let _video = videos.find(v => v.codecid === enc);
+        if (!_video) for (const e of encArr) {
+            _video = videos.find(v => v.codecid === e);
+            if (!_video) continue;
+            enc = e;
+            break;
+        }
         if (!_video) throw new AppError('No video found');
         select.res = res;
         select.enc = enc;

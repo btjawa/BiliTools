@@ -226,6 +226,10 @@ pub async fn load() -> Result<()> {
         .build_sqlx(SqliteQueryBuilder);
     
     let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
+    { TASK_MANAGER.get_queue(&QueueType::Waiting).write().await.clear(); }
+    { TASK_MANAGER.get_queue(&QueueType::Doing).write().await.clear(); }
+    { TASK_MANAGER.get_queue(&QueueType::Complete).write().await.clear(); }
+    { TASK_MANAGER.schedulers.write().await.clear(); }
     for r in rows {
         let sid = Arc::new(r.try_get::<String, _>("name")?);
         let queue = QueueType::from_str_lossy(
@@ -241,11 +245,9 @@ pub async fn load() -> Result<()> {
             sid.clone(), list.clone(), folder
         );
         let mut queue = TASK_MANAGER.get_queue(&queue).write().await;
-        queue.clear();
         queue.push_back(sid.clone());
         drop(queue);
         let mut guard = TASK_MANAGER.schedulers.write().await;
-        guard.clear();
         guard.insert(sid, scheduler);
         drop(guard);
     }

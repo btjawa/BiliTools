@@ -196,6 +196,7 @@ async fn handle_danmaku(
             "-c", cfg.to_string_lossy().as_ref(),
             "-i", xml.to_string_lossy().as_ref(),
             "-o", ass.to_string_lossy().as_ref(),
+            "--ignore-warnings"
         ]).spawn()?;
 
     let mut child = Some(child);
@@ -234,6 +235,10 @@ async fn handle_danmaku(
             break;
         }
     } };
+
+    if !ass.exists() { // no elems
+        fs::write(&ass, &[]).await?;
+    }
 
     fs::copy(&ass, get_unique_path(PathBuf::from(format!("{output_file}.ass")))).await?;
     fs::remove_file(&xml).await?;

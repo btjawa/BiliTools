@@ -172,7 +172,7 @@
         "suggest": "今天想搜尋些什麼呢～",
         "autoDetect": "自動檢測",
         "general": "常規下載",
-        "advanced": "進階下載",
+        "extra": "其他訊息",
         "selectAll": "全選"
     },
     "history": {

@@ -172,7 +172,7 @@
         "suggest": "何を検索したいか？",
         "autoDetect": "自動検出",
         "general": "通常",
-        "advanced": "詳細",
+        "extra": "他の情報",
         "selectAll": "全選択"
     },
     "history": {

@@ -172,7 +172,7 @@
         "suggest": "What would you like to search for?",
         "autoDetect": "Auto Detect",
         "general": "General",
-        "advanced": "Advanced",
+        "extra": "Other infos",
         "selectAll": "Select All"
     },
     "history": {

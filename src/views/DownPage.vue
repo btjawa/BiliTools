@@ -55,7 +55,6 @@ const tabs = {
 };
 type Key = keyof typeof tabs;
 
-
 const queueData = computed(() => queue[tab.value].map(v => queue.schedulers[v]));
 
 const tab = ref<Key>('waiting');

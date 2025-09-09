@@ -51,6 +51,7 @@ pub async fn load() -> Result<()> {
 
     let pool = get_db().await?;
     let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
+    { TASK_MANAGER.tasks.write().await.clear(); }
     for r in rows {
         let mut v: Task = serde_json::from_str(
             &r.try_get::<String, _>("value")?
@@ -60,7 +61,6 @@ pub async fn load() -> Result<()> {
         }
         let id = v.id.clone();
         let mut guard = TASK_MANAGER.tasks.write().await;
-        guard.clear();
         guard.insert(
             id.clone(),
             Arc::new(RwLock::new(v.clone()))

@@ -1,9 +1,9 @@
 import { tryFetch, timestamp, getRandomInRange, duration } from "../utils";
+import { DanmakuEventToXML } from "@/services/media/dm";
 import { useUserStore } from "@/store";
 import { AppError } from "../error";
 import * as Types from '@/types/shared.d';
 import * as Resps from '@/types/media/extras.d';
-import * as dm_v1 from "@/proto/dm_v1";
 
 export async function getSteinInfo(id: number, graph_version: number, edge_id?: number) {
     const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
@@ -128,14 +128,15 @@ export async function getNfo(item: Types.MediaItem, nfo: Types.MediaNfo, type: '
 
 export async function getDanmaku(cb: (content: number, chunk: number) => void, item: Types.MediaItem, date?: false | string) {
     if (!item.aid || !item.cid) throw new AppError('No aid or cid found');
+    const doc = document.implementation.createDocument('', 'i', null);
     const oid = item.cid;
     if (date) {
         const params = { type: 1, oid, date };
         const buffer = await tryFetch('https://api.bilibili.com/x/v2/dm/web/history/seg.so', { type: 'binary', params });
-        const xml = dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer));
+        DanmakuEventToXML(new Uint8Array(buffer), doc);
+        const xml = new XMLSerializer().serializeToString(doc);
         return new TextEncoder().encode('<?xml version="1.0" encoding="UTF-8"?>' + xml);    
     }
-    const doc = document.implementation.createDocument('', 'i', null);
     const user = useUserStore();
     const url = user.isLogin ? 'https://api.bilibili.com/x/v2/dm/wbi/web/seg.so' : 'https://api.bilibili.com/x/v2/dm/web/seg.so';
     const content = Math.ceil((item.duration ?? 0) / 360);
@@ -146,7 +147,7 @@ export async function getDanmaku(cb: (content: number, chunk: number) => void, i
             type: 1, oid, pid: item.aid, segment_index: i,
         }
         const buffer = await tryFetch(url, { type: 'binary', params, ...(user.isLogin && { auth: 'wbi' }) });
-        dm_v1.DmSegMobileReplyToXML(new Uint8Array(buffer), { inputXml: doc });
+        DanmakuEventToXML(new Uint8Array(buffer), doc);
         await new Promise(resolve => setTimeout(resolve, getRandomInRange(100, 500)));
     }
     const xml = new XMLSerializer().serializeToString(doc);

@@ -172,7 +172,7 @@
         "suggest": "今天想搜些什么呢~",
         "autoDetect": "自动检测",
         "general": "常规下载",
-        "advanced": "高级下载",
+        "extra": "其他信息",
         "selectAll": "全选"
     },
     "history": {

@@ -8,7 +8,7 @@ const APP_VERSION = '1.4.0-7';
 > 本项目的唯一官方发行渠道为 [GitHub Releases](https://github.com/btjawa/BiliTools/releases)，请注意辨别<br>
 > 对于第三方平台分发的安装包，**我们无法保证其完整性与安全性**
 
-若安装后应用无法打开或遇到其他问题，请查阅 [常见问题](./help/windows)
+若安装后应用无法打开或遇到其他问题，请查阅 [常见问题](/help/windows)
 
 ## <i class="fa-brands fa-windows"></i> Windows
 

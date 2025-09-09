@@ -19,7 +19,7 @@
             class="flex flex-col items-center cursor-pointer w-20"
         >
             <Image :src="props.info.nfo.upper.avatar + '@64h'" :height="36" class="rounded-full!" />
-            <span class="text-xs truncate mt-1 w-20">{{ info.nfo.upper?.name }}</span>
+            <span class="text-xs truncate mt-1 w-20 text-center">{{ info.nfo.upper?.name }}</span>
         </a>
     </div>
     <span class="overflow-auto text-sm whitespace-pre-wrap">{{ info.desc }}</span>

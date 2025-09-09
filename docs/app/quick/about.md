@@ -42,7 +42,7 @@
 > [!TIP]
 > 本项目将于 `v1.4.0` 正式版发布后进入稳定状态，暂缓更新。
 
-欢迎各位为本项目做出贡献，让本项目变得更好！请参考 [Contributing](./CONTRIBUTING.md) 进行贡献~
+欢迎各位为本项目做出贡献，让本项目变得更好！请参考 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md) 进行贡献~
 
 在提交 Issue 时，请提供足够的信息，以便于维护者分析并解决你的问题
 
@@ -89,7 +89,7 @@
 ## 声明
 
 > [!IMPORTANT]
-> 本项目遵守 [GPL-3.0-or-later](/LICENSE) 开源协议，免费开源：<br>
+> 本项目遵守 [GPL-3.0-or-later](https://github.com/btjawa/BiliTools/blob/master/LICENSE) 开源协议，免费开源：<br>
 > **任何形式的二次分发必须继续开源、遵守相同协议、保留原作者及版权信息**
 
 <hr />

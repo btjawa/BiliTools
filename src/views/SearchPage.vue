@@ -107,8 +107,8 @@ const buttons = [{
 	text: 'search.general',
 	action: () => initPopup(),
 }, {
-	icon: 'fa-bolt',
-	text: 'search.advanced',
+	icon: 'fa-file-circle-info',
+	text: 'search.extra',
 	action: () => AppLog(i18n.global.t('wip'), 'info')
 }, {
 	icon: 'fa-square-dashed-circle-plus',

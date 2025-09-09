@@ -41,7 +41,7 @@
 
 Everyone is welcome to contribute and help improving this project!
 
-Please use [Contributing](./CONTRIBUTING.md) as a reference~
+Please use [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md) as a reference~
 
 When submitting an Issue, please provide enough info so the maintainer could solve your problems.
 
@@ -88,7 +88,7 @@ Your support will be a great motivation for [me](https://github.com/btjawa) to k
 ## Disclaimer
 
 > [!IMPORTANT]
-> This project is licensed under [GPL-3.0-or-later](/LICENSE). It is free and open-source:<br>
+> This project is licensed under [GPL-3.0-or-later](https://github.com/btjawa/BiliTools/blob/master/LICENSE). It is free and open-source:<br>
 > Any redistribution must **remain open-source, use the same license, and retain all original and copyright information**.
 
 <hr />

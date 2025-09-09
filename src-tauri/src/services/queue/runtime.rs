@@ -435,7 +435,11 @@ impl Scheduler {
     where
         F: FnOnce(Receiver<CtrlEvent>) -> Pin<Box<dyn Future<Output = TauriResult<()>> + Send>> + Send + 'static,
     {
-        let tx = self.get_ctrl(parent).await?;
+        let tx = if let Ok(tx) = self.get_ctrl(parent).await {
+            tx
+        } else {
+            return Ok(());
+        };
         let task_rx = tx.subscribe();
         let mut rx = tx.subscribe();
         let mut paused = false;

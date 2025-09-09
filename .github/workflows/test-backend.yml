@@ -1,4 +1,4 @@
-name: PR App check
+name: PR Backend check
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ on:
       - ".github/workflows/test-backend.yml"
 
 jobs:
-  build-tauri:
+  check:
     strategy:
       fail-fast: false
       matrix:

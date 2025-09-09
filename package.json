@@ -20,6 +20,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.7.0",
     "@tailwindcss/vite": "^4.1.12",
     "@tauri-apps/api": "2.7.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.0",
@@ -51,7 +52,6 @@
     "@tauri-apps/cli": "2.7.0",
     "@types/md5": "^2.3.5",
     "@types/node": "^24.3.1",
-    "pbjs": "^0.0.14",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.9.2",
     "vite": "^7.1.2",
