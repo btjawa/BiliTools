@@ -22,7 +22,7 @@
         </div>
         <span class="min-w-6">{{ index + 1 }}</span>
         <div class="w-px h-full bg-(--split-color) mx-4"></div>
-        <span class="flex flex-1 ellipsis text">{{ item.title }}</span>
+        <span class="flex flex-1 truncate text">{{ item.title }}</span>
     </div>
     <div v-if="stein_gate"
         class="w-full flex justify-center gap-1 my-2"

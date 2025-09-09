@@ -32,7 +32,7 @@
         :style="{ 'border-color': getBorder(task.id) }"
     >
         <div class="flex w-full text">
-            <span class="w-full ellipsis">{{ task.item.title }}</span>
+            <span class="w-full truncate">{{ task.item.title }}</span>
             <span class="flex-shrink-0">{{ timestamp(task.ts) }}</span>
         </div>
         <div class="flex gap-2 desc w-full text">

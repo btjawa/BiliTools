@@ -3,7 +3,7 @@
   "private": "true",
   "scripts": {
     "docs:dev": "vitepress dev app",
-    "docs:build": "vitepress build app",
+    "docs:build": "git fetch --unshallow && vitepress build app",
     "docs:preview": "vitepress preview app"
   },
   "type": "module",

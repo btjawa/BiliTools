@@ -11,8 +11,7 @@
 > [!IMPORTANT]
 > 本项目基于用户账号解析资源，因此你需要订阅大会员、或是购买对应内容后才能解析对应资源
 
-
-## 功能
+## 🧪 支持功能
 
 | 资源解析 | 状态    | 备注                      |
 |---------|---------|---------------------------|
@@ -36,18 +35,27 @@
 | 自动刷新登录状态 | ✅ 已完成 | 过滤 PCDN  | ✅ 已完成 |
 | 参数签名        | ✅ 已完成 | 音频转 MP3 | ✅ 已完成 |
 | 风控验证        | ✅ 已完成 | 命名格式   | ✅ 已完成 |
-| 指纹验证        | ✅ 已完成 | 历史记录   | ⚠️ 开发中 |
+| 指纹验证        | ✅ 已完成 | 历史记录   | ✅ 已完成 |
 
-## 赞助
+## 🛠️ 参与贡献
+
+> [!TIP]
+> 本项目将于 `v1.4.0` 正式版发布后进入稳定状态，暂缓更新。
+
+欢迎各位为本项目做出贡献，让本项目变得更好！请参考 [Contributing](./CONTRIBUTING.md) 进行贡献~
+
+在提交 Issue 时，请提供足够的信息，以便于维护者分析并解决你的问题
+
+## ⚡ 赞助
 
 如果你喜欢，并想助力这个项目，请考虑到 [爱发电](https://afdian.com/a/BTJ_Shiroi) 请我喝杯咖啡~
 
 你的支持将是 [我](https://github.com/btjawa) 持续维护的一大动力！
 
-## 鸣谢
+## 💫 鸣谢
 
 <a href="https://github.com/btjawa/BiliTools/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=btjawa/BiliTools" />
+  <img src="https://contrib.rocks/image?repo=btjawa/BiliTools&max=100" />
 </a>
 
 <br />
@@ -95,7 +103,7 @@
 - 本项目不会绕过身份验证机制、破解付费资源或实施其他非法行为
 - 本项目产生与获取的所有数据将使用 `SQLite` 格式明文存储于用户本地：
 
-> Windows: `%AppData%\com.btjawa.bilitools`<br>
+> Windows: `%APPDATA%\com.btjawa.bilitools`<br>
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 

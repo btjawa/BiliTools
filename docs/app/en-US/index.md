@@ -8,8 +8,8 @@ hero:
   tagline: Powered by Tauri & Typescript & Rust
   actions:
     - theme: brand
-      text: Quick start
-      link: /quick/about
+      text: Get started
+      link: /en-US/quick/about
     - theme: alt
       text: Other infos
       link: https://blog.btjawa.top/posts/bilitools

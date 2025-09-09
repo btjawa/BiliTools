@@ -13,14 +13,14 @@
             <Image class="rounded-full! z-0" :height="100" :src="user.avatar" />
             <img class="absolute w-7 right-0 bottom-0" v-if="user.vipLabel" src="@/assets/img/user/big-vip.svg">
         </div>
-        <div class="flex flex-col gap-1 self-center">
+        <div class="flex flex-col gap-1 self-center flex-1 min-w-0">
             <div class="flex gap-2 items-center">
-                <h1 class="text-2xl font-bold">{{ user.name }}</h1>
-                <Image class="h-5" v-if="user.vipLabel" :height="24" :ratio="274/66" :src="user.vipLabel" />
+                <h1 class="text-2xl font-bold truncate">{{ user.name }}</h1>
+                <Image class="h-5 shrink-0" v-if="user.vipLabel" :height="24" :ratio="274/66" :src="user.vipLabel" />
             </div>
             <span class="text-sm">{{ user.desc }}</span>
         </div>
-        <div class="flex gap-2 ml-auto">
+        <div class="flex gap-2">
             <div v-for="[k, v] in Object.entries(user.stat)" class="flex flex-col text-sm text-center">
                 <span class="desc">{{ $t('user.stat.' + k) }}</span>
                 <span>{{ v }}</span>

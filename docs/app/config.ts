@@ -39,6 +39,15 @@ export default defineAdditionalConfig({
       }
     ],
 
+    editLink: {
+      pattern: 'https://github.com/btjawa/BiliTools/edit/master/docs/app/:path',
+      text: '在 GitHub 上编辑此页'
+    },
+
+    lastUpdated: {
+      text: '最后更新于',
+    },
+
     footer: {
       message: 'Licensed under the <a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE">GPL-3.0-or-later</a>.',
       copyright: 'Copyright © 2023-present <a href="https://github.com/btjawa">btjawa</a>.'

@@ -241,9 +241,11 @@ pub async fn load() -> Result<()> {
             sid.clone(), list.clone(), folder
         );
         let mut queue = TASK_MANAGER.get_queue(&queue).write().await;
+        queue.clear();
         queue.push_back(sid.clone());
         drop(queue);
         let mut guard = TASK_MANAGER.schedulers.write().await;
+        guard.clear();
         guard.insert(sid, scheduler);
         drop(guard);
     }

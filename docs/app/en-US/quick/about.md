@@ -1,34 +1,8 @@
-<div align="center">
-<img src=".github/logo.svg" width=500 />
-
-<h1>BiliTools - A Bilibili Toolbox</h1>
-
-<a href="https://trendshift.io/repositories/13286" target="_blank">
-    <img src="https://trendshift.io/api/badge/repositories/13286" alt="btjawa%2FBiliTools | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-</a>
-
-<div>
-<a href="https://github.com/btjawa/BiliTools/stargazers" target="_blank"><img src="https://img.shields.io/github/stars/btjawa/BiliTools" /></a>
-<a href="https://github.com/btjawa/BiliTools/forks" target="_blank"><img src="https://img.shields.io/github/forks/btjawa/BiliTools" /></a>
-<a href="https://github.com/btjawa/BiliTools/actions/workflows/release.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/btjawa/BiliTools/release.yml" /></a>
-<a href="https://github.com/btjawa/BiliTools/releases/latest" target="_blank"><img src="https://img.shields.io/github/v/release/btjawa/BiliTools" /></a>
-<a href="https://github.com/btjawa/BiliTools/blob/master/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/btjawa/BiliTools" /></a>
-</div>
-
-[简体中文](./README.md) | English | [日本語](./README_JA.md) | [ChangeLog](./CHANGELOG.md) | [Contributing](./CONTRIBUTING.md) | [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md)
-</div>
+<div align="center"><img width=500 src="/logo.svg" alt="Logo" /></div>
 
 <hr />
 
 💡 A simple & light-weight Bilibili toolbox, Powered by [Tauri v2](https://github.com/tauri-apps/tauri).
-
-- 📖 Documents: [https://bilitools.btjawa.top](https://bilitools.btjawa.top) 
-
-- 🧾 Other infos: [https://btjawa.top/bilitools](https://btjawa.top/bilitools)
-
-- 🚀 Downloads: [Releases](https://github.com/btjawa/BiliTools/releases)
-
-For installation instructions, guides and FAQs, please refer to the documents.
 
 > [!IMPORTANT] 
 > **This project is built for [Bilibili China](https://www.bilibili.com). We do NOT support the [Bilibili Overseas](https://www.bilibili.tv).**<br>
@@ -70,17 +44,6 @@ Everyone is welcome to contribute and help improving this project!
 Please use [Contributing](./CONTRIBUTING.md) as a reference~
 
 When submitting an Issue, please provide enough info so the maintainer could solve your problems.
-
-## 🌎 Internationalization
-
-**Simplified Chinese (zh-CN)** is the primary language maintained, and acts as the source for other translations.
-
-| Code           | Status      |
-|----------------|-------------|
-| zh-CN          | ✅ Complete |
-| zh-HK          | ✅ Complete |
-| en-US          | ✅ Complete |
-| ja-JP          | ✅ Complete |
 
 ## ⚡ Donate
 

@@ -275,7 +275,7 @@ export async function getMediaInfo(id: string, type: Types.MediaType, options?: 
         const upper = (upperResp as Resps.MusicUpperInfo).data;
         return {
             type,
-            id: data.aid,
+            id: data.id,
             desc: data.intro,
             nfo: {
                 tags: (tagsResp as Resps.MusicTagsInfo).data.map(v => v.info),

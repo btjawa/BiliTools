@@ -60,6 +60,7 @@ pub async fn load() -> Result<()> {
         }
         let id = v.id.clone();
         let mut guard = TASK_MANAGER.tasks.write().await;
+        guard.clear();
         guard.insert(
             id.clone(),
             Arc::new(RwLock::new(v.clone()))

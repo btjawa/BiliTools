@@ -61,7 +61,7 @@
 					<button v-for="t in v.mediaInfo.sections?.tabs" @click="updateTab(t.id)"
 						class="w-full!" :class="{ 'active': v.tab === t.id }"
 					>
-						<span class="ellipsis">{{ t.name }}</span>
+						<span class="truncate">{{ t.name }}</span>
 						<label class="primary-color"></label>
 					</button>
 				</div>

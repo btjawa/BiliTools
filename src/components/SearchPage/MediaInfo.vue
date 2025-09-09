@@ -1,26 +1,31 @@
-<template><div class="flex w-full min-h-36 h-36 bg-(--block-color) rounded-lg p-4 gap-4">
+<template>
+<div class="flex w-full min-h-36 h-36 bg-(--block-color) rounded-lg p-4 gap-4">
     <Image :src="info.nfo.thumbs[0].url + '@112h'" :height="112" :ratio="16/10" />
-    <div class="text flex flex-col flex-1 min-w-0">
-        <h2 class="text-lg ellipsis">{{ info.nfo.showtitle }}</h2>
-        <div class="text-xs flex flex-wrap gap-3 mt-1.5 text-(--desc-color)">
-            <template v-for="([key, value]) in Object.entries(info.stat)">
-            <div class="flex flex-nowrap gap-1 items-center" v-if="value">
-                <i class="bcc-iconfont" :class="iconMap[key as keyof typeof iconMap]"></i>{{ stat(value) }}
+    <div class="text flex flex-col gap-1 flex-1 min-w-0">
+    <div class="flex gap-2">
+        <div class="relative flex flex-col gap-1 flex-1 min-w-0">
+            <h2 class="text-lg w-full truncate">{{ info.nfo.showtitle }}</h2>
+            <div class="text-xs flex flex-wrap items-center text-(--desc-color)">
+                <template v-for="(v, k) in info.stat">
+                <template v-if="v">
+                    <i class="bcc-iconfont" :class="iconMap[k]"></i>
+                    <span class="ml-1.5!">{{ stat(v) }}</span>
+                </template>
+                </template>
             </div>
-            </template>
         </div>
-        <div class="flex-1 overflow-auto mt-1.5">
-            <span class="text-sm">{{ info.desc }}</span>
-        </div>
+        <a v-if="props.info.nfo.upper?.avatar"
+            @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
+            class="flex flex-col items-center cursor-pointer w-20"
+        >
+            <Image :src="props.info.nfo.upper.avatar + '@64h'" :height="36" class="rounded-full!" />
+            <span class="text-xs truncate mt-1 w-20">{{ info.nfo.upper?.name }}</span>
+        </a>
     </div>
-    <a v-if="props.info.nfo.upper?.avatar"
-        @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
-        class="flex flex-col items-center cursor-pointer min-w-16"
-    >
-        <Image :src="props.info.nfo.upper.avatar + '@64h'" :height="36" class="rounded-full!" />
-        <span class="text-xs ellipsis mt-1">{{ info.nfo.upper?.name }}</span>
-    </a>
-</div></template>
+    <span class="overflow-auto text-sm whitespace-pre-wrap">{{ info.desc }}</span>
+    </div>
+</div>
+</template>
 
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -45,8 +50,4 @@ const iconMap = {
 
 <style scoped>
 @reference 'tailwindcss';
-
-h2 ~ div span {
-    @apply whitespace-pre-wrap;
-}
 </style>

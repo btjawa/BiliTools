@@ -26,7 +26,7 @@
 				/>
 			</div>
 			<div class="w-full flex flex-col gap-1 min-w-0">
-				<h2 class="text-base ellipsis">{{ item.title }}</h2>
+				<h2 class="text-base truncate">{{ item.title }}</h2>
 				<div class="desc">
 					<i :class="[$fa.weight, 'fa-clock']"></i>
 					<span>{{ timestamp(item.view_at) }}</span>
