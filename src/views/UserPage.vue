@@ -10,7 +10,7 @@
     </div>
     <div class="flex p-6 gap-4 items-end">
         <div class="relative w-fit">
-            <Image class="rounded-full!" :height="100" :src="user.avatar" />
+            <Image class="rounded-full! z-0" :height="100" :src="user.avatar" />
             <img class="absolute w-7 right-0 bottom-0" v-if="user.vipLabel" src="@/assets/img/user/big-vip.svg">
         </div>
         <div class="flex flex-col gap-1 self-center">
