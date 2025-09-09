@@ -19,6 +19,7 @@
     "core:window:allow-unminimize",
     "core:window:allow-start-dragging",
     "core:window:allow-set-always-on-top",
+    "core:window:allow-is-always-on-top",
     "shell:allow-open",
     "opener:allow-open-path",
     "opener:allow-open-url",
