@@ -1,353 +1,356 @@
 {
-    "bilibili": "ビリビリ",
-    "optional": "オプション",
-    "page": "ページ",
-    "reset": "リセット",
-    "wip": "作業中～",
-    "empty": "利用できるリソースはありません～",
-    "contextMenu": {
-        "cut": "切り取り",
-        "copy": "コピー",
-        "paste": "貼り付け"
+  "bilibili": "ビリビリ",
+  "optional": "オプション",
+  "page": "ページ",
+  "reset": "リセット",
+  "wip": "作業中～",
+  "empty": "利用できるリソースはありません～",
+  "contextMenu": {
+    "cut": "切り取り",
+    "copy": "コピー",
+    "paste": "貼り付け"
+  },
+  "mediaType": {
+    "video": "動画",
+    "bangumi": "番組",
+    "music": "音楽",
+    "musicList": "プレイリスト",
+    "lesson": "レッスン",
+    "favorite": "お気に入り"
+  },
+  "taskType": {
+    "aiSummary": "AI 要約",
+    "subtitles": "字幕",
+    "albumNfo": "シリーズ NFO",
+    "singleNfo": "エピソード NFO",
+    "liveDanmaku": "ライブ弾幕",
+    "historyDanmaku": "履歴弾幕",
+    "thumb": "画像",
+    "video": "動画",
+    "audio": "音声",
+    "audioVideo": "動画+音声"
+  },
+  "popup": {
+    "least": "少なくとも 1 件選択してください",
+    "abrHint": "「設定 → ポリシー → 変換ポリシー」で MP3 変換の有無を変更できます",
+    "popupLint": "リソースを選び、オプションを指定してください",
+    "dashHint": {
+      "name": "DASH / FLV / MP4 について",
+      "desc": "必要時のみ変更してください。まず {0} を読んで内容を理解してください。"
+    },
+    "nextStep": "次へ",
+    "misc": {
+      "name": "その他",
+      "aiSummary": "AI 要約",
+      "subtitles": "字幕"
+    },
+    "nfo": {
+      "name": "NFO メタデータ",
+      "album": "シリーズ NFO",
+      "single": "エピソード NFO"
+    },
+    "danmaku": {
+      "name": "弾幕",
+      "live": "ライブ弾幕",
+      "history": "履歴弾幕"
+    },
+    "thumb": {
+      "name": "画像",
+      "pic": "カバー",
+      "cover": "カバー",
+      "square_cover": "正方形カバー",
+      "ugc_season_cover": "シリーズカバー",
+      "season_cover": "シーズンカバー",
+      "season_horizontal_cover_1610": "シーズンポスター (16:10)",
+      "season_horizontal_cover_169": "シーズンポスター (16:9)",
+      "brief": "プレビュー-{num}"
     },
     "mediaType": {
-        "video": "動画",
-        "bangumi": "番組",
-        "music": "音楽",
-        "musicList": "プレイリスト",
-        "lesson": "レッスン",
-        "favorite": "お気に入り"
-    },
-    "taskType": {
-        "aiSummary": "AI 要約",
-        "subtitles": "字幕",
-        "albumNfo": "シリーズ NFO",
-        "singleNfo": "エピソード NFO",
-        "liveDanmaku": "ライブ弾幕",
-        "historyDanmaku": "履歴弾幕",
-        "thumb": "画像",
-        "video": "動画",
-        "audio": "音声",
-        "audioVideo": "動画+音声"
-    },
-    "popup": {
-        "least": "少なくとも 1 件選択してください",
-        "abrHint": "「設定 → ポリシー → 変換ポリシー」で MP3 変換の有無を変更できます",
-        "popupLint": "リソースを選び、オプションを指定してください",
-        "dashHint": {
-            "name": "DASH / FLV / MP4 について",
-            "desc": "必要時のみ変更してください。まず {0} を読んで内容を理解してください。"
-        },
-        "nextStep": "次へ",
-        "misc": {
-            "name": "その他",
-            "aiSummary": "AI 要約",
-            "subtitles": "字幕"
-        },
-        "nfo": {
-            "name": "NFO メタデータ",
-            "album": "シリーズ NFO",
-            "single": "エピソード NFO"
-        },
-        "danmaku": {
-            "name": "弾幕",
-            "live": "ライブ弾幕",
-            "history": "履歴弾幕"
-        },
-        "thumb": {
-            "name": "画像",
-            "pic": "カバー",
-            "cover": "カバー",
-            "square_cover": "正方形カバー",
-            "ugc_season_cover": "シリーズカバー",
-            "season_cover": "シーズンカバー",
-            "season_horizontal_cover_1610": "シーズンポスター (16:10)",
-            "season_horizontal_cover_169": "シーズンポスター (16:9)",
-            "brief": "プレビュー-{num}"
-        },
-        "mediaType": {
-            "video": "動画",
-            "audio": "音声",
-            "audioVideo": "動画+音声"
-        }
-    },
-    "format": {
-        "showtitle": "動画/シリーズ名",
-        "title": "パート/話名",
-        "container": "分類",
-        "mediaType": "メディアタイプ",
-        "taskType": "タスク名",
-        "pubtime": "公開/アップロード",
-        "upper": "投稿者",
-        "upperid": "投稿者 UID",
-        "aid": "AV 番号",
-        "sid": "SID (音楽)",
-        "fid": "FID (お気に入り)",
-        "cid": "CID",
-        "bvid": "BV 番号",
-        "epid": "EP 番号",
-        "ssid": "SS 番号",
-        "res": "解像度",
-        "abr": "ビットレート",
-        "enc": "コーデック",
-        "fmt": "配信形式",
-        "index": "ダウンロード番号",
-        "downtime": "ダウンロード時刻"
-    },
-    "quality": {
-        "res": {
-            "6": "240P 高速",
-            "16": "360P なめらか",
-            "32": "480P 標準",
-            "64": "720P 準HD",
-            "80": "1080P HD",
-            "112": "1080P 高ビットレート",
-            "116": "1080P 60fps",
-            "120": "4K 超高画質",
-            "125": "HDR",
-            "126": "Dolby Vision",
-            "127": "8K 超高画質"
-        },
-        "abr": {
-            "30216": "64K",
-            "30228": "128K",
-            "30232": "132K",
-            "30280": "192K",
-            "30380": "320K",
-            "30250": "Dolby Atmos",
-            "30251": "Hi-Res ロスレス",
-            "30252": "ロスレス FLAC"
-        },
-        "enc": {
-            "7": "AVC (H.264)",
-            "12": "HEVC (H.265)",
-            "13": "AV1"
-        },
-        "fmt": {
-            "dash": "DASH",
-            "mp4": "MP4",
-            "flv": "FLV"
-        }
-    },
-    "error": {
-        "risk": "リスク制御を検知しました。認証してください",
-        "checkUpdate": "GitHub で更新を確認してください",
-        "invalidInput": "入力を解析できません",
-        "selectLimit": "一度に 30 件超の選択は非推奨です",
-        "skipTask": "タスク {0} には {1} がなく、スキップします。"
-    },
-    "updater": {
-        "title": "新しいバージョンがあります！",
-        "latest": "最新です",
-        "hint": "「設定 → 一般」で自動チェックを無効化できます（非推奨）",
-        "install": "ダウンロードしてインストール",
-        "cancel": "今回はスキップ"
-    },
-    "user": {
-        "input": "{0} を入力",
-        "account": "アカウント",
-        "password": "パスワード",
-        "phone": "電話番号",
-        "code": "認証コード",
-        "scan": "QR でログイン",
-        "getScan": "Bilibili アプリで\nQR をスキャン",
-        "pwd": "パスワードログイン",
-        "sms": "SMS ログイン",
-        "sendSms": "コード取得",
-        "login": "ログイン",
-        "info": {
-            "86038": "QR の有効期限切れ\n更新してください",
-            "86090": "スキャン成功\n端末で確認してください"
-        },
-        "agree": "ログインで Bilibili の規約とプライバシーに同意します\n{0}",
-        "stat": {
-            "following": "フォロー",
-            "follower": "フォロワー",
-            "dynamic": "投稿",
-            "coins": "コイン"
-        },
-        "exit": "ログアウト"
-    },
-    "search": {
-        "input": "{0} リンク/AV/BV/SS/EP/AU/AM/SID/FID ...",
-        "suggest": "何を検索したいか？",
-        "autoDetect": "自動検出",
-        "general": "通常",
-        "extra": "他の情報",
-        "selectAll": "全選択"
-    },
-    "history": {
-        "title": "履歴",
-        "refresh": "更新",
-        "keyword": "キーワード",
-        "moreFilters": "詳細フィルター",
-        "download": "ダウンロードへ",
-        "placeholder": "開始日 - 終了日",
-        "filter": {
-            "apply": "適用",
-            "duration": {
-                "all": "すべての長さ",
-                "under10": "10 分未満",
-                "10to30": "10–30 分",
-                "30to60": "30–60 分",
-                "over60": "60 分以上"
-            },
-            "time": {
-                "all": "すべての期間",
-                "today": "今日",
-                "yesterday": "昨日",
-                "week": "直近 1 週間",
-                "custom": "カスタム"
-            },
-            "device": {
-                "all": "すべてのデバイス",
-                "pc": "PC",
-                "phone": "スマホ",
-                "pad": "タブレット",
-                "tv": "TV"
-            }
-        }
-    },
-    "down": {
-        "title": "ダウンロード",
-        "waiting": "待機中",
-        "doing": "処理中",
-        "complete": "完了",
-        "empty": "キューは空です～",
-        "ordering": "保留枠",
-        "taskList": "タスクリスト",
-        "processQueue": "処理開始",
-        "restored": "タスクを復元しました～"
-    },
-    "settings": {
-        "title": "設定",
-        "confirm": "削除しますか？元に戻せません。",
-        "general": "一般",
-        "language": {
-            "name": "言語"
-        },
-        "theme": {
-            "name": "テーマ",
-            "light": "ライト",
-            "dark": "ダーク",
-            "auto": "システムに従う"
-        },
-        "window_effect": {
-            "name": "ウィンドウ効果",
-            "auto": "自動",
-            "mica": "Mica",
-            "acrylic": "Acrylic",
-            "sidebar": "Sidebar",
-            "none": "効果なし"
-        },
-        "clipboard": {
-            "name": "クリップボード監視",
-            "desc": "有効時、クリップボードの Bilibili リンクを自動検出して検索します。"
-        },
-        "notify": {
-            "name": "通知",
-            "desc": "有効時、ダウンロード完了で通知します。"
-        },
-        "auto_download": {
-            "name": "自動開始",
-            "desc": "有効時、タスク追加後に自動で開始します。"
-        },
-        "auto_check_update": {
-            "name": "自動更新チェック"
-        },
-        "storage": "ストレージ",
-        "paths": {
-            "name": "パス",
-            "desc": "未完了は「一時ファイル」に保存し、処理後「出力ファイル」へ移動します。",
-            "down_dir": "出力ファイル",
-            "temp_dir": "一時ファイル"
-        },
-        "cache": {
-            "name": "キャッシュ",
-            "desc": "DB に設定・ログイン情報・ダウンロード履歴などを保存します。",
-            "log": "ログ",
-            "temp": "一時ファイル",
-            "webview": "Webview キャッシュ",
-            "database": "データベース"
-        },
-        "database": {
-            "name": "データベース",
-            "desc": "ここでバックアップ/復元できます。",
-            "import": "インポート",
-            "export": "エクスポート"
-        },
-        "download": "ダウンロード",
-        "default": {
-            "name": "デフォルト",
-            "desc": "まずこの設定を使用。未対応なら利用可能な最高設定を使用します。"
-        },
-        "max_conc": {
-            "name": "同時実行数",
-            "desc": "並行タスク数を制御します。高すぎると制限の可能性が高まります。"
-        },
-        "proxy": {
-            "name": "プロキシ",
-            "desc": "HTTP(S) のみ対応。",
-            "address": "アドレス",
-            "placeholder": "http(s)://server:port",
-            "username": "ユーザー名",
-            "password": "パスワード"
-        },
-        "strategy": "ポリシー",
-        "add_metadata": {
-            "name": "音声にメタデータを埋め込む",
-            "desc": "有効時、音声ファイルをダウンロードする際に自動で埋め込みます。"
-        },
-        "block_pcdn": {
-            "name": "PCDN を回避",
-            "desc": "有効時、PCDN より高品質のリンクを優先します。"
-        },
-        "convert": {
-            "name": "変換ポリシー",
-            "danmaku": {
-                "name": "XML 弾幕 → ASS",
-                "desc": "有効時、DanmakuFactory で ASS に変換します。"
-            },
-            "mp3": {
-                "name": "音声を MP3 に変換",
-                "desc": "有効時、音声を強制的に MP3 へ。動画+音声は対象外です。"
-            }
-        },
-        "organize": {
-            "name": "整理",
-            "auto_rename": {
-                "name": "重名を自動検出"
-            },
-            "top_folder": {
-                "name": "トップフォルダー"
-            },
-            "sub_folder": {
-                "name": "サブフォルダー"
-            }
-        },
-        "format": "命名",
-        "naming": {
-            "name": "命名形式",
-            "desc": "ボタンで変数を挿入。未対応は空。\n時間変数は {format} で整形可（例: {example}）",
-            "series": "トップフォルダー",
-            "item": "サブフォルダー",
-            "file": "ファイル名",
-            "general": "共通",
-            "down": "ダウンロード",
-            "ids": "番号",
-            "stream": "メディア"
-        }
-    },
-    "info": {
-        "title": "アプリ情報",
-        "changelog": "更新履歴",
-        "checkUpdate": "更新を確認",
-        "document": "ドキュメント",
-        "feedback": "フィードバック",
-        "donate": "寄付",
-        "paid": "本ソフトは無料の公益プロジェクトです。有料購入は詐欺の可能性があります。",
-        "star": "役立つと思ったら GitHub で Star を！",
-        "data": "本プロジェクトで生成および取得されたデータは、端末内にのみ保存されます。",
-        "others": "本プロジェクトの使用による結果はすべてユーザーの自己責任であり、開発者は一切の責任を負いません。\n「哔哩哔哩」および「Bilibili」の名称・ロゴ・関連する図形は、上海幻電信息科技有限公司の登録商標または商標です。\n本プロジェクトは哔哩哔哩およびその関連会社とは一切の提携・所属・認可・承認関係にありません。"
+      "video": "動画",
+      "audio": "音声",
+      "audioVideo": "動画+音声"
     }
+  },
+  "format": {
+    "showtitle": "動画/シリーズ名",
+    "title": "パート/話名",
+    "container": "分類",
+    "mediaType": "メディアタイプ",
+    "taskType": "タスク名",
+    "pubtime": "公開/アップロード",
+    "upper": "投稿者",
+    "upperid": "投稿者 UID",
+    "aid": "AV 番号",
+    "sid": "SID (音楽)",
+    "fid": "FID (お気に入り)",
+    "cid": "CID",
+    "bvid": "BV 番号",
+    "epid": "EP 番号",
+    "ssid": "SS 番号",
+    "res": "解像度",
+    "abr": "ビットレート",
+    "enc": "コーデック",
+    "fmt": "配信形式",
+    "index": "ダウンロード番号",
+    "downtime": "ダウンロード時刻"
+  },
+  "quality": {
+    "res": {
+      "6": "240P 高速",
+      "16": "360P なめらか",
+      "32": "480P 標準",
+      "64": "720P 準HD",
+      "80": "1080P HD",
+      "112": "1080P 高ビットレート",
+      "116": "1080P 60fps",
+      "120": "4K 超高画質",
+      "125": "HDR",
+      "126": "Dolby Vision",
+      "127": "8K 超高画質"
+    },
+    "abr": {
+      "30216": "64K",
+      "30228": "128K",
+      "30232": "132K",
+      "30280": "192K",
+      "30380": "320K",
+      "30250": "Dolby Atmos",
+      "30251": "Hi-Res ロスレス",
+      "30252": "ロスレス FLAC"
+    },
+    "enc": {
+      "7": "AVC (H.264)",
+      "12": "HEVC (H.265)",
+      "13": "AV1"
+    },
+    "fmt": {
+      "dash": "DASH",
+      "mp4": "MP4",
+      "flv": "FLV"
+    }
+  },
+  "error": {
+    "risk": "リスク制御を検知しました。認証してください",
+    "checkUpdate": "GitHub で更新を確認してください",
+    "invalidInput": "入力を解析できません",
+    "selectLimit": "一度に 30 件超の選択は非推奨です",
+    "skipTask": "タスク {0} には {1} がなく、スキップします。"
+  },
+  "updater": {
+    "title": "新しいバージョンがあります！",
+    "latest": "最新です",
+    "hint": "「設定 → 一般」で自動チェックを無効化できます（非推奨）",
+    "install": "ダウンロードしてインストール",
+    "cancel": "今回はスキップ"
+  },
+  "user": {
+    "input": "{0} を入力",
+    "account": "アカウント",
+    "password": "パスワード",
+    "phone": "電話番号",
+    "code": "認証コード",
+    "scan": "QR でログイン",
+    "getScan": "Bilibili アプリで\nQR をスキャン",
+    "pwd": "パスワードログイン",
+    "sms": "SMS ログイン",
+    "sendSms": "コード取得",
+    "login": "ログイン",
+    "info": {
+      "86038": "QR の有効期限切れ\n更新してください",
+      "86090": "スキャン成功\n端末で確認してください"
+    },
+    "agree": "ログインで Bilibili の規約とプライバシーに同意します\n{0}",
+    "stat": {
+      "following": "フォロー",
+      "follower": "フォロワー",
+      "dynamic": "投稿",
+      "coins": "コイン"
+    },
+    "exit": "ログアウト"
+  },
+  "search": {
+    "input": "{0} リンク/AV/BV/SS/EP/AU/AM/SID/FID ...",
+    "suggest": "何を検索しますか？",
+    "autoDetect": "自動検出",
+    "general": "通常",
+    "extra": "他の情報",
+    "export": "データを書き出し",
+    "exported": "データを {0} に書き出しました",
+    "selectAll": "全選択"
+  },
+  "history": {
+    "title": "履歴",
+    "refresh": "更新",
+    "keyword": "キーワード",
+    "moreFilters": "詳細フィルター",
+    "download": "ダウンロードへ",
+    "placeholder": "開始日 - 終了日",
+    "filter": {
+      "apply": "適用",
+      "duration": {
+        "all": "すべての長さ",
+        "under10": "10 分未満",
+        "10to30": "10–30 分",
+        "30to60": "30–60 分",
+        "over60": "60 分以上"
+      },
+      "time": {
+        "all": "すべての期間",
+        "today": "今日",
+        "yesterday": "昨日",
+        "week": "直近 1 週間",
+        "custom": "カスタム"
+      },
+      "device": {
+        "all": "すべてのデバイス",
+        "pc": "PC",
+        "phone": "スマホ",
+        "pad": "タブレット",
+        "tv": "TV"
+      }
+    }
+  },
+  "down": {
+    "title": "ダウンロード",
+    "waiting": "待機中",
+    "doing": "処理中",
+    "complete": "完了",
+    "empty": "キューは空です～",
+    "ordering": "保留枠",
+    "taskInfo": "詳細情報",
+    "processQueue": "処理開始",
+    "restored": "タスクを復元しました～"
+  },
+  "settings": {
+    "title": "設定",
+    "confirm": "削除しますか？元に戻せません。",
+    "general": "一般",
+    "language": {
+      "name": "言語"
+    },
+    "theme": {
+      "name": "テーマ",
+      "light": "ライト",
+      "dark": "ダーク",
+      "auto": "システムに従う"
+    },
+    "window_effect": {
+      "name": "ウィンドウ効果",
+      "auto": "自動",
+      "mica": "Mica",
+      "acrylic": "Acrylic",
+      "sidebar": "Sidebar",
+      "none": "効果なし"
+    },
+    "clipboard": {
+      "name": "クリップボード監視",
+      "desc": "有効時、クリップボードの Bilibili リンクを自動検出して検索します。"
+    },
+    "notify": {
+      "name": "通知",
+      "desc": "有効時、ダウンロード完了で通知します。"
+    },
+    "auto_download": {
+      "name": "自動開始",
+      "desc": "有効時、タスク追加後に自動で開始します。"
+    },
+    "auto_check_update": {
+      "name": "自動更新チェック"
+    },
+    "storage": "ストレージ",
+    "paths": {
+      "name": "パス",
+      "desc": "未完了は「一時ファイル」に保存し、処理後「出力ファイル」へ移動します。",
+      "down_dir": "出力ファイル",
+      "temp_dir": "一時ファイル"
+    },
+    "cache": {
+      "name": "キャッシュ",
+      "desc": "DB に設定・ログイン情報・ダウンロード履歴などを保存します。",
+      "log": "ログ",
+      "temp": "一時ファイル",
+      "webview": "Webview キャッシュ",
+      "database": "データベース"
+    },
+    "database": {
+      "name": "データベース",
+      "desc": "ここでバックアップ/復元できます。",
+      "import": "インポート",
+      "export": "エクスポート",
+      "exported": "データベースを {0} にエクスポートしました"
+    },
+    "download": "ダウンロード",
+    "default": {
+      "name": "デフォルト",
+      "desc": "まずこの設定を使用。未対応なら利用可能な最高設定を使用します。"
+    },
+    "max_conc": {
+      "name": "同時実行数",
+      "desc": "並行タスク数を制御します。高すぎると制限の可能性が高まります。"
+    },
+    "proxy": {
+      "name": "プロキシ",
+      "desc": "HTTP(S) のみ対応。",
+      "address": "アドレス",
+      "placeholder": "http(s)://server:port",
+      "username": "ユーザー名",
+      "password": "パスワード"
+    },
+    "strategy": "ポリシー",
+    "add_metadata": {
+      "name": "音声にメタデータを埋め込む",
+      "desc": "有効時、音声ファイルをダウンロードする際に自動で埋め込みます。"
+    },
+    "block_pcdn": {
+      "name": "PCDN を回避",
+      "desc": "有効時、PCDN より高品質のリンクを優先します。"
+    },
+    "convert": {
+      "name": "変換ポリシー",
+      "danmaku": {
+        "name": "XML 弾幕 → ASS",
+        "desc": "有効時、DanmakuFactory で ASS に変換します。"
+      },
+      "mp3": {
+        "name": "音声を MP3 に変換",
+        "desc": "有効時、音声を強制的に MP3 へ。動画+音声は対象外です。"
+      }
+    },
+    "organize": {
+      "name": "整理",
+      "auto_rename": {
+        "name": "重名を自動検出"
+      },
+      "top_folder": {
+        "name": "トップフォルダー"
+      },
+      "sub_folder": {
+        "name": "サブフォルダー"
+      }
+    },
+    "format": "命名",
+    "naming": {
+      "name": "命名形式",
+      "desc": "ボタンで変数を挿入。未対応は空。\n時間変数は {format} で整形可（例: {example}）",
+      "series": "トップフォルダー",
+      "item": "サブフォルダー",
+      "file": "ファイル名",
+      "general": "共通",
+      "down": "ダウンロード",
+      "ids": "番号",
+      "stream": "メディア"
+    }
+  },
+  "info": {
+    "title": "アプリ情報",
+    "changelog": "更新履歴",
+    "checkUpdate": "更新を確認",
+    "document": "ドキュメント",
+    "feedback": "フィードバック",
+    "donate": "寄付",
+    "paid": "本ソフトは無料の公益プロジェクトです。有料購入は詐欺の可能性があります。",
+    "star": "役立つと思ったら GitHub で Star を！",
+    "data": "本プロジェクトで生成および取得されたデータは、端末内にのみ保存されます。",
+    "others": "本プロジェクトの使用による結果はすべてユーザーの自己責任であり、開発者は一切の責任を負いません。\n「哔哩哔哩」および「Bilibili」の名称・ロゴ・関連する図形は、上海幻電信息科技有限公司の登録商標または商標です。\n本プロジェクトは哔哩哔哩およびその関連会社とは一切の提携・所属・認可・承認関係にありません。"
+  }
 }

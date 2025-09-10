@@ -64,7 +64,7 @@
     -webkit-user-drag: none;
   }
   ::-webkit-scrollbar {
-    @apply w-1.5;
+    @apply w-1.5 h-1.5;
   }
   ::-webkit-scrollbar-thumb {
     @apply rounded-md bg-(--scroller-color);

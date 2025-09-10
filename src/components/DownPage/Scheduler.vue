@@ -35,8 +35,8 @@
             <span class="w-full truncate">{{ task.item.title }}</span>
             <span class="flex-shrink-0">{{ timestamp(task.ts) }}</span>
         </div>
-        <div class="flex gap-2 desc w-full text">
-        <div class="flex gap-1 max-w-full overflow-auto whitespace-nowrap">
+        <div class="flex gap-2 desc w-full text items-center justify-center">
+        <div class="flex gap-2 max-w-full overflow-auto whitespace-nowrap *:shrink-0">
             <template v-if="(task.select.media.video || task.select.media.audioVideo)">
                 <Dropdown class="flat min-w-0! mr-1"
                     v-if="tab === 'waiting'"
@@ -91,7 +91,7 @@
         <div class="flex w-full gap-4 *:shrink-0 items-center">
             <button @click="popup?.(task)">
                 <i :class="[$fa.weight, 'fa-list']"></i>
-                <span>{{ $t('down.taskList') }}</span>
+                <span>{{ $t('down.taskInfo') }}</span>
             </button>
             <ProgressBar :progress="getProgress(task)" />
             <span class="w-14">{{ getProgress(task).toFixed(2) }}%</span>

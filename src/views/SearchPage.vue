@@ -84,8 +84,10 @@ import { useRouter } from 'vue-router';
 import pLimit from 'p-limit';
 
 import { useSettingsStore, useUserStore } from '@/store';
-import { AppLog, parseId, waitPage } from '@/services/utils';
+import { AppLog, parseId, strip, waitPage } from '@/services/utils';
 import { data, extras } from '@/services/media';
+import { save } from '@tauri-apps/plugin-dialog';
+import { commands } from '@/services/backend';
 import * as queue from '@/services/queue';
 import * as Types from '@/types/shared.d';
 import i18n from '@/i18n';
@@ -107,9 +109,13 @@ const buttons = [{
 	text: 'search.general',
 	action: () => initPopup(),
 }, {
-	icon: 'fa-file-circle-info',
+	icon: 'fa-memo-circle-info',
 	text: 'search.extra',
 	action: () => AppLog(i18n.global.t('wip'), 'info')
+}, {
+	icon: 'fa-file-export',
+	text: 'search.export',
+	action: () => exportData(),
 }, {
 	icon: 'fa-square-dashed-circle-plus',
 	text: 'search.selectAll',
@@ -262,5 +268,15 @@ async function emit(select: Types.PopupSelect) {
 	router.push('/down-page');
 	const page = await waitPage(downPage, 'tab');
 	page.value.tab = 'waiting';
+}
+
+async function exportData() {
+	const path = await save({
+        defaultPath: `${settings.down_dir}/${strip(v.mediaInfo.nfo.showtitle)}_${Date.now()}.json`
+    });
+    if (!path) return;
+	const result = await commands.exportData(path, v.mediaInfo as any);
+	if (result.status === 'error') throw result;
+    AppLog(i18n.global.t('search.exported', [path]), 'success');
 }
 </script>

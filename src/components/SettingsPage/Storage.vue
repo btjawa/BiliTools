@@ -55,7 +55,7 @@ import * as dialog from '@tauri-apps/plugin-dialog';
 
 import { useAppStore, useSettingsStore } from '@/store';
 import { commands } from '@/services/backend';
-import { formatBytes } from '@/services/utils';
+import { AppLog, formatBytes } from '@/services/utils';
 
 const settings = useSettingsStore();
 const app = useAppStore();
@@ -109,6 +109,7 @@ async function exportDb() {
     if (!path) return;
     const result = await commands.dbExport(path);
     if (result.status === 'error') throw result.error;
+    AppLog(i18n.global.t('settings.database.exported', [path]), 'success');
 }
 </script>
 

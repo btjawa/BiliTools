@@ -77,6 +77,14 @@ async dbExport(output: string) : Promise<Result<null, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async exportData(output: string, data: JsonValue) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_data", { output, data }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async stopLogin() : Promise<void> {
     await TAURI_INVOKE("stop_login");
 },

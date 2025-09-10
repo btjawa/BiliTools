@@ -122,6 +122,14 @@ pub async fn db_import(input: PathBuf) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
+pub async fn export_data(output: PathBuf, data: serde_json::Value) -> TauriResult<()> {
+    let json = serde_json::to_string_pretty(&data)?;
+    fs::write(output, json.as_bytes()).await?;
+    Ok(())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
 pub async fn meta(app: tauri::AppHandle) -> TauriResult<InitData> {
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();

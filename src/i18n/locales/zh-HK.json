@@ -1,353 +1,356 @@
 {
-    "bilibili": "嗶哩嗶哩",
-    "optional": "可選",
-    "page": "頁數",
-    "reset": "重設",
-    "wip": "此處施工中～",
-    "empty": "無可用資源～",
-    "contextMenu": {
-        "cut": "剪下",
-        "copy": "複製",
-        "paste": "貼上"
+  "bilibili": "嗶哩嗶哩",
+  "optional": "可選",
+  "page": "頁數",
+  "reset": "重設",
+  "wip": "此處施工中～",
+  "empty": "無可用資源～",
+  "contextMenu": {
+    "cut": "剪下",
+    "copy": "複製",
+    "paste": "貼上"
+  },
+  "mediaType": {
+    "video": "影片",
+    "bangumi": "番劇",
+    "music": "音樂",
+    "musicList": "歌單",
+    "lesson": "課程",
+    "favorite": "收藏夾"
+  },
+  "taskType": {
+    "aiSummary": "AI 摘要",
+    "subtitles": "字幕",
+    "albumNfo": "合集/劇集刮削",
+    "singleNfo": "單集刮削",
+    "liveDanmaku": "即時彈幕",
+    "historyDanmaku": "歷史彈幕",
+    "thumb": "圖像",
+    "video": "影片",
+    "audio": "音訊",
+    "audioVideo": "音訊影片"
+  },
+  "popup": {
+    "least": "請至少選擇一項資源",
+    "abrHint": "可於「設定 → 進階 → 轉換策略」修改是否轉換為 MP3 格式",
+    "popupLint": "請點擊所需資源的按鈕，並選擇對應參數",
+    "dashHint": {
+      "name": "關於 DASH / FLV / MP4",
+      "desc": "請勿隨意更改。如確有需要，請先閱讀：{0}，並確保你明白自己正在做什麼"
+    },
+    "nextStep": "下一步",
+    "misc": {
+      "name": "雜項",
+      "aiSummary": "AI 摘要",
+      "subtitles": "字幕"
+    },
+    "nfo": {
+      "name": "NFO 中繼資料",
+      "album": "合集/劇集刮削",
+      "single": "單集刮削"
+    },
+    "danmaku": {
+      "name": "彈幕",
+      "live": "即時彈幕",
+      "history": "歷史彈幕"
+    },
+    "thumb": {
+      "name": "圖像",
+      "pic": "封面",
+      "cover": "封面",
+      "square_cover": "方形封面",
+      "ugc_season_cover": "合集封面",
+      "season_cover": "本季封面",
+      "season_horizontal_cover_1610": "本季海報 (16:10)",
+      "season_horizontal_cover_169": "本季海報 (16:9)",
+      "brief": "預覽-{num}"
     },
     "mediaType": {
-        "video": "影片",
-        "bangumi": "番劇",
-        "music": "音樂",
-        "musicList": "歌單",
-        "lesson": "課程",
-        "favorite": "收藏夾"
-    },
-    "taskType": {
-        "aiSummary": "AI 摘要",
-        "subtitles": "字幕",
-        "albumNfo": "合集/劇集刮削",
-        "singleNfo": "單集刮削",
-        "liveDanmaku": "即時彈幕",
-        "historyDanmaku": "歷史彈幕",
-        "thumb": "圖像",
-        "video": "影片",
-        "audio": "音訊",
-        "audioVideo": "音訊影片"
-    },
-    "popup": {
-        "least": "請至少選擇一項資源",
-        "abrHint": "可於「設定 → 進階 → 轉換策略」修改是否轉換為 MP3 格式",
-        "popupLint": "請點擊所需資源的按鈕，並選擇對應參數",
-        "dashHint": {
-            "name": "關於 DASH / FLV / MP4",
-            "desc": "請勿隨意更改。如確有需要，請先閱讀：{0}，並確保你明白自己正在做什麼"
-        },
-        "nextStep": "下一步",
-        "misc": {
-            "name": "雜項",
-            "aiSummary": "AI 摘要",
-            "subtitles": "字幕"
-        },
-        "nfo": {
-            "name": "NFO 中繼資料",
-            "album": "合集/劇集刮削",
-            "single": "單集刮削"
-        },
-        "danmaku": {
-            "name": "彈幕",
-            "live": "即時彈幕",
-            "history": "歷史彈幕"
-        },
-        "thumb": {
-            "name": "圖像",
-            "pic": "封面",
-            "cover": "封面",
-            "square_cover": "方形封面",
-            "ugc_season_cover": "合集封面",
-            "season_cover": "本季封面",
-            "season_horizontal_cover_1610": "本季海報 (16:10)",
-            "season_horizontal_cover_169": "本季海報 (16:9)",
-            "brief": "預覽-{num}"
-        },
-        "mediaType": {
-            "video": "影片",
-            "audio": "音訊",
-            "audioVideo": "音訊影片"
-        }
-    },
-    "format": {
-        "showtitle": "影片/合集標題",
-        "title": "分 P/單集標題",
-        "container": "資源分類",
-        "mediaType": "媒體類型",
-        "taskType": "任務名稱",
-        "pubtime": "發布/上載時間",
-        "upper": "UP 主暱稱",
-        "upperid": "UP 主 UID",
-        "aid": "AV 號",
-        "sid": "SID (音樂)",
-        "fid": "FID (收藏夾)",
-        "cid": "CID",
-        "bvid": "BV 號",
-        "epid": "EP 號",
-        "ssid": "SS 號",
-        "res": "解析度",
-        "abr": "比特率",
-        "enc": "編碼格式",
-        "fmt": "串流格式",
-        "index": "下載編號",
-        "downtime": "下載時間"
-    },
-    "quality": {
-        "res": {
-            "6": "240P 極速",
-            "16": "360P 流暢",
-            "32": "480P 標清",
-            "64": "720P 準高清",
-            "80": "1080P 高清",
-            "112": "1080P 高碼率",
-            "116": "1080P 60 幀",
-            "120": "4K 超高清",
-            "125": "HDR 真彩",
-            "126": "杜比視界",
-            "127": "8K 超高清"
-        },
-        "abr": {
-            "30216": "64K",
-            "30228": "128K",
-            "30232": "132K",
-            "30280": "192K",
-            "30380": "320K",
-            "30250": "杜比全景聲",
-            "30251": "Hi-Res 無損",
-            "30252": "無損 FLAC"
-        },
-        "enc": {
-            "7": "AVC (H.264)",
-            "12": "HEVC (H.265)",
-            "13": "AV1"
-        },
-        "fmt": {
-            "dash": "DASH 格式",
-            "mp4": "MP4 格式",
-            "flv": "FLV 格式"
-        }
-    },
-    "error": {
-        "risk": "觸發風控，請進行驗證",
-        "checkUpdate": "請到 GitHub 檢查最新更新",
-        "invalidInput": "無法解析輸入",
-        "selectLimit": "不建議一次選擇超過 30 個選項",
-        "skipTask": "任務 {0} 無{1}，跳過該子任務"
-    },
-    "updater": {
-        "title": "發現新版本！",
-        "latest": "已是最新版本",
-        "hint": "可於「設定 → 一般」停用「自動檢查更新」，但不建議這麼做",
-        "install": "下載並安裝",
-        "cancel": "略過本次更新"
-    },
-    "user": {
-        "input": "請輸入 {0}",
-        "account": "帳號",
-        "password": "密碼",
-        "phone": "手機號碼",
-        "code": "驗證碼",
-        "scan": "掃描二維碼登入",
-        "getScan": "請使用嗶哩嗶哩客戶端\n掃碼登入或掃碼下載 App",
-        "pwd": "密碼登入",
-        "sms": "簡訊登入",
-        "sendSms": "獲取驗證碼",
-        "login": "登入",
-        "info": {
-            "86038": "二維碼已過期\n請點擊重新整理",
-            "86090": "掃碼成功\n請在手機上確認"
-        },
-        "agree": "登入即代表你同意嗶哩嗶哩的使用者協議與隱私政策\n{0}",
-        "stat": {
-            "following": "關注數",
-            "follower": "粉絲數",
-            "dynamic": "動態數",
-            "coins": "硬幣數"
-        },
-        "exit": "登出"
-    },
-    "search": {
-        "input": "{0}連結/AV/BV/SS/EP/AU/AM/SID/FID 號…",
-        "suggest": "今天想搜尋些什麼呢～",
-        "autoDetect": "自動檢測",
-        "general": "常規下載",
-        "extra": "其他訊息",
-        "selectAll": "全選"
-    },
-    "history": {
-        "title": "歷史記錄",
-        "refresh": "重新整理",
-        "keyword": "關鍵字",
-        "moreFilters": "更多篩選",
-        "download": "前往下載",
-        "placeholder": "開始日期 - 結束日期",
-        "filter": {
-            "apply": "套用篩選",
-            "duration": {
-                "all": "全部時長",
-                "under10": "10 分鐘以下",
-                "10to30": "10–30 分鐘",
-                "30to60": "30–60 分鐘",
-                "over60": "60 分鐘以上"
-            },
-            "time": {
-                "all": "全部時間",
-                "today": "今天",
-                "yesterday": "昨天",
-                "week": "近一週",
-                "custom": "自訂"
-            },
-            "device": {
-                "all": "所有裝置",
-                "pc": "PC",
-                "phone": "手機",
-                "pad": "平板",
-                "tv": "TV"
-            }
-        }
-    },
-    "down": {
-        "title": "下載",
-        "waiting": "等待中",
-        "doing": "進行中",
-        "complete": "已完成",
-        "empty": "此佇列為空～",
-        "ordering": "備選區",
-        "taskList": "任務列表",
-        "processQueue": "開始處理",
-        "restored": "已恢復下載任務～"
-    },
-    "settings": {
-        "title": "設定",
-        "confirm": "確定刪除嗎？此操作不可復原。",
-        "general": "一般",
-        "language": {
-            "name": "語言"
-        },
-        "theme": {
-            "name": "主題",
-            "light": "淺色",
-            "dark": "深色",
-            "auto": "跟隨系統"
-        },
-        "window_effect": {
-            "name": "視窗效果",
-            "auto": "自動",
-            "mica": "Mica",
-            "acrylic": "Acrylic",
-            "sidebar": "Sidebar",
-            "none": "無"
-        },
-        "clipboard": {
-            "name": "監聽剪貼簿",
-            "desc": "若啟用，則會自動檢測剪貼簿中的嗶哩嗶哩連結並搜尋。"
-        },
-        "notify": {
-            "name": "通知系統",
-            "desc": "若啟用，則會在下載完畢時發送系統通知。"
-        },
-        "auto_download": {
-            "name": "自動開始下載",
-            "desc": "若啟用，則會在新增任務後自動開始下載。"
-        },
-        "auto_check_update": {
-            "name": "自動檢查更新"
-        },
-        "storage": "儲存",
-        "paths": {
-            "name": "路徑",
-            "desc": "「臨時檔案」儲存未下載完成的檔案，處理後將轉移至「輸出檔案」。",
-            "down_dir": "輸出檔案",
-            "temp_dir": "臨時檔案"
-        },
-        "cache": {
-            "name": "快取",
-            "desc": "資料庫儲存設定、登入資訊、下載記錄等資料。",
-            "log": "日誌",
-            "temp": "臨時檔案",
-            "webview": "Webview 快取",
-            "database": "資料庫"
-        },
-        "database": {
-            "name": "操作資料庫",
-            "desc": "此處可以備份與恢復資料庫。",
-            "import": "匯入",
-            "export": "匯出"
-        },
-        "download": "下載",
-        "default": {
-            "name": "預設參數",
-            "desc": "下載時，將會優先使用此處參數。若目標資源不支援此處選定的參數，則會使用其支援的最高參數。"
-        },
-        "max_conc": {
-            "name": "最大並行下載數",
-            "desc": "控制同時執行的最大任務數量。若該值過高，可能導致觸發風控。"
-        },
-        "proxy": {
-            "name": "網路代理",
-            "desc": "暫僅支援 HTTP(S) 協議。",
-            "address": "地址",
-            "placeholder": "http(s)://server:port",
-            "username": "使用者名稱",
-            "password": "密碼"
-        },
-        "strategy": "策略",
-        "add_metadata": {
-            "name": "自動為音訊檔案嵌入中繼資料",
-            "desc": "若啟用，則會在下載音訊時自動為其嵌入中繼資料。"
-        },
-        "block_pcdn": {
-            "name": "嘗試屏蔽 PCDN",
-            "desc": "若啟用，則會在下載時嘗試使用更高品質的連結而非 PCDN。"
-        },
-        "convert": {
-            "name": "轉換策略",
-            "danmaku": {
-                "name": "將 XML 彈幕轉換為 ASS 字幕",
-                "desc": "若啟用，則會在下載彈幕時調用 DanmakuFactory 將 XML 轉換為 ASS 格式。"
-            },
-            "mp3": {
-                "name": "將音訊轉換為 MP3 格式",
-                "desc": "若啟用，則會強制轉換音訊為 MP3 格式。音訊影片不受影響。"
-            }
-        },
-        "organize": {
-            "name": "組織策略",
-            "auto_rename": {
-                "name": "自動檢測重名"
-            },
-            "top_folder": {
-                "name": "頂層資料夾"
-            },
-            "sub_folder": {
-                "name": "子資料夾"
-            }
-        },
-        "format": "命名",
-        "naming": {
-            "name": "命名格式",
-            "desc": "點擊對應按鈕以新增變數。若目標資源不支援該變數，將留空。\n時間變數支援使用 {format} 格式化，例如：{example}",
-            "series": "頂層資料夾",
-            "item": "子資料夾",
-            "file": "檔案名稱",
-            "general": "通用",
-            "down": "下載",
-            "ids": "編號",
-            "stream": "媒體"
-        }
-    },
-    "info": {
-        "title": "關於",
-        "changelog": "更新日誌",
-        "checkUpdate": "檢查更新",
-        "document": "文件",
-        "feedback": "回饋",
-        "donate": "贊助",
-        "paid": "此軟體為公益免費項目。如果你付費購買了此軟體，你可能遭遇詐騙。",
-        "star": "覺得好用的話，歡迎到 GitHub 為此項目點個 Star！",
-        "data": "該應用產生與獲取的所有資料均僅儲存於使用者本機",
-        "others": "因使用本項目而產生的任何後果均由使用者個人承擔，與開發者無關，概不負責。\n「嗶哩嗶哩」及「Bilibili」名稱、LOGO及相關圖形為上海幻電資訊科技有限公司的註冊商標或商標。\n本項目與嗶哩嗶哩及其關聯公司無任何關聯、合作、授權或背書等關係。"
+      "video": "影片",
+      "audio": "音訊",
+      "audioVideo": "音訊影片"
     }
+  },
+  "format": {
+    "showtitle": "影片/合集標題",
+    "title": "分 P/單集標題",
+    "container": "資源分類",
+    "mediaType": "媒體類型",
+    "taskType": "任務名稱",
+    "pubtime": "發布/上載時間",
+    "upper": "UP 主暱稱",
+    "upperid": "UP 主 UID",
+    "aid": "AV 號",
+    "sid": "SID (音樂)",
+    "fid": "FID (收藏夾)",
+    "cid": "CID",
+    "bvid": "BV 號",
+    "epid": "EP 號",
+    "ssid": "SS 號",
+    "res": "解析度",
+    "abr": "比特率",
+    "enc": "編碼格式",
+    "fmt": "串流格式",
+    "index": "下載編號",
+    "downtime": "下載時間"
+  },
+  "quality": {
+    "res": {
+      "6": "240P 極速",
+      "16": "360P 流暢",
+      "32": "480P 標清",
+      "64": "720P 準高清",
+      "80": "1080P 高清",
+      "112": "1080P 高碼率",
+      "116": "1080P 60 幀",
+      "120": "4K 超高清",
+      "125": "HDR 真彩",
+      "126": "杜比視界",
+      "127": "8K 超高清"
+    },
+    "abr": {
+      "30216": "64K",
+      "30228": "128K",
+      "30232": "132K",
+      "30280": "192K",
+      "30380": "320K",
+      "30250": "杜比全景聲",
+      "30251": "Hi-Res 無損",
+      "30252": "無損 FLAC"
+    },
+    "enc": {
+      "7": "AVC (H.264)",
+      "12": "HEVC (H.265)",
+      "13": "AV1"
+    },
+    "fmt": {
+      "dash": "DASH 格式",
+      "mp4": "MP4 格式",
+      "flv": "FLV 格式"
+    }
+  },
+  "error": {
+    "risk": "觸發風控，請進行驗證",
+    "checkUpdate": "請到 GitHub 檢查最新更新",
+    "invalidInput": "無法解析輸入",
+    "selectLimit": "不建議一次選擇超過 30 個選項",
+    "skipTask": "任務 {0} 無{1}，跳過該子任務"
+  },
+  "updater": {
+    "title": "發現新版本！",
+    "latest": "已是最新版本",
+    "hint": "可於「設定 → 一般」停用「自動檢查更新」，但不建議這麼做",
+    "install": "下載並安裝",
+    "cancel": "略過本次更新"
+  },
+  "user": {
+    "input": "請輸入 {0}",
+    "account": "帳號",
+    "password": "密碼",
+    "phone": "手機號碼",
+    "code": "驗證碼",
+    "scan": "掃描二維碼登入",
+    "getScan": "請使用嗶哩嗶哩客戶端\n掃碼登入或掃碼下載 App",
+    "pwd": "密碼登入",
+    "sms": "簡訊登入",
+    "sendSms": "獲取驗證碼",
+    "login": "登入",
+    "info": {
+      "86038": "二維碼已過期\n請點擊重新整理",
+      "86090": "掃碼成功\n請在手機上確認"
+    },
+    "agree": "登入即代表你同意嗶哩嗶哩的使用者協議與隱私政策\n{0}",
+    "stat": {
+      "following": "關注數",
+      "follower": "粉絲數",
+      "dynamic": "動態數",
+      "coins": "硬幣數"
+    },
+    "exit": "登出"
+  },
+  "search": {
+    "input": "{0}連結/AV/BV/SS/EP/AU/AM/SID/FID 號…",
+    "suggest": "今天想搜尋些什麼呢～",
+    "autoDetect": "自動檢測",
+    "general": "常規下載",
+    "extra": "其他資訊",
+    "export": "匯出資料",
+    "exported": "已匯出資料至 {0}",
+    "selectAll": "全選"
+  },
+  "history": {
+    "title": "歷史記錄",
+    "refresh": "重新整理",
+    "keyword": "關鍵字",
+    "moreFilters": "更多篩選",
+    "download": "前往下載",
+    "placeholder": "開始日期 - 結束日期",
+    "filter": {
+      "apply": "套用篩選",
+      "duration": {
+        "all": "全部時長",
+        "under10": "10 分鐘以下",
+        "10to30": "10–30 分鐘",
+        "30to60": "30–60 分鐘",
+        "over60": "60 分鐘以上"
+      },
+      "time": {
+        "all": "全部時間",
+        "today": "今天",
+        "yesterday": "昨天",
+        "week": "近一週",
+        "custom": "自訂"
+      },
+      "device": {
+        "all": "所有裝置",
+        "pc": "PC",
+        "phone": "手機",
+        "pad": "平板",
+        "tv": "TV"
+      }
+    }
+  },
+  "down": {
+    "title": "下載",
+    "waiting": "等待中",
+    "doing": "進行中",
+    "complete": "已完成",
+    "empty": "此佇列為空～",
+    "ordering": "備選區",
+    "taskInfo": "詳細資訊",
+    "processQueue": "開始處理",
+    "restored": "已恢復下載任務～"
+  },
+  "settings": {
+    "title": "設定",
+    "confirm": "確定刪除嗎？此操作不可復原。",
+    "general": "一般",
+    "language": {
+      "name": "語言"
+    },
+    "theme": {
+      "name": "主題",
+      "light": "淺色",
+      "dark": "深色",
+      "auto": "跟隨系統"
+    },
+    "window_effect": {
+      "name": "視窗效果",
+      "auto": "自動",
+      "mica": "Mica",
+      "acrylic": "Acrylic",
+      "sidebar": "Sidebar",
+      "none": "無"
+    },
+    "clipboard": {
+      "name": "監聽剪貼簿",
+      "desc": "若啟用，則會自動檢測剪貼簿中的嗶哩嗶哩連結並搜尋。"
+    },
+    "notify": {
+      "name": "通知系統",
+      "desc": "若啟用，則會在下載完畢時發送系統通知。"
+    },
+    "auto_download": {
+      "name": "自動開始下載",
+      "desc": "若啟用，則會在新增任務後自動開始下載。"
+    },
+    "auto_check_update": {
+      "name": "自動檢查更新"
+    },
+    "storage": "儲存",
+    "paths": {
+      "name": "路徑",
+      "desc": "「臨時檔案」儲存未下載完成的檔案，處理後將轉移至「輸出檔案」。",
+      "down_dir": "輸出檔案",
+      "temp_dir": "臨時檔案"
+    },
+    "cache": {
+      "name": "快取",
+      "desc": "資料庫儲存設定、登入資訊、下載記錄等資料。",
+      "log": "日誌",
+      "temp": "臨時檔案",
+      "webview": "Webview 快取",
+      "database": "資料庫"
+    },
+    "database": {
+      "name": "操作資料庫",
+      "desc": "此處可以備份與恢復資料庫。",
+      "import": "匯入",
+      "export": "匯出",
+      "exported": "已匯出資料庫至 {0}"
+    },
+    "download": "下載",
+    "default": {
+      "name": "預設參數",
+      "desc": "下載時，將會優先使用此處參數。若目標資源不支援此處選定的參數，則會使用其支援的最高參數。"
+    },
+    "max_conc": {
+      "name": "最大並行下載數",
+      "desc": "控制同時執行的最大任務數量。若該值過高，可能導致觸發風控。"
+    },
+    "proxy": {
+      "name": "網路代理",
+      "desc": "暫僅支援 HTTP(S) 協議。",
+      "address": "地址",
+      "placeholder": "http(s)://server:port",
+      "username": "使用者名稱",
+      "password": "密碼"
+    },
+    "strategy": "策略",
+    "add_metadata": {
+      "name": "自動為音訊檔案嵌入中繼資料",
+      "desc": "若啟用，則會在下載音訊時自動為其嵌入中繼資料。"
+    },
+    "block_pcdn": {
+      "name": "嘗試屏蔽 PCDN",
+      "desc": "若啟用，則會在下載時嘗試使用更高品質的連結而非 PCDN。"
+    },
+    "convert": {
+      "name": "轉換策略",
+      "danmaku": {
+        "name": "將 XML 彈幕轉換為 ASS 字幕",
+        "desc": "若啟用，則會在下載彈幕時調用 DanmakuFactory 將 XML 轉換為 ASS 格式。"
+      },
+      "mp3": {
+        "name": "將音訊轉換為 MP3 格式",
+        "desc": "若啟用，則會強制轉換音訊為 MP3 格式。音訊影片不受影響。"
+      }
+    },
+    "organize": {
+      "name": "組織策略",
+      "auto_rename": {
+        "name": "自動檢測重名"
+      },
+      "top_folder": {
+        "name": "頂層資料夾"
+      },
+      "sub_folder": {
+        "name": "子資料夾"
+      }
+    },
+    "format": "命名",
+    "naming": {
+      "name": "命名格式",
+      "desc": "點擊對應按鈕以新增變數。若目標資源不支援該變數，將留空。\n時間變數支援使用 {format} 格式化，例如：{example}",
+      "series": "頂層資料夾",
+      "item": "子資料夾",
+      "file": "檔案名稱",
+      "general": "通用",
+      "down": "下載",
+      "ids": "編號",
+      "stream": "媒體"
+    }
+  },
+  "info": {
+    "title": "關於",
+    "changelog": "更新日誌",
+    "checkUpdate": "檢查更新",
+    "document": "文件",
+    "feedback": "回饋",
+    "donate": "贊助",
+    "paid": "此軟體為公益免費項目。如果你付費購買了此軟體，你可能遭遇詐騙。",
+    "star": "覺得好用的話，歡迎到 GitHub 為此項目點個 Star！",
+    "data": "該應用產生與獲取的所有資料均僅儲存於使用者本機",
+    "others": "因使用本項目而產生的任何後果均由使用者個人承擔，與開發者無關，概不負責。\n「嗶哩嗶哩」及「Bilibili」名稱、LOGO及相關圖形為上海幻電資訊科技有限公司的註冊商標或商標。\n本項目與嗶哩嗶哩及其關聯公司無任何關聯、合作、授權或背書等關係。"
+  }
 }
