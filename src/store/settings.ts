@@ -7,6 +7,7 @@ export const useSettingsStore = defineStore('settings', () => {
         add_metadata: true,
         auto_check_update: false, // for watch() to take effet when enabled
         auto_download: false,
+        auto_startup: false, // Auto start on system boot
         block_pcdn: true,
         check_update: true,
         clipboard: false,

@@ -25,6 +25,7 @@ pub struct Settings {
     pub add_metadata: bool,
     pub auto_check_update: bool,
     pub auto_download: bool,
+    pub auto_startup: bool, // Auto start on system boot
     pub block_pcdn: bool,
     pub check_update: bool,
     pub clipboard: bool,

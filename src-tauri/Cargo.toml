@@ -53,6 +53,7 @@ specta-typescript = "0.0.9"
 sha2 = "0.10.9"
 sys-locale = "0.3.2"
 tauri = { version = "2.7.0", features = ["macos-private-api"] }
+tauri-plugin-autostart = "2.5.0"
 tauri-plugin-clipboard-manager = "2.3.0"
 tauri-plugin-dialog = "2.3.2"
 tauri-plugin-http = { version = "2.5.1", features = ["unsafe-headers", "rustls-tls", "stream", "gzip", "brotli", "blocking"] }

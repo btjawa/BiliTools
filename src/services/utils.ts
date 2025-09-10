@@ -1,4 +1,4 @@
-import { useSettingsStore, useAppStore } from "@/store";
+import { useAppStore, useSettingsStore } from '@/store';
 import { TYPE, useToast } from "vue-toastification";
 import { MediaType } from '@/types/shared.d';
 import { Ref, watch } from "vue";
@@ -11,6 +11,7 @@ import { commands, events } from './backend';
 import { handleEvent } from "./queue";
 import { AppError } from './error';
 import * as auth from './auth';
+import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 
 export function AppLog(message: string, _type?: `${TYPE}`) {
     const type = Object.values(TYPE).includes(_type as TYPE) ? (_type as TYPE) : TYPE.INFO;
@@ -42,6 +43,7 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
 export function setEventHook() {
     const app = useAppStore();
     const settings = useSettingsStore();
+
     watch(settings.$state, async (v) => {
         i18n.global.locale.value = v.language;
         const result = await Promise.all([
@@ -49,6 +51,17 @@ export function setEventHook() {
             commands.updateMaxConc(v.max_conc),
             commands.configWrite(v),
         ]);
+        
+        // Sync autostart status
+        try {
+            const current = await isEnabled();
+            if (current !== v.auto_startup) {
+                v.auto_startup ? await enable() : await disable();
+            }
+        } catch (error) {
+            console.error('Failed to sync autostart status:', error);
+        }
+        
         for (const r of result) {
             if (r.status === 'error') new AppError(r.error).handle();
         }
@@ -59,7 +72,8 @@ export function setEventHook() {
         list.toggle('dark', dark);
         document.documentElement.style.backgroundColor = color ?? 'transparent';
 
-    }, { deep: true });
+    }, { deep: true, immediate: true });
+    
     events.headersData.listen(e => app.$patch({
         headers: e.payload
     }));

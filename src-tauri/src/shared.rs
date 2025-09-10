@@ -25,6 +25,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         add_metadata: true,
         auto_check_update: true,
         auto_download: false,
+        auto_startup: false, // Auto start on system boot
         block_pcdn: true,
         check_update: true,
         clipboard: false,

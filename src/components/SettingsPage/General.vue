@@ -58,6 +58,14 @@
     <Switch v-model="settings.auto_download"/>
     <span class="desc">{{ $t('settings.auto_download.desc') }}</span>
 </section>
+<section>
+    <h3>
+        <i :class="[$fa.weight, 'fa-power-off']"></i>
+        <span>{{ $t('settings.auto_startup.name') }}</span>
+    </h3>
+    <Switch v-model="settings.auto_startup"/>
+    <span class="desc">{{ $t('settings.auto_startup.desc') }}</span>
+</section>
 <hr />
 <section>
     <h3>
