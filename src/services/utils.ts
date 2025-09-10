@@ -197,7 +197,11 @@ export async function parseId(input: string, ignore?: boolean) {
     const err = new AppError(i18n.global.t('error.invalidInput'));
     if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(input)) throw err;
     try {
-        const url = new URL(input);
+        const _input = 
+            (input.startsWith('www.bilibili.com') || input.startsWith('bilibili.com'))
+            ? 'https://' + input
+            : input;
+        const url = new URL(_input);
         const segs = url.pathname.split('/');
         if (url.hostname === 'b23.tv') {
             return await parseId(await tryFetch(input, { type: 'url' }));
@@ -344,7 +348,7 @@ export function getRandomInRange(min: number, max: number) {
 export function getPublicImages(data: Record<string, any> | undefined, prefix?: string) {
     const images: { id: string; url: string }[] = [];
     for (const [id, url] of Object.entries(data ?? {})) {
-        if (typeof url === 'string' && (url.endsWith('.jpg') || url.endsWith('.png')))
+        if (typeof url === 'string' && (url.endsWith('.jpg') || url.endsWith('.png') || url.endsWith('.gif')))
         images.push({ id: prefix ? `${prefix}_${id}` : id, url });
     }
     return images;

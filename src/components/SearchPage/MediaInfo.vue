@@ -1,6 +1,6 @@
 <template>
 <div class="flex w-full min-h-36 h-36 bg-(--block-color) rounded-lg p-4 gap-4">
-    <Image :src="info.nfo.thumbs[0].url + '@112h'" :height="112" :ratio="16/10" />
+    <Image :src="info.nfo.thumbs[0].url" :height="112" :ratio="16/10" />
     <div class="text flex flex-col gap-1 flex-1 min-w-0">
     <div class="flex gap-2">
         <div class="relative flex flex-col gap-1 flex-1 min-w-0">
