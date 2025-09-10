@@ -248,8 +248,12 @@
             "desc": "If enabled, send a system notification when a download finishes."
         },
         "auto_download": {
-            "name": "Auto Start Download",
-            "desc": "If enabled, start downloads after adding tasks."
+            "name": "Auto Download",
+            "desc": "If enabled, downloads will start automatically after adding tasks."
+        },
+        "auto_startup": {
+            "name": "Auto Startup",
+            "desc": "If enabled, the application will automatically start when the system starts."
         },
         "auto_check_update": {
             "name": "Auto Check Updates"
