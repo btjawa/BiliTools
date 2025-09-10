@@ -123,7 +123,6 @@ pub async fn db_import(input: PathBuf) -> TauriResult<()> {
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn meta(app: tauri::AppHandle) -> TauriResult<InitData> {
-    storage::init().await?;
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
     let config = config::read();
@@ -136,8 +135,6 @@ pub async fn init() -> TauriResult<()> {
     if READY.set(()).is_err() {
         #[cfg(not(debug_assertions))]
         return Err(anyhow::anyhow!("403 Forbidden").into());
-    } else {
-        services::init().await?;
     }
     queue::runtime::TASK_MANAGER.snapshot(true).await?;
     login::stop_login();

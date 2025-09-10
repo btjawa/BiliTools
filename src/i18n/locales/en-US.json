@@ -133,7 +133,8 @@
         "risk": "Risk control triggered, please verify",
         "checkUpdate": "Check the latest on GitHub",
         "invalidInput": "Cannot parse input",
-        "selectLimit": "Not recommended to select over 30 items"
+        "selectLimit": "Not recommended to select over 30 items",
+        "skipTask": "Task {0} has no {1}, skipping this SubTask"
     },
     "updater": {
         "title": "New version available!",
@@ -347,6 +348,6 @@
         "paid": "This is a free public project. If you paid for it, you may have been scammed.",
         "star": "If you find it useful, give the project a Star on GitHub!",
         "data": "All generated and fetched data is stored locally on your device.",
-        "others": "Follow laws and platform terms. Developers are not responsible for misuse.\n“Bilibili” is a registered trademark of Shanghai Kuanyu Digital Technology Co., Ltd.\nThis software is not affiliated with or endorsed by Bilibili."
+        "others": "All consequences of using this project are the user’s responsibility. The author assumes no liability.\n“哔哩哔哩” and “Bilibili”, including related logos and graphics, are trademarks of Shanghai Hode Information Technology Co., Ltd.\nThis project has no affiliation, cooperation, authorization, or endorsement relationship with Bilibili or its associated companies."
     }
 }

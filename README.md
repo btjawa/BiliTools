@@ -145,7 +145,7 @@
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools`
 
-- “哔哩哔哩” 及 “Bilibili”名称、LOGO及相关图形是上海幻电信息科技有限公司的注册商标或商标。
+- “哔哩哔哩” 及 “Bilibili” 名称、LOGO及相关图形是上海幻电信息科技有限公司的注册商标或商标。
 - 本项目为独立的第三方工具，与哔哩哔哩及其关联公司无任何关联、合作、授权或背书等关系。
 - 使用本项目获取的内容，其版权归原权利人所有，请遵守相关法律法规及平台服务协议。
 - 如有侵权，可随时 [联系](mailto:btj2407@gmail.com) 处理。

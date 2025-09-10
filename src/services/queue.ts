@@ -132,6 +132,7 @@ async function handleDanmaku(task: Types.Task, subtask: Types.SubTask) {
         status: { content, chunk }
     }), item, type);
 }
+
 async function handleThumbs(task: Types.Task) {
     const { select, nfo } = task;
     const alias = { pic: "cover", cover: "pic" } as any;
@@ -145,17 +146,33 @@ async function handleThumbs(task: Types.Task) {
         url: v.url.replace('http:', 'https:')
     }));
 }
+
 async function handleNfo(task: Types.Task, subtask: Types.SubTask) {
     const { item, nfo } = task;
     return await extras.getNfo(item, nfo, subtask.type === 'albumNfo' ? 'album' : 'nfo');
 }
-async function handleSubtitle(task: Types.Task) {
+async function handleSubtitle(task: Types.Task, subtask: Types.SubTask) {
     const { select, item } = task;
-    return await extras.getSubtitle(item, { name: select.misc.subtitles });
+    const result = await extras.getSubtitle(item, { name: select.misc.subtitles });
+    if (result === -1) {
+        AppLog(i18n.global.t('error.skipTask', [
+            task.id,
+            i18n.global.t('taskType.' + subtask.type)
+        ]), 'info');
+        return new Uint8Array(0);
+    } else return result;
 }
-async function handleAISummary(task: Types.Task) {
+
+async function handleAISummary(task: Types.Task, subtask: Types.SubTask) {
     const { item } = task;
-    return await extras.getAISummary(item);
+    const result = await extras.getAISummary(item);
+    if (result === -1) {
+        AppLog(i18n.global.t('error.skipTask', [
+            task.id,
+            i18n.global.t('taskType.' + subtask.type)
+        ]), 'info');
+        return new Uint8Array(0);
+    } else return result;
 }
 
 function buildPaths(scope: keyof typeof Types.NamingTemplates, task: Types.Task, subtask?: Types.SubTask) {
@@ -223,17 +240,15 @@ async function handleTask(task: Types.Task, type: backend.RequestAction, subtask
     if (type === 'getFilename') {
         return buildPaths('file', task, subtask);
     } else if (type === 'getNfo') {
-        if (!subtask) throw new AppError('No subtask for handling nfo found');
         return await handleNfo(task, subtask);
     } else if (type === 'getThumbs') {
         return await handleThumbs(task);
     } else if (type === 'getDanmaku') {
-        if (!subtask) throw new AppError('No subtask for danmaku found');
         return await handleDanmaku(task, subtask);
     } else if (type === 'getSubtitle') {
-        return await handleSubtitle(task);
+        return await handleSubtitle(task, subtask);
     } else if (type === 'getAISummary') {
-        return await handleAISummary(task);
+        return await handleAISummary(task, subtask);
     }
 }
 

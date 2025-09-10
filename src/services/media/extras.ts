@@ -21,7 +21,7 @@ export async function getPlayerInfo(id: number, cid: number) {
     return body.data;
 }
 
-export async function getAISummary(item: Types.MediaItem): Promise<Uint8Array<ArrayBuffer>>;
+export async function getAISummary(item: Types.MediaItem): Promise<Uint8Array<ArrayBuffer> | -1>;
 export async function getAISummary(item: Types.MediaItem, options: { check: true }): Promise<boolean>;
 export async function getAISummary(item: Types.MediaItem, options?: { check?: boolean }) {
     if (!item.aid || !item.cid) throw 'No aid or cid found';
@@ -30,9 +30,7 @@ export async function getAISummary(item: Types.MediaItem, options?: { check?: bo
     const body = response as Resps.AISummaryInfo;
     const result = body.data.model_result;
     if (options?.check) return Boolean(result.result_type);
-    if (!result.result_type) {
-        throw new AppError('No summary', { code: body.code });
-    }
+    if (!result.result_type) return -1;
     let text = `# ${item.title} - ${item.bvid}\n\n${result.summary}\n\n`;
     if (result.result_type === 2) {
         result.outline.forEach(section => {
@@ -46,14 +44,14 @@ export async function getAISummary(item: Types.MediaItem, options?: { check?: bo
 }
 
 export async function getSubtitle(item: Types.MediaItem): Promise<Resps.Subtitle[]>;
-export async function getSubtitle(item: Types.MediaItem, options: { name: false | string }): Promise<Uint8Array<ArrayBuffer>>;
+export async function getSubtitle(item: Types.MediaItem, options: { name: false | string }): Promise<Uint8Array<ArrayBuffer> | -1>;
 export async function getSubtitle(item: Types.MediaItem, options?: { name?: false | string }) {
     if (!item.aid || !item.cid) throw new AppError('No aid or cid found');
     const playerInfo = await getPlayerInfo(item.aid, item.cid);
     const subtitles = playerInfo.subtitle?.subtitles;
     if (!options?.name) return subtitles;
     const _url = subtitles.find(v => v.lan === options.name)?.subtitle_url;
-    if (!_url) throw new AppError('No URL found for ' + options.name);
+    if (!_url) return -1;
     const url = _url.startsWith('//') ? 'https:' + _url : _url;
     const subtitle = await tryFetch(url) as Resps.SubtitleInfo;
     const getTime = (s: number) => { // Only works for input < 24 hour
@@ -89,11 +87,10 @@ export async function getNfo(item: Types.MediaItem, nfo: Types.MediaNfo, type: '
     } else {
         add('title', item.title);
     }
-    let aiSummary = '';
-    try {
-        aiSummary = new TextDecoder().decode(await getAISummary(item)) + '\n';
-    } catch(_) {}
-    add('plot', aiSummary + item.desc);
+    const summary = await getAISummary(item);
+    if (summary !== -1) {
+        add('plot', new TextDecoder().decode(summary) + '\n' + item.desc);
+    }
     if (mode === 'album') {
         const el = add('thumb', 'poster.jpg');
         addAttr(el, { preview: 'poster.jpg' });

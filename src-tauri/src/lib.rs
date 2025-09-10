@@ -81,6 +81,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(window) = app.get_webview_window("main") {
                 window.open_devtools();
             }
+            tauri::async_runtime::spawn(async move {
+                storage::init().await?;
+                services::init().await?;
+                Ok::<(), crate::TauriError>(())
+            });
             Ok(())
         })
         .run(tauri::generate_context!())

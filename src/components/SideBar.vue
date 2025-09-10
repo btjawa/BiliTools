@@ -61,6 +61,6 @@ li {
     }
 }
 ul.macos {
-    @apply pt-[36px];
+    @apply pt-[36px] bg-[unset]!;
 }
 </style>
