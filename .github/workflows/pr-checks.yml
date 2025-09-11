@@ -1,0 +1,121 @@
+name: 'Pull Request Checks'
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
+      binaries: ${{ steps.filter.outputs.binaries }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Filter Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            backend:
+              - "src-tauri/**"
+              - ".gitignore"
+              - ".gitattributes"
+            frontend:
+              - "src/**"
+              - ".gitignore"
+              - ".gitattributes"
+              - "index.html"
+              - "package.json"
+              - "tsconfig.node.json"
+              - "tsconfig.json"
+              - "vite.config.ts"
+            docs:
+              - "docs/**"
+            binaries:
+              - "src-tauri/binaries/**"
+
+  checks:
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows x86_64
+          - platform: 'windows-2025'
+            target: 'x86_64-pc-windows-msvc'
+          # Windows arm64
+          # - platform: 'windows-11-arm'
+          #   target: 'aarch64-pc-windows-msvc'
+          # Linux x86_64
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+          # Linux arm64
+          - platform: 'ubuntu-22.04-arm'
+            target: 'aarch64-unknown-linux-gnu'
+          # macOS x86_64 (Intel)
+          - platform: 'macos-14'
+            target: 'x86_64-apple-darwin'
+          # macOS arm64 (M1 and above)
+          - platform: 'macos-14'
+            target: 'aarch64-apple-darwin'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          save-if: false
+
+      - name: Install Dependencies (ubuntu only)
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-libappindicator3-dev librsvg2-dev patchelf
+        # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
+
+      - name: Install Frontend Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Clippy
+        if: needs.changes.outputs.backend == 'true'
+        run: pnpm clippy
+
+      - name: ESLint
+        if: needs.changes.outputs.frontend == 'true'
+        run: pnpm lint
+
+      - name: Docs
+        if: needs.changes.outputs.docs == 'true'
+        run: pnpm docs:build
+
+      - name: Binaries smoke test
+        if: needs.changes.outputs.binaries == 'true'
+        run: pnpm ci:binaries
+
+      

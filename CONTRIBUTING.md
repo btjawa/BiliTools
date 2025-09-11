@@ -28,6 +28,8 @@
 
 **提交 PR 时请提交至主仓库的 `dev` 分支，不要提交至 `master` 分支。**
 
+**所有提交必须签名。**
+
 所有提交信息都应遵循 [约定式提交](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 规范，例：
 - `feat: add notifications support for macOS`
 - `fix: ffmpeg path handling issue`
@@ -54,65 +56,51 @@
 - 安装前端依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 - 对于 **Ubuntu**，安装以下依赖
 
 ```bash
-sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-libappindicator3-dev librsvg2-dev patchelf
 ```
 
 - 启动开发服务器
 
 ```bash
-npm run tauri dev
+pnpm dev
 ```
 
 - 构建项目
 
 ```bash
-npm run tauri build
+pnpm build
 ```
 
 ### 文档开发
 
-本项目使用 [Vitepress](https://vitepress.dev/) 托管文档，位于 `docs` 文件夹内，使用单独的 `package.json`。
-
-在定位到 `docs` 目录后：
-
-- 安装依赖
-
-```bash
-npm install
-```
+本项目使用 [Vitepress](https://vitepress.dev/) 托管文档，位于 `docs` 文件夹内。
 
 - 启动文档开发服务器
 
 ```bash
-npm run docs:dev
+pnpm docs:dev
 ```
 
 - 构建文档
 
 ```bash
-npm run docs:build
+pnpm docs:build
 ```
 
 ### 贡献更改
 
-在提交更改前，请至少进行以下质量及编译检查，并确保尽数通过：
-
-- 在 `./` 目录下：
+在提交更改前，请进行以下质量检查与代码格式化，并确保尽数通过：
 
 ```bash
-npm run build
-```
-
-- 在 `./src-tauri` 目录下：
-
-```bash
-cargo clippy
+pnpm lint
+pnpm prettier
+pnpm clippy
 ```
 
 确保代码合格后，请参考 [Pull Request](#pull-request) 进行贡献。

@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "BiliTools",
-  "version": "1.4.0-8",
+  "version": "1.4.0-dev",
   "identifier": "com.btjawa.bilitools",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "pnpm web:dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "pnpm web:build",
     "frontendDist": "../dist"
   },
   "app": {

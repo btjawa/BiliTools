@@ -1,6 +1,6 @@
 [package]
 name = "bilitools"
-version = "1.4.0-8"
+version = "1.4.0-dev"
 description = "A cross-platform bilibili toolbox"
 authors = ["btjawa"]
 edition = "2021"
@@ -20,11 +20,6 @@ codegen-units = 1
 opt-level = "s"
 strip = true
 lto = true
-# codegen-units = 256
-# opt-level = 0
-# strip = false
-# debug = true
-# debug-assertions = true
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -46,11 +41,14 @@ log = "0.4"
 notify-rust = "4.11.7"
 rand = "0.9"
 regex = "1.11.1"
+sea-query = "0.32.7"
+sea-query-binder = { version = "0.7.0", features = ["sqlx-sqlite"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10.9"
 specta = { version = "2.0.0-rc.22", features = ["serde_json"] }
 specta-typescript = "0.0.9"
-sha2 = "0.10.9"
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "macros"] }
 sys-locale = "0.3.2"
 tauri = { version = "2.7.0", features = ["macos-private-api"] }
 tauri-plugin-clipboard-manager = "2.3.0"
@@ -66,9 +64,6 @@ tauri-specta = { version = "2.0.0-rc.21", features = ["derive", "typescript"] }
 time = "0.3.41"
 tokio = { version = "1.47", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
 walkdir = "2.5.0"
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "macros"] }
-sea-query = "0.32.7"
-sea-query-binder = { version = "0.7.0", features = ["sqlx-sqlite"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.61.3", features = ["Win32_Foundation", "Win32_System_Com"] }

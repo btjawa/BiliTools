@@ -1,10 +1,10 @@
 {
-  "name": "@btjawa/docs",
+  "name": "@btjawa/bilitools-docs",
   "private": "true",
   "scripts": {
-    "docs:dev": "vitepress dev app",
-    "docs:build": "vitepress build app",
-    "docs:preview": "vitepress preview app"
+    "dev": "vitepress dev .",
+    "build": "vitepress build .",
+    "preview": "vitepress preview ."
   },
   "type": "module",
   "devDependencies": {
