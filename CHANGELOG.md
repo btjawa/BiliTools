@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.4.0-8] - 2025-09-11
+
+## 更新
+
+- [`a4c603f`](https://github.com/btjawa/BiliTools/commit/a4c603f1f91fea8fe9219fd24a4872dd0acef113) 支持导出媒体存档信息，支持查看详细任务信息
+- [`d798337`](https://github.com/btjawa/BiliTools/commit/d79833780a5d52f36b0071f94b909a4597edd2a2) 支持修改等待任务的参数 ([#149](https://github.com/btjawa/BiliTools/issues/149))
+- [`e05f910`](https://github.com/btjawa/BiliTools/commit/e05f91058e1ccabeae602889ccbe379c24868d00) 支持置顶窗口 ([#170](https://github.com/btjawa/BiliTools/issues/170))
+- [`d33013a`](https://github.com/btjawa/BiliTools/commit/d33013aebe26db553bd0145b66ae8972470c5627) 支持自定义窗口效果 ([#163](https://github.com/btjawa/BiliTools/issues/170))
+- [`3e36a43`](https://github.com/btjawa/BiliTools/commit/b4a94506706a8352c5f9bfd0109b1e75f7198a13) 支持 Linux arm64
+
+## 修复
+
+- [`0f6017f`](https://github.com/btjawa/BiliTools/commit/0f6017f51af5947e22f26663224b1e01adbcfcc4) 修复点号导致路径解析错误的问题 ([#165](https://github.com/btjawa/BiliTools/issues/165))
+- [`3e36a43`](https://github.com/btjawa/BiliTools/commit/3e36a439d9a71cb0095f561415ed99dadaf540fe) 重构弹幕解析逻辑，修复空弹幕处理逻辑
+- [`3e36a43`](https://github.com/btjawa/BiliTools/commit/b4a94506706a8352c5f9bfd0109b1e75f7198a13) 重新构建所有 Sidecar ([#167](https://github.com/btjawa/BiliTools/issues/167))
+
 ## [1.4.0-7] - 2025-09-06
 
 ## 更新

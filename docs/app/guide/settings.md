@@ -10,12 +10,29 @@
 
 ### 主题
 
-> [!NOTE]
-> Windows 10 [受限于 API](https://github.com/tauri-apps/window-vibrancy?tab=readme-ov-file#available-functions)，无法使用亚克力效果
-
-Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/windows/apps/design/style/mica) 效果，macOS 10.11+ 默认使用 [Sidebar](https://developer.apple.com/documentation/appkit/nsvisualeffectview#overview) 效果。
-
 你可以使用 `遵循系统` 来自适应系统主题，也可以使用 `深色` 或 `浅色` 指定主题。
+
+### 窗口效果
+
+配置在各操作系统上可供使用的窗口效果。
+
+你可以在 [此处](https://github.com/tauri-apps/window-vibrancy?tab=readme-ov-file#screenshots) 预览这些效果。
+
+- 自动
+  - Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/windows/apps/design/style/mica) 效果，macOS 10.11+ 默认使用 [Sidebar](https://developer.apple.com/documentation/appkit/nsvisualeffectview#overview) 效果。
+- Mica 
+  - 即云母效果，仅适用于 Windows 11.
+- Acrylic
+  - 即亚克力效果，适用于 Windows 10/11.
+  - 在 Windows 10 v1903+ 及 Windows 11 build 22000 上，该效果会导致窗口拖拽产生延迟。<sup>[1](https://github.com/tauri-apps/window-vibrancy?tab=readme-ov-file#available-functions)</sup>
+- Sidebar
+  - 仅适用于 macOS 10.11+.
+- 无
+  - 不应用窗口效果，使用默认不透明配色方案。
+
+### 监听剪切板
+
+启用后，则会自动检测剪贴板中是否含有有效哔哩哔哩链接，并自动搜索。
 
 ### 通知系统
 
@@ -51,6 +68,17 @@ Windows 11 默认使用 [云母 (Mica)](https://learn.microsoft.com/en-us/window
   - Edge WebView2 (该应用的运行时) 产生的缓存，可定期清理。
 - 数据库
   - 应用存储配置、下载信息、登录信息等使用的数据库，删除即为重置应用。
+
+### 操作数据库
+
+> [!CAUTION]
+> 请确保在没有下载任务时导入数据库，否则下载数据可能出现损坏。
+
+导出即备份数据库，导入即恢复数据库。
+
+请确保数据库中的 `meta` 表均已迁移至最新版本，否则表可能在运行时因迁移机制被丢弃。
+
+请确保数据库中的数据符合类型定义，否则运行时将无法读取数据。
 
 ## <i class="fa-solid fa-download"></i> 下载
 
