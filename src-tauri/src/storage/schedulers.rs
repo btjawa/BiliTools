@@ -1,17 +1,25 @@
-use sea_query::{Alias, ColumnDef, Expr, Iden, Order, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
-use std::{path::{PathBuf, Path}, str::FromStr, sync::Arc};
-use sqlx::{Acquire, Row, SqliteConnection};
-use sea_query_binder::SqlxBinder;
 use anyhow::Result;
+use sea_query::{
+    Alias, ColumnDef, Expr, Iden, OnConflict, Order, Query, SqliteQueryBuilder, Table,
+    TableCreateStatement,
+};
+use sea_query_binder::SqlxBinder;
+use sqlx::{Acquire, Row, SqliteConnection};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Arc,
+};
 
 use crate::{
     queue::{
-        runtime::{TASK_MANAGER, Scheduler},
-        types::QueueType
-    }, shared::get_ts
+        runtime::{Scheduler, TASK_MANAGER},
+        types::QueueType,
+    },
+    shared::get_ts,
 };
 
-use super::db::{TableSpec, get_db};
+use super::db::{get_db, TableSpec};
 
 pub const WAITING_SID: &str = "__waiting__";
 
@@ -34,24 +42,17 @@ impl TableSpec for ArchiveTable {
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Schedulers::Table)
-            .col(ColumnDef::new(Schedulers::Name)
-                .text().not_null().primary_key()
+            .col(
+                ColumnDef::new(Schedulers::Name)
+                    .text()
+                    .not_null()
+                    .primary_key(),
             )
-            .col(ColumnDef::new(Schedulers::Queue)
-                .text().not_null()
-            )
-            .col(ColumnDef::new(Schedulers::Seq)
-                .integer().not_null()
-            )
-            .col(ColumnDef::new(Schedulers::List)
-                .text().not_null()
-            )
-            .col(ColumnDef::new(Schedulers::Folder)
-                .text().not_null()
-            )
-            .col(ColumnDef::new(Schedulers::UpdatedAt)
-                .integer().not_null()
-            )
+            .col(ColumnDef::new(Schedulers::Queue).text().not_null())
+            .col(ColumnDef::new(Schedulers::Seq).integer().not_null())
+            .col(ColumnDef::new(Schedulers::List).text().not_null())
+            .col(ColumnDef::new(Schedulers::Folder).text().not_null())
+            .col(ColumnDef::new(Schedulers::UpdatedAt).integer().not_null())
             .to_owned()
     }
 }
@@ -72,7 +73,7 @@ pub async fn upsert(
     queue: QueueType,
     list: &[Arc<String>],
     folder: &Path,
-    seq: Option<i64>
+    seq: Option<i64>,
 ) -> Result<i64> {
     let pool = get_db().await?;
     let mut tx = pool.begin().await?;
@@ -90,7 +91,10 @@ pub async fn upsert(
             .and_where(Expr::col(Schedulers::Name).eq(sid))
             .build_sqlx(SqliteQueryBuilder);
 
-        if let Some(row) = sqlx::query_with(&sql, values).fetch_optional(&mut *conn).await? {
+        if let Some(row) = sqlx::query_with(&sql, values)
+            .fetch_optional(&mut *conn)
+            .await?
+        {
             row.try_get::<i64, _>("seq")?
         } else {
             next_seq(conn, queue).await?
@@ -105,7 +109,7 @@ pub async fn upsert(
             Schedulers::Seq,
             Schedulers::List,
             Schedulers::Folder,
-            Schedulers::UpdatedAt
+            Schedulers::UpdatedAt,
         ])
         .values_panic([
             sid.into(),
@@ -113,7 +117,7 @@ pub async fn upsert(
             seq.into(),
             list.into(),
             folder.to_string_lossy().as_ref().into(),
-            now.into()
+            now.into(),
         ])
         .on_conflict(
             OnConflict::column(Schedulers::Name)
@@ -122,9 +126,9 @@ pub async fn upsert(
                     Schedulers::Seq,
                     Schedulers::List,
                     Schedulers::Folder,
-                    Schedulers::UpdatedAt
+                    Schedulers::UpdatedAt,
                 ])
-                .to_owned()
+                .to_owned(),
         )
         .build_sqlx(SqliteQueryBuilder);
 
@@ -133,10 +137,7 @@ pub async fn upsert(
     Ok(seq)
 }
 
-pub async fn move_queue(
-    sid: &str,
-    to: QueueType
-) -> Result<i64> {
+pub async fn move_queue(sid: &str, to: QueueType) -> Result<i64> {
     let pool = get_db().await?;
     let mut tx = pool.begin().await?;
     let conn = tx.acquire().await?;
@@ -150,7 +151,7 @@ pub async fn move_queue(
         .values([
             (Schedulers::Queue, queue.into()),
             (Schedulers::Seq, next.into()),
-            (Schedulers::UpdatedAt, now.into())
+            (Schedulers::UpdatedAt, now.into()),
         ])
         .and_where(Expr::col(Schedulers::Name).eq(sid))
         .build_sqlx(SqliteQueryBuilder);
@@ -160,10 +161,7 @@ pub async fn move_queue(
     Ok(next)
 }
 
-pub async fn update_list(
-    sid: &str,
-    list: &[Arc<String>],
-) -> Result<()> {
+pub async fn update_list(sid: &str, list: &[Arc<String>]) -> Result<()> {
     let pool = get_db().await?;
     let now = get_ts(true);
     let list = serde_json::to_string(list)?;
@@ -172,7 +170,7 @@ pub async fn update_list(
         .table(Schedulers::Table)
         .values([
             (Schedulers::List, list.into()),
-            (Schedulers::UpdatedAt, now.into())
+            (Schedulers::UpdatedAt, now.into()),
         ])
         .and_where(Expr::col(Schedulers::Name).eq(sid))
         .build_sqlx(SqliteQueryBuilder);
@@ -205,7 +203,14 @@ async fn check_waiting() -> Result<()> {
         return Ok(());
     }
 
-    upsert(WAITING_SID, QueueType::Waiting, &[], &PathBuf::new(), Some(0)).await?;
+    upsert(
+        WAITING_SID,
+        QueueType::Waiting,
+        &[],
+        &PathBuf::new(),
+        Some(0),
+    )
+    .await?;
     Ok(())
 }
 
@@ -219,31 +224,43 @@ pub async fn load() -> Result<()> {
             Schedulers::Seq,
             Schedulers::List,
             Schedulers::Folder,
-            Schedulers::UpdatedAt
+            Schedulers::UpdatedAt,
         ])
         .from(Schedulers::Table)
         .order_by(Schedulers::Seq, Order::Asc)
         .build_sqlx(SqliteQueryBuilder);
-    
+
     let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
-    { TASK_MANAGER.get_queue(&QueueType::Waiting).write().await.clear(); }
-    { TASK_MANAGER.get_queue(&QueueType::Doing).write().await.clear(); }
-    { TASK_MANAGER.get_queue(&QueueType::Complete).write().await.clear(); }
-    { TASK_MANAGER.schedulers.write().await.clear(); }
+    {
+        TASK_MANAGER
+            .get_queue(&QueueType::Waiting)
+            .write()
+            .await
+            .clear();
+    }
+    {
+        TASK_MANAGER
+            .get_queue(&QueueType::Doing)
+            .write()
+            .await
+            .clear();
+    }
+    {
+        TASK_MANAGER
+            .get_queue(&QueueType::Complete)
+            .write()
+            .await
+            .clear();
+    }
+    {
+        TASK_MANAGER.schedulers.write().await.clear();
+    }
     for r in rows {
         let sid = Arc::new(r.try_get::<String, _>("name")?);
-        let queue = QueueType::from_str_lossy(
-            &r.try_get::<String, _>("queue")?
-        );
-        let list: Vec<Arc<String>> = serde_json::from_str(
-            &r.try_get::<String, _>("list")?
-        )?;
-        let folder = PathBuf::from_str(
-            &r.try_get::<String, _>("folder")?
-        )?;
-        let scheduler = Scheduler::new(
-            sid.clone(), list.clone(), folder
-        );
+        let queue = QueueType::from_str_lossy(&r.try_get::<String, _>("queue")?);
+        let list: Vec<Arc<String>> = serde_json::from_str(&r.try_get::<String, _>("list")?)?;
+        let folder = PathBuf::from_str(&r.try_get::<String, _>("folder")?)?;
+        let scheduler = Scheduler::new(sid.clone(), list.clone(), folder);
         let mut queue = TASK_MANAGER.get_queue(&queue).write().await;
         queue.push_back(sid.clone());
         drop(queue);

@@ -102,13 +102,13 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Clippy
+      - name: Clippy & Rust Format
         if: needs.changes.outputs.backend == 'true'
-        run: pnpm clippy
+        run: pnpm clippy && pnpm rustfmt:check
 
-      - name: ESLint
+      - name: ESLint & Prettier
         if: needs.changes.outputs.frontend == 'true'
-        run: pnpm lint
+        run: pnpm lint & pnpm format:check
 
       - name: Docs
         if: needs.changes.outputs.docs == 'true'

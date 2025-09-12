@@ -1,37 +1,32 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-use std::{env, path::PathBuf, sync::Arc};
-use tauri::async_runtime;
 use serde::Serialize;
 use specta::Type;
+use std::{env, path::PathBuf, sync::Arc};
+use tauri::async_runtime;
 use tokio::fs;
 
 // Re-export for lib.rs to register commands
 pub use crate::{
+    errors::{TauriError, TauriResult},
     services::{
-        self,
+        self, aria2c, ffmpeg,
         login::{
-            self, stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie
+            self, exit, pwd_login, refresh_cookie, scan_login, sms_login, stop_login, switch_cookie,
         },
         queue::{
-            self, runtime::{
-                submit_task, process_queue, open_folder, ctrl_event, update_max_conc, update_select
-            }
+            self,
+            runtime::{
+                ctrl_event, open_folder, process_queue, submit_task, update_max_conc, update_select,
+            },
         },
-        aria2c,
-        ffmpeg,
     },
+    shared::{self, get_app_handle, set_window, HEADERS, READY},
     storage::{
-        self,
+        self, archive,
         config::{self, CacheKey},
-        cookies,
-        archive,
-        db,
+        cookies, db,
     },
-    shared::{
-        self, set_window, get_app_handle, READY, HEADERS
-    },
-    errors::{TauriResult, TauriError},
 };
 
 #[derive(Serialize, Type)]
@@ -47,7 +42,10 @@ pub async fn get_size(key: CacheKey, event: tauri::ipc::Channel<u64>) -> TauriRe
     let path = config::read().get_cache(&key)?;
     let mut bytes = 0u64;
     let mut count = 0;
-    for entry in walkdir::WalkDir::new(&path).into_iter().filter_map(Result::ok) {
+    for entry in walkdir::WalkDir::new(&path)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         let path = entry.path();
         if path.is_file() {
             match fs::metadata(path).await {
@@ -58,8 +56,8 @@ pub async fn get_size(key: CacheKey, event: tauri::ipc::Channel<u64>) -> TauriRe
                         event.send(bytes)?;
                         count = 0;
                     }
-                },
-                Err(_) => continue
+                }
+                Err(_) => continue,
             }
         }
     }
@@ -134,7 +132,11 @@ pub async fn meta(app: tauri::AppHandle) -> TauriResult<InitData> {
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
     let config = config::read();
-    Ok(InitData { version, hash, config })
+    Ok(InitData {
+        version,
+        hash,
+        config,
+    })
 }
 
 #[tauri::command(async)]

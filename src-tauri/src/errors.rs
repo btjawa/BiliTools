@@ -1,7 +1,7 @@
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
-use tauri::http::StatusCode;
-use std::fmt;
 use specta::Type;
+use std::fmt;
+use tauri::http::StatusCode;
 
 pub type TauriResult<T> = Result<T, TauriError>;
 
@@ -40,7 +40,9 @@ impl_from_signed!(i8, i16, i32, i64, isize);
 impl_from_unsigned!(u8, u16, u32, u64, usize);
 
 impl From<StatusCode> for AnyInt {
-    fn from(v: StatusCode) -> Self { AnyInt::U(v.as_u16() as usize) }
+    fn from(v: StatusCode) -> Self {
+        AnyInt::U(v.as_u16() as usize)
+    }
 }
 
 impl AnyInt {
@@ -48,7 +50,11 @@ impl AnyInt {
         match self {
             AnyInt::I(v) => v,
             AnyInt::U(v) => {
-                if v > isize::MAX as usize { isize::MAX } else { v as isize }
+                if v > isize::MAX as usize {
+                    isize::MAX
+                } else {
+                    v as isize
+                }
             }
         }
     }
@@ -63,11 +69,11 @@ pub struct TauriError {
 impl TauriError {
     pub fn new<N>(message: impl Into<String>, code: Option<N>) -> Self
     where
-        N: Into<AnyInt>
+        N: Into<AnyInt>,
     {
         Self {
             code: code.map(Into::into),
-            message: message.into()
+            message: message.into(),
         }
     }
 }

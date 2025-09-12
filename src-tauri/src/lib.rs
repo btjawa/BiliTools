@@ -1,12 +1,12 @@
 pub mod commands;
-pub mod services;
-pub mod storage;
-pub mod shared;
 pub mod errors;
+pub mod services;
+pub mod shared;
+pub mod storage;
 
-use tauri_specta::{collect_commands, collect_events, Builder};
-use tauri::Manager;
 use commands::*;
+use tauri::Manager;
+use tauri_specta::{collect_commands, collect_events, Builder};
 
 #[cfg(debug_assertions)]
 use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
@@ -21,23 +21,45 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
         .commands(collect_commands![
-            meta, init, set_window, config_write, open_cache, get_size, clean_cache, db_import, db_export, export_data, // Essentials
-            stop_login, exit, sms_login, pwd_login, switch_cookie, scan_login, refresh_cookie, // Login
-            submit_task, process_queue, open_folder, ctrl_event, update_max_conc, update_select // Queue
+            meta,
+            init,
+            set_window,
+            config_write,
+            open_cache,
+            get_size,
+            clean_cache,
+            db_import,
+            db_export,
+            export_data, // Essentials
+            stop_login,
+            exit,
+            sms_login,
+            pwd_login,
+            switch_cookie,
+            scan_login,
+            refresh_cookie, // Login
+            submit_task,
+            process_queue,
+            open_folder,
+            ctrl_event,
+            update_max_conc,
+            update_select // Queue
         ])
         .events(collect_events![
-            shared::HeadersData, shared::ProcessError, queue::runtime::QueueEvent
+            shared::HeadersData,
+            shared::ProcessError,
+            queue::runtime::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
-        builder
-            .export(
-                specta_typescript::Typescript::default()
-                    .bigint(specta_typescript::BigIntExportBehavior::Number)
-                    .header("// @ts-nocheck"),
-                "../src/services/backend.ts",
-            )
-            .expect("Failed to export typescript bindings");
+    builder
+        .export(
+            specta_typescript::Typescript::default()
+                .bigint(specta_typescript::BigIntExportBehavior::Number)
+                .header("// @ts-nocheck"),
+            "../src/services/backend.ts",
+        )
+        .expect("Failed to export typescript bindings");
 
     let log_builder = tauri_plugin_log::Builder::new()
         .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
@@ -46,15 +68,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .level_for("sqlx::query", log::LevelFilter::Warn);
 
     #[cfg(debug_assertions)]
-    let log_builder = log_builder
-        .with_colors(
-            ColoredLevelConfig::new()
-                .error(Color::Red)
-                .warn(Color::Yellow)
-                .info(Color::Green)
-                .debug(Color::Blue)
-                .trace(Color::Magenta)
-        );
+    let log_builder = log_builder.with_colors(
+        ColoredLevelConfig::new()
+            .error(Color::Red)
+            .warn(Color::Yellow)
+            .info(Color::Green)
+            .debug(Color::Blue)
+            .trace(Color::Magenta),
+    );
 
     tauri::Builder::default()
         .plugin(log_builder.build())
@@ -67,8 +88,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             let windows = app.webview_windows();
-            windows.values().next().expect("Sorry, no window found")
-            .set_focus().expect("Can't Bring Window to Focus");
+            windows
+                .values()
+                .next()
+                .expect("Sorry, no window found")
+                .set_focus()
+                .expect("Can't Bring Window to Focus");
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(builder.invoke_handler())

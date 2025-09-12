@@ -1,8 +1,11 @@
-
-use std::{collections::{HashMap, VecDeque}, path::PathBuf, sync::Arc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Number;
 use specta::Type;
+use std::{
+    collections::{HashMap, VecDeque},
+    path::PathBuf,
+    sync::Arc,
+};
 
 // Media
 
@@ -46,20 +49,20 @@ pub struct MediaNfo {
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct MediaNfoThumb {
     pub id: String,
-    pub url: String
+    pub url: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct MediaNfoUpper {
     pub name: String,
     pub mid: usize,
-    pub avatar: String
+    pub avatar: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct MediaNfoActor {
     pub role: String,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,8 +154,8 @@ impl PopupSelectMedia {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct QueueData {
-    pub waiting:  VecDeque<Arc<String>>,
-    pub doing:    VecDeque<Arc<String>>,
+    pub waiting: VecDeque<Arc<String>>,
+    pub doing: VecDeque<Arc<String>>,
     pub complete: VecDeque<Arc<String>>,
 }
 
@@ -161,7 +164,7 @@ pub struct QueueData {
 pub enum QueueType {
     Waiting,
     Doing,
-    Complete
+    Complete,
 }
 
 impl QueueType {
@@ -169,7 +172,7 @@ impl QueueType {
         match self {
             QueueType::Waiting => "waiting",
             QueueType::Doing => "doing",
-            QueueType::Complete => "complete"
+            QueueType::Complete => "complete",
         }
     }
     pub fn from_str_lossy(str: &str) -> QueueType {
@@ -206,7 +209,7 @@ pub enum TaskState {
     Completed,
     Paused,
     Failed,
-    Cancelled
+    Cancelled,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]

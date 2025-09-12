@@ -25,6 +25,8 @@
     "docs:build": "pnpm --filter @btjawa/bilitools-docs build",
     "docs:preview": "pnpm --filter @btjawa/bilitools-docs preview",
     "clippy": "cargo clippy --manifest-path ./src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
+    "rustfmt:check": "cargo fmt --manifest-path ./src-tauri/Cargo.toml --check",
+    "rustfmt": "cargo fmt --manifest-path ./src-tauri/Cargo.toml",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write .",

@@ -99,8 +99,9 @@ pnpm docs:build
 
 ```bash
 pnpm lint
-pnpm prettier
+pnpm format
 pnpm clippy
+pnpm rustfmt
 ```
 
 确保代码合格后，请参考 [Pull Request](#pull-request) 进行贡献。

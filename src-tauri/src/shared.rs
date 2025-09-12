@@ -1,26 +1,34 @@
-use tauri::{http::{HeaderMap, HeaderName, HeaderValue}, AppHandle, Manager, Wry, utils::WindowEffect as TauriWindowEffect, Theme as TauriTheme};
-use std::{collections::BTreeMap, path::PathBuf, sync::{Arc, LazyLock}};
-use tauri_plugin_http::reqwest::{Client, Proxy};
+use anyhow::Result;
+use arc_swap::ArcSwap;
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{OnceCell, RwLock};
-use time::OffsetDateTime;
-use tauri_specta::Event;
-use arc_swap::ArcSwap;
-use anyhow::Result;
 use specta::Type;
+use std::{
+    collections::BTreeMap,
+    path::PathBuf,
+    sync::{Arc, LazyLock},
+};
+use tauri::{
+    http::{HeaderMap, HeaderName, HeaderValue},
+    utils::WindowEffect as TauriWindowEffect,
+    AppHandle, Manager, Theme as TauriTheme, Wry,
+};
+use tauri_plugin_http::reqwest::{Client, Proxy};
+use tauri_specta::Event;
+use time::OffsetDateTime;
+use tokio::sync::{OnceCell, RwLock};
 
 use crate::storage::{
     config::{
-        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsProxy, SettingsOrganize
+        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsOrganize,
+        SettingsProxy,
     },
-    cookies
+    cookies,
 };
 
-pub static APP_HANDLE: LazyLock<Arc<OnceCell<AppHandle<Wry>>>> = LazyLock::new(||
-    Arc::new(OnceCell::new())
-);
-pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
+pub static APP_HANDLE: LazyLock<Arc<OnceCell<AppHandle<Wry>>>> =
+    LazyLock::new(|| Arc::new(OnceCell::new()));
+pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
     ArcSwap::from_pointee(Settings {
         add_metadata: true,
         auto_check_update: true,
@@ -35,9 +43,12 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
         default: SettingsDefault {
             res: 80,
             abr: 30280,
-            enc: 7
+            enc: 7,
         },
-        down_dir: get_app_handle().path().desktop_dir().expect("Failed to get desktop_dir"),
+        down_dir: get_app_handle()
+            .path()
+            .desktop_dir()
+            .expect("Failed to get desktop_dir"),
         format: SettingsFormat {
             series: "{container} - {showtitle} ({downtime:YYYY-MM-DD_HH-mm-ss})".into(),
             item: "({index}) {mediaType} - {title}".into(),
@@ -51,34 +62,45 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(||
                 } else if code.as_str().starts_with("zh") {
                     if code.as_str().ends_with("MO") || code.as_str().ends_with("TW") {
                         "zh-HK".into()
-                    } else { "zh-CN".into() }
-                } else { c }
-            }).unwrap_or("en-US".into()),
+                    } else {
+                        "zh-CN".into()
+                    }
+                } else {
+                    c
+                }
+            })
+            .unwrap_or("en-US".into()),
         max_conc: 3,
         notify: true,
-        temp_dir: get_app_handle().path().temp_dir().expect("Failed to get temp_dir"),
+        temp_dir: get_app_handle()
+            .path()
+            .temp_dir()
+            .expect("Failed to get temp_dir"),
         theme: Theme::Auto,
         window_effect: WindowEffect::Auto,
         organize: SettingsOrganize {
             auto_rename: true,
             top_folder: true,
-            sub_folder: true
+            sub_folder: true,
         },
         proxy: SettingsProxy {
             address: String::new(),
             username: String::new(),
-            password: String::new()
+            password: String::new(),
         },
     })
-);
-pub static HEADERS: LazyLock<Headers>      = LazyLock::new(Headers::new);
-pub static READY: LazyLock<OnceCell<()>>   = LazyLock::new(OnceCell::new);
-pub static DATABASE_URL: LazyLock<String>  = LazyLock::new(|| format!("sqlite://{}", STORAGE_PATH.to_string_lossy()));
+});
+pub static HEADERS: LazyLock<Headers> = LazyLock::new(Headers::new);
+pub static READY: LazyLock<OnceCell<()>> = LazyLock::new(OnceCell::new);
+pub static DATABASE_URL: LazyLock<String> =
+    LazyLock::new(|| format!("sqlite://{}", STORAGE_PATH.to_string_lossy()));
 pub static STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKING_PATH.join("Storage"));
-pub static WORKING_PATH: LazyLock<PathBuf> = LazyLock::new(||
-    get_app_handle().path().app_data_dir().expect("Failed to get app_data_dir")
-);
-
+pub static WORKING_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    get_app_handle()
+        .path()
+        .app_data_dir()
+        .expect("Failed to get app_data_dir")
+});
 
 pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36";
 
@@ -129,19 +151,23 @@ impl WindowEffect {
     pub fn as_tauri(&self) -> Option<TauriWindowEffect> {
         match self {
             WindowEffect::Auto => match tauri_plugin_os::platform() {
-                "windows" => if let tauri_plugin_os::Version::Semantic(_, _, patch) = tauri_plugin_os::version() {
-                    if patch >= 22000 {
-                        Some(TauriWindowEffect::Mica)
-                    } else if !(18362..=22000).contains(&patch) {
-                        Some(TauriWindowEffect::Acrylic)
+                "windows" => {
+                    if let tauri_plugin_os::Version::Semantic(_, _, patch) =
+                        tauri_plugin_os::version()
+                    {
+                        if patch >= 22000 {
+                            Some(TauriWindowEffect::Mica)
+                        } else if !(18362..=22000).contains(&patch) {
+                            Some(TauriWindowEffect::Acrylic)
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
-                } else {
-                    None
-                },
+                }
                 "macos" => Some(TauriWindowEffect::Sidebar),
-                _ => None
+                _ => None,
             },
             WindowEffect::Mica => Some(TauriWindowEffect::Mica),
             WindowEffect::Acrylic => Some(TauriWindowEffect::Acrylic),
@@ -170,7 +196,7 @@ pub struct HeadersData {
 }
 
 pub struct Headers {
-    map: RwLock<BTreeMap<String, String>>
+    map: RwLock<BTreeMap<String, String>>,
 }
 
 impl Default for Headers {
@@ -187,19 +213,25 @@ impl Headers {
         map.insert("Origin".into(), "https://www.bilibili.com".into());
         map.insert("Cookie".into(), String::new());
         Self {
-            map: RwLock::new(map)
+            map: RwLock::new(map),
         }
     }
     pub async fn refresh(&self) -> Result<()> {
         let mut map = self.map.write().await;
-        let cookies = cookies::load().await?
-            .iter().map(|(name, value)|
-                format!("{}={}", name, value.to_string().replace("\\\"", "").trim_matches('"'))
-            ).collect::<Vec<_>>().join("; ");
+        let cookies = cookies::load()
+            .await?
+            .iter()
+            .map(|(name, value)| {
+                format!(
+                    "{}={}",
+                    name,
+                    value.to_string().replace("\\\"", "").trim_matches('"')
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
         map.insert("Cookie".into(), cookies);
-        let headers: HeadersData = serde_json::from_value(
-            serde_json::to_value(&*map)?
-        )?;
+        let headers: HeadersData = serde_json::from_value(serde_json::to_value(&*map)?)?;
         drop(map);
         let app = get_app_handle();
         headers.emit(app)?;
@@ -211,7 +243,7 @@ impl Headers {
         for (key, value) in &*map {
             headers.insert(
                 HeaderName::from_bytes(key.as_bytes())?,
-                HeaderValue::from_str(value)?
+                HeaderValue::from_str(value)?,
             );
         }
         Ok(headers)
@@ -228,13 +260,10 @@ pub async fn init_client_no_proxy() -> Result<Client> {
 
 pub async fn init_client_inner(use_proxy: bool) -> Result<Client> {
     let proxy = &config::read().proxy;
-    let client_builder = Client::builder()
-        .default_headers(HEADERS.to_header_map().await?);
+    let client_builder = Client::builder().default_headers(HEADERS.to_header_map().await?);
     let client_builder = if !proxy.address.is_empty() && use_proxy {
-        client_builder.proxy(
-            Proxy::all(&proxy.address)?
-                .basic_auth(&proxy.username, &proxy.password)
-        )
+        client_builder
+            .proxy(Proxy::all(&proxy.address)?.basic_auth(&proxy.username, &proxy.password))
     } else {
         client_builder.no_proxy()
     };
@@ -256,8 +285,11 @@ pub fn get_ts(mills: bool) -> i64 {
 }
 
 pub fn random_string(len: usize) -> String {
-    rand::rng().sample_iter(&Alphanumeric)
-        .take(len).map(char::from).collect()
+    rand::rng()
+        .sample_iter(&Alphanumeric)
+        .take(len)
+        .map(char::from)
+        .collect()
 }
 
 pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
@@ -265,7 +297,8 @@ pub fn get_unique_path(mut path: PathBuf) -> PathBuf {
         return path;
     }
     let mut count = 1;
-    let stem = path.file_stem()
+    let stem = path
+        .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or("file".into());
 
@@ -284,8 +317,10 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     let app = get_app_handle();
     log::error!("{name}: {}", e.to_string());
     let _ = ProcessError {
-        name: name.into(), error: e.to_string(),
-    }.emit(app);
+        name: name.into(),
+        error: e.to_string(),
+    }
+    .emit(app);
     e
 }
 
@@ -294,46 +329,56 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
 pub fn set_window(
     window: tauri::WebviewWindow,
     theme: Theme,
-    window_effect: WindowEffect
+    window_effect: WindowEffect,
 ) -> crate::TauriResult<(bool, Option<&'static str>)> {
     use tauri::{utils::config::WindowEffectsConfig, window::Color};
     #[cfg(target_os = "windows")]
-    window.with_webview(move |webview| { let _ = || unsafe {
-        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
-        use windows::core::Interface;
-        let settings = webview.controller().CoreWebView2()
-            .and_then(|c| c.Settings())
-            .and_then(|s| s.cast::<ICoreWebView2Settings5>())
-            .map_err(|e| {
-                log::info!("Failed to parse Core Settings to ICoreWebView2Settings5: \n{e:?}")
-            }).ok();
-        if let Some(s) = settings {
-            #[cfg(not(debug_assertions))]
-            s.SetAreBrowserAcceleratorKeysEnabled(false)?;
-            s.SetAreDefaultContextMenusEnabled(false)?;
-            s.SetIsPasswordAutosaveEnabled(false)?;
-            s.SetIsGeneralAutofillEnabled(false)?;
-            s.SetIsZoomControlEnabled(false)?;
-        }
-        Ok::<(), crate::TauriError>(())
-    }.map_err(|e| process_err(e, "set_window")); })?;
+    window.with_webview(move |webview| {
+        let _ = || {
+            unsafe {
+                use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
+                use windows::core::Interface;
+                let settings = webview
+                    .controller()
+                    .CoreWebView2()
+                    .and_then(|c| c.Settings())
+                    .and_then(|s| s.cast::<ICoreWebView2Settings5>())
+                    .map_err(|e| {
+                        log::info!(
+                            "Failed to parse Core Settings to ICoreWebView2Settings5: \n{e:?}"
+                        )
+                    })
+                    .ok();
+                if let Some(s) = settings {
+                    #[cfg(not(debug_assertions))]
+                    s.SetAreBrowserAcceleratorKeysEnabled(false)?;
+                    s.SetAreDefaultContextMenusEnabled(false)?;
+                    s.SetIsPasswordAutosaveEnabled(false)?;
+                    s.SetIsGeneralAutofillEnabled(false)?;
+                    s.SetIsZoomControlEnabled(false)?;
+                }
+                Ok::<(), crate::TauriError>(())
+            }
+            .map_err(|e| process_err(e, "set_window"))
+        };
+    })?;
     let theme = theme.as_tauri();
     let is_dark = theme == TauriTheme::Dark;
     window.set_theme(Some(theme))?;
     match window_effect.as_tauri() {
         Some(v) => {
-            window.set_background_color(Some(Color(0,0,0,0)))?;
+            window.set_background_color(Some(Color(0, 0, 0, 0)))?;
             window.set_effects(WindowEffectsConfig {
                 effects: vec![v],
                 ..Default::default()
             })?;
             Ok((is_dark, None))
-        },
+        }
         None => {
             let (hex, rgb) = if is_dark {
-                ("#202020", Color(32,32,32,255))
+                ("#202020", Color(32, 32, 32, 255))
             } else {
-                ("#f9f9f9", Color(249,249,249,255))
+                ("#f9f9f9", Color(249, 249, 249, 255))
             };
             window.set_background_color(Some(rgb))?;
             window.set_effects(WindowEffectsConfig {

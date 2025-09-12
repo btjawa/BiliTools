@@ -1,11 +1,13 @@
-use sea_query::{ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
-use time::{macros::format_description, PrimitiveDateTime};
 use anyhow::{anyhow, Context, Result};
-use serde::{Serialize, Deserialize};
-use sea_query_binder::SqlxBinder;
-use std::collections::BTreeMap;
 use regex::Regex;
+use sea_query::{
+    ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement,
+};
+use sea_query_binder::SqlxBinder;
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::collections::BTreeMap;
+use time::{macros::format_description, PrimitiveDateTime};
 
 use crate::storage::db::{get_db, TableSpec};
 
@@ -40,27 +42,18 @@ impl TableSpec for CookiesTable {
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Cookies::Table)
-            .col(ColumnDef::new(Cookies::Name)
-                .text().not_null().primary_key()
+            .col(
+                ColumnDef::new(Cookies::Name)
+                    .text()
+                    .not_null()
+                    .primary_key(),
             )
-            .col(ColumnDef::new(Cookies::Value)
-                .text().not_null()
-            )
-            .col(ColumnDef::new(Cookies::Path)
-                .text().null()
-            )
-            .col(ColumnDef::new(Cookies::Domain)
-                .text().null()
-            )
-            .col(ColumnDef::new(Cookies::Expires)
-                .integer().null()
-            )
-            .col(ColumnDef::new(Cookies::Httponly)
-                .boolean().not_null()
-            )
-            .col(ColumnDef::new(Cookies::Secure)
-                .boolean().not_null()
-            )
+            .col(ColumnDef::new(Cookies::Value).text().not_null())
+            .col(ColumnDef::new(Cookies::Path).text().null())
+            .col(ColumnDef::new(Cookies::Domain).text().null())
+            .col(ColumnDef::new(Cookies::Expires).integer().null())
+            .col(ColumnDef::new(Cookies::Httponly).boolean().not_null())
+            .col(ColumnDef::new(Cookies::Secure).boolean().not_null())
             .to_owned()
     }
 }
@@ -86,12 +79,22 @@ pub async fn load() -> Result<BTreeMap<String, String>> {
 pub async fn insert(cookie: String) -> Result<()> {
     let re_name_value = Regex::new(r"^([^=]+)=([^;]+)")?;
     let re_attribute = Regex::new(r"(?i)\b(path|domain|expires|httponly|secure)\b(?:=([^;]*))?")?;
-    let captures = re_name_value.captures(&cookie).context(anyhow!("Invalid Cookie"))?;
-    let name = captures.get(1).ok_or(anyhow!("Failed to get name from {captures:?}"))?
-        .as_str().trim().into();
+    let captures = re_name_value
+        .captures(&cookie)
+        .context(anyhow!("Invalid Cookie"))?;
+    let name = captures
+        .get(1)
+        .ok_or(anyhow!("Failed to get name from {captures:?}"))?
+        .as_str()
+        .trim()
+        .into();
 
-    let value = captures.get(2).ok_or(anyhow!("Failed to get value from {captures:?}"))?
-        .as_str().trim().into();
+    let value = captures
+        .get(2)
+        .ok_or(anyhow!("Failed to get value from {captures:?}"))?
+        .as_str()
+        .trim()
+        .into();
 
     let mut row = CookieRow {
         name,
@@ -100,7 +103,7 @@ pub async fn insert(cookie: String) -> Result<()> {
         domain: None,
         expires: None,
         httponly: false,
-        secure: false
+        secure: false,
     };
     for cap in re_attribute.captures_iter(&cookie) {
         let key = cap.get(1).map_or("", |m| m.as_str().trim()).to_lowercase();
@@ -113,34 +116,47 @@ pub async fn insert(cookie: String) -> Result<()> {
                     "[weekday repr:short], [day] [month repr:short] [year] [hour]:[minute]:[second] GMT"
                 );
                 let timestamp = PrimitiveDateTime::parse(&value, &fmt)?
-                    .assume_utc().unix_timestamp();
+                    .assume_utc()
+                    .unix_timestamp();
                 row.expires = Some(timestamp);
-            },
+            }
             "httponly" => row.httponly = true,
             "secure" => row.secure = true,
-            _ => continue
+            _ => continue,
         }
     }
     let (sql, values) = Query::insert()
         .into_table(Cookies::Table)
         .columns([
-            Cookies::Name, Cookies::Value,
-            Cookies::Path, Cookies::Domain, Cookies::Expires,
-            Cookies::Httponly, Cookies::Secure
+            Cookies::Name,
+            Cookies::Value,
+            Cookies::Path,
+            Cookies::Domain,
+            Cookies::Expires,
+            Cookies::Httponly,
+            Cookies::Secure,
         ])
         .values_panic([
-            row.name.into(), row.value.into(),
-            row.path.into(), row.domain.into(), row.expires.into(),
-            row.httponly.into(), row.secure.into()
+            row.name.into(),
+            row.value.into(),
+            row.path.into(),
+            row.domain.into(),
+            row.expires.into(),
+            row.httponly.into(),
+            row.secure.into(),
         ])
         .on_conflict(
             OnConflict::column(Cookies::Name)
                 .update_columns([
-                    Cookies::Name, Cookies::Value,
-                    Cookies::Path, Cookies::Domain, Cookies::Expires,
-                    Cookies::Httponly, Cookies::Secure
+                    Cookies::Name,
+                    Cookies::Value,
+                    Cookies::Path,
+                    Cookies::Domain,
+                    Cookies::Expires,
+                    Cookies::Httponly,
+                    Cookies::Secure,
                 ])
-                .to_owned()
+                .to_owned(),
         )
         .build_sqlx(SqliteQueryBuilder);
 

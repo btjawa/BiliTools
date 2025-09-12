@@ -1,43 +1,45 @@
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc, LazyLock};
-use tauri::http::{header, StatusCode};
-use serde::{Serialize, Deserialize};
-use tokio::time::{sleep, Duration};
 use anyhow::{Context, Result};
-use serde_json::Value;
 use hmac::{Hmac, Mac};
-use std::fmt::Write;
-use sha2::Sha256;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sha2::Sha256;
+use std::fmt::Write;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, LazyLock,
+};
+use tauri::http::{header, StatusCode};
+use tokio::time::{sleep, Duration};
 
 use crate::{
-    shared::{
-        get_ts, init_client, HEADERS
-    }, storage::cookies, TauriError, TauriResult
+    shared::{get_ts, init_client, HEADERS},
+    storage::cookies,
+    TauriError, TauriResult,
 };
 
-static LOGIN_POLLING: LazyLock<Arc<AtomicBool>> = LazyLock::new(||
-    Arc::new(AtomicBool::new(false))
-);
+static LOGIN_POLLING: LazyLock<Arc<AtomicBool>> =
+    LazyLock::new(|| Arc::new(AtomicBool::new(false)));
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ExitLoginResponse {
     code: isize,
     message: String,
     ts: isize,
-    data: Value
+    data: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct BuvidResponse {
     code: isize,
     message: String,
-    data: BuvidResponseData
+    data: BuvidResponseData,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct BuvidResponseData {
     b_3: String,
-    b_4: String
+    b_4: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -45,7 +47,7 @@ struct BiliTicketResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: Option<BiliTicketResponseData>
+    data: Option<BiliTicketResponseData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -60,7 +62,7 @@ struct BiliTicketResponseData {
 #[derive(Serialize, Deserialize, Debug)]
 struct SmsLoginResponse {
     code: isize,
-    data: Option<SmsLoginResponseData>
+    data: Option<SmsLoginResponseData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -79,7 +81,7 @@ struct SmsLoginResponseData {
 struct PwdLoginResponse {
     code: isize,
     message: String,
-    data: Option<PwdLoginResponseData>
+    data: Option<PwdLoginResponseData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -98,7 +100,7 @@ struct SwitchCookieResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: Option<SwitchCookieResponseData>
+    data: Option<SwitchCookieResponseData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -112,7 +114,7 @@ struct ScanLoginResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: Option<ScanLoginResponseData>
+    data: Option<ScanLoginResponseData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -121,7 +123,7 @@ struct ScanLoginResponseData {
     refresh_token: String,
     timestamp: isize,
     code: isize,
-    message: String
+    message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -129,7 +131,7 @@ struct RefreshCookieResponse {
     code: isize,
     message: String,
     ttl: isize,
-    data: Option<RefreshCookieResponseData>
+    data: Option<RefreshCookieResponseData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -171,15 +173,19 @@ pub async fn get_bili_ticket() -> TauriResult<()> {
             ("hexsign", &hexsign),
             ("context[ts]", &ts.to_string()),
             ("csrf", bili_csrf),
-        ]).send().await?;
+        ])
+        .send()
+        .await?;
     if response.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while fetching BiliTicket Cookie",
-            Some(response.status())
+            Some(response.status()),
         ));
     }
-    let body: BiliTicketResponse = response.json()
-        .await.context("Failed to decode BiliTicket response")?;
+    let body: BiliTicketResponse = response
+        .json()
+        .await
+        .context("Failed to decode BiliTicket response")?;
     if let Some(data) = body.data {
         Ok(cookies::insert(format!("bili_ticket={}", data.ticket)).await?)
     } else {
@@ -188,7 +194,9 @@ pub async fn get_bili_ticket() -> TauriResult<()> {
 }
 
 pub async fn get_uuid() -> Result<()> {
-    const DIGIT_MAP: [&str; 16] = ["1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","10"];
+    const DIGIT_MAP: [&str; 16] = [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "10",
+    ];
     let s = |length: usize| -> String {
         let mut rng = rand::rng();
         (0..length)
@@ -197,7 +205,12 @@ pub async fn get_uuid() -> Result<()> {
     };
     let uuid = format!(
         "{}-{}-{}-{}-{}{:05}infoc",
-        s(8), s(4), s(4), s(4), s(12), get_ts(true)
+        s(8),
+        s(4),
+        s(4),
+        s(4),
+        s(12),
+        get_ts(true)
     );
     cookies::insert(format!("_uuid={uuid}")).await?;
     Ok(())
@@ -205,17 +218,18 @@ pub async fn get_uuid() -> Result<()> {
 
 pub async fn get_buvid() -> TauriResult<()> {
     let client = init_client().await?;
-    let html_resp = client
-        .get("https://www.bilibili.com")
-        .send().await?;
+    let html_resp = client.get("https://www.bilibili.com").send().await?;
     if html_resp.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while fetching initial Cookies",
-            Some(html_resp.status())
+            Some(html_resp.status()),
         ));
     }
-    let cookies: Vec<String> = html_resp.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
+    let cookies: Vec<String> = html_resp
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
     let mut has_buvid_3 = false;
@@ -228,15 +242,18 @@ pub async fn get_buvid() -> TauriResult<()> {
 
     let buvid_resp = client
         .get("https://api.bilibili.com/x/frontend/finger/spi")
-        .send().await?;
+        .send()
+        .await?;
     if buvid_resp.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while fetching Buvid Cookies",
-            Some(buvid_resp.status())
+            Some(buvid_resp.status()),
         ));
     }
-    let buvid_body: BuvidResponse = buvid_resp.json()
-        .await.context("Failed to decode Buvid response")?;
+    let buvid_body: BuvidResponse = buvid_resp
+        .json()
+        .await
+        .context("Failed to decode Buvid response")?;
     if buvid_body.code != 0 {
         return Err(TauriError::new(buvid_body.message, Some(buvid_body.code)));
     }
@@ -255,26 +272,38 @@ pub async fn exit() -> TauriResult<isize> {
     let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
     let response = client
         .post("https://passport.bilibili.com/login/exit/v2")
-        .query(&[
-            ("biliCSRF", bili_csrf),
-        ]).send().await?;
+        .query(&[("biliCSRF", bili_csrf)])
+        .send()
+        .await?;
     if response.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while performing Exit login",
-            Some(response.status())
+            Some(response.status()),
         ));
     }
-    let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
+    let cookies: Vec<String> = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-    let body: ExitLoginResponse = response.json()
-        .await.context("Failed to decode Exit Login response")?;
+    let body: ExitLoginResponse = response
+        .json()
+        .await
+        .context("Failed to decode Exit Login response")?;
     if body.code != 0 {
         return Err(TauriError::new(body.message, Some(body.code)));
     }
     for cookie in cookies {
-        cookies::delete(cookie.split_once('=').map(|(name, _)| name).unwrap_or("").into()).await?;
+        cookies::delete(
+            cookie
+                .split_once('=')
+                .map(|(name, _)| name)
+                .unwrap_or("")
+                .into(),
+        )
+        .await?;
     }
     HEADERS.refresh().await?;
     Ok(body.code)
@@ -282,7 +311,12 @@ pub async fn exit() -> TauriResult<isize> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String) -> TauriResult<isize> {
+pub async fn sms_login(
+    cid: u16,
+    tel: String,
+    code: String,
+    captcha_key: String,
+) -> TauriResult<isize> {
     let client = init_client().await?;
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login/sms")
@@ -292,20 +326,27 @@ pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String)
             ("code", code.to_string()),
             ("source", "main-fe-header".into()),
             ("captcha_key", captcha_key),
-            ("keep", "true".into())
-        ]).send().await?;
+            ("keep", "true".into()),
+        ])
+        .send()
+        .await?;
     if response.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while performing SMS login",
-            Some(response.status())
+            Some(response.status()),
         ));
     }
-    let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
+    let cookies: Vec<String> = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-    let body: SmsLoginResponse = response.json()
-        .await.context("Failed to decode SMS login response")?;
+    let body: SmsLoginResponse = response
+        .json()
+        .await
+        .context("Failed to decode SMS login response")?;
     if let Some(data) = body.data {
         for cookie in cookies {
             cookies::insert(cookie).await?;
@@ -318,7 +359,7 @@ pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String)
             -400 => "请求错误",
             1006 => "请输入正确的短信验证码",
             1007 => "短信验证码已过期",
-            _ => "未知错误"
+            _ => "未知错误",
         };
         Err(TauriError::new(message, Some(body.code)))
     }
@@ -326,7 +367,14 @@ pub async fn sms_login(cid: u16, tel: String, code: String, captcha_key: String)
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn pwd_login(username: String, encoded_pwd: String, token: String, challenge: String, validate: String, seccode: String) -> TauriResult<isize> {
+pub async fn pwd_login(
+    username: String,
+    encoded_pwd: String,
+    token: String,
+    challenge: String,
+    validate: String,
+    seccode: String,
+) -> TauriResult<isize> {
     let client = init_client().await?;
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login")
@@ -339,19 +387,26 @@ pub async fn pwd_login(username: String, encoded_pwd: String, token: String, cha
             ("seccode", seccode),
             ("go_url", "https://www.bilibili.com/".into()),
             ("source", "main-fe-header".into()),
-        ]).send().await?;
+        ])
+        .send()
+        .await?;
     if response.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while performing Password login",
-            Some(response.status())
+            Some(response.status()),
         ));
     }
-    let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
+    let cookies: Vec<String> = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-    let body: PwdLoginResponse = response.json()
-        .await.context("Failed to decode password login response")?;
+    let body: PwdLoginResponse = response
+        .json()
+        .await
+        .context("Failed to decode password login response")?;
     if let Some(data) = body.data {
         if data.refresh_token.is_empty() || data.status != 0 {
             return Err(TauriError::new(data.message, Some(data.status)));
@@ -373,22 +428,26 @@ pub async fn switch_cookie(switch_code: String) -> TauriResult<isize> {
     let client = init_client().await?;
     let response = client
         .post("https://passport.bilibili.com/x/passport-login/web/login")
-        .query(&[
-            ("code", switch_code),
-            ("source", "risk".into()),
-        ]).send().await?;
+        .query(&[("code", switch_code), ("source", "risk".into())])
+        .send()
+        .await?;
     if response.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while switching cookie",
-            Some(response.status())
+            Some(response.status()),
         ));
     }
-    let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
+    let cookies: Vec<String> = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
-    let body: SwitchCookieResponse = response.json()
-        .await.context("Failed to decode switch cookie response")?;
+    let body: SwitchCookieResponse = response
+        .json()
+        .await
+        .context("Failed to decode switch cookie response")?;
     if let Some(data) = body.data {
         for cookie in cookies {
             cookies::insert(cookie).await?;
@@ -403,7 +462,10 @@ pub async fn switch_cookie(switch_code: String) -> TauriResult<isize> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -> TauriResult<isize> {
+pub async fn scan_login(
+    qrcode_key: String,
+    event: tauri::ipc::Channel<isize>,
+) -> TauriResult<isize> {
     let client = init_client().await?;
     let masked_key: String = qrcode_key.chars().take(7).collect();
     LOGIN_POLLING.store(true, Ordering::SeqCst);
@@ -412,20 +474,27 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
             .get(format!(
                 "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key={}",
                 qrcode_key
-            )).send().await?;
+            ))
+            .send()
+            .await?;
         if response.status() != StatusCode::OK {
             return Err(TauriError::new(
                 "Error while polling QR code login",
-                Some(response.status())
+                Some(response.status()),
             ));
         }
-        let cookies: Vec<String> = response.headers().get_all(header::SET_COOKIE)
-            .iter().flat_map(|h| h.to_str().ok())
+        let cookies: Vec<String> = response
+            .headers()
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .flat_map(|h| h.to_str().ok())
             .map(|s| s.to_string())
             .collect();
-        let body: ScanLoginResponse = response.json()
-            .await.context("Failed to decode QR code polling response")?;
-        if let Some(data) = body.data {            
+        let body: ScanLoginResponse = response
+            .json()
+            .await
+            .context("Failed to decode QR code polling response")?;
+        if let Some(data) = body.data {
             event.send(data.code)?;
             match data.code {
                 0 => {
@@ -441,7 +510,7 @@ pub async fn scan_login(qrcode_key: String, event: tauri::ipc::Channel<isize>) -
                 _ => {
                     log::error!("{masked_key}: {}, {}", data.code, data.message);
                     return Err(TauriError::new(data.message, Some(data.code)));
-                },
+                }
             }
         } else {
             return Err(TauriError::new(body.message, Some(body.code)));
@@ -458,7 +527,10 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
     let client = init_client().await?;
     let cookies = cookies::load().await?;
     let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
-    let refresh_token = cookies.get("refresh_token").map(String::as_str).unwrap_or("");
+    let refresh_token = cookies
+        .get("refresh_token")
+        .map(String::as_str)
+        .unwrap_or("");
     let refresh_token_resp = client
         .post("https://passport.bilibili.com/x/passport-login/web/cookie/refresh")
         .query(&[
@@ -466,42 +538,52 @@ pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
             ("refresh_csrf", &refresh_csrf),
             ("refresh_token", refresh_token),
             ("source", "main_web"),
-        ]).send().await?;
+        ])
+        .send()
+        .await?;
     if refresh_token_resp.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while refreshing cookie",
-            Some(refresh_token_resp.status())
+            Some(refresh_token_resp.status()),
         ));
     }
-    let cookies: Vec<String> = refresh_token_resp.headers().get_all(header::SET_COOKIE)
-        .iter().flat_map(|h| h.to_str().ok())
+    let cookies: Vec<String> = refresh_token_resp
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .flat_map(|h| h.to_str().ok())
         .map(|s| s.to_string())
         .collect();
     let refresh_token_body: RefreshCookieResponse = refresh_token_resp.json().await?;
-    if let Some(data) = refresh_token_body.data {        
+    if let Some(data) = refresh_token_body.data {
         for cookie in cookies {
             cookies::insert(cookie).await?;
         }
         cookies::insert(format!("refresh_token={}", data.refresh_token)).await?;
         HEADERS.refresh().await?;
     } else {
-        return Err(TauriError::new(refresh_token_body.message, Some(refresh_token_body.code)));
+        return Err(TauriError::new(
+            refresh_token_body.message,
+            Some(refresh_token_body.code),
+        ));
     }
     let confirm_refresh_resp = client
         .post("https://passport.bilibili.com/x/passport-login/web/confirm/refresh")
-        .query(&[
-            ("csrf", bili_csrf),
-            ("refresh_token", refresh_token),
-        ]).send().await?;
+        .query(&[("csrf", bili_csrf), ("refresh_token", refresh_token)])
+        .send()
+        .await?;
     if confirm_refresh_resp.status() != StatusCode::OK {
         return Err(TauriError::new(
             "Error while confirming refresh",
-            Some(confirm_refresh_resp.status())
+            Some(confirm_refresh_resp.status()),
         ));
     }
     let confirm_refresh_body: ConfirmRefreshResponse = confirm_refresh_resp.json().await?;
     if confirm_refresh_body.code != 0 {
-        return Err(TauriError::new(confirm_refresh_body.message, Some(confirm_refresh_body.code)));
+        return Err(TauriError::new(
+            confirm_refresh_body.message,
+            Some(confirm_refresh_body.code),
+        ));
     }
     Ok(confirm_refresh_body.code)
 }

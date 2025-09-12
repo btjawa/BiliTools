@@ -1,0 +1,6 @@
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Auto"
+edition = "2021"
+reorder_imports = true

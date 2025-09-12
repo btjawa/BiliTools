@@ -1,12 +1,14 @@
-use sea_query::{ColumnDef, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
-use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
-use sea_query_binder::SqlxBinder;
 use anyhow::{anyhow, Result};
+use sea_query::{
+    ColumnDef, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement,
+};
+use sea_query_binder::SqlxBinder;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::Manager;
 use specta::Type;
 use sqlx::Row;
+use std::{path::PathBuf, sync::Arc};
+use tauri::Manager;
 
 use super::db::{get_db, TableSpec};
 use crate::shared::{get_app_handle, Theme, WindowEffect, CONFIG};
@@ -50,7 +52,9 @@ impl Settings {
             CacheKey::Log => path.app_log_dir()?,
             CacheKey::Temp => self.temp_dir(),
             CacheKey::Webview => match std::env::consts::OS {
-                "macos" => path.app_cache_dir()?.join("../WebKit/BiliTools/WebsiteData"),
+                "macos" => path
+                    .app_cache_dir()?
+                    .join("../WebKit/BiliTools/WebsiteData"),
                 "linux" => path.app_cache_dir()?.join("bilitools"),
                 _ => path.app_local_data_dir()?.join("EBWebView"), // windows
             },
@@ -67,7 +71,7 @@ impl Settings {
 pub struct SettingsProxy {
     pub address: String,
     pub username: String,
-    pub password: String
+    pub password: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
@@ -101,7 +105,7 @@ pub struct SettingsOrganize {
 pub enum Config {
     Table,
     Name,
-    Value
+    Value,
 }
 
 pub struct ConfigTable;
@@ -112,12 +116,8 @@ impl TableSpec for ConfigTable {
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Config::Table)
-            .col(ColumnDef::new(Config::Name)
-                .text().not_null().primary_key()
-            )
-            .col(ColumnDef::new(Config::Value)
-                .text().not_null()
-            )
+            .col(ColumnDef::new(Config::Name).text().not_null().primary_key())
+            .col(ColumnDef::new(Config::Value).text().not_null())
             .to_owned()
     }
 }
@@ -137,24 +137,23 @@ pub async fn load() -> Result<()> {
     let mut local = serde_json::Map::new();
     for r in rows {
         let n: String = r.try_get("name")?;
-        let v: Value = serde_json::from_str(
-            &r.try_get::<String, _>("value")?
-        )?;
+        let v: Value = serde_json::from_str(&r.try_get::<String, _>("value")?)?;
         local.insert(n, v);
     }
 
     let map = serde_json::to_value(read())?
-        .as_object().cloned().ok_or(anyhow!("Failed to read config"))?;
+        .as_object()
+        .cloned()
+        .ok_or(anyhow!("Failed to read config"))?;
     for (k, v) in map {
         if !local.contains_key(&k) {
             insert(&k, &v).await?;
             local.insert(k, v);
-        } else if let (
-            Value::Object(default),
-            Value::Object(local)
-        ) = (
-            v, local.get_mut(&k)
-                .ok_or(anyhow!("Failed to get local config"))?
+        } else if let (Value::Object(default), Value::Object(local)) = (
+            v,
+            local
+                .get_mut(&k)
+                .ok_or(anyhow!("Failed to get local config"))?,
         ) {
             for (k, v) in default {
                 if !local.contains_key(&k) {
@@ -164,9 +163,7 @@ pub async fn load() -> Result<()> {
             insert(&k, &Value::Object(local.to_owned())).await?;
         }
     }
-    CONFIG.store(Arc::new(
-        serde_json::from_value(Value::Object(local))?
-    ));
+    CONFIG.store(Arc::new(serde_json::from_value(Value::Object(local))?));
     Ok(())
 }
 
@@ -174,14 +171,11 @@ pub async fn insert(name: &str, value: &Value) -> Result<()> {
     let (sql, values) = Query::insert()
         .into_table(Config::Table)
         .columns([Config::Name, Config::Value])
-        .values_panic([
-            name.into(),
-            serde_json::to_string(&value)?.into()
-        ])
+        .values_panic([name.into(), serde_json::to_string(&value)?.into()])
         .on_conflict(
             OnConflict::column(Config::Name)
                 .update_columns([Config::Value])
-                .to_owned()
+                .to_owned(),
         )
         .build_sqlx(SqliteQueryBuilder);
 
@@ -192,20 +186,21 @@ pub async fn insert(name: &str, value: &Value) -> Result<()> {
 
 pub async fn write(settings: serde_json::Map<String, Value>) -> Result<()> {
     let mut map = serde_json::to_value(read())?;
-    let keys = map.as_object().map(|v|
-        v.keys().cloned().collect::<Vec<String>>()
-    ).ok_or(anyhow!("Failed to read config"))?;
+    let keys = map
+        .as_object()
+        .map(|v| v.keys().cloned().collect::<Vec<String>>())
+        .ok_or(anyhow!("Failed to read config"))?;
 
     let ftr = settings.into_iter().filter(|(k, _)| keys.contains(k));
-    let obj = map.as_object_mut().ok_or(anyhow!("Failed to get mutable config"))?;
+    let obj = map
+        .as_object_mut()
+        .ok_or(anyhow!("Failed to get mutable config"))?;
 
     for (k, v) in ftr {
         insert(&k, &v).await?;
         obj.insert(k, v);
     }
-    CONFIG.store(Arc::new(
-        serde_json::from_value(map)?
-    ));
+    CONFIG.store(Arc::new(serde_json::from_value(map)?));
 
     #[cfg(debug_assertions)]
     log::info!("CONFIG: \n{}", serde_json::to_string_pretty(&read())?);

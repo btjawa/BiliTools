@@ -1,17 +1,29 @@
-use sea_query::{Alias, ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement};
-use sqlx::{sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions}, SqlitePool, Row};
-use std::{future::Future, path::PathBuf, str::FromStr, time::Duration};
-use tokio::{fs, sync::{Notify, RwLock}};
-use sea_query_binder::SqlxBinder;
 use anyhow::Result;
+use sea_query::{
+    Alias, ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table,
+    TableCreateStatement,
+};
+use sea_query_binder::SqlxBinder;
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
+    Row, SqlitePool,
+};
+use std::{future::Future, path::PathBuf, str::FromStr, time::Duration};
+use tokio::{
+    fs,
+    sync::{Notify, RwLock},
+};
 
 use crate::shared::{DATABASE_URL, STORAGE_PATH};
 
 static DB: RwLock<Option<SqlitePool>> = RwLock::const_new(None);
 static DB_READY: Notify = Notify::const_new();
 
-#[derive(Iden)] enum Meta {
-    Table, Name, Version
+#[derive(Iden)]
+enum Meta {
+    Table,
+    Name,
+    Version,
 }
 
 pub trait TableSpec: Send + Sync + 'static {
@@ -19,29 +31,31 @@ pub trait TableSpec: Send + Sync + 'static {
     const LATEST: i32;
     fn create_stmt() -> TableCreateStatement;
     // actually async
-    fn check_latest() -> impl Future<Output = Result<()>> { async {
-        init_meta().await?;
-        let pool = get_db().await?;
-        let cur = get_version(Self::NAME).await?;
-        if cur != Self::LATEST {
-            let mut tx = pool.begin().await?;
+    fn check_latest() -> impl Future<Output = Result<()>> {
+        async {
+            init_meta().await?;
+            let pool = get_db().await?;
+            let cur = get_version(Self::NAME).await?;
+            if cur != Self::LATEST {
+                let mut tx = pool.begin().await?;
 
-            let drop_sql = Table::drop()
-                .table(Alias::new(Self::NAME))
-                .if_exists()
-                .to_string(SqliteQueryBuilder);
+                let drop_sql = Table::drop()
+                    .table(Alias::new(Self::NAME))
+                    .if_exists()
+                    .to_string(SqliteQueryBuilder);
 
-            sqlx::query(&drop_sql).execute(&mut *tx).await.ok();
+                sqlx::query(&drop_sql).execute(&mut *tx).await.ok();
 
-            let create_sql = Self::create_stmt().to_string(SqliteQueryBuilder);
-            sqlx::query(&create_sql).execute(&mut *tx).await?;
+                let create_sql = Self::create_stmt().to_string(SqliteQueryBuilder);
+                sqlx::query(&create_sql).execute(&mut *tx).await?;
 
-            tx.commit().await?;
+                tx.commit().await?;
 
-            set_version(Self::NAME, Self::LATEST).await?;
+                set_version(Self::NAME, Self::LATEST).await?;
+            }
+            Ok(())
         }
-        Ok(())
-    } }
+    }
 }
 
 pub async fn init_db() -> Result<()> {
@@ -87,7 +101,12 @@ pub async fn init_meta() -> Result<()> {
         .table(Meta::Table)
         .if_not_exists()
         .col(ColumnDef::new(Meta::Name).text().not_null().primary_key())
-        .col(ColumnDef::new(Meta::Version).integer().not_null().default(0))
+        .col(
+            ColumnDef::new(Meta::Version)
+                .integer()
+                .not_null()
+                .default(0),
+        )
         .to_string(SqliteQueryBuilder);
 
     let pool = get_db().await?;
@@ -118,7 +137,7 @@ pub async fn set_version(name: &str, value: i32) -> Result<()> {
         .on_conflict(
             OnConflict::column(Meta::Name)
                 .update_columns([Meta::Version])
-                .to_owned()
+                .to_owned(),
         )
         .build_sqlx(SqliteQueryBuilder);
 
@@ -146,7 +165,11 @@ pub async fn export(output: PathBuf) -> Result<()> {
     let pool = get_db().await?;
     let mut conn = pool.acquire().await?;
     let output = output.to_string_lossy().replace('\'', "''");
-    sqlx::query("PRAGMA wal_checkpoint(FULL);").execute(&mut *conn).await?;
-    sqlx::query(&format!("VACUUM INTO '{output}';")).execute(&mut *conn).await?;
+    sqlx::query("PRAGMA wal_checkpoint(FULL);")
+        .execute(&mut *conn)
+        .await?;
+    sqlx::query(&format!("VACUUM INTO '{output}';"))
+        .execute(&mut *conn)
+        .await?;
     Ok(())
 }
