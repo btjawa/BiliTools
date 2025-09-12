@@ -77,7 +77,9 @@ watch(
       const blob = model.value[src] ?? (await getBlob(src));
       model.value[src] ??= blob;
       v.blob = blob;
-    } catch (_) {}
+    } catch {
+      /**/
+    }
   },
   { immediate: true },
 );

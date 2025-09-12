@@ -1,17 +1,17 @@
 <template>
   <Transition name="slide">
     <div
-      class="el flex flex-col rounded-t-xl px-6 py-3 overflow-auto"
       v-if="v.active"
+      class="el flex flex-col rounded-t-xl px-6 py-3 overflow-auto"
     >
       <div class="absolute flex items-center right-4 top-4">
         <i :class="[$fa.weight, 'fa-info-circle']"></i>
         <span class="desc">{{ $t('popup.popupLint') }}</span>
-        <button class="rounded-full ml-4" @click="close">
+        <button class="rounded-full ml-4" @click="exit">
           <i class="fa-solid fa-close"></i>
         </button>
       </div>
-      <template v-for="(i, k) in extras">
+      <template v-for="(i, k) in extras" :key="k">
         <div v-if="i.data.length">
           <h2>
             <i :class="[$fa.weight, i.icon]"></i>
@@ -33,8 +33,8 @@
               </button>
               <Dropdown
                 v-if="id === 'subtitles'"
-                :drop="v.extras.misc.subtitles"
                 v-model="v.subtitle"
+                :drop="v.extras.misc.subtitles"
               />
               <VueDatePicker
                 v-if="id === 'history'"
@@ -50,18 +50,18 @@
           <hr />
         </div>
       </template>
-      <template v-for="(i, k) in quality">
+      <template v-for="(i, k) in quality" :key="k">
         <div v-if="i.data.size">
           <h2>
             <i :class="[$fa.weight, i.icon]"></i>
             <span>{{ $t('format.' + k) }}</span>
           </h2>
           <i18n-t
+            v-if="k === 'fmt'"
             keypath="popup.dashHint.desc"
             tag="span"
             class="desc"
             scope="global"
-            v-if="k === 'fmt'"
           >
             <a @click="openUrl('https://btjawa.top/bilitools/stream')">{{
               $t('popup.dashHint.name')
@@ -92,7 +92,7 @@
             <span>{{ $t('popup.mediaType.' + k) }}</span>
           </button>
         </template>
-        <button class="ml-auto primary-color" @click="emit">
+        <button class="ml-auto primary-color" @click="submit">
           <i :class="[$fa.weight, 'fa-arrow-right']"></i>
           <span>{{ $t('popup.nextStep') }}</span>
         </button>
@@ -111,9 +111,9 @@ import * as Types from '@/types/shared.d';
 import Dropdown from '../Dropdown.vue';
 
 const props = defineProps<{
-  fmt: (fmt: any) => any;
-  close: () => any;
-  emit: (select: Types.PopupSelect) => any;
+  fmt: (fmt?: Types.StreamFormat) => void;
+  close: () => void;
+  emit: (select: Types.PopupSelect) => void;
 }>();
 
 const v = reactive({
@@ -222,9 +222,9 @@ async function init(
   };
 }
 
-function emit() {
+function submit() {
   props.emit(v.select);
-  close();
+  exit();
 }
 
 function qualityClick<K extends keyof typeof quality.value>(
@@ -235,35 +235,36 @@ function qualityClick<K extends keyof typeof quality.value>(
   if (key === 'res') {
     v.select.enc = getDefaultQuality([...quality.value.enc.data], 'enc');
   } else if (key === 'fmt') {
-    props.fmt(value);
-    close();
+    props.fmt(value as Types.StreamFormat);
+    exit();
   }
 }
 
 function click(key: keyof typeof extras.value | 'media', id: string) {
-  const select = v.select[key] as any;
   if (key === 'thumb') {
-    const i = select.indexOf(id);
-    return i === -1 ? select.push(id) : select.splice(i, 1);
+    const t = v.select.thumb;
+    const i = t.indexOf(id);
+    return i === -1 ? t.push(id) : t.splice(i, 1);
   }
   if (key === 'danmaku' && id === 'history') {
-    return (select[id] = select[id] ? false : v.date);
+    return (v.select.danmaku[id] = v.select.danmaku[id] ? false : v.date);
   }
   if (key === 'misc' && id === 'subtitles') {
-    return (select[id] = select[id] ? false : v.subtitle);
+    return (v.select.misc[id] = v.select.misc[id] ? false : v.subtitle);
   }
-  select[id] = !select[id];
+  const k = v.select[key] as Record<string, boolean>;
+  k[id] = !k[id];
 }
 
 function selected(key: keyof typeof extras.value | 'media', id: string) {
   if (key === 'thumb') {
     return v.select.thumb?.includes(id);
-  } else {
-    return (v.select[key] as any)?.[id];
   }
+  const k = v.select[key] as Record<string, boolean>;
+  return k?.[id];
 }
 
-function close() {
+function exit() {
   props.close();
   v.active = false;
 }

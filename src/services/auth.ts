@@ -24,27 +24,7 @@ export interface GeetestOptions {
   new_captcha: boolean;
   product?: 'float' | 'popup' | 'custom' | 'bind';
   width?: string;
-  lang?:
-    | 'zh-cn'
-    | 'zh-hk'
-    | 'zh-tw'
-    | 'en'
-    | 'ja'
-    | 'ko'
-    | 'id'
-    | 'ru'
-    | 'ar'
-    | 'es'
-    | 'pt-pt'
-    | 'fr'
-    | 'de'
-    | 'th'
-    | 'tr'
-    | 'vi'
-    | 'ta'
-    | 'it'
-    | 'bn'
-    | 'mr';
+  lang?: string;
   https?: boolean;
   timeout?: number;
   remUnit?: number;
@@ -223,7 +203,7 @@ export async function captcha(
   challenge: string,
 ): Promise<Types.Captcha> {
   const lang = useSettingsStore().language;
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     window.initGeetest(
       {
         gt,
@@ -232,9 +212,7 @@ export async function captcha(
         new_captcha: true,
         product: 'bind',
         width: '300px',
-        lang: (lang.startsWith('zh')
-          ? lang
-          : lang.slice(0, 2)) as GeetestOptions['lang'],
+        lang: lang.startsWith('zh') ? lang : lang.slice(0, 2),
         https: true,
       },
       function (captchaObj) {

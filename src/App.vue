@@ -7,7 +7,7 @@
     <router-view v-slot="{ Component }">
       <Transition mode="out-in">
         <keep-alive>
-          <component :is="Component" class="page" ref="page" />
+          <component :is="Component" ref="page" class="page" />
         </keep-alive>
       </Transition>
     </router-view>
@@ -43,15 +43,22 @@ const contextMenu = ref<InstanceType<typeof ContextMenu>>();
 const router = useRouter();
 const settings = useSettingsStore();
 const app = useAppStore();
-const context = getCurrentInstance()?.appContext!;
+const context = getCurrentInstance()?.appContext;
+
+if (!context) throw new Error('No AppContext');
 
 watch(
   () => settings.isDark,
-  (v) => {
+  (isDark) => {
     const props = context.config.globalProperties;
-    if (!props.$fa) props.$fa = reactive<any>({});
-    props.$fa.weight = v ? 'fa-solid' : 'fa-light';
-    props.$fa.isDark = v;
+    const weight = isDark ? 'fa-solid' : 'fa-light';
+    if (!props.$fa)
+      props.$fa = reactive({
+        weight,
+        isDark,
+      });
+    props.$fa.weight = weight;
+    props.$fa.isDark = isDark;
   },
   { immediate: true },
 );

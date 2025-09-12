@@ -1,9 +1,9 @@
 <template>
   <div
     data-tauri-drag-region
+    class="titlebar absolute right-0 h-[30px] w-[calc(100vw-56px)] bg-transparent"
     @dblclick="appWindow.toggleMaximize()"
     @contextmenu.prevent
-    class="titlebar absolute right-0 h-[30px] w-[calc(100vw-56px)] bg-transparent"
   >
     <div v-if="osType() !== 'macos'" class="relative z-100 float-right">
       <div class="button" @click="toggleTop">
@@ -28,9 +28,8 @@
 
 <script setup lang="ts">
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { onMounted, ref } from 'vue';
-import { debounce } from '@/services/utils';
 import { type as osType } from '@tauri-apps/plugin-os';
+import { onMounted, ref } from 'vue';
 
 const maxed = ref(false);
 const appWindow = getCurrentWindow();
@@ -49,9 +48,7 @@ async function toggleTop() {
 
 onMounted(() =>
   appWindow.onResized(
-    debounce(async () => {
-      maxed.value = await appWindow.isMaximized();
-    }, 250),
+    async () => (maxed.value = await appWindow.isMaximized()),
   ),
 );
 </script>

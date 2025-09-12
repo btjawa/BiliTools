@@ -7,19 +7,23 @@
       }}</span>
       <div class="flex gap-2 items-center">
         <button
+          v-if="item.sid === '__waiting__' && item.list.length"
+          class="ml-auto w-fit primary-color"
           @click="
             processQueue();
             tab = 'doing';
           "
-          v-if="item.sid === '__waiting__' && item.list.length"
-          class="ml-auto w-fit primary-color"
         >
           <i :class="[$fa.weight, 'fa-download']"></i>
           <span>{{ $t('down.processQueue') }}</span>
         </button>
         <template v-if="item.sid !== '__waiting__'">
           <span class="mr-2 ml-auto">{{ timestamp(item.ts / 1000) }}</span>
-          <button @click="event(k, item.sid, null)" v-for="(v, k) in buttons()">
+          <button
+            v-for="(v, k) in buttons()"
+            :key="k"
+            @click="event(k, item.sid, null)"
+          >
             <i :class="[$fa.weight, v]"></i>
           </button>
         </template>
@@ -28,6 +32,7 @@
     <Empty v-if="!item.list.length" :text="$t('down.empty')" />
     <div
       v-for="task in item.list.map((v) => queue.tasks[v])"
+      :key="task.id"
       class="block gap-1.5 px-4 border-2"
       :style="{ 'border-color': getBorder(task.id) }"
     >
@@ -43,15 +48,15 @@
             v-if="task.select.media.video || task.select.media.audioVideo"
           >
             <Dropdown
-              class="flat min-w-0! mr-1"
               v-if="tab === 'waiting'"
+              v-model="queue.tasks[task.id].select.res"
+              class="flat min-w-0! mr-1"
               :drop="
                 (cache.get(task.id)?.res ?? [task.select.res]).map((id) => ({
                   id,
                   name: $t(`quality.res.${id}`),
                 }))
               "
-              v-model="queue.tasks[task.id].select.res"
               @click.once="dropdown(task)"
               @click="commands.updateSelect(task.id, task.select)"
             />
@@ -62,15 +67,15 @@
             v-if="task.select.media.audio || task.select.media.audioVideo"
           >
             <Dropdown
-              class="flat min-w-0! mr-1"
               v-if="tab === 'waiting'"
+              v-model="queue.tasks[task.id].select.abr"
+              class="flat min-w-0! mr-1"
               :drop="
                 (cache.get(task.id)?.abr ?? [task.select.abr]).map((id) => ({
                   id,
                   name: $t(`quality.abr.${id}`),
                 }))
               "
-              v-model="queue.tasks[task.id].select.abr"
               @click.once="dropdown(task)"
               @click="commands.updateSelect(task.id, task.select)"
             />
@@ -112,6 +117,7 @@
         <div class="flex gap-2 text-sm">
           <button
             v-for="(v, k) in buttons(task)"
+            :key="k"
             @click="event(k, item.sid, task.id)"
           >
             <i :class="[$fa.weight, v]"></i>
@@ -173,7 +179,7 @@ function getProgress(task: Task) {
   const subtasks = task.subtasks;
   const content = subtasks.length;
   let chunk = 0;
-  for (const [_, v] of Object.entries(queue.tasks[task.id].status)) {
+  for (const v of Object.values(queue.tasks[task.id].status)) {
     chunk += v.chunk / v.content || 0;
   }
   return (chunk / content || 0) * 100;

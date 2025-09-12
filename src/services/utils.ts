@@ -81,10 +81,10 @@ export async function tryFetch(
   url: string,
   options?: {
     auth?: 'wbi';
-    params?: Record<string, string | number | Object>;
+    params?: Record<string, string | number | object>;
     post?: {
       type: 'json' | 'form';
-      body?: Record<string, string | number | Object>;
+      body?: Record<string, string | number | object>;
     };
     type?: 'text' | 'binary' | 'blob' | 'url';
     times?: number;
@@ -143,85 +143,73 @@ export async function tryFetch(
             return await response.arrayBuffer();
           case 'blob':
             return await response.blob();
+          case 'url':
+            return response.url;
         }
       }
-      let body = {} as any;
-      try {
-        body = await response.json();
-      } catch (_) {
-        if (options?.type === 'url') return response.url;
-        throw new AppError(response.statusText, { code: response.status });
+      const body = await response.json();
+      if (body.code === 0) {
+        return body;
       }
-      if (body.code !== 0 && body.code) {
-        if (
-          body.code === -352 &&
-          body.data.v_voucher &&
-          i < (options?.times ?? 3)
-        ) {
-          const csrf =
-            new Headers(app.headers)
-              .get('Cookie')
-              ?.match(/bili_jct=([^;]+);/)?.[1] || '';
-          const captchaParams = new URLSearchParams({
-            v_voucher: body.data.v_voucher,
-            ...(csrf && { csrf }),
-          }).toString();
-          const captchaResp = await fetch(
-            'https://api.bilibili.com/x/gaia-vgate/v1/register?' +
-              captchaParams,
-            {
-              headers: app.headers,
-              proxy: { all: settings.proxyConfig },
-              method: 'POST',
-            },
-          );
-          const captchaBody = await captchaResp.json();
-          if (captchaBody.code !== 0) {
-            throw new AppError(captchaBody.message, { code: captchaBody.code });
-          }
-          const {
-            token,
-            geetest: { gt = '', challenge = '' },
-          } = captchaBody.data;
-          if (!token || !gt || !challenge) {
-            throw new AppError(body.message || body.msg, { code: body.code });
-          }
-          AppLog(i18n.global.t('error.risk'), 'warning');
-          const captcha = await auth.captcha(gt, challenge);
-          const validateParams = new URLSearchParams({
-            token,
-            ...captcha,
-            ...(csrf && { csrf }),
-          }).toString();
-          const validateResp = await fetch(
-            'https://api.bilibili.com/x/gaia-vgate/v1/validate?' +
-              validateParams,
-            {
-              headers: app.headers,
-              proxy: { all: settings.proxyConfig },
-              method: 'POST',
-            },
-          );
-          const validateBody = await validateResp.json();
-          if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
-            throw new AppError(validateBody.message, {
-              code: validateBody.code,
-            });
-          }
-          grisk_id = validateBody.data.grisk_id;
-          await new Promise((resolve) =>
-            setTimeout(resolve, getRandomInRange(100, 500)),
-          );
-          continue;
-        } else {
-          if (options?.handleError !== false) {
-            throw new AppError(body.message || body.msg, { code: body.code });
-          }
+      if (body.code === -352 && body.data && i < (options?.times ?? 3)) {
+        const csrf =
+          new Headers(app.headers)
+            .get('Cookie')
+            ?.match(/bili_jct=([^;]+);/)?.[1] || '';
+        const captchaParams = new URLSearchParams({
+          v_voucher: body.data.v_voucher,
+          ...(csrf && { csrf }),
+        }).toString();
+        const captchaResp = await fetch(
+          'https://api.bilibili.com/x/gaia-vgate/v1/register?' + captchaParams,
+          {
+            headers: app.headers,
+            proxy: { all: settings.proxyConfig },
+            method: 'POST',
+          },
+        );
+        const captchaBody = await captchaResp.json();
+        if (captchaBody.code !== 0) {
+          throw new AppError(captchaBody.message, { code: captchaBody.code });
+        }
+        const {
+          token,
+          geetest: { gt = '', challenge = '' },
+        } = captchaBody.data;
+        if (!token || !gt || !challenge) {
+          throw new AppError(body.message || body.msg, { code: body.code });
+        }
+        AppLog(i18n.global.t('error.risk'), 'warning');
+        const captcha = await auth.captcha(gt, challenge);
+        const validateParams = new URLSearchParams({
+          token,
+          ...captcha,
+          ...(csrf && { csrf }),
+        }).toString();
+        const validateResp = await fetch(
+          'https://api.bilibili.com/x/gaia-vgate/v1/validate?' + validateParams,
+          {
+            headers: app.headers,
+            proxy: { all: settings.proxyConfig },
+            method: 'POST',
+          },
+        );
+        const validateBody = await validateResp.json();
+        if (validateBody.code !== 0 || !validateBody.data?.is_valid) {
+          throw new AppError(validateBody.message, {
+            code: validateBody.code,
+          });
+        }
+        grisk_id = validateBody.data.grisk_id;
+        await new Promise((resolve) =>
+          setTimeout(resolve, getRandomInRange(100, 500)),
+        );
+        continue;
+      } else {
+        if (options?.handleError !== false) {
+          throw new AppError(body.message || body.msg, { code: body.code });
         }
       }
-      return body;
-    } catch (e) {
-      throw e;
     } finally {
       loadingBox?.classList.remove('active');
     }
@@ -229,6 +217,7 @@ export async function tryFetch(
 }
 
 export function strip(input: string, char?: string) {
+  // eslint-disable-next-line no-control-regex
   return input.replace(/[\u0000-\u001F\u007F-\u009F]/g, char ?? '');
 }
 
@@ -282,7 +271,7 @@ export async function parseId(input: string, ignore?: boolean) {
         }
     }
     throw err;
-  } catch (_) {
+  } catch {
     // NOT URL
     if (ignore) return { id: input, type: null };
     if (
@@ -329,18 +318,6 @@ export function randomString(len: number = 8) {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
-}
-
-export function debounce(fn: Function, wait: number) {
-  let bouncing = false;
-  return function (this: any, ...args: any[]) {
-    if (bouncing) return null;
-    bouncing = true;
-    setTimeout(() => {
-      bouncing = false;
-    }, wait);
-    fn.apply(this, args);
-  };
 }
 
 export function stat(num: number | string) {
@@ -416,10 +393,7 @@ export function getRandomInRange(min: number, max: number) {
   return Math.floor(Math.random() * (max - min) + min);
 }
 
-export function getPublicImages(
-  data: Record<string, any> | undefined,
-  prefix?: string,
-) {
+export function getPublicImages(data: unknown, prefix?: string) {
   const images: { id: string; url: string }[] = [];
   for (const [id, url] of Object.entries(data ?? {})) {
     if (

@@ -17,7 +17,7 @@ async function getConsumer(url: string) {
     const consumer = new SourceMapConsumer(map);
     cache.set(url, consumer);
     return consumer;
-  } catch (_) {
+  } catch {
     return null;
   }
 }

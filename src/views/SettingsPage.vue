@@ -4,21 +4,22 @@
       <i :class="[$fa.weight, 'fa-gear']"></i>
       <span>{{ $t('settings.title') }}</span>
       <i
-        @click="openUrl('https://btjawa.top/bilitools/settings')"
         class="question fa-light fa-circle-question text-lg"
+        @click="openUrl('https://btjawa.top/bilitools/settings')"
       ></i>
     </h1>
     <div class="flex w-full h-full mt-4 gap-4 min-h-0">
       <Transition mode="out-in">
-        <div class="flex flex-col flex-1 overflow-auto pr-3" :key="tab">
+        <div :key="tab" class="flex flex-col flex-1 overflow-auto pr-3">
           <component :is="list[tab].comp" :key="tab" />
         </div>
       </Transition>
       <div class="tab">
         <button
           v-for="(v, k) in list"
-          @click="tab = k"
+          :key="k"
           :class="{ active: tab === k }"
+          @click="tab = k"
         >
           <span>{{ $t('settings.' + k) }}</span>
           <i :class="[tab === k ? 'fa-solid' : 'fa-light', v.icon]"></i>
@@ -29,7 +30,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, Transition } from 'vue';
+import { ref } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 import {

@@ -1,13 +1,14 @@
 <template>
   <ul
-    @contextmenu.prevent
     class="flex flex-col py-4 px-2.5 gap-3 h-screen"
     :class="[os, { 'bg-(--block-color)': $fa.isDark }]"
+    @contextmenu.prevent
   >
     <li
       v-for="v in list"
-      @click="click(v.path)"
+      :key="v.path"
       :class="{ active: $route.path === v.path, 'mt-auto': v.path === 'theme' }"
+      @click="click(v.path)"
     >
       <template v-if="v.path === '/user-page'">
         <Image v-if="user.isLogin" :src="v.icon" class="rounded-full!" />

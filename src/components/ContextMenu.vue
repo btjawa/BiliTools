@@ -1,15 +1,15 @@
 <template>
   <Transition>
     <ul
-      @mousedown.prevent
       v-if="v.active"
+      ref="menu"
       :style="{ top: v.y + 'px', left: v.x + 'px' }"
       class="fixed flex flex-col min-w-36 w-fit shadow-lg rounded-lg"
-      ref="menu"
+      @mousedown.prevent
     >
-      <button v-for="v in options" @click="v.action">
-        <i :class="['fa-light', v.icon]"></i>
-        <span>{{ $t(v.text) }}</span>
+      <button v-for="(t, k) in options" :key="k" @click="t.action">
+        <i :class="['fa-light', t.icon]"></i>
+        <span>{{ $t(t.text) }}</span>
       </button>
     </ul>
   </Transition>
@@ -44,7 +44,9 @@ const options = [
           elm.selectionStart = elm.selectionEnd = start + text.length;
           elm.dispatchEvent(new Event('input'));
         }
-      } catch (_) {}
+      } catch {
+        /**/
+      }
     },
   },
 ];

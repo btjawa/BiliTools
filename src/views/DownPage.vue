@@ -8,7 +8,7 @@
       <Transition mode="out-in">
         <VList
           :key="tab"
-          #default="{ item }"
+          v-slot="{ item }"
           :data="queueData.length ? queueData : ['empty']"
         >
           <div>
@@ -19,24 +19,25 @@
       </Transition>
       <div class="tab">
         <button
-          v-for="(v, k) in tabs"
-          @click="tab = k"
+          v-for="(i, k) in tabs"
+          :key="k"
           :class="{ active: tab === k }"
+          @click="tab = k"
         >
           <span>{{ $t(`down.${k}`) }}</span>
-          <i :class="[tab === k ? 'fa-solid' : 'fa-light', v]"></i>
+          <i :class="[tab === k ? 'fa-solid' : 'fa-light', i]"></i>
           <label class="primary-color"></label>
         </button>
       </div>
       <div class="popup" :class="{ active: v.popup }">
         <Transition name="slide">
-          <div class="pr-16" v-if="v.popup">
+          <div v-if="v.popup" class="pr-16">
             <button class="close" @click="v.popup = false">
               <i :class="[$fa.weight, 'fa-close']"></i>
             </button>
             <div class="flex flex-col gap-2 desc text flex-wrap [&_span]:mr-2">
               <div>
-                <span v-for="v in getId(v.task)">{{ v }}</span>
+                <span v-for="(i, k) in getId(v.task)" :key="k">{{ i }}</span>
               </div>
               <span
                 >{{ $t('format.pubtime') }}:
@@ -52,14 +53,15 @@
               >
             </div>
             <div
-              v-for="v of v.task?.subtasks"
+              v-for="t of v.task?.subtasks"
+              :key="t.id"
               class="flex w-full gap-4 items-center"
             >
               <span class="flex-shrink-0 min-w-28">{{
-                $t('taskType.' + v.type)
+                $t('taskType.' + t.type)
               }}</span>
-              <span class="w-16">{{ stat(v.id).toFixed(2) }}%</span>
-              <ProgressBar :progress="stat(v.id)" />
+              <span class="w-16">{{ stat(t.id).toFixed(2) }}%</span>
+              <ProgressBar :progress="stat(t.id)" />
             </div>
           </div>
         </Transition>

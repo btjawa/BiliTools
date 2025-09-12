@@ -5,13 +5,13 @@
       <span>{{ $t('settings.default.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.default.desc') }}</span>
-    <div v-for="v in ['res', 'abr', 'enc'] as const">
+    <div v-for="v in ['res', 'abr', 'enc'] as const" :key="v">
       <h3>{{ $t('format.' + v) }}</h3>
       <Dropdown
+        v-model="settings.default[v]"
         :drop="
           QualityMap[v].map((id) => ({ id, name: $t(`quality.${v}.${id}`) }))
         "
-        v-model="settings.default[v]"
       />
     </div>
   </section>
@@ -22,8 +22,8 @@
       <span>{{ $t('settings.max_conc.name') }}</span>
     </h3>
     <Dropdown
-      :drop="Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: i + 1 }))"
       v-model="settings.max_conc"
+      :drop="Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: i + 1 }))"
     />
     <span class="desc">{{ $t('settings.max_conc.desc') }}</span>
   </section>
@@ -33,11 +33,11 @@
       <i :class="[$fa.weight, 'fa-globe']"></i>
       <span>{{ $t('settings.proxy.name') }}</span>
     </h2>
-    <div v-for="v in ['address', 'username', 'password'] as const">
+    <div v-for="v in ['address', 'username', 'password'] as const" :key="v">
       <h3>{{ $t('settings.proxy.' + v) }}</h3>
       <input
-        type="text"
         v-model="settings.proxy[v]"
+        type="text"
         :placeholder="
           v === 'address' ? $t('settings.proxy.placeholder') : $t('optional')
         "

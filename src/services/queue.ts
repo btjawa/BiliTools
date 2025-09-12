@@ -51,8 +51,8 @@ function urlFilter(urls: string[]) {
 async function handleMedia(task: Types.Task) {
   const { select, item } = task;
   const playUrl = await getPlayUrl(item, item.type, select.fmt);
-  let video: Types.PlayUrlResult = null as any;
-  let audio: Types.PlayUrlResult = null as any;
+  let video = null as Types.PlayUrlResult | null;
+  let audio = null as Types.PlayUrlResult | null;
   let videoUrls: string[] = [];
   let audioUrls: string[] = [];
 
@@ -169,7 +169,7 @@ async function handleDanmaku(task: Types.Task, subtask: Types.SubTask) {
 
 async function handleThumbs(task: Types.Task) {
   const { select, nfo } = task;
-  const alias = { pic: 'cover', cover: 'pic' } as any;
+  const alias: Record<string, string> = { pic: 'cover', cover: 'pic' };
   return nfo.thumbs
     .filter(
       (v) => select.thumb.includes(v.id) || select.thumb.includes(alias[v.id]),
@@ -274,7 +274,7 @@ function buildPaths(
       }
     }),
   )
-    .replace(/[\/\\:*?"<>|]/g, '_')
+    .replace(/[/\\:*?"<>|]/g, '_')
     .replace(/\.+$/, ''); // #165
 }
 
@@ -322,7 +322,7 @@ export async function handleEvent(event: backend.QueueEvent) {
       });
     if (event.tasks)
       queue.$patch({
-        tasks: event.tasks as any,
+        tasks: event.tasks as Record<string, Types.Task>,
       });
     if (event.init && queue.doing.length) {
       AppLog(i18n.global.t('down.restored'), 'info');
@@ -336,7 +336,7 @@ export async function handleEvent(event: backend.QueueEvent) {
   } else if (type === 'request') {
     const task = queue.tasks[event.parent];
     const subtask = task.subtasks.find((v) => v.id === event.subtask);
-    let result = null as any;
+    let result: unknown = null;
     try {
       result = await handleTask(task, event.action, subtask);
     } catch (e) {

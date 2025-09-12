@@ -8,7 +8,7 @@
         <div class="relative flex flex-col gap-1 flex-1 min-w-0">
           <h2 class="text-lg w-full truncate">{{ info.nfo.showtitle }}</h2>
           <div class="text-xs flex flex-wrap items-center text-(--desc-color)">
-            <template v-for="(v, k) in info.stat">
+            <template v-for="(v, k) in info.stat" :key="k">
               <template v-if="v">
                 <i class="bcc-iconfont" :class="iconMap[k]"></i>
                 <span class="ml-1.5!">{{ stat(v) }}</span>
@@ -18,8 +18,8 @@
         </div>
         <a
           v-if="props.info.nfo.upper?.avatar"
-          @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
           class="flex flex-col items-center cursor-pointer w-20"
+          @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
         >
           <Image
             :src="props.info.nfo.upper.avatar + '@64h'"

@@ -1,9 +1,9 @@
 <template>
   <div class="relative w-fit min-w-40 inline-block">
     <button
-      @click="active = !active"
       ref="button"
       class="w-full flex items-center"
+      @click="active = !active"
     >
       <span class="w-full text-left">{{
         drop.find((v) => v.id == model)?.name
@@ -12,7 +12,7 @@
     </button>
     <Transition>
       <div v-if="active" class="list fixed flex flex-col shadow-lg mt-1">
-        <button v-for="v in drop" @click="model = v.id" :key="v.id">
+        <button v-for="(v, k) in drop" :key="k" @click="model = v.id">
           {{ v.name }}
         </button>
       </div>
@@ -23,11 +23,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 defineProps<{
-  drop: { id: any; name: any }[];
+  drop: { id: unknown; name: unknown }[];
 }>();
 const active = ref(false);
 const button = ref<HTMLElement>();
-const model = defineModel();
+const model = defineModel<unknown>();
 
 function close(e: MouseEvent) {
   if (button.value?.contains(e.target as Node)) return;

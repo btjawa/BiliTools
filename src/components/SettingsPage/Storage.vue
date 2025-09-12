@@ -5,7 +5,7 @@
       <span>{{ $t('settings.paths.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.paths.desc') }}</span>
-    <div v-for="v in pathList" class="io">
+    <div v-for="v in pathList" :key="v" class="io">
       <h3>{{ $t('settings.paths.' + v) }}</h3>
       <button @click="openPath(settings[v])">{{ settings[v] }}</button>
       <button @click="getFolder(v)">
@@ -20,7 +20,7 @@
       <span>{{ $t('settings.cache.name') }}</span>
     </h2>
     <span class="desc">{{ $t('settings.cache.desc') }}</span>
-    <div v-for="v in cacheList" class="io">
+    <div v-for="v in cacheList" :key="v" class="io">
       <h3>{{ $t('settings.cache.' + v) }}</h3>
       <button @click="openCache(v)">{{ formatBytes(app.cache[v]) }}</button>
       <button @click="cleanCache(v)">

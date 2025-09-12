@@ -8,7 +8,7 @@
       <Transition name="slide">
         <VList
           v-if="v.listActive"
-          #default="{ item }"
+          v-slot="{ item }"
           :data="v.list?.length ? v.list : ['empty']"
         >
           <div>
@@ -19,11 +19,11 @@
             >
               <div class="relative flex rounded-lg min-w-40 overflow-hidden">
                 <Image
+                  v-model="coverCache"
                   :src="(item.covers?.[0] ?? item.cover) + '@160w_96h_1c.jpg'"
                   :height="96"
                   :width="160"
                   :ratio="5 / 3"
-                  v-model="coverCache"
                 />
                 <div
                   class="absolute w-full h-full z-10 bg-linear-to-b from-transparent to-black/50"
@@ -43,7 +43,7 @@
                   <i :class="[$fa.weight, 'fa-clock']"></i>
                   <span>{{ timestamp(item.view_at) }}</span>
                 </div>
-                <div class="desc" v-if="item.duration">
+                <div v-if="item.duration" class="desc">
                   <i :class="[$fa.weight, 'fa-marker']"></i>
                   <span
                     >{{
@@ -62,8 +62,8 @@
                 >{{ item.author_name }}</a
               >
               <button
-                class="absolute right-3 bottom-3"
                 v-if="item.videos"
+                class="absolute right-3 bottom-3"
                 @click="search(item)"
               >
                 <i :class="[$fa.weight, 'fa-download']"></i>
@@ -76,16 +76,17 @@
       <div class="flex flex-col w-32 gap-2 ml-auto">
         <div class="tab">
           <button
-            v-for="t in tabs"
-            @click="p.business = t.type"
+            v-for="(t, i) in tabs"
+            :key="i"
             :class="{ active: p.business === t.type }"
+            @click="p.business = t.type"
           >
             <span>{{ t.name }}</span>
             <label class="primary-color"></label>
           </button>
         </div>
         <span>{{ $t('page') }}</span>
-        <input type="number" v-model="p.pn" @input="update" />
+        <input v-model="p.pn" type="number" @input="update" />
         <button @click="refresh()">
           <i :class="[$fa.weight, 'fa-rotate-right']"></i>
           <span>{{ $t('history.refresh') }}</span>
@@ -96,61 +97,56 @@
         </button>
       </div>
     </div>
-    <Transition>
-      <div class="popup" :class="{ active: v.filter }">
-        <Transition name="slide">
-          <div class="gap-4 pr-16" v-if="v.filter">
-            <button class="close" @click="v.filter = false">
-              <i :class="[$fa.weight, 'fa-close']"></i>
+    <div class="popup" :class="{ active: v.filter }">
+      <Transition name="slide">
+        <div v-if="v.filter" class="gap-4 pr-16">
+          <button class="close" @click="v.filter = false">
+            <i :class="[$fa.weight, 'fa-close']"></i>
+          </button>
+          <div
+            v-for="(val, k) in filters"
+            :key="k"
+            class="flex gap-2 *:flex-shrink-0"
+          >
+            <button
+              v-for="i in val"
+              :key="i"
+              class="border-2 border-transparent"
+              :class="{ 'border-(--primary-color)!': v.select[k] === i }"
+              @click="v.select[k] = i as any"
+            >
+              {{ $t(`history.filter.${k}.${i}`) }}
             </button>
-            <div v-for="(val, k) in filters" class="flex gap-2 *:flex-shrink-0">
-              <button
-                v-for="i in val"
-                @click="v.select[k] = i as any"
-                class="border-2 border-transparent"
-                :class="{ 'border-(--primary-color)!': v.select[k] === i }"
-              >
-                {{ $t(`history.filter.${k}.${i}`) }}
-              </button>
-              <VueDatePicker
-                range
-                v-if="k === 'time'"
-                class="w-60!"
-                :placeholder="$t('history.placeholder')"
-                v-model="v.range"
-                format="yyyy/MM/dd"
-                :max-date="new Date()"
-                :locale="$i18n.locale"
-                :dark="$fa.isDark"
-              />
-            </div>
-            <hr class="m-0" />
-            <div class="flex gap-4 items-center">
-              <span>{{ $t('history.keyword') }}</span>
-              <input type="text" v-model="p.keyword" />
-            </div>
-            <hr class="m-0" />
-            <button class="primary-color w-fit" @click="apply">
-              <i :class="[$fa.weight, 'fa-filter']"></i>
-              <span>{{ $t('history.filter.apply') }}</span>
-            </button>
+            <VueDatePicker
+              v-if="k === 'time'"
+              v-model="v.range"
+              range
+              class="w-60!"
+              :placeholder="$t('history.placeholder')"
+              format="yyyy/MM/dd"
+              :max-date="new Date()"
+              :locale="$i18n.locale"
+              :dark="$fa.isDark"
+            />
           </div>
-        </Transition>
-      </div>
-    </Transition>
+          <hr class="m-0" />
+          <div class="flex gap-4 items-center">
+            <span>{{ $t('history.keyword') }}</span>
+            <input v-model="p.keyword" type="text" />
+          </div>
+          <hr class="m-0" />
+          <button class="primary-color w-fit" @click="apply">
+            <i :class="[$fa.weight, 'fa-filter']"></i>
+            <span>{{ $t('history.filter.apply') }}</span>
+          </button>
+        </div>
+      </Transition>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {
-  inject,
-  onActivated,
-  reactive,
-  Ref,
-  ref,
-  Transition,
-  watch,
-} from 'vue';
+import { inject, onActivated, reactive, Ref, ref, watch } from 'vue';
 import { getHistoryCursor, getHistorySearch } from '@/services/media/extras';
 import { HistoryItem, HistoryTab } from '@/types/media/extras.d';
 import { openUrl } from '@tauri-apps/plugin-opener';

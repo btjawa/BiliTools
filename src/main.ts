@@ -10,7 +10,6 @@ import Toast, { PluginOptions, POSITION } from 'vue-toastification';
 import VueDatePicker from '@vuepic/vue-datepicker';
 
 import '@/style.css';
-import '@wcj/markdown-style';
 import 'vue-toastification/dist/index.css';
 import '@vuepic/vue-datepicker/dist/main.css';
 

@@ -11,7 +11,7 @@ export async function getMediaInfo(
   options?: { pn?: number },
 ): Promise<Types.MediaInfo> {
   let url = 'https://api.bilibili.com';
-  let params = {} as any;
+  let params = {};
   const _id = Number(id.match(/\d+/)?.[0]);
   switch (type) {
     case Types.MediaType.Video:
@@ -458,21 +458,11 @@ export async function getPlayUrl(
 ): Promise<Types.PlayUrlProvider> {
   let url = 'https://api.bilibili.com';
   const user = useUserStore();
-  let params = {
+  let params: Record<string, number> = {
     qn: user.isLogin ? 127 : 64,
     fnver: 0,
     fnval: 16,
     fourk: 1,
-  } as {
-    qn: number;
-    fnver: number;
-    fnval: number;
-    fourk: number;
-    quality?: number;
-    avid?: number;
-    cid?: number;
-    ep_id?: number;
-    season_id?: number;
   };
   switch (codec) {
     case Types.StreamFormat.Flv:
@@ -488,24 +478,24 @@ export async function getPlayUrl(
   switch (type) {
     case Types.MediaType.Video:
       url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
-      params.avid = item.aid;
-      params.cid = item.cid;
+      params = { avid: item.aid!, cid: item.cid! };
       break;
     case Types.MediaType.Bangumi:
       url += '/pgc/player/web/v2/playurl';
-      params.ep_id = item.epid;
-      params.season_id = item.ssid;
+      params = { ep_id: item.epid!, season_id: item.ssid! };
       break;
     case Types.MediaType.Lesson:
       url += '/pugv/player/web/playurl';
-      params.avid = item.aid;
-      params.cid = item.cid;
-      params.ep_id = item.epid;
-      params.season_id = item.ssid;
+      params = {
+        avid: item.aid!,
+        cid: item.cid!,
+        ep_id: item.epid!,
+        season_id: item.ssid!,
+      };
       break;
     case Types.MediaType.Music:
       url = 'https://www.bilibili.com/audio/music-service-c/web/url';
-      params = { sid: item.sid, privilege: 2, quality: 0 } as any;
+      params = { sid: item.sid!, privilege: 2, quality: 0 };
       break;
   }
   const body = await tryFetch(url, {

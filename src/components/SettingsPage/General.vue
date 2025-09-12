@@ -4,7 +4,7 @@
       <i :class="[$fa.weight, 'fa-earth-america']"></i>
       <span>{{ $t('settings.language.name') }}</span>
     </h3>
-    <Dropdown :drop="locales" v-model="settings.language" />
+    <Dropdown v-model="settings.language" :drop="locales" />
   </section>
   <section>
     <h3>
@@ -12,13 +12,13 @@
       <span>{{ $t('settings.theme.name') }}</span>
     </h3>
     <Dropdown
+      v-model="settings.theme"
       :drop="
         ['dark', 'light', 'auto'].map((id) => ({
           id,
           name: $t('settings.theme.' + id),
         }))
       "
-      v-model="settings.theme"
     />
   </section>
   <section>
@@ -27,13 +27,13 @@
       <span>{{ $t('settings.window_effect.name') }}</span>
     </h3>
     <Dropdown
+      v-model="settings.window_effect"
       :drop="
         ['auto', 'mica', 'acrylic', 'sidebar', 'none'].map((id) => ({
           id,
           name: $t('settings.window_effect.' + id),
         }))
       "
-      v-model="settings.window_effect"
     />
   </section>
   <hr />

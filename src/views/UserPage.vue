@@ -22,8 +22,8 @@
           <div class="relative w-fit">
             <Image class="rounded-full! z-0" :height="100" :src="user.avatar" />
             <img
-              class="absolute w-7 right-0 bottom-0"
               v-if="user.vipLabel"
+              class="absolute w-7 right-0 bottom-0"
               src="@/assets/img/user/big-vip.svg"
             />
           </div>
@@ -31,8 +31,8 @@
             <div class="flex gap-2 items-center">
               <h1 class="text-2xl font-bold truncate">{{ user.name }}</h1>
               <Image
-                class="h-5 shrink-0"
                 v-if="user.vipLabel"
+                class="h-5 shrink-0"
                 :height="24"
                 :ratio="274 / 66"
                 :src="user.vipLabel"
@@ -42,11 +42,12 @@
           </div>
           <div class="flex gap-2">
             <div
-              v-for="[k, v] in Object.entries(user.stat)"
+              v-for="[k, i] in Object.entries(user.stat)"
+              :key="k"
               class="flex flex-col text-sm text-center"
             >
               <span class="desc">{{ $t('user.stat.' + k) }}</span>
-              <span>{{ v }}</span>
+              <span>{{ i }}</span>
             </div>
           </div>
           <button class="primary-color" @click="req('exit')">
@@ -66,8 +67,8 @@
             />
             <div
               v-if="v.scanStatus === 86038 || v.scanStatus === 86090"
-              @click="req('scan')"
               class="absolute flex flex-col items-center justify-center gap-2 w-36 h-36 bg-white cursor-pointer"
+              @click="req('scan')"
             >
               <i
                 class="fa-solid text-(--primary-color) text-2xl"
@@ -86,10 +87,10 @@
         </div>
         <div class="flex flex-col items-center gap-4 m-16 ml-8">
           <div class="flex gap-8 tabs">
-            <h1 @click="v.tab = 0" :class="{ active: !v.tab }">
+            <h1 :class="{ active: !v.tab }" @click="v.tab = 0">
               {{ $t('user.pwd') }}
             </h1>
-            <h1 @click="v.tab = 1" :class="{ active: v.tab }">
+            <h1 :class="{ active: v.tab }" @click="v.tab = 1">
               {{ $t('user.sms') }}
             </h1>
           </div>
@@ -97,12 +98,13 @@
             <div class="flex">
               <Dropdown
                 v-if="v.tab"
+                v-model="v.cid"
                 class="flat min-w-[52px]"
                 :drop="v.countries"
-                v-model="v.cid"
               />
               <span v-else>{{ $t('user.account') }}</span>
               <input
+                v-model="form[1]"
                 type="text"
                 spellcheck="false"
                 :placeholder="
@@ -110,7 +112,6 @@
                     v.tab ? $t('user.phone') : $t('user.account'),
                   ])
                 "
-                v-model="form[1]"
               />
               <button
                 v-if="v.tab"
@@ -124,6 +125,7 @@
             <div>
               <span>{{ v.tab ? $t('user.code') : $t('user.password') }}</span>
               <input
+                v-model="form[2]"
                 :type="v.tab ? 'text' : 'password'"
                 spellcheck="false"
                 :placeholder="
@@ -131,7 +133,6 @@
                     v.tab ? $t('user.code') : $t('user.password'),
                   ])
                 "
-                v-model="form[2]"
               />
             </div>
           </div>

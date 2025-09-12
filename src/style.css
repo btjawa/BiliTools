@@ -167,6 +167,14 @@
       @apply absolute top-4 right-4 rounded-full w-8 h-8;
     }
   }
+  .markdown {
+    h2 {
+      @apply my-1 text-lg;
+    }
+    li {
+      @apply list-disc list-inside ml-2;
+    }
+  }
 }
 
 .Vue-Toastification__container {
@@ -192,15 +200,5 @@
   }
   .dp--tp-wrap {
     @apply hidden;
-  }
-}
-
-markdown-style {
-  @apply bg-transparent!;
-  ul {
-    @apply list-disc!;
-  }
-  a {
-    @apply text-(--primary-color)!;
   }
 }

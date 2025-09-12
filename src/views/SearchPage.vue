@@ -12,10 +12,11 @@
           class="w-full rounded-2xl"
           type="text"
           spellcheck="false"
-          @keydown.enter="search()"
           :placeholder="$t('search.input', [$t('bilibili')])"
+          @keydown.enter="search()"
         />
         <Dropdown
+          v-model="v.mediaType"
           :drop="[
             { id: 'auto', name: $t('search.autoDetect') },
             ...Object.values(Types.MediaType).map((id) => ({
@@ -23,11 +24,10 @@
               name: $t('mediaType.' + id),
             })),
           ]"
-          v-model="v.mediaType"
         />
         <button
-          @click="search()"
           :class="[$fa.weight, 'fa-search rounded-full']"
+          @click="search()"
         ></button>
       </div>
       <Transition>
@@ -39,8 +39,8 @@
       </Transition>
       <Transition>
         <img
-          src="@/assets/img/searching.png"
           v-if="v.searching"
+          src="@/assets/img/searching.png"
           class="absolute"
         />
       </Transition>
@@ -53,25 +53,30 @@
       </Transition>
       <Transition>
         <div
-          class="flex flex-col flex-1 mt-3 w-full min-h-0"
           v-if="v.listActive"
+          class="flex flex-col flex-1 mt-3 w-full min-h-0"
         >
           <MediaInfo :info="v.mediaInfo" />
           <div class="flex mt-3 gap-3 flex-1 min-h-0">
             <Transition name="slide">
               <MediaList
-                :list="v.mediaInfo.list"
-                ref="mediaList"
-                :stein_gate="v.mediaInfo.stein_gate"
-                :update-stein="updateStein"
-                v-model="v.checkboxs"
                 v-if="!v.searching && v.mediaInfo.list.length"
+                ref="mediaList"
+                v-model="v.checkboxs"
+                :list="v.mediaInfo.list"
+                :stein-gate="v.mediaInfo.stein_gate"
+                :update-stein="updateStein"
               />
             </Transition>
             <div class="flex flex-col gap-3 ml-auto min-w-32 max-w-48 pb-6">
-              <button v-for="v in buttons" @click="v.action" class="shrink-0">
-                <i :class="[$fa.weight, v.icon]"></i>
-                <span>{{ $t(v.text) }}</span>
+              <button
+                v-for="(i, k) in buttons"
+                :key="k"
+                class="shrink-0"
+                @click="i.action"
+              >
+                <i :class="[$fa.weight, i.icon]"></i>
+                <span>{{ $t(i.text) }}</span>
               </button>
               <template
                 v-if="
@@ -81,17 +86,18 @@
               >
                 <span>{{ $t('page') }}</span>
                 <input
-                  type="number"
                   v-model="v.pageIndex"
+                  type="number"
                   @input="handlePage"
                 />
               </template>
               <div class="tab overflow-auto">
                 <button
-                  v-for="t in v.mediaInfo.sections?.tabs"
-                  @click="updateTab(t.id)"
+                  v-for="(t, k) in v.mediaInfo.sections?.tabs"
+                  :key="k"
                   class="w-full!"
                   :class="{ active: v.tab === t.id }"
+                  @click="updateTab(t.id)"
                 >
                   <span class="truncate">{{ t.name }}</span>
                   <label class="primary-color"></label>
@@ -214,7 +220,7 @@ async function search(overrideInput?: string) {
   if (overrideInput)
     try {
       await parseId(overrideInput);
-    } catch (_) {
+    } catch {
       return;
     }
   try {
@@ -238,8 +244,6 @@ async function search(overrideInput?: string) {
     v.listActive = true;
     if (info.sections) v.tab = info.sections.target;
     updateIndex();
-  } catch (e) {
-    throw e;
   } finally {
     await nextTick();
     v.searching = false;
@@ -342,6 +346,7 @@ async function exportData() {
     defaultPath: `${settings.down_dir}/${strip(v.mediaInfo.nfo.showtitle)}_${Date.now()}.json`,
   });
   if (!path) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await commands.exportData(path, v.mediaInfo as any);
   if (result.status === 'error') throw result;
   AppLog(i18n.global.t('search.exported', [path]), 'success');

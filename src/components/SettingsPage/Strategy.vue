@@ -21,7 +21,7 @@
       <i :class="[$fa.weight, 'fa-rotate']"></i>
       <span>{{ $t('settings.convert.name') }}</span>
     </h2>
-    <div v-for="v in ['danmaku', 'mp3'] as const">
+    <div v-for="v in ['danmaku', 'mp3'] as const" :key="v">
       <h3>{{ $t(`settings.convert.${v}.name`) }}</h3>
       <Switch v-model="settings.convert[v]" />
       <span class="desc">{{ $t(`settings.convert.${v}.desc`) }}</span>
@@ -33,11 +33,14 @@
       <i :class="[$fa.weight, 'fa-inboxes']"></i>
       <span>{{ $t('settings.organize.name') }}</span>
       <i
-        @click="openUrl('https://btjawa.top/bilitools/organize')"
         class="question fa-light fa-circle-question"
+        @click="openUrl('https://btjawa.top/bilitools/organize')"
       ></i>
     </h2>
-    <div v-for="v in ['auto_rename', 'top_folder', 'sub_folder'] as const">
+    <div
+      v-for="v in ['auto_rename', 'top_folder', 'sub_folder'] as const"
+      :key="v"
+    >
       <h3>{{ $t(`settings.organize.${v}.name`) }}</h3>
       <Switch v-model="settings.organize[v]" />
     </div>

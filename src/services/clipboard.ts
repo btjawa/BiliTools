@@ -57,7 +57,8 @@ function schedule() {
         sentry = text;
         for (const cb of callbacks) cb(text);
       }
-    } catch (_) {
+    } catch {
+      /**/
     } finally {
       inFlight = false;
       schedule();

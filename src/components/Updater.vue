@@ -1,6 +1,9 @@
 <template>
   <Transition name="slide">
-    <div class="absolute page w-[calc(100vw-56px)] right-0 z-99" v-if="active">
+    <div
+      v-if="active && v.update"
+      class="absolute page w-[calc(100vw-56px)] right-0 z-99"
+    >
       <h1 class="w-full">
         <i :class="[$fa.weight, 'fa-sparkles']"></i>
         <span>{{ $t('updater.title') }}</span>
@@ -17,15 +20,16 @@
             "
             >BiliTools <a>v{{ v.update.version }}</a></span
           >
-          <div class="desc ml-4" v-if="v.update.date">
+          <div v-if="v.update.date" class="desc ml-4">
             <i :class="[$fa.weight, 'fa-clock']"></i>
             <span>{{ new Date(v.update.date).toLocaleString() }}</span>
           </div>
         </h2>
         <span class="desc">{{ $t('updater.hint') }}</span>
-        <markdown-style
-          v-html="v.update.body"
-          class="text my-3 overflow-auto"
+        <vue-markdown
+          class="markdown text my-3 overflow-auto"
+          :source="v.update.body ?? ''"
+          @click="(e: Event) => e.preventDefault()"
         />
         <div class="flex gap-2">
           <button class="primary-color" @click="update">
@@ -34,7 +38,7 @@
           </button>
           <button @click="close">{{ $t('updater.cancel') }}</button>
           <Transition name="slide">
-            <div class="flex items-center ml-4 gap-4" v-if="v.downloading">
+            <div v-if="v.downloading" class="flex items-center ml-4 gap-4">
               <ProgressBar :progress="v.progress" />
               <span>{{ v.progress.toFixed(2) }}%</span>
             </div>
@@ -46,16 +50,17 @@
 </template>
 
 <script lang="ts" setup>
-import * as updater from '@tauri-apps/plugin-updater';
-import { info } from '@tauri-apps/plugin-log';
-import { markRaw, reactive, ref, Transition, watch } from 'vue';
+import { markRaw, reactive, ref, watch } from 'vue';
 import { useSettingsStore } from '@/store';
-import { AppLog } from '@/services/utils';
-import i18n from '@/i18n';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { marked } from 'marked';
-import ProgressBar from './ProgressBar.vue';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { info } from '@tauri-apps/plugin-log';
+import { AppLog } from '@/services/utils';
+
+import * as updater from '@tauri-apps/plugin-updater';
+import VueMarkdown from 'vue-markdown-render';
+import ProgressBar from './ProgressBar.vue';
+import i18n from '@/i18n';
 
 const active = ref(false);
 
@@ -63,7 +68,7 @@ defineExpose({ check, close, active });
 
 const v = reactive({
   anim: {} as Animation,
-  update: {} as updater.Update,
+  update: null as updater.Update | null,
   downloading: false,
   progress: 0,
 });
@@ -77,10 +82,6 @@ async function check(notice?: boolean) {
   info('Update: ' + JSON.stringify(update, null, 2));
   if (update) {
     v.update = markRaw(update);
-    v.update.body = (await marked.parse(update.body ?? '')).replace(
-      /<a href=/g,
-      '<a target="_blank" href=',
-    );
     v.anim = document
       .querySelector('.page')!
       .animate([{ opacity: '1' }, { opacity: '0' }], {
@@ -102,7 +103,7 @@ async function update() {
   let content = 0;
   let chunk = 0;
   v.downloading = true;
-  await v.update.downloadAndInstall((e) => {
+  await v.update?.downloadAndInstall((e) => {
     switch (e.event) {
       case 'Started': {
         content = e.data.contentLength ?? 0;
@@ -117,7 +118,3 @@ async function update() {
   await relaunch();
 }
 </script>
-
-<style scoped>
-@reference 'tailwindcss';
-</style>

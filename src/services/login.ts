@@ -77,7 +77,7 @@ export async function getCountryList() {
   const body = (await tryFetch(
     'https://passport.bilibili.com/web/generic/country/list',
   )) as Types.CountryListInfo;
-  return [...body?.data?.common, ...body?.data?.others];
+  return [...(body?.data?.common ?? []), ...(body?.data?.others ?? [])];
 }
 
 export async function getZoneCode() {
@@ -155,17 +155,17 @@ export async function genQrcode(canvas: HTMLCanvasElement): Promise<string> {
   qr.make();
   canvas.width = options.width;
   canvas.height = options.height;
-  let context = canvas.getContext('2d') as CanvasRenderingContext2D;
-  let moduleSize = options.width / qr.getModuleCount();
-  let moduleHeight = options.height / qr.getModuleCount();
-  for (var row = 0; row < qr.getModuleCount(); row++) {
-    for (var col = 0; col < qr.getModuleCount(); col++) {
+  const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const moduleSize = options.width / qr.getModuleCount();
+  const moduleHeight = options.height / qr.getModuleCount();
+  for (let row = 0; row < qr.getModuleCount(); row++) {
+    for (let col = 0; col < qr.getModuleCount(); col++) {
       context.fillStyle = qr.isDark(row, col)
         ? options.foreground
         : options.background;
-      var width =
+      const width =
         Math.ceil((col + 1) * moduleSize) - Math.floor(col * moduleSize);
-      var height =
+      const height =
         Math.ceil((row + 1) * moduleSize) - Math.floor(row * moduleSize);
       context.fillRect(
         Math.round(col * moduleSize),

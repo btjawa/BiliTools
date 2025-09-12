@@ -4,8 +4,8 @@
       <i :class="[$fa.weight, 'fa-file-signature']"></i>
       <span>{{ $t('settings.naming.name') }}</span>
       <i
-        @click="openUrl('https://btjawa.top/bilitools/naming')"
         class="question fa-light fa-circle-question"
+        @click="openUrl('https://btjawa.top/bilitools/naming')"
       ></i>
     </h2>
     <i18n-t
@@ -21,20 +21,20 @@
         <a>{pubtime:YYYY-MM-DD_HH-mm-ss}</a>
       </template>
     </i18n-t>
-    <template v-for="(val, key) in placeholders">
+    <template v-for="(val, key) in placeholders" :key>
       <div>
         <i :class="[$fa.weight, val.icon]"></i>
         <span>{{ $t('settings.naming.' + key) }}</span>
       </div>
-      <template v-for="(v, k) in val.data">
+      <template v-for="(v, k) in val.data" :key="k">
         <div>{{ $t('settings.naming.' + k) }}</div>
         <div class="flex flex-wrap gap-2 w-full">
-          <button v-for="i in v" @click="click(i, key)">
+          <button v-for="i in v" :key="i" @click="click(i, key)">
             {{ $t('format.' + i) }}
           </button>
         </div>
       </template>
-      <input type="text" spellcheck="false" v-model="settings.format[key]" />
+      <input v-model="settings.format[key]" type="text" spellcheck="false" />
       <hr />
     </template>
   </section>
@@ -42,7 +42,7 @@
 
 <script lang="ts" setup>
 import { useSettingsStore } from '@/store';
-import { NamingTemplates as v } from '@/types/shared.d';
+import { NamingTemplates as n } from '@/types/shared.d';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 const settings = useSettingsStore();
@@ -50,15 +50,15 @@ const settings = useSettingsStore();
 const placeholders = {
   series: {
     icon: 'fa-folder-bookmark',
-    data: v.series,
+    data: n.series,
   },
   item: {
     icon: 'fa-folder-closed',
-    data: v.item,
+    data: n.item,
   },
   file: {
     icon: 'fa-files',
-    data: v.file,
+    data: n.file,
   },
 };
 

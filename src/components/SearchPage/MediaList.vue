@@ -1,12 +1,13 @@
 <template>
-  <VList ref="vlist" :data="list" #default="{ item, index }">
+  <VList ref="vlist" v-slot="{ item, index }" :data="list">
     <div>
       <div
-        v-if="stein_gate"
+        v-if="steinGate"
         class="max-w-full flex justify-center gap-1 mb-2 flex-shrink-0 overflow-auto"
       >
         <button
-          v-for="story in stein_gate.story_list"
+          v-for="(story, k) in steinGate.story_list"
+          :key="k"
           class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
           @click="updateStein(story.edge_id)"
         >
@@ -28,9 +29,9 @@
       >
         <div class="checkbox">
           <input
+            v-model="checkboxs"
             type="checkbox"
             :value="index"
-            v-model="checkboxs"
             @click="click(index)"
           />
           <i class="fa-solid fa-check"></i>
@@ -39,10 +40,10 @@
         <div class="w-px h-full bg-(--split-color) mx-4"></div>
         <span class="flex flex-1 truncate text">{{ item.title }}</span>
       </div>
-      <div v-if="stein_gate" class="w-full flex justify-center gap-1 my-2">
-        <template v-for="(question, index) in stein_gate.choices"
+      <div v-if="steinGate" class="w-full flex justify-center gap-1 my-2">
+        <template v-for="(question, k) in steinGate.choices" :key="k"
           ><button
-            v-if="show(stein_gate, index)"
+            v-if="show(steinGate, k)"
             class="mx-1"
             @click="updateStein(question.id)"
           >
@@ -59,10 +60,10 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { VList } from 'virtua/vue';
 
 const checkboxs = defineModel<number[]>();
-const props = defineProps<{
-  stein_gate: MediaInfo['stein_gate'];
+defineProps<{
+  steinGate: MediaInfo['stein_gate'];
   list: MediaItem[];
-  updateStein: Function;
+  updateStein: (id: number) => void;
 }>();
 
 const vlist = ref<InstanceType<typeof VList>>();
@@ -115,11 +116,11 @@ function click(i: number) {
   checkboxs.value = range;
 }
 
-function show(stein_gate: typeof props.stein_gate, index: number) {
-  const question = stein_gate?.choices?.[index];
+function show(steinGate: MediaInfo['stein_gate'], index: number) {
+  const question = steinGate?.choices?.[index];
   const exp = question?.condition
     ? question.condition.replace(/\$[\w]+/g, (match) => {
-        const val = stein_gate?.hidden_vars.find(
+        const val = steinGate?.hidden_vars.find(
           (v) => v.id_v2 === match.slice(),
         );
         return val?.value.toString() || '0';

@@ -87,7 +87,6 @@ export interface WebTicketInfo {
   data: {
     created_at: number;
     ttl: number;
-    context: any;
     ticket: string;
     nav: {
       img: string;

@@ -1,15 +1,15 @@
 <template>
   <button
-    @click="model = !model"
     :class="{ 'primary-color active': model }"
     class="h-fit! w-10! p-1! rounded-full!"
+    @click="model = !model"
   >
     <div class="h-4 w-4 rounded-full"></div></button
   ><br />
 </template>
 
 <script lang="ts" setup>
-const model = defineModel();
+const model = defineModel<boolean>();
 </script>
 
 <style scoped>
