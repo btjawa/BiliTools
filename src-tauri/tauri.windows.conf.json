@@ -32,12 +32,7 @@
     "windows": {
       "certificateThumbprint": null,
       "nsis": {
-        "languages": [
-          "SimpChinese",
-          "TradChinese",
-          "English",
-          "Japanese"
-        ],
+        "languages": ["SimpChinese", "TradChinese", "English", "Japanese"],
         "displayLanguageSelector": true
       }
     }

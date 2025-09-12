@@ -1,5 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { UserPage, SearchPage, HistoryPage, DownPage, SettingsPage, InfoPage } from '@/views';
+import {
+  UserPage,
+  SearchPage,
+  HistoryPage,
+  DownPage,
+  SettingsPage,
+  InfoPage,
+} from '@/views';
 
 export default createRouter({
   history: createWebHistory(),

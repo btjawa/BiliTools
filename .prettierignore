@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.txt
+*.pfx
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.psd
+._*
+
+# Vitepress
+docs/.vitepress/dist
+docs/.vitepress/cache
+
+# Tauri
+src-tauri/target
+src-tauri/gen/schemas
+src/services/backend.ts
+
+pnpm-lock.yaml
+package-lock.json
+*.min.*
+
+# Personal writing habits
+*.md
+.github

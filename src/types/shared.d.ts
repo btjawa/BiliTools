@@ -1,11 +1,11 @@
-import { SteinInfo } from "./media/extras.d";
+import { SteinInfo } from './media/extras.d';
 
 export const QualityMap = {
   res: [6, 16, 32, 64, 80, 112, 116, 120, 125, 126, 127],
   abr: [30216, 30228, 30232, 30280, 30250, 30380, 30251, 30252],
   enc: [7, 12, 13],
   fmt: [StreamFormat.Dash, StreamFormat.Mp4, StreamFormat.Flv],
-}
+};
 
 export const NamingTemplates = {
   series: {
@@ -19,12 +19,18 @@ export const NamingTemplates = {
     ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid'] as const,
   },
   file: {
-    general: ['showtitle', 'title', 'container', 'mediaType', 'taskType'] as const,
+    general: [
+      'showtitle',
+      'title',
+      'container',
+      'mediaType',
+      'taskType',
+    ] as const,
     down: ['index', 'pubtime', 'downtime', 'upper', 'upperid'] as const,
     ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid'] as const,
-    stream: ['res', 'abr', 'enc', 'fmt'] as const
-  }
-}
+    stream: ['res', 'abr', 'enc', 'fmt'] as const,
+  },
+};
 
 export interface PopupSelect {
   res?: number;
@@ -48,14 +54,14 @@ export interface PopupSelect {
     video: boolean;
     audio: boolean;
     audioVideo: boolean;
-  }
-};
+  };
+}
 
 export interface Headers {
-  'Cookie': string;
+  Cookie: string;
   'User-Agent': string;
-  'Referer': string;
-  'Origin': string;
+  Referer: string;
+  Origin: string;
   [key: string]: string;
 }
 
@@ -73,18 +79,18 @@ export enum TaskType {
 }
 
 export enum MediaType {
-  Video = "video",
-  Bangumi = "bangumi",
-  Music = "music",
-  MusicList = "musicList",
-  Lesson = "lesson",
-  Favorite = "favorite",
+  Video = 'video',
+  Bangumi = 'bangumi',
+  Music = 'music',
+  MusicList = 'musicList',
+  Lesson = 'lesson',
+  Favorite = 'favorite',
 }
 
 export enum StreamFormat {
-  Dash = "dash",
-  Mp4 = "mp4",
-  Flv = "flv",
+  Dash = 'dash',
+  Mp4 = 'mp4',
+  Flv = 'flv',
 }
 
 export interface PlayUrlResult {
@@ -108,7 +114,7 @@ export interface PlayUrlProvider {
 export interface ExtrasProvider {
   misc: {
     aiSummary: boolean;
-    subtitles: { id: string; name: string; }[];
+    subtitles: { id: string; name: string }[];
   };
   nfo: boolean;
   danmaku: string[];
@@ -137,7 +143,7 @@ export interface MediaNfo {
   tags: string[];
   thumbs: { id: string; url: string }[];
   showtitle: string;
-  premiered: number, // sec timestamp
+  premiered: number; // sec timestamp
   upper: {
     name: string;
     mid: number;
@@ -154,13 +160,13 @@ export interface MediaInfo {
   type: MediaType;
   id: number;
   desc: string;
-  nfo: MediaNfo,
+  nfo: MediaNfo;
   stein_gate?: {
     grapth_version: number;
     edge_id: number;
-    story_list: SteinInfo["data"]["story_list"];
-    choices?: SteinInfo["data"]["edges"]["questions"][0]["choices"];
-    hidden_vars: SteinInfo["data"]["hidden_vars"];
+    story_list: SteinInfo['data']['story_list'];
+    choices?: SteinInfo['data']['edges']['questions'][0]['choices'];
+    hidden_vars: SteinInfo['data']['hidden_vars'];
   };
   stat: {
     play?: number;
@@ -179,7 +185,7 @@ export interface MediaInfo {
     }[];
     data: Record<number, MediaItem[]>;
   };
-  list: MediaItem[]
+  list: MediaItem[];
 }
 
 export interface Task {
@@ -196,7 +202,13 @@ export interface Task {
   nfo: MediaNfo;
 }
 
-type TaskState = 'pending' | 'active' | 'completed' | 'paused' | 'cancelled' | 'failed';
+type TaskState =
+  | 'pending'
+  | 'active'
+  | 'completed'
+  | 'paused'
+  | 'cancelled'
+  | 'failed';
 
 export interface SubTask {
   id: string;

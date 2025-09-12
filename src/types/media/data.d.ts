@@ -185,8 +185,8 @@ export interface LessonInfo {
   data: {
     brief: {
       img: {
-        url: string
-      }[]
+        url: string;
+      }[];
     };
     cover: string;
     episode_tag: {
@@ -241,7 +241,7 @@ export interface MusicTagsInfo {
   data: {
     key: number;
     info: string;
-  }[]
+  }[];
 }
 
 export interface MusicMembersInfo {
@@ -253,7 +253,7 @@ export interface MusicMembersInfo {
       member_id: number;
       name: string;
     }[];
-  }[]
+  }[];
 }
 
 export interface MusicUpperInfo {
@@ -264,7 +264,7 @@ export interface MusicUpperInfo {
     uname: string;
     avater: string;
     sign: string;
-  }
+  };
 }
 
 interface MusicInfoData {
@@ -527,7 +527,7 @@ interface PlayUrlDashData {
     index_range: string;
   };
   codecid: number;
-};
+}
 
 export interface PlayUrlDash {
   duration: number;
@@ -557,6 +557,6 @@ export interface PlayUrlDurl {
     url: string;
     order: number;
     md5: string;
-  }[],
+  }[];
   quality: number;
 }

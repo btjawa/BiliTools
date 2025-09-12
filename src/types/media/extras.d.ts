@@ -20,11 +20,11 @@ export interface PlayerInfo {
       subtitles: Subtitle[];
     };
     view_points: {
-      type: number,
-      from: number,
-      to: number,
-      content: number,
-      imgUrl: string,
+      type: number;
+      from: number;
+      to: number;
+      content: number;
+      imgUrl: string;
     }[];
     interaction: {
       graph_version: number;
@@ -133,10 +133,10 @@ export interface HistoryCursorInfo {
       view_at: number;
       business: string;
       ps: number;
-    },
-    list: HistoryItem[],
-    tab: HistoryTab[]
-  }
+    };
+    list: HistoryItem[];
+    tab: HistoryTab[];
+  };
 }
 
 export interface HistorySearchInfo {
@@ -150,7 +150,7 @@ export interface HistorySearchInfo {
       total: number;
     };
     list: HistoryItem[];
-  }
+  };
 }
 
 export interface HistoryTab {

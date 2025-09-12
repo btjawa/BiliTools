@@ -1,50 +1,68 @@
 <template>
-<VList ref="vlist" :data="list" #default="{ item, index }">
-<div>
-    <div v-if="stein_gate"
+  <VList ref="vlist" :data="list" #default="{ item, index }">
+    <div>
+      <div
+        v-if="stein_gate"
         class="max-w-full flex justify-center gap-1 mb-2 flex-shrink-0 overflow-auto"
-    >
-        <button v-for="story in stein_gate.story_list"
-            class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
-            @click="updateStein(story.edge_id)"
+      >
+        <button
+          v-for="story in stein_gate.story_list"
+          class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
+          @click="updateStein(story.edge_id)"
         >
-            <i :class="[$fa.weight, story.is_current ? 'fa-check' : 'fa-location-dot']"></i>
+          <i
+            :class="[
+              $fa.weight,
+              story.is_current ? 'fa-check' : 'fa-location-dot',
+            ]"
+          ></i>
         </button>
-    </div>
-    <div
+      </div>
+      <div
         class="flex w-full items-center h-12 text-sm p-4 my-px rounded-lg bg-(--block-color) border-2 border-solid border-transparent"
-        :class="{ 'border-(--primary-color)!': item.isTarget, 'range': inRange(index) }"
+        :class="{
+          'border-(--primary-color)!': item.isTarget,
+          range: inRange(index),
+        }"
         @mouseenter="hoverIndex = index"
-    >
+      >
         <div class="checkbox">
-            <input type="checkbox" :value="index" v-model="checkboxs" @click="click(index)" />
-            <i class="fa-solid fa-check"></i>
+          <input
+            type="checkbox"
+            :value="index"
+            v-model="checkboxs"
+            @click="click(index)"
+          />
+          <i class="fa-solid fa-check"></i>
         </div>
         <span class="min-w-6">{{ index + 1 }}</span>
         <div class="w-px h-full bg-(--split-color) mx-4"></div>
         <span class="flex flex-1 truncate text">{{ item.title }}</span>
-    </div>
-    <div v-if="stein_gate"
-        class="w-full flex justify-center gap-1 my-2"
-    >
-        <template v-for="(question, index) in stein_gate.choices"><button
-            v-if="show(stein_gate, index)" class="mx-1"
+      </div>
+      <div v-if="stein_gate" class="w-full flex justify-center gap-1 my-2">
+        <template v-for="(question, index) in stein_gate.choices"
+          ><button
+            v-if="show(stein_gate, index)"
+            class="mx-1"
             @click="updateStein(question.id)"
-        >{{ question.option }}</button></template>
+          >
+            {{ question.option }}
+          </button></template
+        >
+      </div>
     </div>
-</div>
-</VList>
+  </VList>
 </template>
 <script lang="ts" setup>
 import { MediaInfo, MediaItem } from '@/types/shared.d';
 import { onMounted, onUnmounted, ref } from 'vue';
-import { VList } from "virtua/vue";
+import { VList } from 'virtua/vue';
 
 const checkboxs = defineModel<number[]>();
 const props = defineProps<{
-    stein_gate: MediaInfo['stein_gate'],
-    list: MediaItem[],
-    updateStein: Function
+  stein_gate: MediaInfo['stein_gate'];
+  list: MediaItem[];
+  updateStein: Function;
 }>();
 
 const vlist = ref<InstanceType<typeof VList>>();
@@ -53,57 +71,61 @@ const clickIndex = ref(0);
 const hoverIndex = ref(0);
 
 const keyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Shift') shiftActive.value = true;
-}
+  if (e.key === 'Shift') shiftActive.value = true;
+};
 
 const keyUp = (e: KeyboardEvent) => {
-    if (e.key === 'Shift') shiftActive.value = false;
-}
+  if (e.key === 'Shift') shiftActive.value = false;
+};
 
 defineExpose({ vlist });
 
 onMounted(() => {
-    clickIndex.value = checkboxs.value?.[0] ?? 0;
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
-})
+  clickIndex.value = checkboxs.value?.[0] ?? 0;
+  window.addEventListener('keydown', keyDown);
+  window.addEventListener('keyup', keyUp);
+});
 
 onUnmounted(() => {
-    window.removeEventListener('keydown', keyDown);
-    window.removeEventListener('keyup', keyUp);
-})
+  window.removeEventListener('keydown', keyDown);
+  window.removeEventListener('keyup', keyUp);
+});
 
 const inRange = (i: number) =>
-    i >= Math.min(clickIndex.value, hoverIndex.value) &&
-    i <= Math.max(clickIndex.value, hoverIndex.value) &&
-    shiftActive.value;
+  i >= Math.min(clickIndex.value, hoverIndex.value) &&
+  i <= Math.max(clickIndex.value, hoverIndex.value) &&
+  shiftActive.value;
 
 function click(i: number) {
-    const click = clickIndex.value;
-    if (!shiftActive.value && checkboxs.value) {
-        clickIndex.value = i;
-        const idx = checkboxs.value?.indexOf(i);
-        if (idx === -1) {
-            checkboxs.value?.push(i);
-        } else {
-            checkboxs.value?.splice(idx, 1);
-        }
-        return;
+  const click = clickIndex.value;
+  if (!shiftActive.value && checkboxs.value) {
+    clickIndex.value = i;
+    const idx = checkboxs.value?.indexOf(i);
+    if (idx === -1) {
+      checkboxs.value?.push(i);
+    } else {
+      checkboxs.value?.splice(idx, 1);
     }
-    const start = Math.min(click, i);
-    const end = Math.max(click, i);
-    const range: number[] = [];
-    for (let i=start; i<=end; i++) range.push(i);
-    checkboxs.value = range;
+    return;
+  }
+  const start = Math.min(click, i);
+  const end = Math.max(click, i);
+  const range: number[] = [];
+  for (let i = start; i <= end; i++) range.push(i);
+  checkboxs.value = range;
 }
 
 function show(stein_gate: typeof props.stein_gate, index: number) {
-	const question = stein_gate?.choices?.[index];
-	const exp = question?.condition ? question.condition.replace(/\$[\w]+/g, (match) => {
-		const val = stein_gate?.hidden_vars.find(v => v.id_v2 === match.slice());
-		return val?.value.toString() || '0';
-	}) : '1';
-	return (new Function('return ' + exp.match(/^[\d+\-*/.()=<>\s]+$/)?.[0]))();
+  const question = stein_gate?.choices?.[index];
+  const exp = question?.condition
+    ? question.condition.replace(/\$[\w]+/g, (match) => {
+        const val = stein_gate?.hidden_vars.find(
+          (v) => v.id_v2 === match.slice(),
+        );
+        return val?.value.toString() || '0';
+      })
+    : '1';
+  return new Function('return ' + exp.match(/^[\d+\-*/.()=<>\s]+$/)?.[0])();
 }
 </script>
 
@@ -111,7 +133,7 @@ function show(stein_gate: typeof props.stein_gate, index: number) {
 @reference 'tailwindcss';
 
 .range {
-    background: color-mix(in srgb, var(--primary-color) 15%, var(--block-color));
-    @apply transition-[background];
+  background: color-mix(in srgb, var(--primary-color) 15%, var(--block-color));
+  @apply transition-[background];
 }
 </style>

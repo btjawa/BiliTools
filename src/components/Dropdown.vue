@@ -1,26 +1,36 @@
-<template><div class="relative w-fit min-w-40 inline-block">
-  <button @click="active = !active" ref="button" class="w-full flex items-center">
-    <span class="w-full text-left">{{ drop.find(v => v.id == model)?.name }}</span>
-    <i class="fa-solid fa-triangle text-[10px] transition-transform"></i>
-  </button>
-  <Transition>
-  <div v-if="active" class="list fixed flex flex-col shadow-lg mt-1">
-    <button v-for="v in drop" @click="model = v.id" :key="v.id">{{ v.name }}</button>
+<template>
+  <div class="relative w-fit min-w-40 inline-block">
+    <button
+      @click="active = !active"
+      ref="button"
+      class="w-full flex items-center"
+    >
+      <span class="w-full text-left">{{
+        drop.find((v) => v.id == model)?.name
+      }}</span>
+      <i class="fa-solid fa-triangle text-[10px] transition-transform"></i>
+    </button>
+    <Transition>
+      <div v-if="active" class="list fixed flex flex-col shadow-lg mt-1">
+        <button v-for="v in drop" @click="model = v.id" :key="v.id">
+          {{ v.name }}
+        </button>
+      </div>
+    </Transition>
   </div>
-  </Transition>
-</div></template>
+</template>
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 defineProps<{
-  drop: { id: any, name: any }[],
+  drop: { id: any; name: any }[];
 }>();
 const active = ref(false);
 const button = ref<HTMLElement>();
 const model = defineModel();
 
 function close(e: MouseEvent) {
-  if ((button.value)?.contains(e.target as Node)) return;
+  if (button.value?.contains(e.target as Node)) return;
   active.value = false;
 }
 onMounted(() => document.addEventListener('click', close));

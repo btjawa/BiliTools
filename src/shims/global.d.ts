@@ -15,9 +15,9 @@ declare module 'vue' {
        * Gets the current dark state
        */
       isDark: boolean;
-    }>
+    }>;
   }
 }
 
 // normally this is only needed in .d.ts files
-export {}
+export {};
