@@ -358,18 +358,17 @@ async fn handle_media(
     let mut path = loop {
         tokio::select! {
             res = &mut download => break res,
-            msg = rx.recv() => match msg {
-                Ok(CtrlEvent::Cancel) => {
-                    let _ = aria2c::cancel(id.clone()).await;
+            Ok(msg) = rx.recv() => match msg {
+                CtrlEvent::Cancel => {
+                    aria2c::cancel(id.clone()).await?;
                     return Ok(());
                 },
-                Ok(CtrlEvent::Pause) => {
-                    let _ = aria2c::pause(id.clone()).await;
+                CtrlEvent::Pause => {
+                    aria2c::pause(id.clone()).await?;
                 },
-                Ok(CtrlEvent::Resume) => {
-                    let _ = aria2c::resume(id.clone()).await;
-                },
-                _ => ()
+                CtrlEvent::Resume => {
+                    aria2c::resume(id.clone()).await?;
+                }
             }
         }
     }?;
@@ -477,50 +476,40 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
             TaskType::Video | TaskType::Audio => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_media(ptask, rx, video_clone, audio_clone).await })
+                        handle_media(ptask, rx, video_clone, audio_clone)
                     })
                     .await?;
             }
             TaskType::AudioVideo => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_merge(ptask, rx, video_clone, audio_clone).await })
+                        handle_merge(ptask, rx, video_clone, audio_clone)
                     })
                     .await?;
             }
             TaskType::Thumb => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_thumbs(ptask, rx).await })
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_thumbs(ptask, rx))
                     .await?;
             }
             TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_danmaku(ptask, rx).await })
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_danmaku(ptask, rx))
                     .await?;
             }
             TaskType::AlbumNfo | TaskType::SingleNfo => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_nfo(ptask, rx, folder).await })
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_nfo(ptask, rx, folder))
                     .await?;
             }
             TaskType::AiSummary => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_ai_summary(ptask, rx).await })
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_ai_summary(ptask, rx))
                     .await?;
             }
             TaskType::Subtitles => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        Box::pin(async { handle_subtitle(ptask, rx).await })
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_subtitle(ptask, rx))
                     .await?;
             }
         }

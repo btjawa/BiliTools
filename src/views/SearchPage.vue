@@ -117,7 +117,7 @@ import { MediaInfo, MediaList, Popup } from '@/components/SearchPage';
 import { Dropdown, Empty } from '@/components';
 import DownPage from './DownPage.vue';
 
-import { inject, nextTick, reactive, Ref, ref, watch } from 'vue';
+import { inject, nextTick, onActivated, reactive, Ref, ref, watch } from 'vue';
 import * as log from '@tauri-apps/plugin-log';
 import { useRouter } from 'vue-router';
 import pLimit from 'p-limit';
@@ -214,6 +214,11 @@ watch(
     if (len > 30) AppLog(i18n.global.t('error.selectLimit'), 'warning');
   },
 );
+
+onActivated(() => {
+  // Force VList to refresh after keep-alive activation. DO NOT DELETE IT.
+  mediaList.value?.vlist?.scrollBy(0);
+});
 
 defineExpose({ search });
 async function search(overrideInput?: string) {

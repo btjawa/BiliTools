@@ -4,12 +4,14 @@ use std::{
     collections::{HashMap, VecDeque},
     future::Future,
     path::PathBuf,
-    pin::Pin,
-    sync::{Arc, LazyLock},
+    sync::{
+        atomic::{AtomicBool, Ordering::SeqCst},
+        Arc, LazyLock,
+    },
 };
 use tauri_specta::Event;
 use tokio::sync::{
-    broadcast::{channel, Receiver, Sender},
+    broadcast::{self, Receiver, Sender},
     oneshot, OnceCell, RwLock, Semaphore,
 };
 
@@ -365,7 +367,48 @@ pub enum CtrlEvent {
     Cancel,
 }
 
-type CtrlChannels = (Sender<CtrlEvent>, Receiver<CtrlEvent>);
+#[derive(Debug)]
+struct CtrlEntry {
+    tx: Sender<CtrlEvent>,
+    cancelled: AtomicBool,
+    paused: AtomicBool,
+}
+
+impl CtrlEntry {
+    fn new() -> Self {
+        let (tx, _) = broadcast::channel::<CtrlEvent>(8);
+        Self {
+            tx,
+            cancelled: AtomicBool::new(false),
+            paused: AtomicBool::new(false),
+        }
+    }
+    fn send(&self, event: CtrlEvent) {
+        match event {
+            CtrlEvent::Cancel => {
+                if !self.cancelled.swap(true, SeqCst) {
+                    let _ = self.tx.send(CtrlEvent::Cancel);
+                }
+            }
+            CtrlEvent::Pause => {
+                if !self.cancelled.load(SeqCst) && !self.paused.swap(true, SeqCst) {
+                    let _ = self.tx.send(CtrlEvent::Pause);
+                }
+            }
+            CtrlEvent::Resume => {
+                if !self.cancelled.load(SeqCst) && self.paused.swap(false, SeqCst) {
+                    let _ = self.tx.send(CtrlEvent::Resume);
+                }
+            }
+        }
+    }
+    fn is_paused(&self) -> bool {
+        self.paused.load(SeqCst)
+    }
+    fn is_cancelled(&self) -> bool {
+        self.cancelled.load(SeqCst)
+    }
+}
 
 #[derive(Debug)]
 pub struct Scheduler {
@@ -373,7 +416,7 @@ pub struct Scheduler {
     pub ts: i64,
     pub list: RwLock<Vec<Arc<String>>>,
     pub folder: PathBuf,
-    ctrls: RwLock<HashMap<Arc<String>, CtrlChannels>>,
+    ctrls: RwLock<HashMap<Arc<String>, Arc<CtrlEntry>>>,
     inited: OnceCell<()>,
 }
 
@@ -388,8 +431,7 @@ impl Scheduler {
     pub fn new(sid: Arc<String>, list: Vec<Arc<String>>, folder: PathBuf) -> Arc<Self> {
         let mut map = HashMap::new();
         for id in &list {
-            let (tx, rx) = channel::<CtrlEvent>(8);
-            map.insert(id.clone(), (tx, rx));
+            map.insert(id.clone(), Arc::new(CtrlEntry::new()));
         }
         Arc::new(Self {
             sid,
@@ -401,12 +443,9 @@ impl Scheduler {
         })
     }
 
-    async fn get_ctrl(&self, id: &Arc<String>) -> Result<Sender<CtrlEvent>> {
+    async fn get_ctrl(&self, id: &Arc<String>) -> Option<Arc<CtrlEntry>> {
         let ctrls = self.ctrls.read().await;
-        ctrls
-            .get(id)
-            .map(|(tx, _)| tx.clone())
-            .ok_or(anyhow!("Failed to get ctrl for {id}"))
+        ctrls.get(id).cloned()
     }
 
     async fn dispatch(self: Arc<Self>) -> TauriResult<()> {
@@ -459,58 +498,48 @@ impl Scheduler {
         Ok(())
     }
 
-    pub async fn try_join<F>(&self, parent: &Arc<String>, id: &Arc<String>, func: F) -> Result<()>
+    pub async fn try_join<F, Fut>(
+        &self,
+        parent: &Arc<String>,
+        id: &Arc<String>,
+        func: F,
+    ) -> Result<()>
     where
-        F: FnOnce(Receiver<CtrlEvent>) -> Pin<Box<dyn Future<Output = TauriResult<()>> + Send>>
-            + Send
-            + 'static,
+        F: FnOnce(Receiver<CtrlEvent>) -> Fut + Send + 'static,
+        Fut: Future<Output = TauriResult<()>> + Send + 'static,
     {
-        let tx = if let Ok(tx) = self.get_ctrl(parent).await {
-            tx
-        } else {
-            return Ok(());
+        let ctrl = match self.get_ctrl(parent).await {
+            Some(e) => e,
+            None => return Ok(()),
         };
-        let task_rx = tx.subscribe();
-        let mut rx = tx.subscribe();
-        let mut paused = false;
-        let mut result: Option<TauriResult<()>> = None;
 
-        let (done_tx, mut done_rx) = oneshot::channel();
-        async_runtime::spawn(async move {
-            let _ = done_tx.send(func(task_rx).await);
-        });
-
-        loop {
-            tokio::select! {
-                Ok(msg) = rx.recv() => match msg {
-                    CtrlEvent::Cancel => break,
-                    CtrlEvent::Pause => paused = true,
-                    CtrlEvent::Resume => {
-                        paused = false;
-                        if result.is_some() {
-                            break;
-                        }
-                    },
-                },
-                res = &mut done_rx => {
-                    result = Some(res?);
-                    if !paused {
-                        break;
-                    }
-                }
-            }
+        if ctrl.is_cancelled() {
+            ctrl.send(CtrlEvent::Cancel);
+            return Ok(());
         }
 
-        let app = get_app_handle();
-        let _ = result.unwrap_or(Ok(())).map_err(|e| {
+        let task_rx = ctrl.tx.subscribe();
+        let mut rx = ctrl.tx.subscribe();
+
+        if let Err(e) = func(task_rx).await {
+            let app = get_app_handle();
             QueueEvent::Error {
                 parent: parent.clone(),
                 id: Some(id.clone()),
                 message: format!("SubTask {id} failed, parent: {parent}: \n{}", e.message),
                 code: e.code.map(|v| v.saturating_isize()),
             }
-            .emit(app)
-        });
+            .emit(app)?;
+        }
+
+        loop {
+            if !ctrl.is_paused() {
+                break;
+            }
+            if let Ok(CtrlEvent::Resume) | Ok(CtrlEvent::Cancel) | Err(_) = rx.recv().await {
+                break;
+            }
+        }
         Ok(())
     }
 }
@@ -630,8 +659,8 @@ pub async fn ctrl_event(
         });
     }
     for id in list.iter() {
-        if let Ok(ctrl) = sch.get_ctrl(id).await {
-            let _ = ctrl.send(event.clone());
+        if let Some(ctrl) = sch.get_ctrl(id).await {
+            ctrl.send(event.clone());
         }
         TASK_MANAGER
             .state(

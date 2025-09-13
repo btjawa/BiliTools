@@ -87,10 +87,10 @@
         </div>
         <div class="flex flex-col items-center gap-4 m-16 ml-8">
           <div class="flex gap-8 tabs">
-            <h1 :class="{ active: !v.tab }" @click="v.tab = 0">
+            <h1 :class="{ active: !v.tab }" @click="v.tab = 'pwd'">
               {{ $t('user.pwd') }}
             </h1>
-            <h1 :class="{ active: v.tab }" @click="v.tab = 1">
+            <h1 :class="{ active: v.tab }" @click="v.tab = 'sms'">
               {{ $t('user.sms') }}
             </h1>
           </div>
@@ -104,7 +104,7 @@
               />
               <span v-else>{{ $t('user.account') }}</span>
               <input
-                v-model="form[1]"
+                v-model="form[v.tab][1]"
                 type="text"
                 spellcheck="false"
                 :placeholder="
@@ -125,7 +125,7 @@
             <div>
               <span>{{ v.tab ? $t('user.code') : $t('user.password') }}</span>
               <input
-                v-model="form[2]"
+                v-model="form[v.tab][2]"
                 :type="v.tab ? 'text' : 'password'"
                 spellcheck="false"
                 :placeholder="
@@ -168,13 +168,18 @@ const v = reactive({
   captchaKey: '',
   countries: [] as { id: string; name: string }[],
   scanStatus: -1,
-  tab: 0,
+  tab: 'sms' as 'sms' | 'pwd',
 });
 
-const form = reactive({ 1: '', 2: '' });
+const form = reactive({
+  pwd: [],
+  sms: [],
+});
 
 async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
   let status = -1;
+  const pwd = form['pwd'];
+  const sms = form['sms'];
   switch (type) {
     case 'init': {
       req('scan');
@@ -194,18 +199,18 @@ async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
       break;
     }
     case 'pwd': {
-      if (!form[1] || !form[2]) return;
-      status = await login.pwdLogin(form[1], form[2]);
+      if (!pwd[1] || !pwd[2]) return;
+      status = await login.pwdLogin(pwd[1], pwd[2]);
       break;
     }
     case 'sms': {
-      if (!form[1] || !form[2] || !v.captchaKey) return;
-      status = await login.smsLogin(v.cid, form[1], form[2], v.captchaKey);
+      if (!sms[1] || !sms[2] || !v.captchaKey) return;
+      status = await login.smsLogin(v.cid, sms[1], sms[2], v.captchaKey);
       break;
     }
     case 'sendSms': {
-      if (!form[1] || !v.cid) return;
-      v.captchaKey = await login.sendSmsCode(v.cid, form[1]);
+      if (!sms[1] || !v.cid) return;
+      v.captchaKey = await login.sendSmsCode(v.cid, sms[1]);
       break;
     }
     case 'exit': {

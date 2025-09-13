@@ -333,34 +333,25 @@ pub fn set_window(
 ) -> crate::TauriResult<(bool, Option<&'static str>)> {
     use tauri::{utils::config::WindowEffectsConfig, window::Color};
     #[cfg(target_os = "windows")]
-    window.with_webview(move |webview| {
-        let _ = || {
-            unsafe {
-                use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
-                use windows::core::Interface;
-                let settings = webview
-                    .controller()
-                    .CoreWebView2()
-                    .and_then(|c| c.Settings())
-                    .and_then(|s| s.cast::<ICoreWebView2Settings5>())
-                    .map_err(|e| {
-                        log::info!(
-                            "Failed to parse Core Settings to ICoreWebView2Settings5: \n{e:?}"
-                        )
-                    })
-                    .ok();
-                if let Some(s) = settings {
-                    #[cfg(not(debug_assertions))]
-                    s.SetAreBrowserAcceleratorKeysEnabled(false)?;
-                    s.SetAreDefaultContextMenusEnabled(false)?;
-                    s.SetIsPasswordAutosaveEnabled(false)?;
-                    s.SetIsGeneralAutofillEnabled(false)?;
-                    s.SetIsZoomControlEnabled(false)?;
-                }
-                Ok::<(), crate::TauriError>(())
-            }
-            .map_err(|e| process_err(e, "set_window"))
-        };
+    window.with_webview(move |webview| unsafe {
+        (|| -> crate::TauriResult<()> {
+            use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings5;
+            use windows::core::Interface;
+            let s = webview
+                .controller()
+                .CoreWebView2()
+                .and_then(|c| c.Settings())
+                .and_then(|s| s.cast::<ICoreWebView2Settings5>())?;
+            #[cfg(not(debug_assertions))]
+            s.SetAreBrowserAcceleratorKeysEnabled(false)?;
+            s.SetAreDefaultContextMenusEnabled(false)?;
+            s.SetIsPasswordAutosaveEnabled(false)?;
+            s.SetIsGeneralAutofillEnabled(false)?;
+            s.SetIsZoomControlEnabled(false)?;
+            Ok(())
+        })()
+        .map_err(|e| process_err(e, "set_window"))
+        .ok();
     })?;
     let theme = theme.as_tauri();
     let is_dark = theme == TauriTheme::Dark;

@@ -458,7 +458,7 @@ export async function getPlayUrl(
 ): Promise<Types.PlayUrlProvider> {
   let url = 'https://api.bilibili.com';
   const user = useUserStore();
-  let params: Record<string, number> = {
+  const params: Record<string, number | undefined> = {
     qn: user.isLogin ? 127 : 64,
     fnver: 0,
     fnval: 16,
@@ -478,24 +478,34 @@ export async function getPlayUrl(
   switch (type) {
     case Types.MediaType.Video:
       url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
-      params = { avid: item.aid!, cid: item.cid! };
+      Object.assign(params, {
+        avid: item.aid,
+        cid: item.cid,
+      });
       break;
     case Types.MediaType.Bangumi:
       url += '/pgc/player/web/v2/playurl';
-      params = { ep_id: item.epid!, season_id: item.ssid! };
+      Object.assign(params, {
+        ep_id: item.epid,
+        season_id: item.ssid,
+      });
       break;
     case Types.MediaType.Lesson:
       url += '/pugv/player/web/playurl';
-      params = {
-        avid: item.aid!,
-        cid: item.cid!,
-        ep_id: item.epid!,
-        season_id: item.ssid!,
-      };
+      Object.assign(params, {
+        avid: item.aid,
+        cid: item.cid,
+        ep_id: item.epid,
+        season_id: item.ssid,
+      });
       break;
     case Types.MediaType.Music:
       url = 'https://www.bilibili.com/audio/music-service-c/web/url';
-      params = { sid: item.sid!, privilege: 2, quality: 0 };
+      Object.assign(params, {
+        sid: item.sid,
+        privilege: 2,
+        quality: 0,
+      });
       break;
   }
   const body = await tryFetch(url, {

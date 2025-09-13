@@ -153,9 +153,9 @@ pub async fn import(input: PathBuf) -> Result<()> {
     }
     drop(guard);
     let target = STORAGE_PATH.to_string_lossy();
-    let _ = fs::remove_file(&*target).await;
-    let _ = fs::remove_file(&format!("{target}-wal")).await;
-    let _ = fs::remove_file(&format!("{target}-shm")).await;
+    fs::remove_file(&*target).await?;
+    fs::remove_file(&format!("{target}-wal")).await?;
+    fs::remove_file(&format!("{target}-shm")).await?;
     fs::copy(&input, &*target).await?;
     init_db().await?;
     Ok(())

@@ -81,10 +81,10 @@ export async function tryFetch(
   url: string,
   options?: {
     auth?: 'wbi';
-    params?: Record<string, string | number | object>;
+    params?: Record<string, string | number | undefined>;
     post?: {
       type: 'json' | 'form';
-      body?: Record<string, string | number | object>;
+      body?: Record<string, string | number | undefined>;
     };
     type?: 'text' | 'binary' | 'blob' | 'url';
     times?: number;
