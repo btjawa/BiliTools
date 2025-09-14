@@ -1,5 +1,59 @@
 # Changelog
 
+## [1.4.0] - 2025-09-15
+
+### 重大更新
+
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 大规模 UI / UX 重构
+- [`d6db8b5`](https://github.com/btjawa/BiliTools/commit/d6db8b5809880e551fc883416e44748be3cb07fd) 重构任务存档逻辑
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) 支持恢复下载任务 & 顶层文件夹格式 ([#136](https://github.com/btjawa/BiliTools/issues/136), [#41](https://github.com/btjawa/BiliTools/issues/41), [#141](https://github.com/btjawa/BiliTools/issues/141))
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) [`220fb70`](https://github.com/btjawa/BiliTools/commit/220fb709fcf0d18a2a1618db99b8dc3bebef57d6) 重构命名格式 & 支持 ISO 8601 的时间占位符 ([#134](https://github.com/btjawa/BiliTools/issues/134))
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) [`3924441`](https://github.com/btjawa/BiliTools/commit/39244411ac8c41deed3ac65a7e540f65bc7c7543) 支持自动迁移 & 导入 & 导出数据库 ([#125](https://github.com/btjawa/BiliTools/issues/125))
+- [`c7be98d`](https://github.com/btjawa/BiliTools/commit/c7be98d068f48601b9401a765f21eade5368547d) [`3e36a43`](https://github.com/btjawa/BiliTools/commit/b4a94506706a8352c5f9bfd0109b1e75f7198a13) 支持基于 Debian 的 Linux 发行版 ([#97](https://github.com/btjawa/BiliTools/issues/97))
+- [`4fde227`](https://github.com/btjawa/BiliTools/commit/4fde227a819d86cb3824bb287536a70584d5ad5b) [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 重构队列推送、任务同步、并发处理等逻辑 ([#86](https://github.com/btjawa/BiliTools/issues/86))
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 整合多选下载、打包下载与常规下载 ([#87](https://github.com/btjawa/BiliTools/issues/87), [#80](https://github.com/btjawa/BiliTools/issues/80), [#81](https://github.com/btjawa/BiliTools/issues/81), [#89](https://github.com/btjawa/BiliTools/issues/89), [#78](https://github.com/btjawa/BiliTools/issues/78))
+
+### 新增功能
+
+- [`a4c603f`](https://github.com/btjawa/BiliTools/commit/a4c603f1f91fea8fe9219fd24a4872dd0acef113) 支持导出 & 查看媒体存档信息
+- [`d798337`](https://github.com/btjawa/BiliTools/commit/d79833780a5d52f36b0071f94b909a4597edd2a2) 支持修改等待任务的参数 ([#149](https://github.com/btjawa/BiliTools/issues/149))
+- [`e05f910`](https://github.com/btjawa/BiliTools/commit/e05f91058e1ccabeae602889ccbe379c24868d00) 支持置顶窗口 ([#170](https://github.com/btjawa/BiliTools/issues/170))
+- [`d33013a`](https://github.com/btjawa/BiliTools/commit/d33013aebe26db553bd0145b66ae8972470c5627) 支持自定义窗口效果 ([#163](https://github.com/btjawa/BiliTools/issues/170))
+- [`d042886`](https://github.com/btjawa/BiliTools/commit/d042886641ea95f646ce985a6ebd2caf7c405439) 支持解析历史记录 ([#107](https://github.com/btjawa/BiliTools/pull/107))
+- [`210a1ba`](https://github.com/btjawa/BiliTools/commit/210a1ba48508463947648360165a238d8d85285a) 支持设置检测重名 ([#146](https://github.com/btjawa/BiliTools/issues/146))
+- [`27a48bb`](https://github.com/btjawa/BiliTools/commit/27a48bbd2baf652aaadb0a0be9e97b054972075d) 支持 Shift 多选 ([#129](https://github.com/btjawa/BiliTools/issues/129))
+- [`4e82999`](https://github.com/btjawa/BiliTools/commit/4e82999946f6c5e948eca2ebd89069dc453247f5) 支持监听剪切板 ([#70](https://github.com/btjawa/BiliTools/issues/70))
+- [`75fc043`](https://github.com/btjawa/BiliTools/commit/75fc043351d9669ee54f09b5316c31344d4f27f1) 支持解析稍后再看 ([#83](https://github.com/btjawa/BiliTools/issues/83))
+- [`59a3ddb`](https://github.com/btjawa/BiliTools/commit/59a3ddb035c96d2ddb9e4f0116308d1f6b523aff) 支持解析子合集与番剧PV等资源 ([#55](https://github.com/btjawa/BiliTools/issues/55), [#64](https://github.com/btjawa/BiliTools/issues/64), [#108](https://github.com/btjawa/BiliTools/issues/108))
+- [`f099939`](https://github.com/btjawa/BiliTools/commit/f099939911aadb2c755d57bf6fb7ffd32db37e5a) 支持转换音频为 `MP3` 格式 （[#95](https://github.com/btjawa/BiliTools/issues/95)）
+- [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 支持解析 XML 格式弹幕 ([#118](https://github.com/btjawa/BiliTools/issues/118))
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 支持屏蔽 PCDN ([#77](https://github.com/btjawa/BiliTools/issues/77))
+
+### 问题修复
+
+- [`0f6017f`](https://github.com/btjawa/BiliTools/commit/0f6017f51af5947e22f26663224b1e01adbcfcc4) 修复点号导致路径解析错误的问题 ([#165](https://github.com/btjawa/BiliTools/issues/165))
+- [`cc74e3b`](https://github.com/btjawa/BiliTools/commit/cc74e3bbb06d6424b63d4356791502ef6d5738e4) 修复 FLAC 在 MKV 下的混流问题 ([#151](https://github.com/btjawa/BiliTools/issues/151))
+- [`89caa66`](https://github.com/btjawa/BiliTools/commit/89caa665a94875301038fc0159997591ba677465) 修复临时路径指向错误的恶性漏洞
+- [`6c347a5`](https://github.com/btjawa/BiliTools/commit/6c347a5b8c46d8990b24eeb30a331d7dc9105441) 适配多种合集的解析方案 ([#158](https://github.com/btjawa/BiliTools/issues/158), [#159](https://github.com/btjawa/BiliTools/issues/159))
+- [`75fc043`](https://github.com/btjawa/BiliTools/commit/75fc043351d9669ee54f09b5316c31344d4f27f1) 修复 aria2c 超时问题 ([#127](https://github.com/btjawa/BiliTools/issues/127), [#122](https://github.com/btjawa/BiliTools/issues/122), [#111](https://github.com/btjawa/BiliTools/issues/111), [#103](https://github.com/btjawa/BiliTools/issues/103), [#93](https://github.com/btjawa/BiliTools/issues/93))
+- [`fbe5adc`](https://github.com/btjawa/BiliTools/commit/fbe5adce71b0043cfbe23703fe792b65be64f230) 修复视频列表中索引偏移量问题 ([#128](https://github.com/btjawa/BiliTools/issues/128), [#126](https://github.com/btjawa/BiliTools/issues/126))
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) 修复 `duration` 字段格式不匹配问题 ([#119](https://github.com/btjawa/BiliTools/issues/119), [#124](https://github.com/btjawa/BiliTools/issues/124))
+- [`d758ffe`](https://github.com/btjawa/BiliTools/commit/d758ffea5b01de9e90728799ddf7310db528e8bf) 规范文件编号排序 ([#115](https://github.com/btjawa/BiliTools/issues/115), [#119](https://github.com/btjawa/BiliTools/issues/119), [#121](https://github.com/btjawa/BiliTools/issues/121))
+- [`eaf88ab`](https://github.com/btjawa/BiliTools/commit/eaf88abbd6948836d8aedb7e440706e0da13aa6b) 修复收藏夹缺少 `cid` 参数问题 ([#106](https://github.com/btjawa/BiliTools/issues/106))
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 修复 `uname` 字段缺失问题 ([#82](https://github.com/btjawa/BiliTools/issues/82), [#94](https://github.com/btjawa/BiliTools/issues/94), [#113](https://github.com/btjawa/BiliTools/issues/113), [#117](https://github.com/btjawa/BiliTools/issues/117))
+- [`d6db8b5`](https://github.com/btjawa/BiliTools/commit/d6db8b5809880e551fc883416e44748be3cb07fd) 规范 aria2c 的请求参数 ([#100](https://github.com/btjawa/BiliTools/issues/100))
+- [`a6c4a64`](https://github.com/btjawa/BiliTools/commit/a6c4a646dfc795e4f8879e03a989c289a3a72e13) 更新头图链接使用的 API 字段 ([#72](https://github.com/btjawa/BiliTools/issues/72), [#75](https://github.com/btjawa/BiliTools/issues/75), [#76](https://github.com/btjawa/BiliTools/issues/76))
+
+### 优化改进
+
+- [`3e36a43`](https://github.com/btjawa/BiliTools/commit/3e36a439d9a71cb0095f561415ed99dadaf540fe) 重构弹幕解析逻辑 & 重新构建所有 Sidecar ([#167](https://github.com/btjawa/BiliTools/issues/167))
+- [`db6ade4`](https://github.com/btjawa/BiliTools/commit/db6ade470b06ad9a32aad09d4c57a757089c6fd7) 支持更详细的错误栈追踪 & 更新调色方案
+- [`b82414d`](https://github.com/btjawa/BiliTools/commit/b82414dbce214ebf5a5ae05c51d5d2ff7e8ed5d9) 增强非法字符的校验 ([#135](https://github.com/btjawa/BiliTools/issues/135))
+- [`6e11760`](https://github.com/btjawa/BiliTools/commit/6e117604a17aac5c654634b59c4abfb32eeefdc8) 为音频添加元数据 & 优化 EAC3 支持
+- [`6e11760`](https://github.com/btjawa/BiliTools/commit/6e117604a17aac5c654634b59c4abfb32eeefdc8) 规范元数据格式 ([#104](https://github.com/btjawa/BiliTools/issues/104), [#114](https://github.com/btjawa/BiliTools/issues/114))
+- [`87eaa5a`](https://github.com/btjawa/BiliTools/commit/87eaa5a5546b533682031720dd9ae1d4e1ace9cc) 缩小默认窗口大小 ([#96](https://github.com/btjawa/BiliTools/issues/96), [#83](https://github.com/btjawa/BiliTools/issues/83))
+- [`75558de`](https://github.com/btjawa/BiliTools/commit/75558de62883817839d6e0935dc50f04fc06cff1) 为 macOS 分发包增加签名 ([#103](https://github.com/btjawa/BiliTools/issues/103), [#91](https://github.com/btjawa/BiliTools/issues/91), [#26](https://github.com/btjawa/BiliTools/issues/26))
+
 ## [1.4.0-8] - 2025-09-11
 
 ## 更新
