@@ -168,11 +168,14 @@
     }
   }
   .markdown {
-    h2 {
-      @apply my-1 text-lg;
+    p {
+      @apply text-(--desc-color) italic;
+    }
+    h3 {
+      @apply mb-2 mt-4 font-bold text-lg;
     }
     li {
-      @apply list-disc list-inside ml-2;
+      @apply list-disc list-inside ml-4;
     }
   }
 }

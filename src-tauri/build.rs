@@ -1,6 +1,5 @@
-use std::{env, fs, path::PathBuf, process::Command};
 fn main() {
-    let git_hash = Command::new("git")
+    let git_hash = std::process::Command::new("git")
         .args(["rev-parse", "HEAD"])
         .output()
         .ok()
@@ -11,6 +10,7 @@ fn main() {
 
     #[cfg(debug_assertions)]
     {
+        use std::{env, fs, path::PathBuf};
         let out = PathBuf::from("./target/debug");
         let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("No arch found");
         let os = env::var("CARGO_CFG_TARGET_OS").expect("No os found");

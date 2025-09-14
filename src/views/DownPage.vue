@@ -37,20 +37,22 @@
             </button>
             <div class="flex flex-col gap-2 desc text flex-wrap [&_span]:mr-2">
               <div>
-                <span v-for="(i, k) in getId(v.task)" :key="k">{{ i }}</span>
+                <span
+                  >{{ $t('format.mediaType') }}:
+                  {{ $t('mediaType.' + v.task.item.type) }}</span
+                >
+                <span
+                  >{{ $t('format.container') }}:
+                  {{ $t('mediaType.' + v.task.type) }}</span
+                >
               </div>
               <span
                 >{{ $t('format.pubtime') }}:
                 {{ timestamp(v.task.item.pubtime) }}</span
               >
-              <span
-                >{{ $t('format.container') }}:
-                {{ $t('mediaType.' + v.task.type) }}</span
-              >
-              <span
-                >{{ $t('format.mediaType') }}:
-                {{ $t('mediaType.' + v.task.item.type) }}</span
-              >
+              <div>
+                <span v-for="(i, k) in getId(v.task)" :key="k">{{ i }}</span>
+              </div>
             </div>
             <div
               v-for="t of v.task?.subtasks"

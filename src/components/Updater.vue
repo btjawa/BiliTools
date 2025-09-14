@@ -29,7 +29,7 @@
         <vue-markdown
           class="markdown text my-3 overflow-auto"
           :source="v.update.body ?? ''"
-          @click="(e: Event) => e.preventDefault()"
+          @click="click"
         />
         <div class="flex gap-2">
           <button class="primary-color" @click="update">
@@ -97,6 +97,12 @@ async function check(notice?: boolean) {
 function close() {
   active.value = false;
   v.anim.reverse();
+}
+
+function click(event: Event) {
+  event.preventDefault();
+  const a = (event.target as HTMLElement)?.closest('a');
+  if (a) openUrl(a.href);
 }
 
 async function update() {

@@ -29,6 +29,7 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://*.bilibili.com/*" },
+        { "url": "https://*.hdslb.com/*" },
         { "url": "https://bilibili.com/*" },
         { "url": "https://github.com/*" },
         { "url": "https://btjawa.top/*" },

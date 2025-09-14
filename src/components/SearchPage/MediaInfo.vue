@@ -2,7 +2,13 @@
   <div
     class="flex w-full min-h-36 h-36 bg-(--block-color) rounded-lg p-4 gap-4"
   >
-    <Image :src="info.nfo.thumbs[0].url" :height="112" :ratio="16 / 10" />
+    <Image
+      class="hover:cursor-pointer"
+      :src="info.nfo.thumbs[0].url"
+      :height="112"
+      :ratio="16 / 10"
+      @click="openUrl(props.info.nfo.thumbs[0].url.replace('http:', 'https:'))"
+    />
     <div class="text flex flex-col gap-1 flex-1 min-w-0">
       <div class="flex gap-2">
         <div class="relative flex flex-col gap-1 flex-1 min-w-0">
@@ -58,7 +64,3 @@ const iconMap = {
   share: 'bcc-icon-icon_action_share_n_x',
 };
 </script>
-
-<style scoped>
-@reference 'tailwindcss';
-</style>

@@ -18,7 +18,7 @@ debug = true
 [profile.release]
 codegen-units = 1
 opt-level = "s"
-strip = true
+# strip = true # https://github.com/tauri-apps/tauri/issues/14186
 lto = true
 
 [lib]

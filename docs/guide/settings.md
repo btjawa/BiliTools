@@ -145,6 +145,35 @@
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools/DanmakuFactory.json`<br>
 > Linux: `$HOME/.local/share/com.btjawa.bilitools/DanmakuFactory.json`
 
+示例配置：
+
+```json
+{
+  "resolution": [1920, 1080],
+  "scrolltime": 12.000000,
+  "fixtime": 5.000000,
+  "density": 0,
+  "fontname": "Microsoft YaHei",
+  "fontsize": 38,
+  "opacity": 180,
+  "outline": 0.0,
+  "shadow": 1.0,
+  "displayArea": 1.000000,
+  "scrollArea": 1.000000,
+  "bold": false,
+  "showUsernames": false,
+  "showMsgbox": false,
+  "msgboxSize": [500, 1080],
+  "msgboxPos": [20, 0],
+  "msgboxFontsize": 38,
+  "msgboxDuration": 0.00,
+  "giftMinPrice": 0.00,
+  "giftMergeTolerance": 0.00,
+  "blockmode": [],
+  "statmode": []
+}
+```
+
 ### 将音频转换为 MP3 格式
 
 > [!WARNING]

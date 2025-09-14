@@ -6,7 +6,7 @@ import path from 'path';
 const CHANGELOG = 'CHANGELOG.md';
 
 // e.g. [0.0.0] - 2020-01-01
-const regex = /^[^\[]*\[([0-9A-Za-z._+\-]+)\]\s*-\s*(\d{4}-\d{2}-\d{2})\b/;
+const regex = /^[^[]*\[([0-9A-Za-z._+-]+)\]\s*-\s*(\d{4}-\d{2}-\d{2})\b/;
 const file = path.join(process.cwd(), CHANGELOG);
 
 if (!fs.existsSync(file)) {
@@ -37,7 +37,7 @@ if (!tag || !contents.length) {
 const body = contents.join('\n').trim().replace(/\r\n/g, '\n');
 
 if (!process.env.GITHUB_OUTPUT) {
-  console.log({ tag, body });
+  process.stdout.write(String.raw`${body.replace(/\n/g, '\\n')}`);
   process.exit(1);
 }
 
