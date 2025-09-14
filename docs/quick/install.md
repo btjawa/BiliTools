@@ -1,5 +1,5 @@
 <script setup>
-const APP_VERSION = '1.4.0-8';
+const APP_VERSION = '1.4.0';
 </script>
 
 # 下载 & 安装
