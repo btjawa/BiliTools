@@ -77,9 +77,8 @@ jobs:
         with:
           node-version: 22
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@stable
@@ -96,7 +95,7 @@ jobs:
         if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
 
       - name: Install Frontend Dependencies
