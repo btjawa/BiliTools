@@ -1,5 +1,5 @@
 <script setup>
-const APP_VERSION = '1.4.0';
+const __APP_VERSION__ = '1.4.0';
 </script>
 
 # 下载 & 安装
@@ -8,7 +8,7 @@ const APP_VERSION = '1.4.0';
 > 本项目的唯一官方发行渠道为 [GitHub Releases](https://github.com/btjawa/BiliTools/releases)，请注意辨别<br>
 > 对于第三方平台分发的安装包，**我们无法保证其完整性与安全性**
 
-若安装后应用无法打开或遇到其他问题，请查阅 [常见问题](/help/windows)
+若安装后应用无法打开或遇到其他问题，请查阅 [常见问题](/help/)
 
 ## <i class="fa-brands fa-windows"></i> Windows
 
@@ -18,7 +18,7 @@ const APP_VERSION = '1.4.0';
 
 | x64 | arm64 |
 | ------------------- | --------------- |
-| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/BiliTools_${APP_VERSION}_x64-setup.exe`">GitHub Releases</a> | / |
+| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/BiliTools_${__APP_VERSION__}_x64-setup.exe`">GitHub Releases</a> | / |
 
 下载后，按照常规流程安装即可，按需更改安装路径
 
@@ -30,7 +30,7 @@ const APP_VERSION = '1.4.0';
 
 | Intel 芯片 | Apple M 芯片 |
 | ----------------------- | -------------------------- |
-| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/BiliTools_${APP_VERSION}_x64.dmg`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/BiliTools_${APP_VERSION}_aarch64.dmg`">GitHub Releases</a> |
+| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/BiliTools_${__APP_VERSION__}_x64.dmg`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/BiliTools_${__APP_VERSION__}_aarch64.dmg`">GitHub Releases</a> |
 
 下载后，双击 `dmg` 文件挂载镜像，随后在弹出的窗口中将应用图标 **拖拽** 到右侧文件夹图标即可
 
@@ -43,10 +43,10 @@ const APP_VERSION = '1.4.0';
 
 | x64 | arm64 |
 | ------------------- | --------------- |
-| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/bilitools_${APP_VERSION}_amd64.deb`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${APP_VERSION}/bilitools_${APP_VERSION}_ard64.deb`">GitHub Releases</a> |
+| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/bilitools_${__APP_VERSION__}_amd64.deb`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/bilitools_${__APP_VERSION__}_arm64.deb`">GitHub Releases</a> |
 
 下载后，定位到下载目录并使用 apt 安装 deb 包：
 
 ```bash
-sudo apt-get install -y ./bilitools_x.y.z_amd64.deb
+sudo apt-get install -y ./bilitools_x.y.z_arch.deb
 ```

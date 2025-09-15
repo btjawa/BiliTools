@@ -24,7 +24,7 @@
   - 即云母效果，仅适用于 Windows 11.
 - Acrylic
   - 即亚克力效果，适用于 Windows 10/11.
-  - 在 Windows 10 v1903+ 及 Windows 11 build 22000 上，该效果会导致窗口拖拽产生延迟。<sup>[1](https://github.com/tauri-apps/window-vibrancy?tab=readme-ov-file#available-functions)</sup>
+  - 在 Windows 10 v1903+ 及 Windows 11 build 22000 上，该效果会导致 [窗口拖拽产生延迟](https://github.com/tauri-apps/window-vibrancy?tab=readme-ov-file#available-functions)。
 - Sidebar
   - 仅适用于 macOS 10.11+.
 - 无
