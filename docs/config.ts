@@ -9,20 +9,23 @@ export default defineAdditionalConfig({
     nav: [
       { text: '使用说明', link: '/guide/stream', activeMatch: '/guide' },
       { text: '常见问题', link: '/help/', activeMatch: '/help' },
-      { text: `v${pkg.version}`, items: [
-        {
-          text: 'Releases',
-          link: `https://github.com/btjawa/BiliTools/releases/tag/v${pkg.version}`
-        },
-        {
-          text: '更新日志',
-          link: `https://github.com/btjawa/BiliTools/blob/v${pkg.version}/CHANGELOG.md`
-        },
-        {
-          text: '参与贡献',
-          link: `https://github.com/btjawa/BiliTools/blob/v${pkg.version}/CONTRIBUTING.md`
-        }
-      ] }
+      {
+        text: `v${pkg.version}`,
+        items: [
+          {
+            text: 'Releases',
+            link: `https://github.com/btjawa/BiliTools/releases/tag/v${pkg.version}`,
+          },
+          {
+            text: '更新日志',
+            link: `https://github.com/btjawa/BiliTools/blob/v${pkg.version}/CHANGELOG.md`,
+          },
+          {
+            text: '参与贡献',
+            link: `https://github.com/btjawa/BiliTools/blob/v${pkg.version}/CONTRIBUTING.md`,
+          },
+        ],
+      },
     ],
 
     sidebar: [
@@ -41,7 +44,7 @@ export default defineAdditionalConfig({
           { text: '关于 DASH / MP4 / FLV', link: '/guide/stream' },
           { text: '关于登录', link: '/guide/login' },
           { text: '关于风控', link: '/guide/risk' },
-        ]
+        ],
       },
       {
         text: '资源下载',
@@ -55,9 +58,7 @@ export default defineAdditionalConfig({
       {
         text: '工具箱',
         collapsed: false,
-        items: [
-          { text: 'AV BV 互转', link: '/guide/av-bv' },
-        ]
+        items: [{ text: 'AV BV 互转', link: '/guide/av-bv' }],
       },
       {
         text: '设置页',

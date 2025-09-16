@@ -5,23 +5,23 @@ import { AppError } from '../error';
 import * as Types from '@/types/shared.d';
 import * as Resps from '@/types/media/extras.d';
 
-export async function getSteinInfo(
-  id: number,
+export async function getEdgeInfo(
+  aid: number,
   graph_version: number,
   edge_id?: number,
 ) {
-  const params = { aid: id, graph_version, ...(edge_id && { edge_id }) };
+  const params = { aid, graph_version, edge_id };
   const response = await tryFetch(
     'https://api.bilibili.com/x/stein/edgeinfo_v2',
     { auth: 'wbi', params },
   );
-  const body = response as Resps.SteinInfo;
+  const body = response as Resps.EdgeInfo;
   return body.data;
 }
 
-export async function getPlayerInfo(id: number, cid: number) {
+export async function getPlayerInfo(aid: number, cid: number) {
   const user = useUserStore();
-  const params = { aid: id, cid: cid };
+  const params = { aid, cid };
   const url = user.isLogin
     ? 'https://api.bilibili.com/x/player/wbi/v2'
     : 'https://api.bilibili.com/x/player/v2';

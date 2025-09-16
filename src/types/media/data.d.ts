@@ -69,7 +69,7 @@ export interface VideoInfo {
       like: number;
     };
     cid: number;
-    pages: {
+    pages?: {
       cid: number;
       page: number;
       part: string;
@@ -532,8 +532,8 @@ interface PlayUrlDashData {
 export interface PlayUrlDash {
   duration: number;
   min_buffer_time: number;
-  video: PlayUrlDashData[];
-  audio: PlayUrlDashData[];
+  video?: PlayUrlDashData[];
+  audio?: PlayUrlDashData[];
   losslessAudio: {
     isLosslessAudio: boolean;
   };

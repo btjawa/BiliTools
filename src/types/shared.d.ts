@@ -1,4 +1,4 @@
-import { SteinInfo } from './media/extras.d';
+import { EdgeChoice, EdgeStory, EdgeVar } from './media/extras.d';
 
 export const QualityMap = {
   res: [6, 16, 32, 64, 80, 112, 116, 120, 125, 126, 127],
@@ -156,18 +156,20 @@ export interface MediaNfo {
   staff: string[];
 }
 
+export interface MediaEdge {
+  graph_version: number;
+  edge_id: number;
+  list: EdgeStory[];
+  choices?: EdgeChoice[];
+  vars: EdgeVar[];
+}
+
 export interface MediaInfo {
   type: MediaType;
   id: number;
   desc: string;
   nfo: MediaNfo;
-  stein_gate?: {
-    grapth_version: number;
-    edge_id: number;
-    story_list: SteinInfo['data']['story_list'];
-    choices?: SteinInfo['data']['edges']['questions'][0]['choices'];
-    hidden_vars: SteinInfo['data']['hidden_vars'];
-  };
+  edge?: MediaEdge;
   stat: {
     play?: number;
     danmaku?: number;

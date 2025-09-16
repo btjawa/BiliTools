@@ -64,8 +64,8 @@
                 ref="mediaList"
                 v-model="v.checkboxs"
                 :list="v.mediaInfo.list"
-                :stein-gate="v.mediaInfo.stein_gate"
-                :update-stein="updateStein"
+                :edge="v.mediaInfo.edge"
+                :update-edge="updateEdge"
               />
             </Transition>
             <div class="flex flex-col gap-3 ml-auto min-w-32 max-w-48 pb-6">
@@ -271,25 +271,24 @@ async function handlePage() {
   updateIndex();
 }
 
-async function updateStein(edge_id: number) {
-  const info = v.mediaInfo;
-  const stein = info.stein_gate!;
-  const stein_info = await extras.getSteinInfo(
-    info.id,
-    stein.grapth_version,
-    edge_id,
-  );
-  v.mediaInfo.stein_gate = {
-    ...stein,
-    ...stein_info,
-    edge_id: 1,
-    choices: stein_info.edges.questions[0].choices,
+async function updateEdge(edge_id: number) {
+  const { id, edge } = v.mediaInfo;
+  if (!edge) return;
+  const graph_version = edge.graph_version;
+  const edgeInfo = await extras.getEdgeInfo(id, graph_version, edge_id);
+  v.mediaInfo.edge = {
+    graph_version,
+    edge_id: edgeInfo.edge_id,
+    list: edgeInfo.story_list,
+    choices: edgeInfo.edges.questions?.[0].choices,
+    vars: edgeInfo.hidden_vars,
   };
-  const current = stein_info.story_list.find((story) => story.is_current)!;
+  const item = edgeInfo.story_list.find((v) => v.is_current);
+  if (!item) return;
   Object.assign(v.mediaInfo.list[0], {
-    cid: current.cid,
-    title: current.title,
-    cover: current.cover,
+    cid: item.cid,
+    title: item.title,
+    cover: item.cover,
   });
 }
 

@@ -1,5 +1,5 @@
 import { tryFetch, getPublicImages } from '../utils';
-import { getSteinInfo, getPlayerInfo } from './extras';
+import { getPlayerInfo, getEdgeInfo } from './extras';
 import { useUserStore } from '@/store';
 import { AppError } from '../error';
 import * as Resps from '@/types/media/data.d';
@@ -58,9 +58,21 @@ export async function getMediaInfo(
       isTarget: ep.aid === data.aid,
       index,
     });
-    let sections: Types.MediaInfo['sections'] = undefined;
-    let stein_gate: Types.MediaInfo['stein_gate'] = undefined;
-    let list: Types.MediaInfo['list'] = [
+    let sections = undefined;
+    let edge = undefined;
+    let list = data.pages?.map((page, index) => ({
+      title: page.part || data.title,
+      cover: data.pic,
+      desc: data.desc,
+      aid: data.aid,
+      bvid: data.bvid,
+      cid: page.cid,
+      duration: page.duration,
+      pubtime: data.pubdate,
+      type: Types.MediaType.Video,
+      isTarget: index === 0,
+      index,
+    })) ?? [
       {
         title: data.title,
         cover: data.pic,
@@ -75,21 +87,6 @@ export async function getMediaInfo(
         index: 0,
       },
     ];
-    if (data.pages?.length > 1) {
-      list = data.pages.map((page, index) => ({
-        title: page.part || data.title,
-        cover: data.pic,
-        desc: data.desc,
-        aid: data.aid,
-        bvid: data.bvid,
-        cid: page.cid,
-        duration: page.duration,
-        pubtime: data.pubdate,
-        type: Types.MediaType.Video,
-        isTarget: index === 0,
-        index,
-      }));
-    }
     if (data.ugc_season) {
       const target = data.ugc_season.sections.find((v) =>
         v.episodes.some((v) => v.aid === data.aid),
@@ -128,17 +125,15 @@ export async function getMediaInfo(
       }
     }
     if (data.rights.is_stein_gate) {
-      const playerInfo = await getPlayerInfo(data.aid, data.cid);
-      const steinInfo = await getSteinInfo(
-        data.aid,
-        playerInfo.interaction.graph_version,
-      );
-      stein_gate = {
+      const player = await getPlayerInfo(data.aid, data.cid);
+      const graph_version = player.interaction.graph_version;
+      const edgeInfo = await getEdgeInfo(data.aid, graph_version);
+      edge = {
         edge_id: 1,
-        grapth_version: playerInfo.interaction.graph_version,
-        story_list: steinInfo.story_list,
-        choices: steinInfo.edges.questions[0].choices,
-        hidden_vars: steinInfo.hidden_vars,
+        graph_version,
+        list: edgeInfo.story_list,
+        choices: edgeInfo.edges.questions?.[0].choices,
+        vars: edgeInfo.hidden_vars,
       };
     }
     const tagsResp = await tryFetch(
@@ -165,7 +160,7 @@ export async function getMediaInfo(
         actors: [],
         staff: [],
       },
-      stein_gate,
+      edge,
       stat: {
         play: data.stat.view,
         danmaku: data.stat.danmaku,
@@ -564,9 +559,9 @@ export async function getPlayUrl(
         : Types.StreamFormat.Mp4;
       return { video, codec, ts: Date.now() };
     } else if (data.dash) {
-      const video = data.dash.video;
+      const video = data.dash.video?.length ? data.dash.video : [];
       const audio = [
-        ...data.dash.audio,
+        ...(data.dash.audio?.length ? data.dash.audio : []),
         ...(data.dash.dolby?.audio?.length ? [data.dash.dolby.audio[0]] : []),
         ...(data.dash.flac?.audio ? [data.dash.flac.audio] : []),
       ];

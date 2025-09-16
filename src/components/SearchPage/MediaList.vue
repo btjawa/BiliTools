@@ -2,20 +2,17 @@
   <VList ref="vlist" v-slot="{ item, index }" :data="list">
     <div>
       <div
-        v-if="steinGate"
-        class="max-w-full flex justify-center gap-1 mb-2 flex-shrink-0 overflow-auto"
+        v-if="edge"
+        class="w-fit max-w-full mx-auto flex gap-1 mb-2 overflow-auto"
       >
         <button
-          v-for="(story, k) in steinGate.story_list"
-          :key="k"
+          v-for="v in edge.list"
+          :key="v.cursor"
           class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
-          @click="updateStein(story.edge_id)"
+          @click="updateEdge(v.edge_id)"
         >
           <i
-            :class="[
-              $fa.weight,
-              story.is_current ? 'fa-check' : 'fa-location-dot',
-            ]"
+            :class="[$fa.weight, v.is_current ? 'fa-check' : 'fa-location-dot']"
           ></i>
         </button>
       </div>
@@ -40,30 +37,27 @@
         <div class="w-px h-full bg-(--split-color) mx-4"></div>
         <span class="flex flex-1 truncate text">{{ item.title }}</span>
       </div>
-      <div v-if="steinGate" class="w-full flex justify-center gap-1 my-2">
-        <template v-for="(question, k) in steinGate.choices" :key="k"
-          ><button
-            v-if="show(steinGate, k)"
-            class="mx-1"
-            @click="updateStein(question.id)"
-          >
-            {{ question.option }}
-          </button></template
-        >
+      <div v-if="edge" class="w-full flex justify-center gap-1 mt-2">
+        <template v-for="v in edge.choices" :key="v.id">
+          <button v-if="showChoice(v)" class="mx-1" @click="updateEdge(v.id)">
+            {{ v.option }}
+          </button>
+        </template>
       </div>
     </div>
   </VList>
 </template>
 <script lang="ts" setup>
-import { MediaInfo, MediaItem } from '@/types/shared.d';
+import { MediaEdge, MediaItem } from '@/types/shared.d';
+import { EdgeChoice } from '@/types/media/extras.d';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { VList } from 'virtua/vue';
 
 const checkboxs = defineModel<number[]>();
-defineProps<{
-  steinGate: MediaInfo['stein_gate'];
+const props = defineProps<{
+  edge?: MediaEdge;
   list: MediaItem[];
-  updateStein: (id: number) => void;
+  updateEdge: (id: number) => void;
 }>();
 
 const vlist = ref<InstanceType<typeof VList>>();
@@ -116,17 +110,15 @@ function click(i: number) {
   checkboxs.value = range;
 }
 
-function show(steinGate: MediaInfo['stein_gate'], index: number) {
-  const question = steinGate?.choices?.[index];
-  const exp = question?.condition
-    ? question.condition.replace(/\$[\w]+/g, (match) => {
-        const val = steinGate?.hidden_vars.find(
-          (v) => v.id_v2 === match.slice(),
-        );
-        return val?.value.toString() || '0';
-      })
-    : '1';
-  return new Function('return ' + exp.match(/^[\d+\-*/.()=<>\s]+$/)?.[0])();
+function showChoice(choice: EdgeChoice) {
+  const expr = choice.condition
+    .replace(
+      /\$[\w]+/g,
+      (val) =>
+        props.edge?.vars.find((v) => v.id_v2 === val)?.value.toString() || '0',
+    )
+    .match(/^[\d+\-*/.()=<>\s]+$/)?.[0];
+  return choice.condition ? new Function('return ' + expr)() : true;
 }
 </script>
 

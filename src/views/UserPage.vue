@@ -87,10 +87,10 @@
         </div>
         <div class="flex flex-col items-center gap-4 m-16 ml-8">
           <div class="flex gap-8 tabs">
-            <h1 :class="{ active: !v.tab }" @click="v.tab = 'pwd'">
+            <h1 :class="{ active: !v.tab }" @click="v.tab = 0">
               {{ $t('user.pwd') }}
             </h1>
-            <h1 :class="{ active: v.tab }" @click="v.tab = 'sms'">
+            <h1 :class="{ active: v.tab }" @click="v.tab = 1">
               {{ $t('user.sms') }}
             </h1>
           </div>
@@ -168,18 +168,18 @@ const v = reactive({
   captchaKey: '',
   countries: [] as { id: string; name: string }[],
   scanStatus: -1,
-  tab: 'sms' as 'sms' | 'pwd',
+  tab: 1 as 0 | 1,
 });
 
 const form = reactive({
-  pwd: [],
-  sms: [],
+  0: [],
+  1: [],
 });
 
 async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
   let status = -1;
-  const pwd = form['pwd'];
-  const sms = form['sms'];
+  const pwd = form[0];
+  const sms = form[1];
   switch (type) {
     case 'init': {
       req('scan');

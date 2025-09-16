@@ -37,34 +37,40 @@ export interface PlayerInfo {
   };
 }
 
-export interface SteinInfo {
+export interface EdgeStory {
+  edge_id: number;
+  title: string;
+  cid: number;
+  cover: string;
+  is_current: number;
+  cursor: number;
+}
+
+export interface EdgeChoice {
+  id: number;
+  condition: string;
+  option: string;
+}
+
+export interface EdgeVar {
+  value: number;
+  id_v2: string;
+  name: string;
+}
+
+export interface EdgeInfo {
   code: number;
   message: string;
   ttl: number;
   data: {
     edge_id: number;
-    story_list: {
-      edge_id: number;
-      title: string;
-      cid: number;
-      cover: string;
-      is_current: number;
-      cursor: number;
-    }[];
+    story_list: EdgeStory[];
     edges: {
-      questions: {
-        choices: {
-          id: number;
-          condition: string;
-          option: string;
-        }[];
+      questions?: {
+        choices: EdgeChoice[];
       }[];
     };
-    hidden_vars: {
-      value: number;
-      id_v2: string;
-      name: string;
-    }[];
+    hidden_vars: EdgeVar[];
   };
 }
 
