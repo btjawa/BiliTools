@@ -2,19 +2,15 @@
   <div
     class="flex w-full min-h-36 h-36 bg-(--block-color) rounded-lg p-4 gap-4"
   >
-    <Image
-      class="hover:cursor-pointer"
-      :src="info.nfo.thumbs[0].url"
-      :height="112"
-      :ratio="16 / 10"
-      @click="openUrl(props.info.nfo.thumbs[0].url.replace('http:', 'https:'))"
-    />
+    <Image :src="info.nfo.thumbs[0]?.url" :height="112" :ratio="16 / 10" />
     <div class="text flex flex-col gap-1 flex-1 min-w-0">
       <div class="flex gap-2">
         <div class="relative flex flex-col gap-1 flex-1 min-w-0">
-          <h2 class="text-lg w-full truncate">{{ info.nfo.showtitle }}</h2>
+          <h2 class="text-lg w-full truncate">
+            {{ info.nfo.showtitle ?? $t('mediaType.' + info.type) }}
+          </h2>
           <div class="text-xs flex flex-wrap items-center text-(--desc-color)">
-            <template v-for="(v, k) in info.stat" :key="k">
+            <template v-for="(v, k) in info.nfo.stat" :key="k">
               <template v-if="v">
                 <i class="bcc-iconfont" :class="iconMap[k]"></i>
                 <span class="ml-1.5!">{{ stat(v) }}</span>
@@ -28,7 +24,7 @@
           @click="openUrl('https://space.bilibili.com/' + info.nfo.upper?.mid)"
         >
           <Image
-            :src="props.info.nfo.upper.avatar + '@64h'"
+            :src="props.info.nfo.upper.avatar"
             :height="36"
             class="rounded-full!"
           />
@@ -38,7 +34,7 @@
         </a>
       </div>
       <span class="overflow-auto text-sm whitespace-pre-wrap">{{
-        info.desc
+        info.nfo.intro
       }}</span>
     </div>
   </div>

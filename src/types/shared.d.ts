@@ -84,7 +84,9 @@ export enum MediaType {
   Music = 'music',
   MusicList = 'musicList',
   Lesson = 'lesson',
+  WatchLater = 'watchLater',
   Favorite = 'favorite',
+  Uploads = 'uploads',
 }
 
 export enum StreamFormat {
@@ -116,7 +118,10 @@ export interface ExtrasProvider {
     aiSummary: boolean;
     subtitles: { id: string; name: string }[];
   };
-  nfo: boolean;
+  nfo: {
+    album: boolean;
+    single: boolean;
+  };
   danmaku: string[];
   thumb: string[];
 }
@@ -128,10 +133,10 @@ export interface MediaItem {
   duration: number;
   pubtime: number; // sec timestamp
   isTarget: boolean;
-  type: MediaType; // specific type
-  aid?: number; // general video
-  sid?: number; // music
-  fid?: number; // favorite
+  type: MediaType;
+  aid?: number;
+  sid?: number;
+  fid?: number;
   cid?: number;
   bvid?: string;
   epid?: number;
@@ -140,20 +145,38 @@ export interface MediaItem {
 }
 
 export interface MediaNfo {
+  showtitle?: string;
+  intro?: string;
   tags: string[];
-  thumbs: { id: string; url: string }[];
-  showtitle: string;
-  premiered: number; // sec timestamp
-  upper: {
+  stat: {
+    play?: number;
+    danmaku?: number;
+    reply?: number;
+    like?: number;
+    coin?: number;
+    favorite?: number;
+    share?: number;
+  };
+  thumbs: {
+    id: string;
+    url: string;
+  }[];
+  premiered?: number; // sec timestamp
+  upper?: {
     name: string;
     mid: number;
     avatar: string;
-  } | null;
-  actors: {
-    role: string;
-    name: string;
-  }[];
-  staff: string[];
+  };
+  credits?: {
+    actors: {
+      role: string;
+      name: string;
+    }[];
+    staff: {
+      role: string;
+      name: string;
+    }[];
+  };
 }
 
 export interface MediaEdge {
@@ -167,18 +190,9 @@ export interface MediaEdge {
 export interface MediaInfo {
   type: MediaType;
   id: number;
-  desc: string;
+  pn?: boolean;
   nfo: MediaNfo;
   edge?: MediaEdge;
-  stat: {
-    play?: number;
-    danmaku?: number;
-    reply?: number | string;
-    like?: number;
-    coin?: number;
-    favorite?: number;
-    share?: number;
-  };
   sections?: {
     target: number;
     tabs: {

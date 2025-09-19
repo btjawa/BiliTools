@@ -37,13 +37,19 @@ pub struct MediaItem {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct MediaNfo {
+    #[specta(optional)]
+    pub showtitle: Option<String>,
+    #[specta(optional)]
+    pub intro: Option<String>,
     pub tags: Vec<String>,
+    pub stat: serde_json::Value, // We don't want to handle this
     pub thumbs: Vec<MediaNfoThumb>,
-    pub showtitle: String,
-    pub premiered: Number,
+    #[specta(optional)]
+    pub premiered: Option<Number>,
+    #[specta(optional)]
     pub upper: Option<MediaNfoUpper>,
-    pub actors: Vec<MediaNfoActor>,
-    pub staff: Vec<String>,
+    #[specta(optional)]
+    pub credits: Option<MediaNfoCredits>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
@@ -60,7 +66,13 @@ pub struct MediaNfoUpper {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
-pub struct MediaNfoActor {
+pub struct MediaNfoCredits {
+    pub actors: Vec<MediaNfoCredit>,
+    pub staff: Vec<MediaNfoCredit>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+pub struct MediaNfoCredit {
     pub role: String,
     pub name: String,
 }
@@ -198,7 +210,8 @@ pub struct Task {
     pub item: Arc<MediaItem>,
     #[serde(rename = "type")]
     pub media_type: String,
-    pub nfo: Arc<MediaNfo>,
+    #[specta(optional)]
+    pub nfo: Option<Arc<MediaNfo>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]

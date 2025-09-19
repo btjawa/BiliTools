@@ -88,7 +88,7 @@ export async function tryFetch(
     };
     type?: 'text' | 'binary' | 'blob' | 'url';
     times?: number;
-    handleError?: boolean;
+    ignoreErr?: boolean;
   },
 ) {
   let grisk_id: string = '';
@@ -206,7 +206,9 @@ export async function tryFetch(
         );
         continue;
       } else {
-        if (options?.handleError !== false) {
+        if (options?.ignoreErr) {
+          return body;
+        } else {
           throw new AppError(body.message || body.msg, { code: body.code });
         }
       }
@@ -226,72 +228,130 @@ export async function getBlob(url: string) {
   return URL.createObjectURL(blob);
 }
 
-export async function parseId(input: string, ignore?: boolean) {
-  const err = new AppError(i18n.global.t('error.invalidInput'));
-  if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(input)) throw err;
-  try {
-    const _input =
-      input.startsWith('www.bilibili.com') || input.startsWith('bilibili.com')
-        ? 'https://' + input
-        : input;
-    const url = new URL(_input);
-    const segs = url.pathname.split('/');
-    if (url.hostname === 'b23.tv') {
-      return await parseId(await tryFetch(input, { type: 'url' }));
-    } else if (!url.hostname.endsWith('bilibili.com')) throw err;
-    let match;
-    if (segs[2] === 'favlist') {
-      match = input.match(/fid=(\d+)/i);
-      if (match) return { id: match[1], type: MediaType.Favorite };
-    }
-    switch (segs[1]) {
-      case 'video':
-        match = input.match(/BV[a-zA-Z0-9]+|av(\d+)/i);
-        if (match) return { id: match[1] || match[0], type: MediaType.Video };
-        break;
-      case 'cheese':
-        match = input.match(/ep(\d+)|ss(\d+)/i);
-        if (match) return { id: match[0], type: MediaType.Lesson };
-        break;
-      case 'bangumi':
-        match = input.match(/ep(\d+)|ss(\d+)/i);
-        if (match) return { id: match[0], type: MediaType.Bangumi };
-        break;
-      case 'audio':
-        match = input.match(/au(\d+)/i);
-        if (match) return { id: match[0], type: MediaType.Music };
-        match = input.match(/am(\d+)/i);
-        if (match) return { id: match[0], type: MediaType.MusicList };
-        break;
-      case 'list':
-        if (segs[2] === 'watchlater') {
-          const params = url.searchParams;
-          match = params.get('aid') ?? params.get('bvid');
-          if (match) return { id: match, type: MediaType.Video };
-        }
-    }
-    throw err;
-  } catch {
-    // NOT URL
-    if (ignore) return { id: input, type: null };
-    if (
-      !/^(av\d+$|ep\d+$|ss\d+$|au\d+$|am\d+$|bv(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9]{10}$)/i.test(
-        input,
-      )
-    ) {
-      throw err;
-    }
-    const map = {
+export async function parseId(
+  input: string,
+  ignore?: boolean,
+): Promise<{
+  id: string;
+  type?: MediaType;
+  target?: number;
+}> {
+  const raw = input.trim();
+  const err = () => new AppError(i18n.global.t('error.invalidInput'));
+  if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(raw)) throw err();
+
+  if (/^(av\d+|BV\w{10}|ep\d+|ss\d+|md\d+|au\d+|am\d+)$/i.test(raw)) {
+    const map: Record<string, MediaType> = {
       av: MediaType.Video,
       bv: MediaType.Video,
       ep: MediaType.Bangumi,
       ss: MediaType.Bangumi,
+      md: MediaType.Bangumi,
       au: MediaType.Music,
       am: MediaType.MusicList,
     };
-    const prefix = input.slice(0, 2).toLowerCase() as keyof typeof map;
-    return { id: input, type: map[prefix] || null };
+    const prefix = raw.slice(0, 2).toLowerCase();
+    return { id: raw, type: map[prefix] ?? null };
   }
+
+  let url: URL;
+  try {
+    url = new URL(/\.(bilibili\.com|b23\.tv)$/i.test(raw) ? `https://${raw}` : raw);
+  } catch {
+    if (ignore)
+      return {
+        id: raw,
+      };
+    throw err();
+  }
+  const host = url.hostname.toLowerCase();
+  if (!/^(?:([a-z0-9-]+\.)*bilibili\.com|b23\.tv)$/i.test(host)) {
+    throw err();
+  }
+  const segs = url.pathname.slice(1).split('/');
+  const prms = url.searchParams;
+
+  if (host === 'b23.tv') {
+    return await parseId(await tryFetch(raw, { type: 'url' }));
+  }
+
+  if (host === 'space.bilibili.com') {
+    const mid = segs[0];
+    const type = segs[1];
+    if (type === 'favlist') {
+      const fid = Number(url.searchParams.get('fid'));
+      return {
+        id: mid,
+        type: MediaType.Favorite,
+        target: isNaN(fid) ? undefined : fid,
+      };
+    }
+    if (
+      (segs[2] ?? type) === 'video' ||
+      type === 'lists' ||
+      segs.length === 1
+    ) {
+      const id = Number(input.match(/\/lists\/(\d+)/)?.[1]);
+      return {
+        id: mid,
+        type: MediaType.Uploads,
+        target: isNaN(id) ? undefined : id,
+      };
+    }
+    throw err();
+  }
+
+  let type = segs[0];
+  let id = segs[1];
+  if (/^(BV\w{10}|av\d+)$/i.test(id))
+    return {
+      id,
+      type: MediaType.Video,
+    };
+  if (/(au\d+|am\d+)/i.test(id)) {
+    if (id.startsWith('au'))
+      return {
+        id,
+        type: MediaType.Music,
+      };
+    if (id.startsWith('am'))
+      return {
+        id,
+        type: MediaType.MusicList,
+      };
+  }
+
+  if (type === 'watchlater') {
+    return {
+      id: String(),
+      type: MediaType.WatchLater,
+    };
+  }
+
+  id = segs[2];
+  if (/(ep\d+|ss\d+|md\d+)/i.test(id)) {
+    if (type === 'bangumi')
+      return {
+        id,
+        type: MediaType.Bangumi,
+      };
+    if (type === 'cheese')
+      return {
+        id,
+        type: MediaType.Lesson,
+      };
+  }
+
+  type = segs[1];
+  if (type === 'watchlater') {
+    const id = prms.get('aid') ?? prms.get('oid') ?? prms.get('bvid');
+    if (id)
+      return {
+        id,
+        type: MediaType.Video,
+      };
+  }
+  throw err();
 }
 
 export function waitPage<T, K extends keyof T>(
@@ -403,4 +463,56 @@ export function getPublicImages(data: unknown, prefix?: string) {
       images.push({ id: prefix ? `${prefix}_${id}` : id, url });
   }
   return images;
+}
+
+export function mapBangumiStaffs(staffs: [role: string, names: string][]): {
+  role: string;
+  name: string;
+}[] {
+  // i hate converting these semantic things
+  const map: Record<string, 'writer' | 'director' | 'studio' | 'credits'> = {
+    原作: 'writer',
+    剧本统筹: 'writer',
+    编剧: 'writer',
+    导演: 'director',
+    系列导演: 'director',
+    动画制作: 'studio',
+    出品: 'studio',
+    音乐制作: 'studio',
+    音响制作: 'studio',
+  };
+  return staffs.flatMap(([role, names]) => {
+    const mapped = map[role.trim()];
+    return mapped
+      ? names.split(/[\uFF0F\u3001]+/u).map((name) => ({
+          role: mapped,
+          name: name.trim(),
+        }))
+      : [];
+  });
+}
+
+export function mapMusicStaffs(staffs: [type: number, names: string][]): {
+  role: string;
+  name: string;
+}[] {
+  const map: Record<number, string> = {
+    1: 'artist',
+    2: 'lyricist',
+    3: 'composer',
+    4: 'arranger',
+    5: 'mixer',
+    9: 'engineer',
+    10: 'performer',
+    11: 'instrument',
+  };
+  return staffs.flatMap(([type, names]) => {
+    const mapped = map[type];
+    return mapped
+      ? names.split(/[\uFF0F\u3001]+|\s+/u).map((name) => ({
+          role: mapped,
+          name: name.trim(),
+        }))
+      : [];
+  });
 }

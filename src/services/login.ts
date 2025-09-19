@@ -32,13 +32,13 @@ export async function fetchUser() {
     )) as Types.UserStatResp
   ).data;
   user.$patch({
-    avatar: info.face + '@100w_100h',
+    avatar: info.face,
     name: info.name,
     desc: info.sign,
     mid: info.mid,
     level: info.level,
     vipLabel: info.vip?.label?.img_label_uri_hans_static,
-    topPhoto: info.top_photo_v2.l_img + '@170h',
+    topPhoto: info.top_photo_v2.l_img,
     stat: {
       coins: info.coins,
       following: stat.following,

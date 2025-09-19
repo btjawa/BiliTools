@@ -1,5 +1,9 @@
 <template>
-  <div class="relative rounded-lg overflow-hidden" :style="ctnStyle">
+  <div
+    class="relative rounded-lg overflow-hidden cursor-pointer"
+    :style="ctnStyle"
+    @click="!prevent && openUrl((props.src ?? '').replace('http:', 'https:'))"
+  >
     <Transition>
       <img
         v-if="v.blob"
@@ -15,10 +19,12 @@
 <script lang="ts" setup>
 import { computed, reactive, watch } from 'vue';
 import { getBlob } from '@/services/utils';
+import { openUrl } from '@tauri-apps/plugin-opener';
 const model = defineModel<Record<string, string>>();
 
 const props = defineProps<{
   src: string | null | undefined;
+  prevent?: boolean;
   width?: number;
   height?: number;
   ratio?: number;

@@ -1,6 +1,5 @@
 import { tryFetch, timestamp, getRandomInRange, duration } from '../utils';
 import { DanmakuEventToXML } from '@/services/media/dm';
-import { useUserStore } from '@/store';
 import { AppError } from '../error';
 import * as Types from '@/types/shared.d';
 import * as Resps from '@/types/media/extras.d';
@@ -20,14 +19,10 @@ export async function getEdgeInfo(
 }
 
 export async function getPlayerInfo(aid: number, cid: number) {
-  const user = useUserStore();
   const params = { aid, cid };
-  const url = user.isLogin
-    ? 'https://api.bilibili.com/x/player/wbi/v2'
-    : 'https://api.bilibili.com/x/player/v2';
-  const response = await tryFetch(url, {
+  const response = await tryFetch('https://api.bilibili.com/x/player/wbi/v2', {
     params,
-    ...(user.isLogin && { auth: 'wbi' }),
+    auth: 'wbi',
   });
   const body = response as Resps.PlayerInfo;
   return body.data;
@@ -83,12 +78,12 @@ export async function getSubtitle(
   if (!options?.name) return subtitles;
   const _url = subtitles.find((v) => v.lan === options.name)?.subtitle_url;
   if (!_url) return -1;
-  const url = _url.startsWith('//') ? 'https:' + _url : _url;
-  const subtitle = (await tryFetch(url)) as Resps.SubtitleInfo;
-  const getTime = (s: number) => {
-    // Only works for input < 24 hour
-    return new Date(s * 1000).toISOString().slice(11, 23).replace('.', ',');
-  };
+  const subtitle = (await tryFetch(
+    _url.startsWith('//') ? 'https:' + _url : _url,
+  )) as Resps.SubtitleInfo;
+  // Only works when input < 24 hour
+  const getTime = (s: number) =>
+    new Date(s * 1000).toISOString().slice(11, 23).replace('.', ',');
   return new TextEncoder().encode(
     subtitle.body
       .map(
@@ -138,7 +133,12 @@ export async function getNfo(
   }
   const summary = await getAISummary(item);
   if (summary !== -1) {
-    add('plot', new TextDecoder().decode(summary) + '\n' + item.desc);
+    add(
+      'plot',
+      new TextDecoder().decode(summary) + '\n' + mode === 'album'
+        ? (nfo.intro ?? item.desc)
+        : item.desc,
+    );
   }
   if (mode === 'album') {
     const el = add('thumb', 'poster.jpg');
@@ -157,14 +157,14 @@ export async function getNfo(
     add('genre', v);
     add('tag', v);
   });
-  Array.from(nfo.actors.entries()).forEach(([i, v]) => {
+  nfo.credits?.actors?.forEach((v, i) => {
     const node = add('actor', '');
     add('name', v.name, node);
     add('role', v.role, node);
     add('order', i + 1, node);
   });
-  nfo.staff.forEach((v) => {
-    add('credits', v);
+  nfo.credits?.staff?.forEach((v) => {
+    add(v.role ?? 'credits', v.name);
   });
   (['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid'] as const).forEach(
     (v) => {
@@ -197,10 +197,6 @@ export async function getDanmaku(
       '<?xml version="1.0" encoding="UTF-8"?>' + xml,
     );
   }
-  const user = useUserStore();
-  const url = user.isLogin
-    ? 'https://api.bilibili.com/x/v2/dm/wbi/web/seg.so'
-    : 'https://api.bilibili.com/x/v2/dm/web/seg.so';
   const content = Math.ceil((item.duration ?? 0) / 360);
   cb(content + 1, 1);
   for (let i = 1; i <= content; i++) {
@@ -211,11 +207,14 @@ export async function getDanmaku(
       pid: item.aid,
       segment_index: i,
     };
-    const buffer = await tryFetch(url, {
-      type: 'binary',
-      params,
-      ...(user.isLogin && { auth: 'wbi' }),
-    });
+    const buffer = await tryFetch(
+      'https://api.bilibili.com/x/v2/dm/wbi/web/seg.so',
+      {
+        type: 'binary',
+        auth: 'wbi',
+        params,
+      },
+    );
     DanmakuEventToXML(new Uint8Array(buffer), doc);
     await new Promise((resolve) =>
       setTimeout(resolve, getRandomInRange(100, 500)),

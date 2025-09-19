@@ -203,31 +203,25 @@ pub async fn convert_audio(
         }
     }
 
-    if ext != "eac3" && config::read().add_metadata {
-        let item = task.item.as_ref();
-        let nfo = task.nfo.as_ref();
-        let ts = nfo.premiered.as_i64().unwrap_or(0);
+    if let Some(nfo) = task
+        .nfo
+        .as_ref()
+        .filter(|_| ext != "eac3")
+        .filter(|_| config::read().add_metadata)
+    {
+        let ts = nfo.premiered.as_ref().and_then(|v| v.as_i64()).unwrap_or(0);
 
-        let utc = OffsetDateTime::from_unix_timestamp(ts)
-            .context(format!("Failed to parse timestamp: {ts}"))?;
-        let offset = UtcOffset::from_hms(8, 0, 0).context("Failed to create timezone")?;
+        let utc = OffsetDateTime::from_unix_timestamp(ts)?;
+        let offset = UtcOffset::from_hms(8, 0, 0)?;
         let date = utc.to_offset(offset);
         let fmt = format_description!("[year]-[month]-[day]");
-
-        let artist = if let Some(v) = nfo.staff.first() {
-            v
-        } else if let Some(v) = &nfo.upper {
-            &v.name
-        } else {
-            &String::new()
-        };
         args.extend([
             "-metadata".into(),
-            format!("title={}", item.title),
+            format!("title={}", task.item.title),
             "-metadata".into(),
-            format!("artist={}", artist),
+            format!("comment={}", task.item.desc),
             "-metadata".into(),
-            format!("date={}", nfo.premiered),
+            format!("date={}", ts),
             "-metadata".into(),
             format!("track={}", task.seq + 1),
         ]);
@@ -238,16 +232,11 @@ pub async fn convert_audio(
                 "-metadata".into(),
                 format!("YEAR={}", date.year()),
             ]);
-            for artist in nfo.staff.iter() {
-                args.extend(["-metadata".into(), format!("ARTIST={}", artist)]);
-            }
             for tag in nfo.tags.iter() {
                 args.extend(["-metadata".into(), format!("GENRE={tag}")]);
             }
         } else {
             args.extend([
-                "-metadata".into(),
-                format!("artist={}", nfo.staff.join("; ")),
                 "-metadata".into(),
                 format!("genre={}", nfo.tags.join("; ")),
                 "-metadata".into(),
@@ -256,7 +245,19 @@ pub async fn convert_audio(
                 format!("year={}", date.year()),
             ]);
         }
-        args.extend(["-metadata".into(), format!("comment={}", item.desc)]);
+        if let Some(staff) = nfo.credits.as_ref().map(|v| &v.staff) {
+            for s in staff {
+                let key = if ext == "flac" {
+                    &s.role.to_ascii_uppercase()
+                } else {
+                    &s.role
+                };
+                args.extend(["-metadata".into(), format!("{key}={}", s.name)]);
+            }
+            if ext != "flac" {
+                args.extend(["-id3v2_version".into(), "4".into()]);
+            }
+        }
     }
 
     let output = temp_root.join(&*id);

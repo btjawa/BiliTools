@@ -1,4 +1,9 @@
-import { tryFetch, getPublicImages } from '../utils';
+import {
+  tryFetch,
+  getPublicImages,
+  mapBangumiStaffs,
+  mapMusicStaffs,
+} from '../utils';
 import { getPlayerInfo, getEdgeInfo } from './extras';
 import { useUserStore } from '@/store';
 import { AppError } from '../error';
@@ -6,42 +11,64 @@ import * as Resps from '@/types/media/data.d';
 import * as Types from '@/types/shared.d';
 
 export async function getMediaInfo(
-  id: string,
+  raw: string,
   type: Types.MediaType,
-  options?: { pn?: number },
+  options?: { pn?: number; target?: number; },
 ): Promise<Types.MediaInfo> {
   let url = 'https://api.bilibili.com';
   let params = {};
-  const _id = Number(id.match(/\d+/)?.[0]);
+  const id = Number(raw.match(/\d+/)?.[0]);
   switch (type) {
     case Types.MediaType.Video:
       url += '/x/web-interface/view';
-      params = id.toLowerCase().startsWith('bv') ? { bvid: id } : { aid: _id };
+      if (options?.target) {
+        params = { aid: options.target };
+      } else {
+        params = raw.toLowerCase().startsWith('bv') ? { bvid: raw } : { aid: id };
+      }
       break;
     case Types.MediaType.Bangumi:
       url += '/pgc/view/web/season';
-      params = id.toLowerCase().startsWith('ss')
-        ? { season_id: _id }
-        : { ep_id: _id };
+      if (raw.startsWith('md')) {
+        const body = (await tryFetch(
+          'https://api.bilibili.com/pgc/review/user',
+          { params: { media_id: id } },
+        )) as Resps.BangumiMediaInfo;
+        params = { season_id: body.result.media.season_id };
+      } else {
+        params = raw.toLowerCase().startsWith('ss')
+          ? { season_id: id }
+          : { ep_id: id };
+      }
       break;
     case Types.MediaType.Lesson:
       url += '/pugv/view/web/season';
-      params = id.toLowerCase().startsWith('ss')
-        ? { season_id: _id }
-        : { ep_id: _id };
+      params = raw.toLowerCase().startsWith('ss')
+        ? { season_id: id }
+        : { ep_id: id };
       break;
     case Types.MediaType.Music:
       url = 'https://www.bilibili.com/audio/music-service-c/web/song/info';
-      params = { sid: _id };
+      params = { sid: id };
       break;
     case Types.MediaType.MusicList:
       url = 'https://www.bilibili.com/audio/music-service-c/web/menu/info';
-      params = { sid: _id };
+      params = { sid: id };
+      break;
+    case Types.MediaType.WatchLater:
+      url += '/x/v2/history/toview/web';
+      params = { ps: 20, pn: options?.pn ?? 1 };
       break;
     case Types.MediaType.Favorite:
-      url += '/x/v3/fav/resource/list';
-      params = { media_id: _id, ps: 36, pn: options?.pn ?? 1, platform: 'web' };
+      url += '/x/v3/fav/folder/created/list-all';
+      params = { up_mid: id };
+      break;
+    case Types.MediaType.Uploads:
+      url += '/x/polymer/web-space/home/seasons_series';
+      params = { mid: id, page_size: 10, page_num: options?.pn ?? 1 };
+      break;
   }
+  console.log(params)
   const body = await tryFetch(url, { params });
   if (type === Types.MediaType.Video) {
     const data = (body as Resps.VideoInfo).data;
@@ -143,33 +170,31 @@ export async function getMediaInfo(
     return {
       type,
       id: data.aid,
-      desc: data.desc,
       nfo: {
+        showtitle: data.ugc_season?.title ?? data.title,
+        intro: data.desc,
         tags: (tagsResp as Resps.VideoTags).data.map((v) => v.tag_name),
+        stat: {
+          play: data.stat.view,
+          danmaku: data.stat.danmaku,
+          reply: data.stat.reply,
+          like: data.stat.like,
+          coin: data.stat.coin,
+          favorite: data.stat.favorite,
+          share: data.stat.share,
+        },
         thumbs: [
           ...getPublicImages(data),
           ...getPublicImages(data.ugc_season, 'ugc_season'),
         ],
-        showtitle: data.ugc_season?.title ?? data.title,
         premiered: data.pubdate,
         upper: {
           name: data.owner.name,
           mid: data.owner.mid,
           avatar: data.owner.face,
         },
-        actors: [],
-        staff: [],
       },
       edge,
-      stat: {
-        play: data.stat.view,
-        danmaku: data.stat.danmaku,
-        reply: data.stat.reply,
-        like: data.stat.like,
-        coin: data.stat.coin,
-        favorite: data.stat.favorite,
-        share: data.stat.share,
-      },
       sections,
       list,
     };
@@ -189,20 +214,29 @@ export async function getMediaInfo(
       duration: ep.duration / 1000,
       pubtime: ep.pub_time,
       type: Types.MediaType.Bangumi,
-      isTarget: _id === ep.id,
+      isTarget: id === ep.id,
       index,
     });
     return {
       type,
       id: data.season_id,
-      desc: data.evaluate,
       nfo: {
+        showtitle: data.season_title,
+        intro: data.evaluate,
         tags: data.styles,
+        stat: {
+          play: data.stat.views,
+          danmaku: data.stat.danmakus,
+          reply: data.stat.reply,
+          like: data.stat.likes,
+          coin: data.stat.coins,
+          favorite: data.stat.favorite,
+          share: data.stat.share,
+        },
         thumbs: [
           ...getPublicImages(data),
           ...getPublicImages(season, 'season'),
         ],
-        showtitle: data.season_title,
         premiered: data.episodes[0].pub_time,
         upper: data.up_info
           ? {
@@ -210,21 +244,19 @@ export async function getMediaInfo(
               mid: data.up_info.mid,
               avatar: data.up_info.avatar,
             }
-          : null,
-        actors: data.actors.split('\n').map((actor) => {
-          const [name, role] = actor.split('\uFF1A');
-          return { name, role: role ?? '' };
-        }),
-        staff: data.staff.split('\n'),
-      },
-      stat: {
-        play: data.stat.views,
-        danmaku: data.stat.danmakus,
-        reply: data.stat.reply,
-        like: data.stat.likes,
-        coin: data.stat.coins,
-        favorite: data.stat.favorite,
-        share: data.stat.share,
+          : undefined,
+        credits: {
+          actors: data.actors.split('\n').map((actor) => {
+            const [role, name] = actor.split('\uFF1A');
+            return { name, role: role ?? '' };
+          }),
+          staff: mapBangumiStaffs(
+            data.staff.split('\n').map((staff) => {
+              const [name, role] = staff.split('\uFF1A');
+              return [name, role];
+            }),
+          ),
+        },
       },
       sections: {
         target: data.positive.id,
@@ -259,9 +291,13 @@ export async function getMediaInfo(
     return {
       type,
       id: data.season_id,
-      desc: `${data.subtitle}\n${data.faq.title}\n${data.faq.content}`,
       nfo: {
+        showtitle: data.title,
+        intro: `${data.subtitle}\n${data.faq.title}\n${data.faq.content}`,
         tags: [],
+        stat: {
+          play: data.stat.play,
+        },
         thumbs: [
           ...getPublicImages(data),
           ...data.brief.img.map((v, i) => ({
@@ -269,18 +305,12 @@ export async function getMediaInfo(
             url: v.url,
           })),
         ],
-        showtitle: data.title,
         premiered: data.episodes[0].release_date,
         upper: {
           avatar: data.up_info.avatar,
           name: data.up_info.uname,
           mid: data.up_info.mid,
         },
-        actors: [],
-        staff: [],
-      },
-      stat: {
-        play: data.stat.play,
       },
       list: data.episodes.map((ep, index) => ({
         title: ep.title,
@@ -316,25 +346,32 @@ export async function getMediaInfo(
     return {
       type,
       id: data.id,
-      desc: data.intro,
       nfo: {
-        tags: (tagsResp as Resps.MusicTagsInfo).data.map((v) => v.info),
-        thumbs: getPublicImages(data),
         showtitle: data.title,
+        intro: data.intro,
+        tags: (tagsResp as Resps.MusicTagsInfo).data.map((v) => v.info),
+        stat: {
+          play: data.statistic.play,
+          reply: data.statistic.comment,
+          favorite: data.statistic.collect,
+          share: data.statistic.share,
+        },
+        thumbs: getPublicImages(data),
         premiered: data.passtime,
         upper: {
           name: upper.uname,
           mid: upper.uid,
-          avatar: upper.avater, // Note: typo in API response, wtf this should be *avatar
+          avatar: upper.avater ?? upper.avatar, // Typo in API response, LMAO
         },
-        actors: [],
-        staff: [...new Set(members.map((v) => v.list[0].name.trim()))],
-      },
-      stat: {
-        play: data.statistic.play,
-        reply: data.statistic.comment,
-        favorite: data.statistic.collect,
-        share: data.statistic.share,
+        credits: {
+          actors: [],
+          staff: mapMusicStaffs(
+            members.map((member) => [
+              member.type,
+              member.list.map((v) => v.name.trim()).join('\uFF0F'),
+            ]),
+          ),
+        },
       },
       list: [
         {
@@ -364,25 +401,24 @@ export async function getMediaInfo(
     return {
       type,
       id: data.menuId,
-      desc: data.intro,
+      pn: true,
       nfo: {
-        tags: [],
-        thumbs: getPublicImages(data),
         showtitle: data.title,
+        intro: data.intro,
+        tags: [],
+        stat: {
+          play: data.statistic.play,
+          reply: data.statistic.comment,
+          favorite: data.statistic.collect,
+          share: data.statistic.share,
+        },
+        thumbs: getPublicImages(data),
         premiered: data.ctime * 1000,
         upper: {
           name: data.uname,
           mid: data.uid,
           avatar: String(),
         },
-        actors: [],
-        staff: [],
-      },
-      stat: {
-        play: data.statistic.play,
-        reply: data.statistic.comment,
-        favorite: data.statistic.collect,
-        share: data.statistic.share,
       },
       list: listInfo.data.data.map((item, index) => ({
         title: item.title,
@@ -399,49 +435,138 @@ export async function getMediaInfo(
         index,
       })),
     };
+  } else if (type === Types.MediaType.WatchLater) {
+    const data = (body as Resps.WatchLaterInfo).data;
+    return {
+      type,
+      id,
+      pn: true,
+      nfo: {
+        tags: [],
+        stat: {},
+        thumbs: data.list.length ? getPublicImages(data.list[0]) : [],
+      },
+      list: data.list.map((item, index) => ({
+        title: item.title,
+        cover: item.pic,
+        desc: item.desc,
+        aid: item.aid,
+        bvid: item.bvid,
+        duration: item.duration,
+        pubtime: item.pubdate,
+        type: Types.MediaType.Video,
+        isTarget: index === 0,
+        index,
+      })),
+    };
   } else if (type === Types.MediaType.Favorite) {
-    const { info, medias } = (body as Resps.FavoriteInfo).data;
+    console.log(params)
+    const favoriteList = (body as Resps.FavoriteListInfo).data.list;
+    const target = options?.target ?? favoriteList[0].id;
+    const listBody = await tryFetch(
+      'https://api.bilibili.com/x/v3/fav/resource/list',
+      {
+        params: { media_id: target, pn: options?.pn ?? 1, ps: 36, platform: 'web' }
+      }
+    ) as Resps.FavoriteInfo;
+    const { info, medias } = listBody.data;
     const typeMap: Record<number, Types.MediaType> = {
       2: Types.MediaType.Video,
       12: Types.MediaType.Music,
       24: Types.MediaType.Bangumi,
     };
+    const list = medias.map((item, index) => ({
+      title: item.title,
+      cover: item.cover,
+      desc: info.intro,
+      aid: item.id,
+      fid: info.id,
+      bvid: item.bvid,
+      duration: item.duration,
+      pubtime: item.pubtime,
+      type: typeMap[item.type],
+      isTarget: index === 0,
+      index,
+    }));
     return {
       type,
-      id: info.id,
-      desc: info.intro,
+      id,
+      pn: true,
       nfo: {
-        tags: [],
-        thumbs: getPublicImages(info),
         showtitle: info.title,
+        intro: info.intro,
+        tags: [],
+        stat: {
+          play: info.cnt_info.play,
+          like: info.cnt_info.thumb_up,
+          favorite: info.cnt_info.collect,
+          share: info.cnt_info.share,
+        },
+        thumbs: getPublicImages(info),
         premiered: info.ctime * 1000,
         upper: {
           avatar: info.upper.face,
           name: info.upper.name,
           mid: info.upper.mid,
         },
-        actors: [],
-        staff: [],
       },
-      stat: {
-        play: info.cnt_info.play,
-        like: info.cnt_info.thumb_up,
-        favorite: info.cnt_info.collect,
-        share: info.cnt_info.share,
+      sections: {
+        target,
+        tabs: favoriteList.map((v) => ({
+          id: v.id,
+          name: v.title
+        })),
+        data: {
+          [target]: list
+        }
       },
-      list: medias.map((item, index) => ({
-        title: item.title,
-        cover: item.cover,
-        desc: info.intro,
-        aid: item.id,
-        fid: info.id,
-        bvid: item.bvid,
-        duration: item.duration,
-        pubtime: item.pubtime,
-        type: typeMap[item.type],
-        isTarget: index === 0,
-        index,
-      })),
+      list,
+    };
+  } else if (type === Types.MediaType.Uploads) {
+    const { seasons_list } = (body as Resps.UploadsSeriesInfo).data.items_lists;
+    const target = options?.target ?? seasons_list[0].meta.season_id;
+    const listBody = await tryFetch(
+      'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list',
+      {
+        params: { ...params, season_id: target }
+      }
+    ) as Resps.UploadsArchivesInfo;
+    const { archives, meta } = listBody.data;
+    const list = archives.map((item, index) => ({
+      title: item.title,
+      cover: item.pic,
+      desc: meta.description, // fallback
+      aid: item.aid,
+      bvid: item.bvid,
+      duration: item.duration,
+      pubtime: item.pubdate,
+      type: Types.MediaType.Video,
+      isTarget: index === 0,
+      index,
+    }))
+    return {
+      type,
+      id,
+      pn: true,
+      sections: {
+        target,
+        tabs: seasons_list.map((v) => ({
+          id: v.meta.season_id,
+          name: v.meta.name,
+        })),
+        data: {
+          [target]: list,
+        },
+      },
+      nfo: {
+        showtitle: meta.name,
+        intro: meta.description,
+        tags: [],
+        stat: {},
+        thumbs: getPublicImages(meta),
+        premiered: meta.ptime,
+      },
+      list
     };
   } else throw new AppError('No type named ' + type);
 }
@@ -472,7 +597,7 @@ export async function getPlayUrl(
   }
   switch (type) {
     case Types.MediaType.Video:
-      url += user.isLogin ? '/x/player/wbi/playurl' : '/x/player/playurl';
+      url += '/x/player/wbi/playurl';
       Object.assign(params, {
         avid: item.aid,
         cid: item.cid,
@@ -504,8 +629,8 @@ export async function getPlayUrl(
       break;
   }
   const body = await tryFetch(url, {
-    ...(type === Types.MediaType.Video && user.isLogin && { auth: 'wbi' }),
     params,
+    auth: 'wbi',
   });
   if (type === Types.MediaType.Music) {
     const info = body as Resps.MusicPlayUrlInfo;

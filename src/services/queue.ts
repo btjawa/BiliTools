@@ -170,7 +170,7 @@ async function handleDanmaku(task: Types.Task, subtask: Types.SubTask) {
 async function handleThumbs(task: Types.Task) {
   const { select, nfo } = task;
   const alias: Record<string, string> = { pic: 'cover', cover: 'pic' };
-  return nfo.thumbs
+  return nfo?.thumbs
     .filter(
       (v) => select.thumb.includes(v.id) || select.thumb.includes(alias[v.id]),
     )
@@ -239,7 +239,7 @@ function buildPaths(
     title: item.title,
     container: t('mediaType.' + task.type),
     mediaType: t('mediaType.' + item.type),
-    taskType: subtask ? t('taskType.' + subtask?.type) : undefined,
+    taskType: subtask ? t('taskType.' + subtask?.type) : null,
     pubtime: nfo?.premiered ?? item?.pubtime,
     upper: nfo.upper?.name,
     upperid: nfo.upper?.mid,
@@ -250,10 +250,10 @@ function buildPaths(
     bvid: item?.bvid,
     epid: item?.epid,
     ssid: item?.ssid,
-    res: select?.res ? t('quality.res.' + select.res) : undefined,
-    abr: select?.abr ? t('quality.abr.' + select.abr) : undefined,
-    enc: select?.enc ? t('quality.enc.' + select.enc) : undefined,
-    fmt: select?.fmt ? t('quality.fmt.' + select.fmt) : undefined,
+    res: select?.res ? t('quality.res.' + select.res) : null,
+    abr: select?.abr ? t('quality.abr.' + select.abr) : null,
+    enc: select?.enc ? t('quality.enc.' + select.enc) : null,
+    fmt: select?.fmt ? t('quality.fmt.' + select.fmt) : null,
     index: task.seq + 1,
     downtime: task.ts,
   };

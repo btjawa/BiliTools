@@ -16,7 +16,9 @@
     "music": "音乐",
     "musicList": "歌单",
     "lesson": "课程",
-    "favorite": "收藏夹"
+    "watchLater": "稍后再看",
+    "favorite": "用户收藏夹",
+    "uploads": "用户视频"
   },
   "taskType": {
     "aiSummary": "AI 总结",
@@ -177,6 +179,9 @@
     "export": "导出数据",
     "exported": "已导出数据至 {0}",
     "selectAll": "全选"
+  },
+  "utils": {
+    "title": "工具箱"
   },
   "history": {
     "title": "历史记录",

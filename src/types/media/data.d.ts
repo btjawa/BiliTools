@@ -38,44 +38,47 @@ export interface UgcInfo {
   bvid: string;
 }
 
+export interface VideoItemInfo {
+  bvid: string;
+  aid: number;
+  pic: string;
+  title: string;
+  pubdate: number;
+  ctime: number;
+  desc: string;
+  duration: number;
+  rights: {
+    is_stein_gate: number;
+  };
+  owner: {
+    mid: number;
+    name: string;
+    face: string;
+  };
+  stat: {
+    view: number;
+    danmaku: number;
+    reply: number;
+    favorite: number;
+    coin: number;
+    share: number;
+    like: number;
+  };
+  cid: number;
+  pages?: {
+    cid: number;
+    page: number;
+    part: string;
+    duration: number;
+    ctime: number;
+  }[];
+}
+
 export interface VideoInfo {
   code: number;
   message: string;
   ttl: number;
-  data: {
-    bvid: string;
-    aid: number;
-    pic: string;
-    title: string;
-    pubdate: number;
-    ctime: number;
-    desc: string;
-    duration: number;
-    rights: {
-      is_stein_gate: number;
-    };
-    owner: {
-      mid: number;
-      name: string;
-      face: string;
-    };
-    stat: {
-      view: number;
-      danmaku: number;
-      reply: number;
-      favorite: number;
-      coin: number;
-      share: number;
-      like: number;
-    };
-    cid: number;
-    pages?: {
-      cid: number;
-      page: number;
-      part: string;
-      duration: number;
-      ctime: number;
-    }[];
+  data: VideoItemInfo & {
     ugc_season: {
       id: number;
       title: string;
@@ -118,6 +121,16 @@ interface EpisodeInfo {
   pub_time: number;
   share_copy: string;
   short_link: string;
+}
+
+export interface BangumiMediaInfo {
+  code: number;
+  message: string;
+  result: {
+    media: {
+      season_id: number;
+    };
+  };
 }
 
 export interface BangumiInfo {
@@ -263,6 +276,7 @@ export interface MusicUpperInfo {
     uid: number;
     uname: string;
     avater: string;
+    avatar: string; // actually fallbacks
     sign: string;
   };
 }
@@ -333,6 +347,29 @@ export interface MusicListDetailInfo {
   };
 }
 
+export interface WatchLaterInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    list: VideoItemInfo[];
+  };
+}
+
+export interface FavoriteListInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    list: {
+      id: number;
+      fid: number;
+      mid: number;
+      title: string;
+    }[]
+  }
+}
+
 export interface FavoriteInfo {
   code: number;
   message: string;
@@ -378,6 +415,54 @@ export interface FavoriteInfo {
     has_more: boolean;
     ttl: number;
   };
+}
+
+export interface UploadsSeriesInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    items_lists: {
+      seasons_list: {
+        meta: {
+          cover: string;
+          description: string;
+          mid: number;
+          name: string;
+          ptime: number;
+          season_id: number;
+        };
+      }[];
+    };
+  };
+}
+
+export interface UploadsArchivesInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    archives: {
+      aid: number;
+      bvid: string;
+      ctime: number;
+      duration: number;
+      pic: string;
+      pubdate: number;
+      stat: {
+        view: number;
+      }
+      title: string;
+    }[],
+    meta: {
+      cover: string;
+      description: string;
+      mid: number;
+      name: string;
+      ptime: number;
+      season_id: number;
+    }
+  }
 }
 
 export interface VideoPlayUrlInfo {

@@ -94,6 +94,7 @@ async fn handle_nfo(
     ptask: ProgressTask,
     _rx: Receiver<CtrlEvent>,
     folder: PathBuf,
+    nfo: Arc<MediaNfo>,
 ) -> TauriResult<()> {
     let subtask = ptask.subtask;
     let parent = ptask.task.id.clone();
@@ -102,18 +103,18 @@ async fn handle_nfo(
     let prog = Progress::new(parent.clone(), id.clone());
     prog.send(1, 0).await?;
 
-    let nfo = request_frontend::<Vec<u8>>(parent, Some(id), RequestAction::GetNfo).await?;
+    let data = request_frontend::<Vec<u8>>(parent, Some(id), RequestAction::GetNfo).await?;
 
     let output_file = if subtask.task_type == TaskType::AlbumNfo {
         folder.join("tvshow.nfo")
     } else {
         ptask.folder.join(format!("{}.nfo", &ptask.filename))
     };
-    fs::write(&output_file, &*nfo).await?;
+    fs::write(&output_file, &*data).await?;
 
     if subtask.task_type == TaskType::AlbumNfo {
         let client = init_client().await?;
-        let url = format!("{}@.jpg", ptask.task.nfo.thumbs[0].url);
+        let url = format!("{}@.jpg", nfo.thumbs[0].url);
         let response = client.get(&url).send().await?;
         if response.status() != StatusCode::OK {
             return Err(TauriError::new(
@@ -415,9 +416,10 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
     let id = task_snapshot.id.clone();
     let select = task_snapshot.select.clone();
 
-    let nfo = request_frontend::<MediaNfo>(id.clone(), None, RequestAction::RefreshNfo).await?;
+    let nfo =
+        request_frontend::<Option<MediaNfo>>(id.clone(), None, RequestAction::RefreshNfo).await?;
     let mut guard = task.write().await;
-    guard.nfo = nfo;
+    guard.nfo = Arc::try_unwrap(nfo).ok().and_then(|r| r.map(Arc::new));
 
     let urls = if select.media.any_true() {
         let urls =
@@ -498,9 +500,11 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
                     .await?;
             }
             TaskType::AlbumNfo | TaskType::SingleNfo => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_nfo(ptask, rx, folder))
-                    .await?;
+                if let Some(nfo) = task.nfo.clone() {
+                    scheduler
+                        .try_join(&id, &sub_id, |rx| handle_nfo(ptask, rx, folder, nfo))
+                        .await?;
+                }
             }
             TaskType::AiSummary => {
                 scheduler

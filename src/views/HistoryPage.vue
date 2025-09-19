@@ -20,7 +20,7 @@
               <div class="relative flex rounded-lg min-w-40 overflow-hidden">
                 <Image
                   v-model="coverCache"
-                  :src="(item.covers?.[0] ?? item.cover) + '@160w_96h_1c.jpg'"
+                  :src="item.covers?.[0] ?? item.cover"
                   :height="96"
                   :width="160"
                   :ratio="5 / 3"

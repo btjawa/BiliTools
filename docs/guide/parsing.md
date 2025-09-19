@@ -20,18 +20,15 @@
   - av11451
   - BV1tx411c77w
 - 稍后再看
+  - https://www.bilibili.com/watchlater/list
   - https://www.bilibili.com/list/watchlater/?bvid=BV1tx411c77w&oid=11451
-> 对于收藏夹，链接中需带有 `fid` 参数，否则无法解析。<br>
-> 暂不支持 ML 收藏夹解析。
-- 收藏夹
-  - https://space.bilibili.com/7624233/favlist?fid=68586733
-  - 68586733
-> 暂不支持 MD 号解析。<br>
-- 番剧 / 影视 / SS 号 / EP 号
+- 番剧 / 影视 / SS 号 / EP 号 / MD 号
   - https://www.bilibili.com/bangumi/play/ss2539
   - https://www.bilibili.com/bangumi/play/ep341254
+  - https://www.bilibili.com/bangumi/media/md28228367
   - ss2539
   - ep341254
+  - md28228367
 - 课程 / SS 号 / EP 号
   - https://www.bilibili.com/cheese/play/ss61
   - https://www.bilibili.com/cheese/play/ep812
@@ -43,6 +40,17 @@
 - 歌单 / AM 号
   - https://www.bilibili.com/audio/am86055
   - am86055
+- 用户投稿视频 & 合集
+  - https://space.bilibili.com/52497613
+  - https://space.bilibili.com/52497613/video
+  - https://space.bilibili.com/52497613/upload/video
+  - https://space.bilibili.com/52497613/lists
+  - https://space.bilibili.com/52497613/lists/5747470
+  - 52497613
+- 用户收藏夹
+  - https://space.bilibili.com/52497613/favlist
+  - https://space.bilibili.com/52497613/favlist?fid=47742713
+  - 47742713
 
 ## 解析功能区
 

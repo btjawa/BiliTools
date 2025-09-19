@@ -78,12 +78,7 @@
                 <i :class="[$fa.weight, i.icon]"></i>
                 <span>{{ $t(i.text) }}</span>
               </button>
-              <template
-                v-if="
-                  v.mediaInfo.type === 'favorite' ||
-                  v.mediaInfo.type === 'musicList'
-                "
-              >
+              <template v-if="v.mediaInfo.pn">
                 <span>{{ $t('page') }}</span>
                 <input
                   v-model="v.pageIndex"
@@ -191,18 +186,13 @@ function updateIndex() {
 async function updateTab(t: number) {
   v.tab = t;
   v.searching = true;
-  if (!v.mediaInfo.sections) return;
-  const list = v.mediaInfo.sections.data[t];
-  if (list) {
-    v.mediaInfo.list = list;
-  } else {
-    const info = await data.getMediaInfo(`av${t}`, v.mediaInfo.type);
-    const target = info.sections?.target ?? 0;
-    const list = info.sections?.data[target];
-    if (target && list) {
-      v.mediaInfo.sections.data[target] = list;
-    }
-  }
+  console.log(v.tab, v.mediaInfo.sections)
+  const info = await data.getMediaInfo(
+    String(v.mediaInfo.id),
+    v.mediaInfo.type,
+    { target: t }
+  );
+  v.mediaInfo = info;
   await nextTick(); // trigger v-if
   v.searching = false;
   updateIndex();
@@ -244,7 +234,10 @@ async function search(overrideInput?: string) {
       type: v.mediaType === 'auto' ? raw.type! : v.mediaType,
     };
     log.info('Query: ' + JSON.stringify(query));
-    const info = await data.getMediaInfo(query.id, query.type);
+    const info = await data.getMediaInfo(query.id, query.type, {
+      target: raw.target
+    });
+    console.log(info);
     v.mediaInfo = info;
     v.listActive = true;
     if (info.sections) v.tab = info.sections.target;
@@ -326,10 +319,13 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
             }))
           : [],
     },
-    nfo: true,
+    nfo: {
+      album: true,
+      single: true,
+    },
     danmaku:
       type !== 'music' ? (user.isLogin ? ['live', 'history'] : ['live']) : [],
-    thumb: nfo.thumbs.map((v) => v.id),
+    thumb: nfo?.thumbs.map((v) => v.id) ?? [],
   };
   v.anim = topEl.value!.animate([{ opacity: '1' }, { opacity: '0' }], {
     duration: 150,
@@ -346,8 +342,11 @@ async function emit(select: Types.PopupSelect) {
 }
 
 async function exportData() {
+  const title =
+    v.mediaInfo.nfo?.showtitle ??
+    i18n.global.t(`mediaType.` + v.mediaInfo.type);
   const path = await save({
-    defaultPath: `${settings.down_dir}/${strip(v.mediaInfo.nfo.showtitle)}_${Date.now()}.json`,
+    defaultPath: `${settings.down_dir}/${strip(title)}_${Date.now()}.json`,
   });
   if (!path) return;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -135,7 +135,11 @@ const extras = computed(() => ({
   },
   nfo: {
     icon: 'fa-memo-circle-info',
-    data: v.extras.nfo ? ['album', 'single'] : [],
+    data: [
+      ...(v.extras.nfo.album ? ['album'] : []),
+      ...(v.extras.nfo.single ? ['single'] : []),
+    ],
+
   },
   danmaku: {
     icon: 'fa-subtitles',

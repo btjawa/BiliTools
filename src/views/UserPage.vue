@@ -10,7 +10,7 @@
       <div v-if="user.isLogin" class="w-full">
         <div class="relative">
           <div
-            class="absolute w-full h-full z-10 bg-linear-to-b from-transparent to-black/50"
+            class="absolute w-full h-full z-10 bg-linear-to-b from-transparent to-black/50 pointer-events-none"
           ></div>
           <Image
             class="z-0 rounded-b-none"
@@ -61,7 +61,7 @@
           <h1>{{ $t('user.scan') }}</h1>
           <div class="relative flex w-[160px] p-2 rounded-lg bg-white">
             <img
-              v-if="v.scanStatus === -1"
+              v-if="v.scanStatus === -2"
               src="@/assets/img/user/loadTV.gif"
               class="absolute m-[22px]"
             />
@@ -137,7 +137,7 @@
             </div>
           </div>
           <button
-            class="w-full h-10 mb-[17px] primary-color"
+            class="w-full h-10 mb-auto primary-color"
             @click="v.tab ? req('sms') : req('pwd')"
           >
             <i class="fa-solid fa-arrow-right-to-bracket"></i>
@@ -192,9 +192,10 @@ async function req(type: 'init' | 'scan' | 'pwd' | 'sms' | 'sendSms' | 'exit') {
     }
     case 'scan': {
       if (!qrcode.value) return;
-      v.scanStatus = -1;
+      v.scanStatus = -2;
       qrcode.value.height = 144; // reset canvas
       const key = await login.genQrcode(qrcode.value);
+      v.scanStatus = -1;
       status = await login.scanLogin(key, (code) => (v.scanStatus = code));
       break;
     }
