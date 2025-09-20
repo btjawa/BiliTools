@@ -24,6 +24,9 @@ export default defineConfig([
       sourceType: 'module',
       globals: globals.browser,
     },
+    rules: {
+      eqeqeq: ['error'],
+    }
   },
   {
     files: ['scripts/*.{mjs,cjs,js}'],
@@ -45,6 +48,7 @@ export default defineConfig([
     },
     rules: {
       'vue/multi-word-component-names': 'off',
+      eqeqeq: ['error'],
     },
   },
   eslintConfigPrettier,
