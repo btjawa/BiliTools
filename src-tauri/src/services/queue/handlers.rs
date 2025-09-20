@@ -48,8 +48,8 @@ fn get_ext(task_type: TaskType, abr: usize) -> &'static str {
     }
 }
 
-async fn handle_subtitle(ptask: ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+async fn handle_subtitle(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -73,8 +73,8 @@ async fn handle_subtitle(ptask: ProgressTask, _rx: Receiver<CtrlEvent>) -> Tauri
     Ok(())
 }
 
-async fn handle_ai_summary(ptask: ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+async fn handle_ai_summary(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -91,12 +91,12 @@ async fn handle_ai_summary(ptask: ProgressTask, _rx: Receiver<CtrlEvent>) -> Tau
 }
 
 async fn handle_nfo(
-    ptask: ProgressTask,
+    ptask: &ProgressTask,
     _rx: Receiver<CtrlEvent>,
-    folder: PathBuf,
-    nfo: Arc<MediaNfo>,
+    folder: &PathBuf,
+    nfo: &Arc<MediaNfo>,
 ) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+    let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -130,8 +130,8 @@ async fn handle_nfo(
     Ok(())
 }
 
-async fn handle_danmaku(ptask: ProgressTask, mut rx: Receiver<CtrlEvent>) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -240,8 +240,8 @@ async fn handle_danmaku(ptask: ProgressTask, mut rx: Receiver<CtrlEvent>) -> Tau
     Ok(())
 }
 
-async fn handle_thumbs(ptask: ProgressTask, mut rx: Receiver<CtrlEvent>) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+async fn handle_thumbs(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -255,27 +255,22 @@ async fn handle_thumbs(ptask: ProgressTask, mut rx: Receiver<CtrlEvent>) -> Taur
     let content = thumbs.len() as u64;
 
     for (index, thumb) in thumbs.iter().enumerate() {
-        tokio::select! {
-            Ok(CtrlEvent::Cancel) = rx.recv() => {
-                break;
-            },
-            res = async {
-                let output_file = get_unique_path(ptask.folder.join(format!("{}.{}.jpg", &ptask.filename, thumb.id )));
-                let response = client
-                    .get(format!("{}@.jpg", thumb.url))
-                    .send().await?;
-                if response.status() != StatusCode::OK {
-                    return Err(TauriError::new(
-                        format!("Error while fetching thumb {}", thumb.url),
-                        Some(response.status())
-                    ));
-                }
-                let bytes = response.bytes().await?;
-                fs::write(&output_file, &bytes).await?;
-                prog.send(content, index as u64).await?;
-                Ok::<(), TauriError>(())
-            } => res?
+        if let Ok(CtrlEvent::Cancel) = rx.try_recv() {
+            return Ok(());
         }
+        let output_file = get_unique_path(ptask.folder.join(format!("{}.{}.jpg", &ptask.filename, thumb.id )));
+        let response = client
+            .get(format!("{}@.jpg", thumb.url))
+            .send().await?;
+        if response.status() != StatusCode::OK {
+            return Err(TauriError::new(
+                format!("Error while fetching thumb {}", thumb.url),
+                Some(response.status())
+            ));
+        }
+        let bytes = response.bytes().await?;
+        fs::write(&output_file, &bytes).await?;
+        prog.send(content, index as u64).await?;
     }
 
     prog.send(content, content).await?;
@@ -284,12 +279,12 @@ async fn handle_thumbs(ptask: ProgressTask, mut rx: Receiver<CtrlEvent>) -> Taur
 }
 
 async fn handle_merge(
-    ptask: ProgressTask,
+    ptask: &ProgressTask,
     mut rx: Receiver<CtrlEvent>,
-    video_path: Arc<OnceCell<PathBuf>>,
-    audio_path: Arc<OnceCell<PathBuf>>,
+    video_path: &Arc<OnceCell<PathBuf>>,
+    audio_path: &Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+    let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -330,17 +325,17 @@ async fn handle_merge(
 }
 
 async fn handle_media(
-    ptask: ProgressTask,
+    ptask: &ProgressTask,
     mut rx: Receiver<CtrlEvent>,
-    video_path: Arc<OnceCell<PathBuf>>,
-    audio_path: Arc<OnceCell<PathBuf>>,
+    video_path: &Arc<OnceCell<PathBuf>>,
+    audio_path: &Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
-    let subtask = ptask.subtask;
+    let subtask = &ptask.subtask;
     let select = ptask.task.select.clone();
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
-    let urls = if let Some(urls) = ptask.urls {
+    let urls = if let Some(urls) = ptask.urls.clone() {
         if subtask.task_type == TaskType::Video {
             urls.video_urls.clone()
         } else if subtask.task_type == TaskType::Audio {
@@ -369,7 +364,8 @@ async fn handle_media(
                 },
                 CtrlEvent::Resume => {
                     aria2c::resume(id.clone()).await?;
-                }
+                },
+                _ => (),
             }
         }
     }?;
@@ -472,49 +468,49 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
             filename,
         };
         let folder = scheduler.folder.clone();
-        let video_clone = video_path.clone();
-        let audio_clone = audio_path.clone();
+        let video = video_path.clone();
+        let audio = audio_path.clone();
         match subtask.task_type {
             TaskType::Video | TaskType::Audio => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| {
-                        handle_media(ptask, rx, video_clone, audio_clone)
+                        handle_media(&ptask, rx, &video, &audio)
                     })
-                    .await?;
+                    .await;
             }
             TaskType::AudioVideo => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| {
-                        handle_merge(ptask, rx, video_clone, audio_clone)
+                        handle_merge(&ptask, rx, &video, &audio)
                     })
-                    .await?;
-            }
+                    .await;
+            },
             TaskType::Thumb => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| handle_thumbs(ptask, rx))
-                    .await?;
+                    .try_join(&id, &sub_id, |rx| handle_thumbs(&ptask, rx))
+                    .await;
             }
             TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| handle_danmaku(ptask, rx))
-                    .await?;
+                    .try_join(&id, &sub_id, |rx| handle_danmaku(&ptask, rx))
+                    .await;
             }
             TaskType::AlbumNfo | TaskType::SingleNfo => {
                 if let Some(nfo) = task.nfo.clone() {
                     scheduler
-                        .try_join(&id, &sub_id, |rx| handle_nfo(ptask, rx, folder, nfo))
-                        .await?;
+                        .try_join(&id, &sub_id, |rx| handle_nfo(&ptask, rx, &folder, &nfo))
+                        .await;
                 }
             }
             TaskType::AiSummary => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| handle_ai_summary(ptask, rx))
-                    .await?;
+                    .try_join(&id, &sub_id, |rx| handle_ai_summary(&ptask, rx))
+                    .await;
             }
             TaskType::Subtitles => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| handle_subtitle(ptask, rx))
-                    .await?;
+                    .try_join(&id, &sub_id, |rx| handle_subtitle(&ptask, rx))
+                    .await;
             }
         }
     }

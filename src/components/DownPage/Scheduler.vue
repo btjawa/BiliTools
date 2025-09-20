@@ -158,6 +158,9 @@ const cache = reactive(
 );
 
 const buttons = computed(() => (task?: Task) => ({
+  ...(task && task?.state !== 'pending' && task?.state !== 'completed' && {
+    retry: 'fa-rotate-right',
+  }),
   ...(task?.state === 'active' && {
     pause: 'fa-pause',
   }),

@@ -207,7 +207,7 @@ queueEvent: "queue-event"
 
 export type AnyInt = number
 export type CacheKey = "log" | "temp" | "webview" | "database"
-export type CtrlEvent = "pause" | "resume" | "cancel"
+export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 export type InitData = { version: string; hash: string; config: Settings }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>

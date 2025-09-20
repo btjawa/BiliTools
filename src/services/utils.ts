@@ -285,7 +285,7 @@ export async function parseId(
       return {
         id: mid,
         type: MediaType.Favorite,
-        target: fid !== null ? Number(fid) : undefined,
+        target: typeof fid === 'number' ? Number(fid) : undefined,
       };
     }
     if (
@@ -297,7 +297,7 @@ export async function parseId(
       return {
         id: mid,
         type: MediaType.UserVideo,
-        target: id !== null ? Number(id) : undefined,
+        target: typeof id === 'number' ? Number(id) : undefined,
       };
     }
     if (segs[2] === 'opus' || type === 'article') {
@@ -306,7 +306,7 @@ export async function parseId(
         type: MediaType.UserOpus,
       };
     }
-    if (segs[2] == 'audio' || type == 'audio') {
+    if (segs[2] === 'audio' || type === 'audio') {
       return {
         id: mid,
         type: MediaType.UserAudio,
@@ -403,7 +403,7 @@ export function randomString(len: number = 8) {
 
 export function stat(num: number | string) {
   const locale = useSettingsStore().language;
-  if (typeof num == 'string') return num;
+  if (typeof num === 'string') return num;
   if (locale === 'zh-CN') {
     if (num >= 100000000) {
       return (num / 100000000).toFixed(1) + '亿';

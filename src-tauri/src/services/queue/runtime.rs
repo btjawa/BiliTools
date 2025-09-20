@@ -365,6 +365,7 @@ pub enum CtrlEvent {
     Pause,
     Resume,
     Cancel,
+    Retry,
 }
 
 #[derive(Debug)]
@@ -372,6 +373,7 @@ struct CtrlEntry {
     tx: Sender<CtrlEvent>,
     cancelled: AtomicBool,
     paused: AtomicBool,
+    retry_flag: AtomicBool,
 }
 
 impl CtrlEntry {
@@ -381,6 +383,7 @@ impl CtrlEntry {
             tx,
             cancelled: AtomicBool::new(false),
             paused: AtomicBool::new(false),
+            retry_flag: AtomicBool::new(false),
         }
     }
     fn send(&self, event: CtrlEvent) {
@@ -400,6 +403,12 @@ impl CtrlEntry {
                     let _ = self.tx.send(CtrlEvent::Resume);
                 }
             }
+            CtrlEvent::Retry => {
+                self.retry_flag.store(true, SeqCst);
+                self.cancelled.store(false, SeqCst);
+                self.paused.store(false, SeqCst);
+                let _ = self.tx.send(CtrlEvent::Cancel);
+            }
         }
     }
     fn is_paused(&self) -> bool {
@@ -407,6 +416,9 @@ impl CtrlEntry {
     }
     fn is_cancelled(&self) -> bool {
         self.cancelled.load(SeqCst)
+    }
+    fn retry_swap(&self) -> bool {
+        self.retry_flag.swap(false, SeqCst)
     }
 }
 
@@ -503,44 +515,48 @@ impl Scheduler {
         parent: &Arc<String>,
         id: &Arc<String>,
         func: F,
-    ) -> Result<()>
+    )
     where
-        F: FnOnce(Receiver<CtrlEvent>) -> Fut + Send + 'static,
-        Fut: Future<Output = TauriResult<()>> + Send + 'static,
+        F: Fn(Receiver<CtrlEvent>) -> Fut,
+        Fut: Future<Output = TauriResult<()>>,
     {
         let ctrl = match self.get_ctrl(parent).await {
             Some(e) => e,
-            None => return Ok(()),
+            None => return,
         };
-
-        if ctrl.is_cancelled() {
-            ctrl.send(CtrlEvent::Cancel);
-            return Ok(());
-        }
-
-        let task_rx = ctrl.tx.subscribe();
-        let mut rx = ctrl.tx.subscribe();
-
-        if let Err(e) = func(task_rx).await {
-            let app = get_app_handle();
-            QueueEvent::Error {
-                parent: parent.clone(),
-                id: Some(id.clone()),
-                message: format!("SubTask {id} failed, parent: {parent}: \n{}", e.message),
-                code: e.code.map(|v| v.saturating_isize()),
-            }
-            .emit(app)?;
-        }
-
+        
         loop {
-            if !ctrl.is_paused() {
-                break;
+            let task_rx = ctrl.tx.subscribe();
+            let mut rx = ctrl.tx.subscribe();
+            let result = func(task_rx).await;
+            if let Err(e) = &result {
+                let app = get_app_handle();
+                let _ = QueueEvent::Error {
+                    parent: parent.clone(),
+                    id: Some(id.clone()),
+                    message: format!("SubTask {id} failed, parent: {parent}: \n{}", e.message),
+                    code: e.code.map(|v| v.saturating_isize()),
+                }
+                .emit(app);
             }
-            if let Ok(CtrlEvent::Resume) | Ok(CtrlEvent::Cancel) | Err(_) = rx.recv().await {
-                break;
+            if ctrl.is_cancelled() {
+                ctrl.send(CtrlEvent::Cancel);
+                return;
+            }
+            if ctrl.retry_swap() {
+                continue;
+            }
+            if result.is_ok() && !ctrl.is_paused() {
+                return;
+            }
+            loop {
+                match rx.recv().await {
+                    Ok(CtrlEvent::Retry) => break,
+                    Ok(CtrlEvent::Pause) => (),
+                    _ => return,
+                }
             }
         }
-        Ok(())
     }
 }
 
@@ -652,7 +668,7 @@ pub async fn ctrl_event(
     list: Vec<Arc<String>>,
 ) -> TauriResult<()> {
     let sch = TASK_MANAGER.get_scheduler(&sid).await?;
-    if sch.inited.get().is_none() && event == CtrlEvent::Resume {
+    if sch.inited.get().is_none() {
         let sch = sch.clone();
         async_runtime::spawn(async move {
             let _ = sch.dispatch().await;
@@ -667,7 +683,7 @@ pub async fn ctrl_event(
                 id,
                 match event {
                     CtrlEvent::Pause => TaskState::Paused,
-                    CtrlEvent::Resume => TaskState::Active,
+                    CtrlEvent::Resume | CtrlEvent::Retry => TaskState::Active,
                     _ => TaskState::Cancelled,
                 },
             )

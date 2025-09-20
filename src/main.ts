@@ -26,8 +26,8 @@ const ToastOptions: PluginOptions = {
   icon: true,
 };
 
-window.onerror = (_, __, ___, ____, error) => {
-  new AppError(error, { name: 'WindowError' }).handle();
+window.onerror = (_, __, ___, ____, e) => {
+  if (e) new AppError(e, { name: 'WindowError' }).handle();
 };
 
 window.onrejectionhandled = (e) => {
