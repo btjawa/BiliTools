@@ -136,6 +136,7 @@ const v = reactive({
   searching: false,
   pageIndex: 1,
   tab: -1,
+  offsetMap: new Map<number, string>(),
 });
 
 const buttons = [
@@ -143,11 +144,6 @@ const buttons = [
     icon: 'fa-cloud-arrow-down',
     text: 'search.general',
     action: () => initPopup(),
-  },
-  {
-    icon: 'fa-memo-circle-info',
-    text: 'search.extra',
-    action: () => AppLog(i18n.global.t('wip'), 'info'),
   },
   {
     icon: 'fa-file-export',
@@ -183,15 +179,29 @@ function updateIndex() {
   });
 }
 
+async function handlePage() {
+  if (v.pageIndex < 1) {
+    v.pageIndex = 1;
+  }
+  const pn = v.pageIndex;
+  const offset = v.offsetMap.get(pn) ?? v.mediaInfo.offset;
+  v.searching = true;
+  const result = await data.getMediaInfo(v.mediaInfo.id, v.mediaInfo.type, {
+    pn,
+    offset,
+  });
+  if (result.offset) v.offsetMap.set(pn + 1, result.offset);
+  Object.assign(v.mediaInfo, result);
+  v.searching = false;
+  updateIndex();
+}
+
 async function updateTab(t: number) {
   v.tab = t;
   v.searching = true;
-  console.log(v.tab, v.mediaInfo.sections)
-  const info = await data.getMediaInfo(
-    String(v.mediaInfo.id),
-    v.mediaInfo.type,
-    { target: t }
-  );
+  const info = await data.getMediaInfo(v.mediaInfo.id, v.mediaInfo.type, {
+    target: t,
+  });
   v.mediaInfo = info;
   await nextTick(); // trigger v-if
   v.searching = false;
@@ -220,6 +230,7 @@ async function search(overrideInput?: string) {
     }
   try {
     const input = (overrideInput ?? v.searchInput).trim();
+    v.offsetMap.clear();
     v.searchInput = input;
     v.listActive = false;
     v.searching = false;
@@ -235,12 +246,12 @@ async function search(overrideInput?: string) {
     };
     log.info('Query: ' + JSON.stringify(query));
     const info = await data.getMediaInfo(query.id, query.type, {
-      target: raw.target
+      target: raw.target,
     });
-    console.log(info);
     v.mediaInfo = info;
     v.listActive = true;
     if (info.sections) v.tab = info.sections.target;
+    if (info.offset) v.offsetMap.set(1, '');
     updateIndex();
   } finally {
     await nextTick();
@@ -248,25 +259,10 @@ async function search(overrideInput?: string) {
   }
 }
 
-async function handlePage() {
-  if (v.pageIndex < 1) {
-    v.pageIndex = 1;
-  }
-  const pn = v.pageIndex;
-  v.searching = true;
-  const result = await data.getMediaInfo(
-    String(v.mediaInfo.id),
-    v.mediaInfo.type,
-    { pn },
-  );
-  Object.assign(v.mediaInfo, result);
-  v.searching = false;
-  updateIndex();
-}
-
 async function updateEdge(edge_id: number) {
-  const { id, edge } = v.mediaInfo;
-  if (!edge) return;
+  const { edge, list } = v.mediaInfo;
+  const id = list[0].aid;
+  if (!edge || !id) return;
   const graph_version = edge.graph_version;
   const edgeInfo = await extras.getEdgeInfo(id, graph_version, edge_id);
   v.mediaInfo.edge = {
@@ -303,35 +299,50 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
   await Promise.all(tasks);
   const info = v.mediaInfo.list[v.checkboxs[0]];
   const nfo = v.mediaInfo.nfo;
-  const type = info.type ?? v.mediaInfo.type;
-  const playUrl = await data.getPlayUrl(info, type, fmt);
-  const provider = {
+  const type = info.type;
+
+  const prov: Types.PopupProvider = {
     misc: {
-      aiSummary:
-        type === 'video' && user.isLogin
-          ? await extras.getAISummary(info, { check: true })
-          : false,
-      subtitles:
-        type !== 'music' && user.isLogin
-          ? (await extras.getSubtitle(info)).map((v) => ({
-              id: v.lan,
-              name: v.lan_doc,
-            }))
-          : [],
+      aiSummary: false,
+      subtitles: [],
     },
     nfo: {
-      album: true,
-      single: true,
+      album: false,
+      single: false,
     },
-    danmaku:
-      type !== 'music' ? (user.isLogin ? ['live', 'history'] : ['live']) : [],
+    danmaku: [],
     thumb: nfo?.thumbs.map((v) => v.id) ?? [],
   };
+
+  if (user.isLogin && type === 'video') {
+    prov.misc.aiSummary = await extras.getAISummary(info, { check: true });
+  }
+
+  if (type !== 'opus') {
+    Object.assign(prov, await data.getPlayUrl(info, type, fmt));
+    prov.nfo = {
+      album: true,
+      single: true,
+    };
+  }
+
+  if (type !== 'music' && type !== 'opus') {
+    if (user.isLogin) {
+      prov.misc.subtitles = (await extras.getSubtitle(info)).map((v) => ({
+        id: v.lan,
+        name: v.lan_doc,
+      }));
+      prov.danmaku = ['live', 'history'];
+    } else {
+      prov.danmaku = ['live'];
+    }
+  }
+
   v.anim = topEl.value!.animate([{ opacity: '1' }, { opacity: '0' }], {
     duration: 150,
     fill: 'forwards',
   });
-  popup.value?.init(playUrl, provider);
+  popup.value?.init(prov);
 }
 
 async function emit(select: Types.PopupSelect) {

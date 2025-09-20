@@ -86,7 +86,10 @@ export enum MediaType {
   Lesson = 'lesson',
   WatchLater = 'watchLater',
   Favorite = 'favorite',
-  Uploads = 'uploads',
+  Opus = 'opus',
+  UserVideo = 'userVideo',
+  UserOpus = 'userOpus',
+  UserAudio = 'userAudio',
 }
 
 export enum StreamFormat {
@@ -110,10 +113,12 @@ export interface PlayUrlProvider {
   video?: PlayUrlResult[];
   audio?: PlayUrlResult[];
   codec: StreamFormat;
-  ts: number; // ms timestamp
 }
 
-export interface ExtrasProvider {
+export interface PopupProvider {
+  video?: PlayUrlResult[];
+  audio?: PlayUrlResult[];
+  codec?: StreamFormat;
   misc: {
     aiSummary: boolean;
     subtitles: { id: string; name: string }[];
@@ -189,17 +194,17 @@ export interface MediaEdge {
 
 export interface MediaInfo {
   type: MediaType;
-  id: number;
+  id: string;
   pn?: boolean;
   nfo: MediaNfo;
   edge?: MediaEdge;
+  offset?: string;
   sections?: {
     target: number;
     tabs: {
       id: number;
       name: string;
     }[];
-    data: Record<number, MediaItem[]>;
   };
   list: MediaItem[];
 }

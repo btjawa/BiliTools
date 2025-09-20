@@ -18,7 +18,10 @@
     "lesson": "课程",
     "watchLater": "稍后再看",
     "favorite": "用户收藏夹",
-    "uploads": "用户视频"
+    "opus": "图文",
+    "userVideo": "用户视频",
+    "userOpus": "用户图文",
+    "userAudio": "用户音频"
   },
   "taskType": {
     "aiSummary": "AI 总结",
@@ -175,7 +178,6 @@
     "suggest": "今天想搜些什么呢~",
     "autoDetect": "自动检测",
     "general": "常规下载",
-    "extra": "其他信息",
     "export": "导出数据",
     "exported": "已导出数据至 {0}",
     "selectAll": "全选"

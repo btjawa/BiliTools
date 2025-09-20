@@ -240,7 +240,7 @@ export async function parseId(
   const err = () => new AppError(i18n.global.t('error.invalidInput'));
   if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(raw)) throw err();
 
-  if (/^(av\d+|BV\w{10}|ep\d+|ss\d+|md\d+|au\d+|am\d+)$/i.test(raw)) {
+  if (/^(av\d+|BV\w{10}|ep\d+|ss\d+|md\d+|au\d+|am\d+|cv\d+)$/i.test(raw)) {
     const map: Record<string, MediaType> = {
       av: MediaType.Video,
       bv: MediaType.Video,
@@ -256,7 +256,9 @@ export async function parseId(
 
   let url: URL;
   try {
-    url = new URL(/\.(bilibili\.com|b23\.tv)$/i.test(raw) ? `https://${raw}` : raw);
+    url = new URL(
+      /\.(bilibili\.com|b23\.tv)$/i.test(raw) ? `https://${raw}` : raw,
+    );
   } catch {
     if (ignore)
       return {
@@ -279,11 +281,11 @@ export async function parseId(
     const mid = segs[0];
     const type = segs[1];
     if (type === 'favlist') {
-      const fid = Number(url.searchParams.get('fid'));
+      const fid = url.searchParams.get('fid');
       return {
         id: mid,
         type: MediaType.Favorite,
-        target: isNaN(fid) ? undefined : fid,
+        target: fid !== null ? Number(fid) : undefined,
       };
     }
     if (
@@ -291,11 +293,23 @@ export async function parseId(
       type === 'lists' ||
       segs.length === 1
     ) {
-      const id = Number(input.match(/\/lists\/(\d+)/)?.[1]);
+      const id = input.match(/\/lists\/(\d+)/)?.[1];
       return {
         id: mid,
-        type: MediaType.Uploads,
-        target: isNaN(id) ? undefined : id,
+        type: MediaType.UserVideo,
+        target: id !== null ? Number(id) : undefined,
+      };
+    }
+    if (segs[2] === 'opus' || type === 'article') {
+      return {
+        id: mid,
+        type: MediaType.UserOpus,
+      };
+    }
+    if (segs[2] == 'audio' || type == 'audio') {
+      return {
+        id: mid,
+        type: MediaType.UserAudio,
       };
     }
     throw err();
@@ -319,6 +333,13 @@ export async function parseId(
         id,
         type: MediaType.MusicList,
       };
+  }
+
+  if (/(cv\d+)/i.test(id) || type === 'opus') {
+    return {
+      id,
+      type: MediaType.Opus,
+    };
   }
 
   if (type === 'watchlater') {

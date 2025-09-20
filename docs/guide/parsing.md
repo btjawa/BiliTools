@@ -8,8 +8,11 @@
 
 > [!TIP]
 > 一般情况下，资源分类保持“自动检测”即可。但在以下情况，需手动选择对应资源分类：<br>
-> 1. 仅输入了收藏夹 `fid` 的情况
+> 1. 仅输入了收藏夹 `fid` / 专栏 的情况
 > 2. 仅输入了 **课程** SS 号 / EP 号的情况
+
+> [!IMPORTANT]
+> 哔哩哔哩正在合并”专栏“与”动态“为图文，本项目也做了如此处理，请注意辨别资源分类类型。
 
 目前支持解析：
 
@@ -41,16 +44,26 @@
   - https://www.bilibili.com/audio/am86055
   - am86055
 - 用户投稿视频 & 合集
-  - https://space.bilibili.com/52497613
-  - https://space.bilibili.com/52497613/video
-  - https://space.bilibili.com/52497613/upload/video
-  - https://space.bilibili.com/52497613/lists
-  - https://space.bilibili.com/52497613/lists/5747470
-  - 52497613
+  - https://space.bilibili.com/8047632
+  - https://space.bilibili.com/8047632/video
+  - https://space.bilibili.com/8047632/upload/video
+  - https://space.bilibili.com/8047632/lists
+  - https://space.bilibili.com/8047632/lists/5747470
+  - 8047632
+- 用户投稿图文（专栏 & 动态）
+  - https://space.bilibili.com/8047632/article
+  - https://space.bilibili.com/8047632/upload/opus
+  - https://www.bilibili.com/read/cv1
+  - https://www.bilibili.com/opus/38554821905721204
+  - cv1
+  - 38554821905721204
+- 用户投稿音频
+  - https://space.bilibili.com/8047632/audio
+  - https://space.bilibili.com/8047632/upload/audio
 - 用户收藏夹
-  - https://space.bilibili.com/52497613/favlist
-  - https://space.bilibili.com/52497613/favlist?fid=47742713
-  - 47742713
+  - https://space.bilibili.com/8047632/favlist
+  - https://space.bilibili.com/8047632/favlist?fid=338926432
+  - 338926432
 
 ## 解析功能区
 

@@ -9,7 +9,7 @@ export interface VideoTags {
 }
 
 export interface UgcInfo {
-  season_id: number;
+  section_id: number;
   id: number;
   aid: number;
   cid: number;
@@ -366,8 +366,8 @@ export interface FavoriteListInfo {
       fid: number;
       mid: number;
       title: string;
-    }[]
-  }
+    }[];
+  };
 }
 
 export interface FavoriteInfo {
@@ -451,9 +451,9 @@ export interface UploadsArchivesInfo {
       pubdate: number;
       stat: {
         view: number;
-      }
+      };
       title: string;
-    }[],
+    }[];
     meta: {
       cover: string;
       description: string;
@@ -461,8 +461,33 @@ export interface UploadsArchivesInfo {
       name: string;
       ptime: number;
       season_id: number;
-    }
-  }
+    };
+  };
+}
+
+export interface UserOpusInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    items: {
+      content: string;
+      cover?: {
+        url: string;
+      };
+      opus_id: string;
+    }[];
+    offset: string;
+  };
+}
+
+export interface UserAudioInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    data: MusicInfoData[];
+  };
 }
 
 export interface VideoPlayUrlInfo {

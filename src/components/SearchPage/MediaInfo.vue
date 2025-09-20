@@ -11,7 +11,7 @@
           </h2>
           <div class="text-xs flex flex-wrap items-center text-(--desc-color)">
             <template v-for="(v, k) in info.nfo.stat" :key="k">
-              <template v-if="v">
+              <template v-if="typeof v === 'number'">
                 <i class="bcc-iconfont" :class="iconMap[k]"></i>
                 <span class="ml-1.5!">{{ stat(v) }}</span>
               </template>

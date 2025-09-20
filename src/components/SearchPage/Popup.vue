@@ -34,7 +34,7 @@
               <Dropdown
                 v-if="id === 'subtitles'"
                 v-model="v.subtitle"
-                :drop="v.extras.misc.subtitles"
+                :drop="v.prov.misc.subtitles"
               />
               <VueDatePicker
                 v-if="id === 'history'"
@@ -120,8 +120,7 @@ const v = reactive({
   active: false,
   subtitle: String(),
   date: String(),
-  playUrl: {} as Types.PlayUrlProvider,
-  extras: {} as Types.ExtrasProvider,
+  prov: {} as Types.PopupProvider,
   select: {} as Types.PopupSelect,
 });
 
@@ -129,37 +128,36 @@ const extras = computed(() => ({
   misc: {
     icon: 'fa-file-export',
     data: [
-      ...(v.extras.misc.aiSummary ? ['aiSummary'] : []),
-      ...(v.extras.misc.subtitles.length ? ['subtitles'] : []),
+      ...(v.prov.misc.aiSummary ? ['aiSummary'] : []),
+      ...(v.prov.misc.subtitles.length ? ['subtitles'] : []),
     ],
   },
   nfo: {
     icon: 'fa-memo-circle-info',
     data: [
-      ...(v.extras.nfo.album ? ['album'] : []),
-      ...(v.extras.nfo.single ? ['single'] : []),
+      ...(v.prov.nfo.album ? ['album'] : []),
+      ...(v.prov.nfo.single ? ['single'] : []),
     ],
-
   },
   danmaku: {
     icon: 'fa-subtitles',
-    data: v.extras.danmaku,
+    data: v.prov.danmaku,
   },
   thumb: {
     icon: 'fa-images',
-    data: v.extras.thumb,
+    data: v.prov.thumb,
   },
 }));
 
 const quality = computed(() => ({
   res: {
     icon: 'fa-video',
-    data: new Set(v.playUrl.video?.map((v) => v.id)),
+    data: new Set(v.prov.video?.map((v) => v.id)),
   },
   enc: {
     icon: 'fa-video-plus',
     data: new Set(
-      v.playUrl.video
+      v.prov.video
         ?.filter((i) => i.id === v.select.res)
         ?.map((v) => v.codecid)
         .filter(Boolean),
@@ -167,11 +165,11 @@ const quality = computed(() => ({
   },
   abr: {
     icon: 'fa-volume',
-    data: new Set(v.playUrl.audio?.map((v) => v.id)),
+    data: new Set(v.prov.audio?.map((v) => v.id)),
   },
   fmt: {
     icon: 'fa-code-simple',
-    data: new Set(Types.QualityMap.fmt),
+    data: new Set(v.prov.video || v.prov.audio ? Types.QualityMap.fmt : []),
   },
 }));
 
@@ -179,30 +177,27 @@ const options = computed(() => ({
   audioVideo: {
     // #81
     icon: 'fa-video',
-    data: v.playUrl.video?.length && v.playUrl.audio?.length,
+    data: v.prov.video?.length && v.prov.audio?.length,
   },
   video: {
     icon: 'fa-volume-slash',
-    data: v.playUrl.video?.length,
+    data: v.prov.video?.length,
   },
   audio: {
     icon: 'fa-video-slash',
-    data: v.playUrl.audio?.length,
+    data: v.prov.audio?.length,
   },
 }));
 
 defineExpose({ init });
 
-async function init(
-  playUrl: Types.PlayUrlProvider,
-  extras: Types.ExtrasProvider,
-) {
+async function init(provider: Types.PopupProvider) {
   v.active = true;
-  v.playUrl = playUrl;
-  v.extras = extras;
+  v.prov = provider;
   (['res', 'abr', 'enc'] as const).forEach((i) => {
     v.select[i] = getDefaultQuality([...quality.value[i].data], i);
   });
+  v.select.fmt = v.prov.codec ?? Types.StreamFormat.Dash;
   v.select.misc = {
     aiSummary: false,
     subtitles: false,
@@ -216,8 +211,7 @@ async function init(
     history: false,
   };
   v.select.thumb = [];
-  v.select.fmt = playUrl.codec;
-  v.subtitle = v.extras.misc.subtitles[0]?.id ?? '';
+  v.subtitle = v.prov.misc.subtitles[0]?.id ?? '';
   v.date = new Intl.DateTimeFormat('en-CA').format(new Date());
   v.select.media = {
     video: false,
