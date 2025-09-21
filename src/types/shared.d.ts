@@ -10,13 +10,13 @@ export const QualityMap = {
 export const NamingTemplates = {
   series: {
     general: ['showtitle', 'container'] as const,
-    down: ['pubtime', 'downtime'] as const,
-    ids: ['fid'] as const,
+    down: ['pubtime', 'downtime', 'upper', 'upperid'] as const,
+    ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid', 'opid'] as const,
   },
   item: {
     general: ['showtitle', 'title', 'container', 'mediaType'] as const,
     down: ['index', 'pubtime', 'downtime', 'upper', 'upperid'] as const,
-    ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid'] as const,
+    ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid', 'opid'] as const,
   },
   file: {
     general: [
@@ -27,7 +27,7 @@ export const NamingTemplates = {
       'taskType',
     ] as const,
     down: ['index', 'pubtime', 'downtime', 'upper', 'upperid'] as const,
-    ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid'] as const,
+    ids: ['aid', 'sid', 'fid', 'cid', 'bvid', 'epid', 'ssid', 'opid'] as const,
     stream: ['res', 'abr', 'enc', 'fmt'] as const,
   },
 };
@@ -38,6 +38,7 @@ export interface PopupSelect {
   enc?: number;
   fmt: StreamFormat;
   misc: {
+    opusContent: boolean;
     aiSummary: boolean;
     subtitles: false | string;
   };
@@ -66,6 +67,7 @@ export interface Headers {
 }
 
 export enum TaskType {
+  OpusContent = 'opusContent',
   AISummary = 'aiSummary',
   Subtitles = 'subtitles',
   AlbumNfo = 'albumNfo',
@@ -120,6 +122,7 @@ export interface PopupProvider {
   audio?: PlayUrlResult[];
   codec?: StreamFormat;
   misc: {
+    opusContent: boolean;
     aiSummary: boolean;
     subtitles: { id: string; name: string }[];
   };
@@ -146,6 +149,7 @@ export interface MediaItem {
   bvid?: string;
   epid?: number;
   ssid?: number;
+  opid?: string;
   index: number;
 }
 

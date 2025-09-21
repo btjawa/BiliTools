@@ -10,6 +10,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { toRaw } from 'vue';
 import i18n from '@/i18n';
 import dayjs from 'dayjs';
+import { getOpusMarkdown } from './media/opus';
 
 // Reference https://linux.do/t/topic/642419
 function urlFilter(urls: string[]) {
@@ -192,6 +193,7 @@ async function handleNfo(task: Types.Task, subtask: Types.SubTask) {
     subtask.type === 'albumNfo' ? 'album' : 'nfo',
   );
 }
+
 async function handleSubtitle(task: Types.Task, subtask: Types.SubTask) {
   const { select, item } = task;
   const result = await extras.getSubtitle(item, {
@@ -224,6 +226,13 @@ async function handleAISummary(task: Types.Task, subtask: Types.SubTask) {
   } else return result;
 }
 
+async function handleOpusContent(task: Types.Task) {
+  const { item } = task;
+  const opid = task.item.opid;
+  if (!opid) return new Uint8Array(0);
+  return await getOpusMarkdown(item.title, opid);
+}
+
 function buildPaths(
   scope: keyof typeof Types.NamingTemplates,
   task: Types.Task,
@@ -236,24 +245,25 @@ function buildPaths(
   const t = i18n.global.t;
   const data = {
     showtitle: nfo.showtitle,
-    title: item.title,
+    title: item.type === 'opus' ? item.opid : item.title,
     container: t('mediaType.' + task.type),
     mediaType: t('mediaType.' + item.type),
     taskType: subtask ? t('taskType.' + subtask?.type) : null,
-    pubtime: nfo?.premiered ?? item?.pubtime,
+    pubtime: nfo?.premiered ?? item.pubtime,
     upper: nfo.upper?.name,
     upperid: nfo.upper?.mid,
-    aid: item?.aid,
-    sid: item?.sid,
-    fid: item?.fid,
-    cid: item?.cid,
-    bvid: item?.bvid,
-    epid: item?.epid,
-    ssid: item?.ssid,
-    res: select?.res ? t('quality.res.' + select.res) : null,
-    abr: select?.abr ? t('quality.abr.' + select.abr) : null,
-    enc: select?.enc ? t('quality.enc.' + select.enc) : null,
-    fmt: select?.fmt ? t('quality.fmt.' + select.fmt) : null,
+    aid: item.aid,
+    sid: item.sid,
+    fid: item.fid,
+    cid: item.cid,
+    bvid: item.bvid,
+    epid: item.epid,
+    ssid: item.ssid,
+    opid: item.opid,
+    res: select.res ? t('quality.res.' + select.res) : null,
+    abr: select.abr ? t('quality.abr.' + select.abr) : null,
+    enc: select.enc ? t('quality.enc.' + select.enc) : null,
+    fmt: select.fmt ? t('quality.fmt.' + select.fmt) : null,
     index: task.seq + 1,
     downtime: task.ts,
   };
@@ -285,8 +295,8 @@ async function handleTask(
 ) {
   if (type === 'refreshNfo') {
     const item = task.item;
-    const id = item.epid ?? item.ssid ?? item.sid ?? item.aid;
-    if (!id) throw new AppError('No sid or aid or epid or ssid found');
+    const id = item.opid ?? item.epid ?? item.ssid ?? item.sid ?? item.aid;
+    if (!id) throw new AppError('No opid / sid / aid / epid / ssid found');
     const info = await getMediaInfo(id.toString(), item.type);
     task.nfo = info.nfo;
     return task.nfo;
@@ -308,6 +318,8 @@ async function handleTask(
     return await handleSubtitle(task, subtask);
   } else if (type === 'getAISummary') {
     return await handleAISummary(task, subtask);
+  } else if (type === 'getOpusContent') {
+    return await handleOpusContent(task);
   }
 }
 
@@ -378,6 +390,7 @@ function selectToSubTasks(id: string, select: Types.PopupSelect) {
   if (select.danmaku.history) push(Types.TaskType.HistoryDanmaku);
   if (select.nfo.album) push(Types.TaskType.AlbumNfo);
   if (select.nfo.single) push(Types.TaskType.SingleNfo);
+  if (select.misc.opusContent) push(Types.TaskType.OpusContent);
   if (select.misc.aiSummary) push(Types.TaskType.AISummary);
   if (select.misc.subtitles) push(Types.TaskType.Subtitles);
   if (!tasks.length) {

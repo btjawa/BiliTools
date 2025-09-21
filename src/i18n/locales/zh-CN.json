@@ -24,6 +24,7 @@
     "userAudio": "用户音频"
   },
   "taskType": {
+    "opusContent": "图文/专栏/动态内容",
     "aiSummary": "AI 总结",
     "subtitles": "字幕",
     "albumNfo": "合集/剧集刮削",
@@ -46,6 +47,7 @@
     "nextStep": "下一步",
     "misc": {
       "name": "杂项",
+      "opusContent": "图文/专栏/动态内容",
       "aiSummary": "AI 总结",
       "subtitles": "字幕"
     },
@@ -93,6 +95,7 @@
     "bvid": "BV号",
     "epid": "EP号",
     "ssid": "SS号",
+    "opid": "图文号",
     "res": "分辨率",
     "abr": "比特率",
     "enc": "编码格式",

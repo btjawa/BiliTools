@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context};
-use std::{path::PathBuf, sync::Arc};
+use std::{path::{PathBuf, Path}, sync::Arc};
 use tokio::{
     fs,
     sync::{broadcast::Receiver, oneshot, OnceCell, RwLock},
@@ -48,6 +48,24 @@ fn get_ext(task_type: TaskType, abr: usize) -> &'static str {
     }
 }
 
+async fn handle_opus_content(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
+    let parent = ptask.task.id.clone();
+    let id = subtask.id.clone();
+
+    let prog = Progress::new(parent.clone(), id.clone());
+
+    prog.send(1, 0).await?;
+
+    let result = request_frontend::<Vec<u8>>(parent, Some(id), RequestAction::GetOpusContent).await?;
+
+    let output_file = get_unique_path(ptask.folder.join(format!("{}.markdown", &ptask.filename)));
+    fs::write(&output_file, &*result).await?;
+
+    prog.send(1, 1).await?;
+    Ok(())
+}
+
 async fn handle_subtitle(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
     let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
@@ -93,7 +111,7 @@ async fn handle_ai_summary(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> Ta
 async fn handle_nfo(
     ptask: &ProgressTask,
     _rx: Receiver<CtrlEvent>,
-    folder: &PathBuf,
+    folder: &Path,
     nfo: &Arc<MediaNfo>,
 ) -> TauriResult<()> {
     let subtask = &ptask.subtask;
@@ -511,6 +529,9 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_subtitle(&ptask, rx))
                     .await;
+            }
+            TaskType::OpusContent => {
+                scheduler.try_join(&id, &sub_id, |rx| handle_opus_content(&ptask, rx)).await;
             }
         }
     }

@@ -5,13 +5,11 @@ import {
   mapMusicStaffs,
 } from '../utils';
 import { getPlayerInfo, getEdgeInfo, getUserInfo } from './extras';
-import { getOpusInfo } from './opus';
+import { getOpusDetails } from './opus';
 import { useUserStore } from '@/store';
 import { AppError } from '../error';
 import * as Resps from '@/types/media/data.d';
 import * as Types from '@/types/shared.d';
-
-type OpusResp = Awaited<ReturnType<typeof getOpusInfo>>;
 
 export async function getMediaInfo(
   id: string,
@@ -25,7 +23,7 @@ export async function getMediaInfo(
   switch (type) {
     case Types.MediaType.Video:
       url += '/x/web-interface/view';
-      params = idType === 'bv' ? { bvid: id } : { aid: idNum };
+      params = idType === 'bv' ? { bvid: id } : { aid: id.slice(2) };
       break;
     case Types.MediaType.Bangumi:
       url += '/pgc/view/web/season';
@@ -59,6 +57,19 @@ export async function getMediaInfo(
       url += '/x/v3/fav/folder/created/list-all';
       params = { up_mid: idNum };
       break;
+    case Types.MediaType.Opus:
+      url += '/x/polymer/web-dynamic/v1/forward/preview';
+      if (idType === 'cv') {
+        const url = await tryFetch(`https://www.bilibili.com/read/${id}`, {
+          type: 'url',
+        });
+        params = {
+          id: (url as string).match(/\/opus\/(\d+)/)?.[1],
+        };
+      } else {
+        params = { id };
+      }
+      break;
     case Types.MediaType.UserVideo:
       url += '/x/polymer/web-space/home/seasons_series';
       params = { mid: idNum, page_size: 10, page_num: options?.pn ?? 1 };
@@ -77,10 +88,7 @@ export async function getMediaInfo(
       params = { uid: idNum, ps: 42, pn: options?.pn ?? 1 };
       break;
   }
-  const body =
-    type === Types.MediaType.Opus
-      ? await getOpusInfo(id)
-      : await tryFetch(url, { params });
+  const body = await tryFetch(url, { params });
   if (type === Types.MediaType.Video) {
     const data = (body as Resps.VideoInfo).data;
     const map = (ep: Resps.UgcInfo, index: number) => ({
@@ -529,18 +537,20 @@ export async function getMediaInfo(
       list,
     };
   } else if (type === Types.MediaType.Opus) {
-    const { title, top, author, stat, content } = body as OpusResp;
-    const text = content?.paragraphs.find((v) => v.para_type === 1)?.text;
-    const pic = content?.paragraphs.find((v) => v.para_type === 2)?.pic;
-    const showtitle =
-      title?.text ??
-      `${text?.nodes.find((v) => v.type === 'TEXT_NODE_TYPE_WORD')?.word.words}...`;
-    const cover = top?.display.album.pics[0].url;
+    const { common_card, user, id: opid } = (body as Resps.OpusInfo).data.item;
+    const { stat } = await getOpusDetails(id);
+    const title = common_card.nodes.find(
+      (v) => v.type === 'RICH_TEXT_NODE_TYPE_TEXT',
+    )?.text;
+    if (!title) {
+      throw new AppError('No title found for opus ' + id);
+    }
     return {
       type,
       id,
       nfo: {
-        showtitle,
+        showtitle: title,
+        intro: title,
         tags: [],
         stat: {
           coin: stat?.coin.count,
@@ -549,35 +559,17 @@ export async function getMediaInfo(
           share: stat?.forward.count,
           like: stat?.like.count,
         },
-        upper: author
-          ? {
-              name: author.name,
-              mid: author.mid,
-              avatar: author.face,
-            }
-          : await getUserInfo(idNum),
-        thumbs: [
-          ...(cover
-            ? [
-                {
-                  id: 'cover',
-                  url: top?.display.album.pics[0].url,
-                },
-              ]
-            : []),
-          ...(pic?.pics.map((v, i) => ({
-            id: `brief-${i + 1}`,
-            url: v.url,
-          })) ?? []),
-        ],
+        upper: await getUserInfo(user.mid),
+        thumbs: getPublicImages(common_card),
       },
       list: [
         {
-          title: showtitle,
-          cover: pic?.pics[0].url ?? '',
-          desc: showtitle,
+          title,
+          cover: common_card.cover,
+          desc: title,
+          opid,
           duration: 0,
-          pubtime: author?.pub_ts ?? 0,
+          pubtime: 0,
           type: Types.MediaType.Opus,
           isTarget: true,
           index: 0,
@@ -653,6 +645,7 @@ export async function getMediaInfo(
         title: item.content,
         cover: item.cover?.url ?? '',
         desc: item.content,
+        opid: item.opus_id,
         duration: 0,
         pubtime: 0,
         type: Types.MediaType.Opus,

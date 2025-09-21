@@ -574,6 +574,7 @@ pub enum RequestAction {
     GetDanmaku,
     GetSubtitle,
     GetAISummary,
+    GetOpusContent,
 }
 
 impl RequestAction {
@@ -588,6 +589,7 @@ impl RequestAction {
             RequestAction::GetDanmaku => "getDanmaku",
             RequestAction::GetSubtitle => "getSubtitle",
             RequestAction::GetAISummary => "getAISummary",
+            RequestAction::GetOpusContent => "getOpusContent",
         }
     }
 }

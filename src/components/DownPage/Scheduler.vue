@@ -99,6 +99,9 @@
           <span v-if="task.select.misc.aiSummary">
             {{ $t('taskType.aiSummary') }}
           </span>
+          <span v-if="task.select.misc.opusContent">
+            {{ $t('taskType.opusContent') }}
+          </span>
         </div>
         <div class="flex gap-1 ml-auto flex-shrink-0 items-center">
           <i :class="[$fa.weight, 'fa-id-badge ml-auto']"></i>
@@ -158,9 +161,11 @@ const cache = reactive(
 );
 
 const buttons = computed(() => (task?: Task) => ({
-  ...(task && task?.state !== 'pending' && task?.state !== 'completed' && {
-    retry: 'fa-rotate-right',
-  }),
+  ...(task &&
+    task?.state !== 'pending' &&
+    task?.state !== 'completed' && {
+      retry: 'fa-rotate-right',
+    }),
   ...(task?.state === 'active' && {
     pause: 'fa-pause',
   }),

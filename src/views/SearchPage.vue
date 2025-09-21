@@ -303,6 +303,7 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
 
   const prov: Types.PopupProvider = {
     misc: {
+      opusContent: false,
       aiSummary: false,
       subtitles: [],
     },
@@ -318,7 +319,9 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
     prov.misc.aiSummary = await extras.getAISummary(info, { check: true });
   }
 
-  if (type !== 'opus') {
+  if (type === 'opus') {
+    prov.misc.opusContent = true;
+  } else {
     Object.assign(prov, await data.getPlayUrl(info, type, fmt));
     prov.nfo = {
       album: true,

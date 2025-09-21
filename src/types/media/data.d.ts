@@ -1,3 +1,5 @@
+import { OpusRichNode } from './opus.d';
+
 export interface VideoTags {
   code: number;
   message: string;
@@ -414,6 +416,26 @@ export interface FavoriteInfo {
     }[];
     has_more: boolean;
     ttl: number;
+  };
+}
+
+export interface OpusInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    item: {
+      id: string;
+      type: 1;
+      user: {
+        mid: number;
+        name: string;
+      };
+      common_card: {
+        cover: string;
+        nodes: OpusRichNode[];
+      };
+    };
   };
 }
 

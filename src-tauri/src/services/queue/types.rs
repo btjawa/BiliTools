@@ -32,6 +32,8 @@ pub struct MediaItem {
     pub epid: Option<usize>,
     #[specta(optional)]
     pub ssid: Option<usize>,
+    #[specta(optional)]
+    pub opid: Option<String>,
     pub index: usize,
 }
 
@@ -235,6 +237,7 @@ pub struct SubTask {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum TaskType {
+    OpusContent,
     AiSummary,
     Subtitles,
     AlbumNfo,

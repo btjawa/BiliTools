@@ -26,7 +26,7 @@ export default defineConfig([
     },
     rules: {
       eqeqeq: ['error'],
-    }
+    },
   },
   {
     files: ['scripts/*.{mjs,cjs,js}'],

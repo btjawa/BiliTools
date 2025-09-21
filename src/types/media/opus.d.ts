@@ -75,6 +75,7 @@ type OpusContentPara =
       para_type: 2;
       pic: {
         pics: {
+          height: number;
           url: string;
         }[];
         style: 2;
@@ -84,6 +85,7 @@ type OpusContentPara =
       para_type: 3;
       line: {
         pic: {
+          height: number;
           url: string;
         };
       };
@@ -110,7 +112,10 @@ type OpusContentPara =
       link_card: {
         card: {
           oid: string;
-          opus: {
+          item_null?: {
+            text: string;
+          };
+          opus?: {
             author: {
               mid: number;
               name: string;
@@ -140,42 +145,27 @@ type OpusContentNode =
     }
   | {
       type: 'TEXT_NODE_TYPE_RICH';
-      rich: {
-        orig_text: string;
-        text: string;
-        style?: {
-          font_level: string;
-          font_size: 17 | 24;
-        };
-      } & OpusContentRich;
+      rich: OpusRichNode;
     };
 
+export type OpusRichNode = {
+  orig_text: string;
+  text: string;
+  style?: {
+    font_level: 'regular';
+    font_size: 17 | 24;
+  };
+} & OpusContentRich;
+
 type OpusContentRich =
-  | {
-      jump_url?: string;
-      type: 'RICH_TEXT_NODE_TYPE_WEB';
-    }
   | {
       rid: string;
       type: 'RICH_TEXT_NODE_TYPE_AT';
     }
   | {
-      jump_url?: string;
+      jump_url: string;
       rid: string;
       type: 'RICH_TEXT_NODE_TYPE_BV';
-    }
-  | {
-      rid: string;
-      type: 'RICH_TEXT_NODE_TYPE_LOTTERY';
-    }
-  | {
-      jump_url?: string;
-      type: 'RICH_TEXT_NODE_TYPE_TOPIC';
-    }
-  | {
-      jump_url?: string;
-      rid: string;
-      type: 'RICH_TEXT_NODE_TYPE_GOODS';
     }
   | {
       emoji: {
@@ -185,6 +175,27 @@ type OpusContentRich =
       type: 'RICH_TEXT_NODE_TYPE_EMOJI';
     }
   | {
+      goods: {
+        jump_url: string;
+      };
+      type: 'RICH_TEXT_NODE_TYPE_GOODS';
+    }
+  | {
+      rid: string;
+      type: 'RICH_TEXT_NODE_TYPE_LOTTERY';
+    }
+  | {
+      type: 'RICH_TEXT_NODE_TYPE_TEXT';
+    }
+  | {
+      jump_url: string;
+      type: 'RICH_TEXT_NODE_TYPE_TOPIC';
+    }
+  | {
       rid: string;
       type: 'RICH_TEXT_NODE_TYPE_VOTE';
+    }
+  | {
+      jump_url: string;
+      type: 'RICH_TEXT_NODE_TYPE_WEB';
     };

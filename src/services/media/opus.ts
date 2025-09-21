@@ -2,7 +2,7 @@ import { AppError } from '../error';
 import { tryFetch } from '../utils';
 import * as Types from '@/types/media/opus.d';
 
-export async function getOpusInfo(id: string) {
+export async function getOpusDetails(id: string) {
   const prefix = id.startsWith('cv') ? 'read' : 'opus';
   const text = await tryFetch(`https://www.bilibili.com/${prefix}/${id}`, {
     type: 'text',
@@ -41,4 +41,168 @@ export async function getOpusInfo(id: string) {
     stat,
     content,
   };
+}
+
+const url = (url: string) =>
+  url.startsWith('https:') ? url : `https://${url}`;
+
+function handleOpusNode(
+  id: string,
+  nodes: Types.OpusContentNode[],
+  options?: {
+    quote?: boolean;
+  },
+) {
+  let h2 = false;
+  let line = '';
+  for (const n of nodes) {
+    let p = '';
+    if (n.type === 'TEXT_NODE_TYPE_WORD') {
+      const { color, font_size, style } = n.word;
+      const words = n.word.words.replaceAll('\u00A0', '&nbsp;');
+      p = words;
+
+      if (color) {
+        p = `<span style="color:${color}">${words}</span>`;
+      }
+      if (options?.quote && words === '\u000A') {
+        p = '<br>\n> ';
+      }
+      if (n.word.words.trim().length !== n.word.words.length) {
+        if (style?.bold) {
+          p = `<strong>${words}</strong>`;
+        }
+      } else {
+        if (font_size === 24) {
+          h2 = true;
+        }
+        if (style?.bold) {
+          p = `**${words}**`;
+        }
+      }
+    }
+    if (n.type === 'TEXT_NODE_TYPE_RICH') {
+      const { style } = n.rich;
+      const rich = n.rich;
+      if (style?.font_size === 24) {
+        h2 = true;
+      }
+      let src = '';
+      switch (rich.type) {
+        case 'RICH_TEXT_NODE_TYPE_AT':
+          src = `https://space.bilibili.com/${rich.rid}`;
+          break;
+        case 'RICH_TEXT_NODE_TYPE_BV':
+        case 'RICH_TEXT_NODE_TYPE_TOPIC':
+        case 'RICH_TEXT_NODE_TYPE_WEB':
+          src = url(rich.jump_url);
+          break;
+        case 'RICH_TEXT_NODE_TYPE_EMOJI':
+          src = url(rich.emoji.icon_url);
+          break;
+        case 'RICH_TEXT_NODE_TYPE_GOODS':
+          src = url(rich.goods.jump_url);
+          break;
+        case 'RICH_TEXT_NODE_TYPE_VOTE':
+          src += `http://t.bilibili.com/vote/h5/result?vote_id=${rich.rid}&dynamic_id=${id}`;
+          break;
+        case 'RICH_TEXT_NODE_TYPE_LOTTERY':
+          src += `https://www.bilibili.com/h5/lottery/result?business_id=${id}`;
+          break;
+      }
+      p = `![](${src})`;
+    }
+    line += p;
+  }
+  return {
+    line,
+    h2,
+    quote: options?.quote ?? false,
+  };
+}
+
+export async function getOpusMarkdown(title: string, opid: string) {
+  const { id, top, author, stat, content } = await getOpusDetails(opid);
+  let md = `# ${title}\n\n`;
+
+  for (const p of top?.display.album.pics ?? []) {
+    md += `![](${p.url})\n\n`;
+  }
+
+  if (author) {
+    md += `> 作者：[${author.name}](https://space.bilibili.com/${author.mid})\n\n`;
+  }
+
+  if (stat) {
+    const s = [
+      ['👍 喜欢', stat.like?.count],
+      ['🪙 投币', stat.coin?.count],
+      ['⭐ 收藏', stat.favorite?.count],
+      ['🔁 转发', stat.forward?.count],
+      ['💬 评论', stat.comment?.count],
+    ]
+      .filter(([, v]) => typeof v === 'number')
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(' | ');
+    md += `${s}\n\n`;
+  }
+
+  for (const p of content?.paragraphs ?? []) {
+    const t = p.para_type;
+    let line = '';
+    let quote = false;
+    let h2 = false;
+    if (t === 1 || t === 4) {
+      if (t === 4) quote = true;
+      const r = handleOpusNode(id, p.text.nodes, {
+        quote: t === 4,
+      });
+      line += r.line;
+      h2 = r.h2;
+      quote = r.quote;
+    }
+    if (t === 2) {
+      for (const n of p.pic.pics) {
+        const { height, url: src } = n;
+        line += `<p align=center><img src="${url(src)}" height=${height} /></p>`;
+      }
+    }
+    if (t === 3) {
+      const { height, url: src } = p.line.pic;
+      line += `<p align=center><img src="${url(src)}" height=${height} /></p>`;
+    }
+    if (t === 5) {
+      for (const [i, n] of p.list.items.entries()) {
+        line += `${'\u0020'.repeat(n.level)} `;
+        let prefix = `${i}. `;
+        if (p.list.style === 2) {
+          prefix = '- ';
+        }
+        line += prefix;
+        const r = handleOpusNode(id, n.nodes);
+        line += r.line;
+        h2 = r.h2;
+        quote = r.quote;
+        line += '\n';
+      }
+    }
+    if (t === 6) {
+      const { opus, item_null } = p.link_card.card;
+      const title = opus?.title ?? item_null?.text;
+      const jump_url = url(opus?.jump_url ?? '');
+      line += `[${title}](${jump_url})`;
+    }
+    if (p.align) {
+      const map = {
+        0: 'left',
+        1: 'center',
+        2: 'right',
+      };
+      line = `<p align=${map[p.align]}>${line}</p>`;
+    }
+    if (h2) line = `## ${line}`;
+    if (quote) line = `> ${line}`;
+    md += `${line}\n\n`;
+  }
+  return new TextEncoder().encode(md);
 }
