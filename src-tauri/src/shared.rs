@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, LazyLock},
 };
 use tauri::{
-    http::{HeaderMap, HeaderName, HeaderValue},
+    http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
     utils::WindowEffect as TauriWindowEffect,
     AppHandle, Manager, Theme as TauriTheme, Wry,
 };
@@ -25,6 +25,8 @@ use crate::storage::{
     },
     cookies,
 };
+
+use crate::{TauriError, TauriResult};
 
 pub static APP_HANDLE: LazyLock<Arc<OnceCell<AppHandle<Wry>>>> =
     LazyLock::new(|| Arc::new(OnceCell::new()));
@@ -324,13 +326,27 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     e
 }
 
+pub async fn get_image(path: &PathBuf, url: &String) -> TauriResult<()> {
+    let client = init_client().await?;
+    let response = client.get(url).send().await?;
+    if response.status() != StatusCode::OK {
+        return Err(TauriError::new(
+            format!("Error while fetching thumb {url}"),
+            Some(response.status()),
+        ));
+    }
+    let bytes = response.bytes().await?;
+    tokio::fs::write(path, &bytes).await?;
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn set_window(
     window: tauri::WebviewWindow,
     theme: Theme,
     window_effect: WindowEffect,
-) -> crate::TauriResult<(bool, Option<&'static str>)> {
+) -> TauriResult<(bool, Option<&'static str>)> {
     use tauri::{utils::config::WindowEffectsConfig, window::Color};
     #[cfg(target_os = "windows")]
     window.with_webview(move |webview| unsafe {

@@ -1,11 +1,13 @@
 use anyhow::{anyhow, Context};
-use std::{path::{PathBuf, Path}, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::{
     fs,
     sync::{broadcast::Receiver, oneshot, OnceCell, RwLock},
 };
 
-use tauri::http::StatusCode;
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
 use crate::{
@@ -14,7 +16,7 @@ use crate::{
         runtime::{request_frontend, CtrlEvent, Progress, RequestAction, Scheduler},
         types::{MediaNfo, MediaNfoThumb, MediaUrls, SubTask, Task, TaskType},
     },
-    shared::{get_app_handle, get_unique_path, init_client, WORKING_PATH},
+    shared::{get_app_handle, get_image, get_unique_path, WORKING_PATH},
     TauriError, TauriResult,
 };
 
@@ -57,7 +59,8 @@ async fn handle_opus_content(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> 
 
     prog.send(1, 0).await?;
 
-    let result = request_frontend::<Vec<u8>>(parent, Some(id), RequestAction::GetOpusContent).await?;
+    let result =
+        request_frontend::<Vec<u8>>(parent, Some(id), RequestAction::GetOpusContent).await?;
 
     let output_file = get_unique_path(ptask.folder.join(format!("{}.markdown", &ptask.filename)));
     fs::write(&output_file, &*result).await?;
@@ -131,17 +134,9 @@ async fn handle_nfo(
     fs::write(&output_file, &*data).await?;
 
     if subtask.task_type == TaskType::AlbumNfo {
-        let client = init_client().await?;
+        let path = folder.join("poster.jpg");
         let url = format!("{}@.jpg", nfo.thumbs[0].url);
-        let response = client.get(&url).send().await?;
-        if response.status() != StatusCode::OK {
-            return Err(TauriError::new(
-                format!("Error while fetching thumb {url}"),
-                Some(response.status()),
-            ));
-        }
-        let bytes = response.bytes().await?;
-        fs::write(folder.join("poster.jpg"), &bytes).await?;
+        get_image(&path, &url).await?;
     }
 
     prog.send(1, 1).await?;
@@ -269,25 +264,19 @@ async fn handle_thumbs(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Tau
     let thumbs =
         request_frontend::<Vec<MediaNfoThumb>>(parent, Some(id), RequestAction::GetThumbs).await?;
 
-    let client = init_client().await?;
     let content = thumbs.len() as u64;
 
     for (index, thumb) in thumbs.iter().enumerate() {
         if let Ok(CtrlEvent::Cancel) = rx.try_recv() {
             return Ok(());
         }
-        let output_file = get_unique_path(ptask.folder.join(format!("{}.{}.jpg", &ptask.filename, thumb.id )));
-        let response = client
-            .get(format!("{}@.jpg", thumb.url))
-            .send().await?;
-        if response.status() != StatusCode::OK {
-            return Err(TauriError::new(
-                format!("Error while fetching thumb {}", thumb.url),
-                Some(response.status())
-            ));
-        }
-        let bytes = response.bytes().await?;
-        fs::write(&output_file, &bytes).await?;
+        let url = format!("{}@.jpg", thumb.url);
+        let path = get_unique_path(
+            ptask
+                .folder
+                .join(format!("{}.{}.jpg", &ptask.filename, thumb.id)),
+        );
+        get_image(&path, &url).await?;
         prog.send(content, index as u64).await?;
     }
 
@@ -430,10 +419,9 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
     let id = task_snapshot.id.clone();
     let select = task_snapshot.select.clone();
 
-    let nfo =
-        request_frontend::<Option<MediaNfo>>(id.clone(), None, RequestAction::RefreshNfo).await?;
+    let nfo = request_frontend::<MediaNfo>(id.clone(), None, RequestAction::RefreshNfo).await?;
     let mut guard = task.write().await;
-    guard.nfo = Arc::try_unwrap(nfo).ok().and_then(|r| r.map(Arc::new));
+    guard.nfo = nfo;
 
     let urls = if select.media.any_true() {
         let urls =
@@ -491,18 +479,14 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
         match subtask.task_type {
             TaskType::Video | TaskType::Audio => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        handle_media(&ptask, rx, &video, &audio)
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_media(&ptask, rx, &video, &audio))
                     .await;
             }
             TaskType::AudioVideo => {
                 scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        handle_merge(&ptask, rx, &video, &audio)
-                    })
+                    .try_join(&id, &sub_id, |rx| handle_merge(&ptask, rx, &video, &audio))
                     .await;
-            },
+            }
             TaskType::Thumb => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_thumbs(&ptask, rx))
@@ -514,11 +498,11 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
                     .await;
             }
             TaskType::AlbumNfo | TaskType::SingleNfo => {
-                if let Some(nfo) = task.nfo.clone() {
-                    scheduler
-                        .try_join(&id, &sub_id, |rx| handle_nfo(&ptask, rx, &folder, &nfo))
-                        .await;
-                }
+                scheduler
+                    .try_join(&id, &sub_id, |rx| {
+                        handle_nfo(&ptask, rx, &folder, &task.nfo)
+                    })
+                    .await;
             }
             TaskType::AiSummary => {
                 scheduler
@@ -531,7 +515,9 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
                     .await;
             }
             TaskType::OpusContent => {
-                scheduler.try_join(&id, &sub_id, |rx| handle_opus_content(&ptask, rx)).await;
+                scheduler
+                    .try_join(&id, &sub_id, |rx| handle_opus_content(&ptask, rx))
+                    .await;
             }
         }
     }

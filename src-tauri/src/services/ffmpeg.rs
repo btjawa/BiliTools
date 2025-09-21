@@ -15,7 +15,7 @@ use tokio::{
 use crate::{
     config,
     queue::{runtime::Progress, types::Task},
-    shared::get_app_handle,
+    shared::{get_app_handle, get_image},
     TauriError, TauriResult,
 };
 
@@ -97,45 +97,36 @@ pub async fn merge(
     ext: &str,
     tx: &Progress,
     mut cancel: oneshot::Receiver<()>,
-    video_path: &Path,
-    audio_path: &Path,
+    video: &Path,
+    audio: &Path,
 ) -> TauriResult<PathBuf> {
     let app = get_app_handle();
     let temp_root = config::read().temp_dir().join(&*id);
     fs::create_dir_all(&temp_root).await?;
 
     let output = temp_root.join(format!("{id}.{ext}"));
-    let duration = get_duration(video_path).await?;
+    let duration = get_duration(video).await?;
 
-    let video = video_path.to_string_lossy().to_string();
-    let audio = audio_path.to_string_lossy().to_string();
+    let mut c = app.shell().sidecar(EXEC)?;
 
-    let mut args = vec![
-        "-hide_banner",
-        "-nostats",
-        "-loglevel",
-        "warning",
-        "-i",
-        &video,
-        "-i",
-        &audio,
-        "-c",
-        "copy",
-        "-shortest",
-    ];
+    c = c
+        .args(["-hide_banner", "-nostats", "-loglevel", "warning"])
+        .arg("-i")
+        .arg(video.as_os_str())
+        .arg("-i")
+        .arg(audio.as_os_str())
+        .args(["-c", "copy", "-shortest"]);
 
     if ext == "mp4" {
-        args.push("-movflags");
-        args.push("+faststart");
+        c = c.args(["-movflags", "+faststart"]);
     }
 
-    let _output = output.to_string_lossy().to_string();
+    c = c
+        .args(["-progress", "pipe:1"])
+        .arg(output.as_os_str())
+        .arg("-y");
 
-    args.extend_from_slice(&["-progress", "pipe:1", &_output, "-y"]);
-
-    log::info!("Merge args for {id}: \n{args:?}");
-
-    let (mut _rx, child) = app.shell().sidecar(EXEC)?.args(args).spawn()?;
+    let (mut _rx, child) = c.spawn()?;
     let mut child = Some(child);
     let mut monitor = Box::pin(monitor(duration, _rx, tx));
     tokio::select! {
@@ -155,130 +146,117 @@ pub async fn convert_audio(
     task: Arc<Task>,
 ) -> TauriResult<(PathBuf, String)> {
     let app = get_app_handle();
-    let temp_root = config::read().temp_dir().join(&*id);
+    let cfg = config::read();
+
+    if cfg.convert.mp3 {
+        ext = "mp3";
+    }
+
+    let add_meta = ext != "eac3" && cfg.add_metadata;
+    let temp_root = cfg.temp_dir().join(&*id);
     fs::create_dir_all(&temp_root).await?;
 
     let duration = get_duration(input).await?;
+    let nfo = task.nfo.as_ref();
 
-    let mut args: Vec<String> = Vec::new();
+    let mut c = app.shell().sidecar(EXEC)?;
 
-    args.extend(
-        [
-            "-hide_banner",
-            "-nostats",
-            "-loglevel",
-            "warning",
-            "-i",
-            input.to_string_lossy().as_ref(),
+    c = c
+        .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
+        .arg(input.as_os_str());
+
+    if let Some(thumb) = nfo.thumbs.first().filter(|_| add_meta) {
+        let cover_url = format!("{}@.jpg", thumb.url);
+        let cover = &temp_root.join("cover.jpg");
+        get_image(cover, &cover_url).await?;
+        c = c.arg("-i").arg(cover.as_os_str()).args([
             "-map",
             "0:a:0",
-            "-vn",
-        ]
-        .into_iter()
-        .map(Into::into),
-    );
+            "-map",
+            "1:v:0",
+            "-c:v",
+            "copy",
+            "-disposition:v:0",
+            "attached_pic",
+        ]);
+    } else {
+        c = c.args(["-map", "0:a:0"]);
+    }
 
-    if config::read().convert.mp3 {
-        args.extend(
-            ["-c:a", "libmp3lame", "-q:a", "2", "-id3v2_version", "3"]
-                .into_iter()
-                .map(Into::into),
-        );
+    if cfg.convert.mp3 {
+        c = c.args(["-c:a", "libmp3lame", "-q:a", "2"]);
         ext = "mp3";
     } else {
-        args.extend(["-c", "copy"].into_iter().map(Into::into));
+        c = c.args(["-c:a", "copy"]);
         if ext == "m4a" {
-            args.extend(
-                [
-                    "-bsf:a",
-                    "aac_adtstoasc",
-                    "-movflags",
-                    "+faststart",
-                    "-f",
-                    "mp4",
-                ]
-                .into_iter()
-                .map(Into::into),
-            );
+            c = c.args([
+                "-bsf:a",
+                "aac_adtstoasc",
+                "-movflags",
+                "+faststart",
+                "-f",
+                "mp4",
+            ]);
         }
     }
 
-    if let Some(nfo) = task
-        .nfo
-        .as_ref()
-        .filter(|_| ext != "eac3")
-        .filter(|_| config::read().add_metadata)
-    {
+    if add_meta {
         let ts = nfo.premiered.as_ref().and_then(|v| v.as_i64()).unwrap_or(0);
-
         let utc = OffsetDateTime::from_unix_timestamp(ts)?;
         let offset = UtcOffset::from_hms(8, 0, 0)?;
         let date = utc.to_offset(offset);
         let fmt = format_description!("[year]-[month]-[day]");
-        args.extend([
-            "-metadata".into(),
-            format!("title={}", task.item.title),
-            "-metadata".into(),
-            format!("comment={}", task.item.desc),
-            "-metadata".into(),
-            format!("date={}", ts),
-            "-metadata".into(),
-            format!("track={}", task.seq + 1),
-        ]);
+        c = c
+            .arg("-metadata")
+            .arg(format!("title={}", task.item.title))
+            .arg("-metadata")
+            .arg(format!("comment={}", task.item.desc))
+            .arg("-metadata")
+            .arg(format!("track={}", task.seq + 1));
         if ext == "flac" {
-            args.extend([
-                "-metadata".into(),
-                format!("DATE={}", date.format(&fmt)?),
-                "-metadata".into(),
-                format!("YEAR={}", date.year()),
-            ]);
-            for tag in nfo.tags.iter() {
-                args.extend(["-metadata".into(), format!("GENRE={tag}")]);
-            }
+            c = c
+                .arg("-metadata")
+                .arg(format!("DATE={}", date.format(&fmt)?))
+                .arg("-metadata")
+                .arg(format!("YEAR={}", date.year()))
+                .args(
+                    nfo.tags
+                        .iter()
+                        .flat_map(|tag| ["-metadata".into(), format!("GENRE={tag}")]),
+                );
         } else {
-            args.extend([
-                "-metadata".into(),
-                format!("genre={}", nfo.tags.join("; ")),
-                "-metadata".into(),
-                format!("date={}", date.format(&fmt)?),
-                "-metadata".into(),
-                format!("year={}", date.year()),
-            ]);
+            c = c
+                .arg("-metadata")
+                .arg(format!("genre={}", nfo.tags.join("; ")))
+                .arg("-metadata")
+                .arg(format!("date={}", date.format(&fmt)?))
+                .arg("-metadata")
+                .arg(format!("year={}", date.year()));
         }
         if let Some(staff) = nfo.credits.as_ref().map(|v| &v.staff) {
-            for s in staff {
+            c = c.args(staff.iter().flat_map(|s| {
                 let key = if ext == "flac" {
                     &s.role.to_ascii_uppercase()
                 } else {
                     &s.role
                 };
-                args.extend(["-metadata".into(), format!("{key}={}", s.name)]);
-            }
-            if ext != "flac" {
-                args.extend(["-id3v2_version".into(), "4".into()]);
-            }
+                ["-metadata".into(), format!("{key}={}", s.name)]
+            }));
         }
     }
 
+    if ext == "mp3" {
+        c = c.args(["-id3v2_version", "4"])
+    }
+
     let output = temp_root.join(&*id);
-    let _output = output.to_string_lossy().to_string();
 
-    args.extend(
-        [
-            "-map_metadata",
-            "0",
-            "-progress",
-            "pipe:1",
-            &format!("{_output}.{ext}"),
-            "-y",
-        ]
-        .into_iter()
-        .map(Into::into),
-    );
+    c = c
+        .args(["-map_metadata", "0", "-progress", "pipe:1"])
+        .arg(output.with_extension(ext).as_os_str())
+        .arg("-y");
 
-    log::info!("Convert args for {id}: \n{args:?}");
-
-    let (mut _rx, _) = app.shell().sidecar(EXEC)?.args(args).spawn()?;
+    let (mut _rx, _) = c.spawn()?;
     monitor(duration, _rx, tx).await?;
     Ok((output, ext.into()))
 }

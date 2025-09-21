@@ -510,12 +510,7 @@ impl Scheduler {
         Ok(())
     }
 
-    pub async fn try_join<F, Fut>(
-        &self,
-        parent: &Arc<String>,
-        id: &Arc<String>,
-        func: F,
-    )
+    pub async fn try_join<F, Fut>(&self, parent: &Arc<String>, id: &Arc<String>, func: F)
     where
         F: Fn(Receiver<CtrlEvent>) -> Fut,
         Fut: Future<Output = TauriResult<()>>,
@@ -524,7 +519,7 @@ impl Scheduler {
             Some(e) => e,
             None => return,
         };
-        
+
         loop {
             let task_rx = ctrl.tx.subscribe();
             let mut rx = ctrl.tx.subscribe();

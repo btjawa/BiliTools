@@ -212,8 +212,7 @@ pub struct Task {
     pub item: Arc<MediaItem>,
     #[serde(rename = "type")]
     pub media_type: String,
-    #[specta(optional)]
-    pub nfo: Option<Arc<MediaNfo>>,
+    pub nfo: Arc<MediaNfo>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]
