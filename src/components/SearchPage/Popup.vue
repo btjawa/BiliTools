@@ -129,6 +129,7 @@ const extras = computed(() => ({
     icon: 'fa-file-export',
     data: [
       ...(v.prov.misc.opusContent ? ['opusContent'] : []),
+      ...(v.prov.misc.opusImages ? ['opusImages'] : []),
       ...(v.prov.misc.aiSummary ? ['aiSummary'] : []),
       ...(v.prov.misc.subtitles.length ? ['subtitles'] : []),
     ],
@@ -201,6 +202,7 @@ async function init(provider: Types.PopupProvider) {
   v.select.fmt = v.prov.codec ?? Types.StreamFormat.Dash;
   v.select.misc = {
     opusContent: false,
+    opusImages: false,
     aiSummary: false,
     subtitles: false,
   };

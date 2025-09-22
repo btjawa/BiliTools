@@ -411,7 +411,8 @@ impl CtrlEntry {
             paused: AtomicBool::new(false),
         }
     }
-    fn send(&self, event: CtrlEvent) {
+    fn send(&self, event: CtrlEvent, id: &Arc<String>) {
+        log::info!("Event #{id} {event:?} received");
         match event {
             CtrlEvent::Retry => {
                 let _ = self.tx.send(CtrlEvent::Cancel);
@@ -529,7 +530,10 @@ impl Scheduler {
 
         TASK_MANAGER.state(id, TaskState::Active).await?;
         match handlers::handle_task(self, task).await {
-            Ok(_) => TASK_MANAGER.state(id, TaskState::Completed).await?,
+            Ok(_) => {
+                log::info!("task {} successfully completed", id.clone());
+                TASK_MANAGER.state(id, TaskState::Completed).await?;
+            },
             Err(e) => {
                 log::error!("task {} failed: {e:#}", id.clone());
                 let app = get_app_handle();
@@ -594,6 +598,7 @@ pub enum RequestAction {
     GetSubtitle,
     GetAISummary,
     GetOpusContent,
+    GetOpusImages,
 }
 
 impl RequestAction {
@@ -609,6 +614,7 @@ impl RequestAction {
             RequestAction::GetSubtitle => "getSubtitle",
             RequestAction::GetAISummary => "getAISummary",
             RequestAction::GetOpusContent => "getOpusContent",
+            RequestAction::GetOpusImages => "getOpusImages",
         }
     }
 }
@@ -694,7 +700,7 @@ pub async fn ctrl_event(
     }
     for id in list {
         if let Some(ctrl) = sch.get_ctrl(&id).await {
-            ctrl.send(event.clone());
+            ctrl.send(event.clone(), &id);
         }
         TASK_MANAGER
             .state(

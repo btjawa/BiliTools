@@ -102,6 +102,9 @@
           <span v-if="task.select.misc.opusContent">
             {{ $t('taskType.opusContent') }}
           </span>
+          <span v-if="task.select.misc.opusImages">
+            {{ $t('taskType.opusImages') }}
+          </span>
         </div>
         <div class="flex gap-1 ml-auto flex-shrink-0 items-center">
           <i :class="[$fa.weight, 'fa-id-badge ml-auto']"></i>

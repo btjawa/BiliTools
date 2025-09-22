@@ -225,7 +225,7 @@ export type PopupSelectNfo = { album: boolean; single: boolean }
 export type ProcessError = { name: string; error: string }
 export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
 export type QueueEvent = { type: "snapshot"; init: boolean; queue: QueueData; tasks?: Partial<{ [key in string]: Task }> | null; schedulers?: Partial<{ [key in string]: SchedulerView }> | null } | { type: "state"; parent: string; state: TaskState } | { type: "progress"; parent: string; id: string; status: SubTaskStatus } | { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "error"; parent: string; id?: string | null; message: string; code: number | null }
-export type RequestAction = "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent"
+export type RequestAction = "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent" | "getOpusImages"
 export type SchedulerView = { sid: string; ts: number; list: string[] }
 export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy }
 export type SettingsConvert = { danmaku: boolean; mp3: boolean }
@@ -239,7 +239,7 @@ export type SubTask = { id: string; type: TaskType }
 export type SubTaskStatus = { chunk: number; content: number }
 export type Task = { id: string; state: TaskState; subtasks: SubTask[]; status: Partial<{ [key in string]: SubTaskStatus }>; ts: number; seq: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo }
 export type TaskState = "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
-export type TaskType = "opusContent" | "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
+export type TaskType = "opusContent" | "opusImages" | "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
 export type TauriError = { code: AnyInt | null; message: string }
 export type Theme = 
 /**

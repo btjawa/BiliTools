@@ -43,8 +43,18 @@ export async function getOpusDetails(id: string) {
   };
 }
 
-const url = (url: string) =>
-  url.startsWith('https:') ? url : `https://${url}`;
+const toHttpsUrl = (url: string): string => {
+  if (url.startsWith('https://')) {
+    return url;
+  }
+  if (url.startsWith('http://')) {
+    return 'https://' + url.slice(7);
+  }
+  if (url.startsWith('//')) {
+    return 'https:' + url;
+  }
+  return 'https://' + url;
+};
 
 function handleOpusNode(
   id: string,
@@ -95,13 +105,13 @@ function handleOpusNode(
         case 'RICH_TEXT_NODE_TYPE_BV':
         case 'RICH_TEXT_NODE_TYPE_TOPIC':
         case 'RICH_TEXT_NODE_TYPE_WEB':
-          src = url(rich.jump_url);
+          src = rich.jump_url;
           break;
         case 'RICH_TEXT_NODE_TYPE_EMOJI':
-          src = url(rich.emoji.icon_url);
+          src = rich.emoji.icon_url;
           break;
         case 'RICH_TEXT_NODE_TYPE_GOODS':
-          src = url(rich.goods.jump_url);
+          src = rich.goods.jump_url;
           break;
         case 'RICH_TEXT_NODE_TYPE_VOTE':
           src += `http://t.bilibili.com/vote/h5/result?vote_id=${rich.rid}&dynamic_id=${id}`;
@@ -110,7 +120,7 @@ function handleOpusNode(
           src += `https://www.bilibili.com/h5/lottery/result?business_id=${id}`;
           break;
       }
-      p = `![](${src})`;
+      p = `![](${toHttpsUrl(src)})`;
     }
     line += p;
   }
@@ -126,7 +136,7 @@ export async function getOpusMarkdown(title: string, opid: string) {
   let md = `# ${title}\n\n`;
 
   for (const p of top?.display.album.pics ?? []) {
-    md += `![](${p.url})\n\n`;
+    md += `![](${toHttpsUrl(p.url)})\n\n`;
   }
 
   if (author) {
@@ -164,12 +174,12 @@ export async function getOpusMarkdown(title: string, opid: string) {
     if (t === 2) {
       for (const n of p.pic.pics) {
         const { height, url: src } = n;
-        line += `<p align=center><img src="${url(src)}" height=${height} /></p>`;
+        line += `<p align=center><img src="${toHttpsUrl(src)}" height=${height} /></p>`;
       }
     }
     if (t === 3) {
       const { height, url: src } = p.line.pic;
-      line += `<p align=center><img src="${url(src)}" height=${height} /></p>`;
+      line += `<p align=center><img src="${toHttpsUrl(src)}" height=${height} /></p>`;
     }
     if (t === 5) {
       for (const [i, n] of p.list.items.entries()) {
@@ -189,7 +199,7 @@ export async function getOpusMarkdown(title: string, opid: string) {
     if (t === 6) {
       const { opus, item_null } = p.link_card.card;
       const title = opus?.title ?? item_null?.text;
-      const jump_url = url(opus?.jump_url ?? '');
+      const jump_url = toHttpsUrl(opus?.jump_url ?? '');
       line += `[${title}](${jump_url})`;
     }
     if (p.align) {
@@ -205,4 +215,12 @@ export async function getOpusMarkdown(title: string, opid: string) {
     md += `${line}\n\n`;
   }
   return new TextEncoder().encode(md);
+}
+
+export async function getOpusImages(opid: string) {
+  const { top, content } = await getOpusDetails(opid);
+  return [
+    ...(top?.display.album.pics.map(v => v.url) ?? []),
+    ...(content?.paragraphs.filter(v => v.para_type === 2).flatMap(v => v.pic.pics.map(v => v.url)) ?? [])
+  ].map(v => v.replace('http:', 'https:'));
 }

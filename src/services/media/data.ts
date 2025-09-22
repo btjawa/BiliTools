@@ -538,7 +538,7 @@ export async function getMediaInfo(
     };
   } else if (type === Types.MediaType.Opus) {
     const { common_card, user, id: opid } = (body as Resps.OpusInfo).data.item;
-    const { stat } = await getOpusDetails(id);
+    const { stat, author } = await getOpusDetails(id);
     const title = common_card.nodes.find(
       (v) => v.type === 'RICH_TEXT_NODE_TYPE_TEXT',
     )?.text;
@@ -569,7 +569,7 @@ export async function getMediaInfo(
           desc: title,
           opid,
           duration: 0,
-          pubtime: 0,
+          pubtime: author?.pub_ts ?? 0,
           type: Types.MediaType.Opus,
           isTarget: true,
           index: 0,

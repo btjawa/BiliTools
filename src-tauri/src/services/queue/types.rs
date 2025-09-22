@@ -237,6 +237,7 @@ pub struct SubTask {
 #[serde(rename_all = "camelCase")]
 pub enum TaskType {
     OpusContent,
+    OpusImages,
     AiSummary,
     Subtitles,
     AlbumNfo,

@@ -39,6 +39,7 @@ export interface PopupSelect {
   fmt: StreamFormat;
   misc: {
     opusContent: boolean;
+    opusImages: boolean;
     aiSummary: boolean;
     subtitles: false | string;
   };
@@ -68,6 +69,7 @@ export interface Headers {
 
 export enum TaskType {
   OpusContent = 'opusContent',
+  OpusImages = 'opusImages',
   AISummary = 'aiSummary',
   Subtitles = 'subtitles',
   AlbumNfo = 'albumNfo',
@@ -123,6 +125,7 @@ export interface PopupProvider {
   codec?: StreamFormat;
   misc: {
     opusContent: boolean;
+    opusImages: boolean;
     aiSummary: boolean;
     subtitles: { id: string; name: string }[];
   };

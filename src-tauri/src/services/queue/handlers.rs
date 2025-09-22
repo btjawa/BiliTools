@@ -51,6 +51,38 @@ fn get_ext(task_type: TaskType, abr: usize) -> &'static str {
     }
 }
 
+async fn handle_opus_images(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
+    let parent = ptask.task.id.clone();
+    let id = subtask.id.clone();
+
+    let prog = Progress::new(parent.clone(), id.clone());
+    prog.send(0, 0).await?;
+
+    let thumbs =
+        request_frontend::<Vec<String>>(parent, Some(id), RequestAction::GetOpusImages).await?;
+
+    let content = thumbs.len() as u64;
+
+    for (index, thumb) in thumbs.iter().enumerate() {
+        if let Ok(CtrlEvent::Cancel) = rx.try_recv() {
+            return Ok(());
+        }
+        let url = format!("{}@.jpg", thumb);
+        let path = get_unique_path(
+            ptask
+                .folder
+                .join(format!("{}.{}.jpg", &ptask.filename, index)),
+        );
+        get_image(&path, &url).await?;
+        prog.send(content, index as u64).await?;
+    }
+
+    prog.send(content, content).await?;
+    Ok(())
+}
+
+
 async fn handle_opus_content(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
     let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();
@@ -63,7 +95,7 @@ async fn handle_opus_content(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> 
     let result =
         request_frontend::<Vec<u8>>(parent, Some(id), RequestAction::GetOpusContent).await?;
 
-    let output_file = get_unique_path(ptask.folder.join(format!("{}.markdown", &ptask.filename)));
+    let output_file = get_unique_path(ptask.folder.join(format!("{}.md", &ptask.filename)));
     fs::write(&output_file, &*result).await?;
 
     prog.send(1, 1).await?;
@@ -517,6 +549,11 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
             TaskType::OpusContent => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_opus_content(&ptask, rx))
+                    .await?;
+            }
+            TaskType::OpusImages => {
+                scheduler
+                    .try_join(&id, &sub_id, |rx| handle_opus_images(&ptask, rx))
                     .await?;
             }
         }

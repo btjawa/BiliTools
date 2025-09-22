@@ -4,13 +4,13 @@ import { getMediaInfo, getPlayUrl } from './media/data';
 import { AppError } from './error';
 
 import * as Types from '@/types/shared.d';
+import * as opus from './media/opus';
 import * as extras from './media/extras';
 import * as backend from './backend';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { toRaw } from 'vue';
 import i18n from '@/i18n';
 import dayjs from 'dayjs';
-import { getOpusMarkdown } from './media/opus';
 
 // Reference https://linux.do/t/topic/642419
 function urlFilter(urls: string[]) {
@@ -230,7 +230,13 @@ async function handleOpusContent(task: Types.Task) {
   const { item } = task;
   const opid = task.item.opid;
   if (!opid) return new Uint8Array(0);
-  return await getOpusMarkdown(item.title, opid);
+  return await opus.getOpusMarkdown(item.title, opid);
+}
+
+async function handleOpusImages(task: Types.Task) {
+  const opid = task.item.opid;
+  if (!opid) return [];
+  return await opus.getOpusImages(opid);
 }
 
 function buildPaths(
@@ -320,6 +326,8 @@ async function handleTask(
     return await handleAISummary(task, subtask);
   } else if (type === 'getOpusContent') {
     return await handleOpusContent(task);
+  } else if (type === 'getOpusImages') {
+    return await handleOpusImages(task);
   }
 }
 
@@ -391,6 +399,7 @@ function selectToSubTasks(id: string, select: Types.PopupSelect) {
   if (select.nfo.album) push(Types.TaskType.AlbumNfo);
   if (select.nfo.single) push(Types.TaskType.SingleNfo);
   if (select.misc.opusContent) push(Types.TaskType.OpusContent);
+  if (select.misc.opusImages) push(Types.TaskType.OpusImages);
   if (select.misc.aiSummary) push(Types.TaskType.AISummary);
   if (select.misc.subtitles) push(Types.TaskType.Subtitles);
   if (!tasks.length) {
