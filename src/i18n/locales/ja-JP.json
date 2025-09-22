@@ -16,9 +16,16 @@
     "music": "音楽",
     "musicList": "プレイリスト",
     "lesson": "レッスン",
-    "favorite": "お気に入り"
+    "watchLater": "あとで見る",
+    "favorite": "お気に入り",
+    "opus": "記事",
+    "userVideo": "ユーザー動画",
+    "userOpus": "ユーザー記事",
+    "userAudio": "ユーザー音声"
   },
   "taskType": {
+    "opusContent": "記事コンテンツ",
+    "opusImages": "記事画像",
     "aiSummary": "AI 要約",
     "subtitles": "字幕",
     "albumNfo": "シリーズ NFO",
@@ -41,6 +48,8 @@
     "nextStep": "次へ",
     "misc": {
       "name": "その他",
+      "opusContent": "記事コンテンツ",
+      "opusImages": "記事画像",
       "aiSummary": "AI 要約",
       "subtitles": "字幕"
     },
@@ -59,6 +68,7 @@
       "pic": "カバー",
       "cover": "カバー",
       "square_cover": "正方形カバー",
+      "first_frame": "先頭フレーム",
       "ugc_season_cover": "シリーズカバー",
       "season_cover": "シーズンカバー",
       "season_horizontal_cover_1610": "シーズンポスター (16:10)",
@@ -87,6 +97,7 @@
     "bvid": "BV 番号",
     "epid": "EP 番号",
     "ssid": "SS 番号",
+    "opid": "記事 ID",
     "res": "解像度",
     "abr": "ビットレート",
     "enc": "コーデック",

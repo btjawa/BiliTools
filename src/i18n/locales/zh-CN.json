@@ -25,7 +25,7 @@
   },
   "taskType": {
     "opusContent": "图文/专栏/动态内容",
-    "opusImages":"图文/专栏/动态图像",
+    "opusImages": "图文/专栏/动态图像",
     "aiSummary": "AI 总结",
     "subtitles": "字幕",
     "albumNfo": "合集/剧集刮削",
@@ -187,9 +187,6 @@
     "export": "导出数据",
     "exported": "已导出数据至 {0}",
     "selectAll": "全选"
-  },
-  "utils": {
-    "title": "工具箱"
   },
   "history": {
     "title": "历史记录",

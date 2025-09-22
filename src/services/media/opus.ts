@@ -220,7 +220,9 @@ export async function getOpusMarkdown(title: string, opid: string) {
 export async function getOpusImages(opid: string) {
   const { top, content } = await getOpusDetails(opid);
   return [
-    ...(top?.display.album.pics.map(v => v.url) ?? []),
-    ...(content?.paragraphs.filter(v => v.para_type === 2).flatMap(v => v.pic.pics.map(v => v.url)) ?? [])
-  ].map(v => v.replace('http:', 'https:'));
+    ...(top?.display.album.pics.map((v) => v.url) ?? []),
+    ...(content?.paragraphs
+      .filter((v) => v.para_type === 2)
+      .flatMap((v) => v.pic.pics.map((v) => v.url)) ?? []),
+  ].map((v) => v.replace('http:', 'https:'));
 }

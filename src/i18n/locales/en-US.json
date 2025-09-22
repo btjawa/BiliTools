@@ -16,9 +16,16 @@
     "music": "Music",
     "musicList": "Playlist",
     "lesson": "Course",
-    "favorite": "Favorites"
+    "watchLater": "Watch Later",
+    "favorite": "Favorites",
+    "opus": "Post",
+    "userVideo": "User Videos",
+    "userOpus": "User Posts",
+    "userAudio": "User Audio"
   },
   "taskType": {
+    "opusContent": "Post Content",
+    "opusImages": "Post Images",
     "aiSummary": "AI Summary",
     "subtitles": "Subtitles",
     "albumNfo": "Series/Album NFO",
@@ -41,6 +48,8 @@
     "nextStep": "Next",
     "misc": {
       "name": "Misc",
+      "opusContent": "Post Content",
+      "opusImages": "Post Images",
       "aiSummary": "AI Summary",
       "subtitles": "Subtitles"
     },
@@ -59,6 +68,7 @@
       "pic": "Cover",
       "cover": "Cover",
       "square_cover": "Square Cover",
+      "first_frame": "First Frame",
       "ugc_season_cover": "Series Cover",
       "season_cover": "Season Cover",
       "season_horizontal_cover_1610": "Season Poster (16:10)",
@@ -87,6 +97,7 @@
     "bvid": "BV ID",
     "epid": "EP ID",
     "ssid": "SS ID",
+    "opid": "Post ID",
     "res": "Resolution",
     "abr": "Bitrate",
     "enc": "Codec",

@@ -16,9 +16,16 @@
     "music": "音樂",
     "musicList": "歌單",
     "lesson": "課程",
-    "favorite": "收藏夾"
+    "watchLater": "稍後觀看",
+    "favorite": "收藏夾",
+    "opus": "圖文",
+    "userVideo": "用戶影片",
+    "userOpus": "用戶圖文",
+    "userAudio": "用戶音訊"
   },
   "taskType": {
+    "opusContent": "圖文/專欄/動態內容",
+    "opusImages": "圖文/專欄/動態圖像",
     "aiSummary": "AI 摘要",
     "subtitles": "字幕",
     "albumNfo": "合集/劇集刮削",
@@ -41,6 +48,8 @@
     "nextStep": "下一步",
     "misc": {
       "name": "雜項",
+      "opusContent": "圖文/專欄/動態內容",
+      "opusImages": "圖文/專欄/動態圖像",
       "aiSummary": "AI 摘要",
       "subtitles": "字幕"
     },
@@ -59,6 +68,7 @@
       "pic": "封面",
       "cover": "封面",
       "square_cover": "方形封面",
+      "first_frame": "首幀畫面",
       "ugc_season_cover": "合集封面",
       "season_cover": "本季封面",
       "season_horizontal_cover_1610": "本季海報 (16:10)",
@@ -87,6 +97,7 @@
     "bvid": "BV 號",
     "epid": "EP 號",
     "ssid": "SS 號",
+    "opid": "圖文號",
     "res": "解析度",
     "abr": "比特率",
     "enc": "編碼格式",
