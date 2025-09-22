@@ -47,7 +47,7 @@
 
 ## 杂项
 
-此处包括 **字幕** 与 **AI总结** 的相关选项。
+此处包括 **字幕**、 **AI总结** 与 **图文/专栏/动态** 的相关选项。
 
 对于字幕，右侧会提供下拉栏选择对应的语言。不一定所有的视频都有选中语言的字幕，缺失时会自动跳过。
 
@@ -65,6 +65,26 @@ AI总结的实际数据来自 **哔哩哔哩 AI 小助手**（实际为 `Shangha
 - 分段标题 - [00:00](https://www.bilibili.com/video/${BV号}?t=${分段时间})
 ```
 你可以在 [`/src/services/media/extras.ts:36:1`](https://github.com/btjawa/BiliTools/blob/v1.4.0/src/services/media/extras.ts#L36) 查看实际处理逻辑 (`function getAISummary`)。
+
+图文/专栏/动态的内容以 Markdown 格式保存：
+
+> [!TIP]
+> 对于包含不可见字符（诸如 `\u00A0`）会自动转换为兼容的 HTML 转义字符，例如 `&nbsp;`<br>
+> 一般情况下，会使用 Markdown 原生语法（诸如 `**` `##`），但在包含 HTML 转义字符的情况下会使用 HTML 标签（诸如`<strong></strong>`）<br>
+> 对于 `font-size: 24` 的情况，会使用 `##`；对于 `font-size: 17` 的情况，会使用默认正文。
+
+```markdown
+# 标题
+
+> 作者：[名称](链接)
+> 👍 喜欢: xxx | 🪙 投币: xxx | ⭐ 收藏: xxx | 🔁 转发: xxx | 💬 评论: xxx
+
+（若干可能的头图）
+
+（正文）
+```
+
+你可以在 [`/src/services/media/opus.ts:134:1`](https://github.com/btjawa/BiliTools/blob/v1.4.1/src/services/media/opus.ts#L134) 查看实际处理逻辑 (`function getOpusMarkdown`)。
 
 ## NFO 元数据
 

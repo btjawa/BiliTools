@@ -154,7 +154,7 @@ export async function getOpusMarkdown(title: string, opid: string) {
       .filter(([, v]) => typeof v === 'number')
       .map(([k, v]) => `${k}: ${v}`)
       .join(' | ');
-    md += `${s}\n\n`;
+    md += `> ${s}\n\n`;
   }
 
   for (const p of content?.paragraphs ?? []) {
