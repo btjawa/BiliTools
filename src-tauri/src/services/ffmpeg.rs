@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
     pin::pin,
@@ -25,13 +24,6 @@ const EXEC: &str = "/usr/libexec/bilitools/ffmpeg";
 
 #[cfg(not(all(target_os = "linux", not(debug_assertions))))]
 const EXEC: &str = "ffmpeg";
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct StreamInfo {
-    duration: u64,
-    video_codec: Option<String>,
-    audio_codec: Option<String>,
-}
 
 fn clean_log(raw_log: &[u8]) -> String {
     String::from_utf8_lossy(raw_log)

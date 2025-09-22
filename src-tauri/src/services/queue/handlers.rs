@@ -82,7 +82,6 @@ async fn handle_opus_images(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -
     Ok(())
 }
 
-
 async fn handle_opus_content(ptask: &ProgressTask, _rx: Receiver<CtrlEvent>) -> TauriResult<()> {
     let subtask = &ptask.subtask;
     let parent = ptask.task.id.clone();

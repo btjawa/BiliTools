@@ -533,7 +533,7 @@ impl Scheduler {
             Ok(_) => {
                 log::info!("task {} successfully completed", id.clone());
                 TASK_MANAGER.state(id, TaskState::Completed).await?;
-            },
+            }
             Err(e) => {
                 log::error!("task {} failed: {e:#}", id.clone());
                 let app = get_app_handle();
