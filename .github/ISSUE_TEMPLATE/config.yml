@@ -1,1 +1,5 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
+contact_links:
+  - name: Discussions / 社区讨论
+    url: https://github.com/btjawa/BiliTools/discussions
+    about: Discussions / 社区讨论

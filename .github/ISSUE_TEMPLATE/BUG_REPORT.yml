@@ -1,7 +1,7 @@
 name: Bug report / 反馈 Bug
 description: Bug report / 反馈 Bug
 title: "[Bug] "
-labels: ["bug", "needs triage"]
+labels: ["type: bug", "status: needs triage"]
 assignees: []
 
 body:

@@ -1,7 +1,7 @@
 name: Feature Request / 功能请求
 description: Feature Request / 功能请求
 title: "[Feature Request] "
-labels: ["enhancement", "needs triage"]
+labels: ["type: feature request", "status: needs triage"]
 assignees: []
 
 body:

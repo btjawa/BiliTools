@@ -32,7 +32,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ci:updatelog": "node scripts/updatelog.mjs",
-    "ci:binaries": "node scripts/binaries.mjs"
+    "ci:binaries": "node scripts/binaries.mjs",
+    "ci:close-issues": "node scripts/close-issues.mjs"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.7.0",
@@ -65,6 +66,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
+    "@octokit/rest": "^22.0.0",
     "@tauri-apps/cli": "2.7.0",
     "@types/markdown-it": "^14.1.2",
     "@types/md5": "^2.3.5",
@@ -82,7 +84,7 @@
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.0.5"
   },
-  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
+  "packageManager": "pnpm@10.17.0+sha512.fce8a3dd29a4ed2ec566fb53efbb04d8c44a0f05bc6f24a73046910fb9c3ce7afa35a0980500668fa3573345bd644644fa98338fa168235c80f4aa17aa17fbef",
   "engines": {
     "node": ">=20.0.0"
   }

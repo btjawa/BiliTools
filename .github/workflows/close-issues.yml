@@ -1,0 +1,29 @@
+name: Post-release housekeeping
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  close-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      
+      - name: Close issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: pnpm ci:close-issues
+        
