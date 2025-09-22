@@ -1,6 +1,6 @@
 {
   "name": "@btjawa/bilitools",
-  "version": "1.4.1-dev",
+  "version": "1.4.1",
   "description": "A cross-platform bilibili toolbox",
   "homepage": "https://github.com/btjawa/BiliTools#readme",
   "bugs": {
