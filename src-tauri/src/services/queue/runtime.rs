@@ -25,7 +25,7 @@ use crate::{
         handlers,
         types::{QueueData, Task},
     },
-    shared::{get_app_handle, get_ts, get_unique_path},
+    shared::{get_app_handle, get_ts, get_unique_path, process_err},
     storage::schedulers,
 };
 
@@ -228,12 +228,13 @@ impl TaskManager {
     }
 
     pub async fn state(&self, parent: &Arc<String>, state: TaskState) -> Result<()> {
-        if let Some(lock) = self.get_task(parent).await {
-            let mut task = lock.write().await;
-            task.state = state.clone();
-            let snapshot = task.clone();
-            archive::upsert(&snapshot).await?;
-        }
+        let Some(lock) = self.get_task(parent).await else {
+            return Ok(());
+        };
+        let mut task = lock.write().await;
+        task.state = state.clone();
+        let snapshot = task.clone();
+        archive::upsert(&snapshot).await?;
         let app = get_app_handle();
         QueueEvent::State {
             parent: parent.clone(),
@@ -328,6 +329,32 @@ impl TaskManager {
         *conc = new_conc;
     }
 
+    pub async fn housekeeping(&self, id: &Arc<String>) -> Result<()> {
+        let Some(lock) = self.get_task(id).await else {
+            return Ok(());
+        };
+        let mut task = lock.write().await;
+        let subtasks = task
+            .subtasks
+            .iter()
+            .map(|t| t.id.clone())
+            .collect::<Vec<_>>();
+        let temp_root = config::read().temp_dir();
+        for id in subtasks {
+            let dir = temp_root.join(&*id);
+            let _ = tokio::fs::remove_dir_all(dir).await;
+            let _ = crate::services::aria2c::cancel(id.clone()).await;
+            task.status.insert(
+                id,
+                Arc::new(SubTaskStatus {
+                    chunk: 0,
+                    content: 0,
+                }),
+            );
+        }
+        Ok(())
+    }
+
     pub async fn pop_task(&self, sid: &Arc<String>, id: &Arc<String>) -> Result<()> {
         archive::delete(id).await?;
 
@@ -373,7 +400,6 @@ struct CtrlEntry {
     tx: Sender<CtrlEvent>,
     cancelled: AtomicBool,
     paused: AtomicBool,
-    retry_flag: AtomicBool,
 }
 
 impl CtrlEntry {
@@ -383,11 +409,14 @@ impl CtrlEntry {
             tx,
             cancelled: AtomicBool::new(false),
             paused: AtomicBool::new(false),
-            retry_flag: AtomicBool::new(false),
         }
     }
     fn send(&self, event: CtrlEvent) {
         match event {
+            CtrlEvent::Retry => {
+                let _ = self.tx.send(CtrlEvent::Cancel);
+                let _ = self.tx.send(CtrlEvent::Retry);
+            }
             CtrlEvent::Cancel => {
                 if !self.cancelled.swap(true, SeqCst) {
                     let _ = self.tx.send(CtrlEvent::Cancel);
@@ -403,12 +432,6 @@ impl CtrlEntry {
                     let _ = self.tx.send(CtrlEvent::Resume);
                 }
             }
-            CtrlEvent::Retry => {
-                self.retry_flag.store(true, SeqCst);
-                self.cancelled.store(false, SeqCst);
-                self.paused.store(false, SeqCst);
-                let _ = self.tx.send(CtrlEvent::Cancel);
-            }
         }
     }
     fn is_paused(&self) -> bool {
@@ -416,9 +439,6 @@ impl CtrlEntry {
     }
     fn is_cancelled(&self) -> bool {
         self.cancelled.load(SeqCst)
-    }
-    fn retry_swap(&self) -> bool {
-        self.retry_flag.swap(false, SeqCst)
     }
 }
 
@@ -460,98 +480,102 @@ impl Scheduler {
         ctrls.get(id).cloned()
     }
 
+    pub fn dispatch_spawned(self: Arc<Self>) {
+        let name = format!("Scheduler #{}", self.sid);
+        log::info!("{name} restored via database");
+        async_runtime::spawn(async move {
+            let _ = self.dispatch().await.map_err(|e| process_err(e, &name));
+        });
+    }
+
     async fn dispatch(self: Arc<Self>) -> TauriResult<()> {
-        self.inited.set(())?;
         let list = { self.list.read().await.clone() };
         let mut handles = Vec::with_capacity(list.len());
         for id in list {
-            let Some(task) = TASK_MANAGER.get_task(&id).await else {
-                continue;
-            };
-            let state = task.read().await.state.clone();
-            if matches!(
-                state,
-                TaskState::Completed | TaskState::Cancelled | TaskState::Failed
-            ) {
-                continue;
-            }
-            let sem = { TASK_MANAGER.sem.read().await.clone() };
-            let permit = sem.acquire_owned().await;
-            TASK_MANAGER.state(&id, TaskState::Active).await?;
             let scheduler = self.clone();
             handles.push(async_runtime::spawn(async move {
-                let _permit = permit;
-                match handlers::handle_task(scheduler, task).await {
-                    Ok(_) => TASK_MANAGER.state(&id, TaskState::Completed).await?,
-                    Err(e) => {
-                        log::error!("task {} failed: {e:#}", id.clone());
-                        let app = get_app_handle();
-                        QueueEvent::Error {
-                            parent: id.clone(),
-                            id: None,
-                            message: format!("Task {id} failed: \n{}", e.message),
-                            code: e.code.map(|v| v.saturating_isize()),
-                        }
-                        .emit(app)?;
-                        TASK_MANAGER.state(&id, TaskState::Failed).await?;
-                    }
-                }
+                scheduler.handle_task(&id).await?;
                 Ok::<(), TauriError>(())
             }));
         }
         for h in handles {
             h.await??;
         }
-        if !self.list.read().await.is_empty() {
-            TASK_MANAGER
-                .move_scheduler(&self.sid, QueueType::Doing, QueueType::Complete)
-                .await?;
+        TASK_MANAGER
+            .move_scheduler(&self.sid, QueueType::Doing, QueueType::Complete)
+            .await?;
+        Ok(())
+    }
+
+    pub fn handle_task_spawned(self: Arc<Self>, id: &Arc<String>) {
+        let name = format!("Task #{id}");
+        log::info!("{name} respawned via retry");
+        let id = id.clone();
+        async_runtime::spawn(async move {
+            let _ = self
+                .handle_task(&id)
+                .await
+                .map_err(|e| process_err(e, &name));
+        });
+    }
+
+    async fn handle_task(self: Arc<Self>, id: &Arc<String>) -> TauriResult<()> {
+        let Some(task) = TASK_MANAGER.get_task(id).await else {
+            return Ok(());
+        };
+        let sem = { TASK_MANAGER.sem.read().await.clone() };
+        let permit = sem.acquire_owned().await;
+        let _permit = permit;
+
+        TASK_MANAGER.state(id, TaskState::Active).await?;
+        match handlers::handle_task(self, task).await {
+            Ok(_) => TASK_MANAGER.state(id, TaskState::Completed).await?,
+            Err(e) => {
+                log::error!("task {} failed: {e:#}", id.clone());
+                let app = get_app_handle();
+                QueueEvent::Error {
+                    parent: id.clone(),
+                    id: None,
+                    message: format!("Task {id} failed: \n{}", e.message),
+                    code: e.code.map(|v| v.saturating_isize()),
+                }
+                .emit(app)?;
+                TASK_MANAGER.state(id, TaskState::Failed).await?;
+            }
         }
         Ok(())
     }
 
-    pub async fn try_join<F, Fut>(&self, parent: &Arc<String>, id: &Arc<String>, func: F)
+    pub async fn try_join<F, Fut>(
+        &self,
+        parent: &Arc<String>,
+        id: &Arc<String>,
+        func: F,
+    ) -> TauriResult<()>
     where
-        F: Fn(Receiver<CtrlEvent>) -> Fut,
+        F: FnOnce(Receiver<CtrlEvent>) -> Fut,
         Fut: Future<Output = TauriResult<()>>,
     {
-        let ctrl = match self.get_ctrl(parent).await {
-            Some(e) => e,
-            None => return,
+        let Some(ctrl) = self.get_ctrl(parent).await else {
+            return Ok(());
         };
-
+        let mut rx = ctrl.tx.subscribe();
+        let task_rx = ctrl.tx.subscribe();
+        if let Err(e) = func(task_rx).await {
+            return Err(TauriError::new(
+                format!("SubTask {id} failed: \n{}", e.message),
+                e.code,
+            ));
+        }
         loop {
-            let task_rx = ctrl.tx.subscribe();
-            let mut rx = ctrl.tx.subscribe();
-            let result = func(task_rx).await;
-            if let Err(e) = &result {
-                let app = get_app_handle();
-                let _ = QueueEvent::Error {
-                    parent: parent.clone(),
-                    id: Some(id.clone()),
-                    message: format!("SubTask {id} failed, parent: {parent}: \n{}", e.message),
-                    code: e.code.map(|v| v.saturating_isize()),
-                }
-                .emit(app);
+            if !ctrl.is_paused() || ctrl.is_cancelled() {
+                break;
             }
-            if ctrl.is_cancelled() {
-                ctrl.send(CtrlEvent::Cancel);
-                return;
-            }
-            if ctrl.retry_swap() {
-                continue;
-            }
-            if result.is_ok() && !ctrl.is_paused() {
-                return;
-            }
-            loop {
-                match rx.recv().await {
-                    Ok(CtrlEvent::Retry) => break,
-                    Ok(CtrlEvent::Pause) => (),
-                    _ => return,
-                }
+            if let Ok(CtrlEvent::Resume) = rx.recv().await {
+                break;
             }
         }
+        Ok(())
     }
 }
 
@@ -665,28 +689,36 @@ pub async fn ctrl_event(
     list: Vec<Arc<String>>,
 ) -> TauriResult<()> {
     let sch = TASK_MANAGER.get_scheduler(&sid).await?;
-    if sch.inited.get().is_none() {
-        let sch = sch.clone();
-        async_runtime::spawn(async move {
-            let _ = sch.dispatch().await;
-        });
+    if sch.inited.set(()).is_ok() && event == CtrlEvent::Resume {
+        sch.clone().dispatch_spawned();
     }
-    for id in list.iter() {
-        if let Some(ctrl) = sch.get_ctrl(id).await {
+    for id in list {
+        if let Some(ctrl) = sch.get_ctrl(&id).await {
             ctrl.send(event.clone());
         }
         TASK_MANAGER
             .state(
-                id,
+                &id,
                 match event {
                     CtrlEvent::Pause => TaskState::Paused,
+                    CtrlEvent::Cancel => TaskState::Cancelled,
                     CtrlEvent::Resume | CtrlEvent::Retry => TaskState::Active,
-                    _ => TaskState::Cancelled,
                 },
             )
             .await?;
+        if event == CtrlEvent::Retry {
+            TASK_MANAGER.housekeeping(&id).await?;
+            let id = id.clone();
+            sch.ctrls
+                .write()
+                .await
+                .insert(id.clone(), Arc::new(CtrlEntry::new()));
+            let sch_clone = sch.clone();
+            sch_clone.handle_task_spawned(&id);
+        }
         if event == CtrlEvent::Cancel {
-            TASK_MANAGER.pop_task(&sid, id).await?;
+            TASK_MANAGER.housekeeping(&id).await?;
+            TASK_MANAGER.pop_task(&sid, &id).await?;
         }
     }
     Ok(())

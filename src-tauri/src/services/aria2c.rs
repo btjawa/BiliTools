@@ -185,7 +185,7 @@ async fn daemon(name: String, child: &CommandChild, rx: &mut Receiver<CommandEve
     let _ = app.shell().command(cmd.0).args(cmd.1).spawn();
     let mut stderr: Vec<String> = vec![];
 
-    let mut daemon = Box::pin(async {
+    let mut daemon = std::pin::pin!(async {
         let name_clone = &name;
         loop {
             if let Err(e) = ARIA2_RPC.request::<Value>("getGlobalStat", vec![]).await {
@@ -277,9 +277,15 @@ pub async fn init() -> Result<()> {
 }
 
 pub async fn cancel(gid: Arc<String>) -> TauriResult<()> {
-    ARIA2_RPC
+    let _ = ARIA2_RPC
+        .request::<Value>("purgeDownloadResult", vec![json!(gid)])
+        .await;
+    let _ = ARIA2_RPC
+        .request::<Value>("removeDownloadResult", vec![json!(gid)])
+        .await;
+    let _ = ARIA2_RPC
         .request::<Value>("forceRemove", vec![json!(gid)])
-        .await?;
+        .await;
     Ok(())
 }
 
@@ -311,27 +317,24 @@ pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> Tau
         .next_back()
         .ok_or(anyhow!("Failed to get file name: {url:?}"))?;
     let output = dir.join(name);
-
-    match ARIA2_RPC
+    let result = ARIA2_RPC
         .request::<Aria2TellStatus>("tellStatus", vec![json!(gid)])
-        .await
-    {
-        Ok(v) => {
-            log::info!("{v:?}");
-            match v.status.as_str() {
-                "complete" => {
-                    let total = v.total_length.parse::<u64>()?;
-                    tx.send(total, total).await?;
-                    return Ok(output);
-                }
-                "paused" => {
-                    ARIA2_RPC
-                        .request::<Value>("unpause", vec![json!(gid)])
-                        .await?;
-                }
-                _ => (),
+        .await;
+
+    match result {
+        Ok(v) => match v.status.as_str() {
+            "complete" => {
+                let total = v.total_length.parse::<u64>()?;
+                tx.send(total, total).await?;
+                return Ok(output);
             }
-        }
+            "paused" => {
+                ARIA2_RPC
+                    .request::<Value>("unpause", vec![json!(gid)])
+                    .await?;
+            }
+            _ => (),
+        },
         Err(_) => {
             ARIA2_RPC
                 .request::<Value>(

@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context};
 use std::{
     path::{Path, PathBuf},
+    pin::pin,
     sync::Arc,
 };
 use tokio::{
@@ -304,7 +305,7 @@ async fn handle_merge(
     let abr = ptask.task.select.abr.unwrap_or(0);
     let ext = get_ext(subtask.task_type.clone(), abr);
 
-    let mut merge = Box::pin(ffmpeg::merge(
+    let mut merge = pin!(ffmpeg::merge(
         id.clone(),
         ext,
         &prog,
@@ -321,7 +322,6 @@ async fn handle_merge(
     }?;
 
     let output_file = get_unique_path(ptask.folder.join(format!("{}.{}", &ptask.filename, ext)));
-    log::info!("{output_file:?}");
 
     fs::copy(&path, output_file).await?;
     fs::remove_file(path).await?;
@@ -357,20 +357,20 @@ async fn handle_media(
 
     let prog = Progress::new(parent.clone(), id.clone());
 
-    let mut download = Box::pin(aria2c::download(id.clone(), &prog, urls));
+    let mut download = pin!(aria2c::download(id.clone(), &prog, urls));
     let mut path = loop {
         tokio::select! {
             res = &mut download => break res,
             Ok(msg) = rx.recv() => match msg {
                 CtrlEvent::Cancel => {
-                    aria2c::cancel(id.clone()).await?;
+                    let _ = aria2c::cancel(id.clone()).await;
                     return Ok(());
                 },
                 CtrlEvent::Pause => {
-                    aria2c::pause(id.clone()).await?;
+                    let _ = aria2c::pause(id.clone()).await;
                 },
                 CtrlEvent::Resume => {
-                    aria2c::resume(id.clone()).await?;
+                    let _ = aria2c::resume(id.clone()).await;
                 },
                 _ => (),
             }
@@ -480,44 +480,44 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
             TaskType::Video | TaskType::Audio => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_media(&ptask, rx, &video, &audio))
-                    .await;
+                    .await?;
             }
             TaskType::AudioVideo => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_merge(&ptask, rx, &video, &audio))
-                    .await;
+                    .await?;
             }
             TaskType::Thumb => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_thumbs(&ptask, rx))
-                    .await;
+                    .await?;
             }
             TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_danmaku(&ptask, rx))
-                    .await;
+                    .await?;
             }
             TaskType::AlbumNfo | TaskType::SingleNfo => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| {
                         handle_nfo(&ptask, rx, &folder, &task.nfo)
                     })
-                    .await;
+                    .await?;
             }
             TaskType::AiSummary => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_ai_summary(&ptask, rx))
-                    .await;
+                    .await?;
             }
             TaskType::Subtitles => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_subtitle(&ptask, rx))
-                    .await;
+                    .await?;
             }
             TaskType::OpusContent => {
                 scheduler
                     .try_join(&id, &sub_id, |rx| handle_opus_content(&ptask, rx))
-                    .await;
+                    .await?;
             }
         }
     }

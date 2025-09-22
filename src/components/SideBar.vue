@@ -2,7 +2,6 @@
   <ul
     class="flex flex-col py-4 px-2.5 gap-3 h-screen"
     :class="[os, { 'bg-(--block-color)': $fa.isDark }]"
-    @contextmenu.prevent
   >
     <li
       v-for="v in list"

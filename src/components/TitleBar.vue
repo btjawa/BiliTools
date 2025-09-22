@@ -3,7 +3,6 @@
     data-tauri-drag-region
     class="titlebar absolute right-0 h-[30px] w-[calc(100vw-56px)] bg-transparent"
     @dblclick="appWindow.toggleMaximize()"
-    @contextmenu.prevent
   >
     <div v-if="osType() !== 'macos'" class="relative z-100 float-right">
       <div class="button" @click="toggleTop">

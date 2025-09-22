@@ -1,6 +1,6 @@
 <template>
   <TitleBar />
-  <div class="main" @contextmenu.prevent="contextMenu?.init">
+  <div class="main">
     <SideBar />
     <ContextMenu ref="contextMenu" />
     <div class="loading"></div>
@@ -65,6 +65,11 @@ watch(
 
 context.app.config.errorHandler = (e) =>
   new AppError(e, { name: 'AppError' }).handle();
+
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  contextMenu.value?.init(e);
+});
 
 provide('page', page);
 provide('updater', updater);

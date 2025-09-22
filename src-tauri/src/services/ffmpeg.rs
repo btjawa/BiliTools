@@ -3,6 +3,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
+    pin::pin,
     sync::Arc,
 };
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
@@ -128,7 +129,7 @@ pub async fn merge(
 
     let (mut _rx, child) = c.spawn()?;
     let mut child = Some(child);
-    let mut monitor = Box::pin(monitor(duration, _rx, tx));
+    let mut monitor = pin!(monitor(duration, _rx, tx));
     tokio::select! {
         res = &mut monitor => res?,
         _ = &mut cancel => if let Some(c) = child.take() {
