@@ -11,7 +11,7 @@ const STATUS_RESOLVED = 'status: resolved';
 const STATUS_IN_PROGRESS = 'status: in progress';
 const STATUS_RELEASED = 'status: released';
 
-const milestones = await octokit.paginate(octokit.issues.listMilestones, {
+const milestones = await octokit.paginate(octokit.rest.issues.listMilestones, {
   owner,
   repo,
   state: 'all',
@@ -27,9 +27,10 @@ console.log(
   `[info] Using milestone #${milestone.number}: ${milestone.title} (${milestone.state})`,
 );
 
-const rawIssues = await octokit.paginate(octokit.issues.listForRepo, {
+const rawIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
   owner,
   repo,
+  state: 'all',
   milestone: milestone.number.toString(),
 });
 
@@ -49,7 +50,7 @@ const body = [
 for (const issue of issues) {
   const issue_number = issue.number;
   try {
-    await octokit.issues.createComment({
+    await octokit.rest.issues.createComment({
       owner,
       repo,
       issue_number,
@@ -65,7 +66,7 @@ for (const issue of issues) {
           .concat(STATUS_RELEASED),
       ),
     );
-    await octokit.issues.update({
+    await octokit.rest.issues.update({
       owner,
       repo,
       issue_number,
