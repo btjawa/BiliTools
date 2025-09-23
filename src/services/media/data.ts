@@ -19,11 +19,14 @@ export async function getMediaInfo(
   let url = 'https://api.bilibili.com';
   let params = {};
   const idType = id.slice(0, 2).toLowerCase();
-  const idNum = Number(id.match(/\d+/)?.[0]);
+  const idNum = id.match(/\d+/)?.[0].toString();
+  if (!idNum) {
+    throw new AppError('Could not find valid num in ' + idNum);
+  }
   switch (type) {
     case Types.MediaType.Video:
       url += '/x/web-interface/view';
-      params = idType === 'bv' ? { bvid: id } : { aid: id.slice(2) };
+      params = idType === 'bv' ? { bvid: id } : { aid: idNum };
       break;
     case Types.MediaType.Bangumi:
       url += '/pgc/view/web/season';
@@ -228,7 +231,7 @@ export async function getMediaInfo(
       duration: ep.duration / 1000,
       pubtime: ep.pub_time,
       type: Types.MediaType.Bangumi,
-      isTarget: idNum === ep.id,
+      isTarget: idNum === ep.id.toString(),
       index,
     });
     const list =

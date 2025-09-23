@@ -19,7 +19,7 @@ pub struct MediaItem {
     #[serde(rename = "type")]
     pub media_type: String,
     #[specta(optional)]
-    pub aid: Option<usize>,
+    pub aid: Option<Number>,
     #[specta(optional)]
     pub sid: Option<usize>,
     #[specta(optional)]
