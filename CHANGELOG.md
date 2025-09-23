@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.2] - 2025-09-23
+
+### 新增功能
+
+- [`c5211e7`](https://github.com/btjawa/BiliTools/commit/c5211e7982fd4c3b2d670d334962a84bbc7ac3ed) 支持 RPM 与 AppImage
+
+### 问题修复
+
+- [`0dde111`](https://github.com/btjawa/BiliTools/commit/0dde1111296800052a251e4e7bef2f8d66c79611) 修复 AV 号的精度问题
+
 ## [1.4.1] - 2025-09-23
 
 ### 新增功能
