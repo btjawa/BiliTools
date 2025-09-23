@@ -16,21 +16,27 @@ jobs:
           # Windows x86_64
           - platform: 'windows-2025'
             target: 'x86_64-pc-windows-msvc'
+            args: '--target x86_64-pc-windows-msvc'
           # Windows arm64
           # - platform: 'windows-11-arm'
           #   target: 'aarch64-pc-windows-msvc'
+          #   args: '--target aarch64-pc-windows-msvc'
           # Linux x86_64
           - platform: 'ubuntu-22.04'
             target: 'x86_64-unknown-linux-gnu'
+            args: --target x86_64-unknown-linux-gnu --config ./src-tauri/tauri.linux.conf.json --config ./src-tauri/tauri.linux.amd64.conf.json
           # Linux arm64
           - platform: 'ubuntu-22.04-arm'
             target: 'aarch64-unknown-linux-gnu'
+            args: --target aarch64-unknown-linux-gnu --config ./src-tauri/tauri.linux.conf.json --config ./src-tauri/tauri.linux.arm64.conf.json
           # macOS x86_64 (Intel)
           - platform: 'macos-14'
             target: 'x86_64-apple-darwin'
+            args: --target x86_64-apple-darwin
           # macOS arm64 (M1 and above)
           - platform: 'macos-14'
             target: 'aarch64-apple-darwin'
+            args: --target aarch64-apple-darwin
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -59,7 +65,7 @@ jobs:
         if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf rpm xdg-utils desktop-file-utils
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
 
       - name: Install Frontend Dependencies
@@ -82,4 +88,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
-          args: --target ${{ matrix.target }}
+          args: ${{ matrix.args }}

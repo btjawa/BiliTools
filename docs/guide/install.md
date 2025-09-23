@@ -50,3 +50,18 @@ const __APP_VERSION__ = '1.4.0';
 ```bash
 sudo apt-get install -y ./bilitools_x.y.z_arch.deb
 ```
+
+### <i class="fa-brands fa-centos"></i> CentOS / <i class="fa-brands fa-fedora"></i> Fedora
+
+> [!WARNING]
+> 尚未测试可用性<br>
+
+| x64 | arm64 |
+| ------------------- | --------------- |
+| <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/bilitools_${__APP_VERSION__}_amd64.rpm`">GitHub Releases</a> | <a target="_blank" :href="`https://github.com/btjawa/BiliTools/releases/download/v${__APP_VERSION__}/bilitools_${__APP_VERSION__}_arm64.rpm`">GitHub Releases</a> |
+
+下载后，定位到下载目录并使用 duf 安装 rpm 包：
+
+```bash
+sudo dnf install -y ./bilitools_x.y.z_arch.rpm
+```
