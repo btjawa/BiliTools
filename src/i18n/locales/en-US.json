@@ -147,6 +147,10 @@
     "selectLimit": "Not recommended to select over 30 items",
     "skipTask": "Task {0} has no {1}, skipping this subtask"
   },
+  "drag": {
+    "hint": "Release to Search",
+    "description": "Valid Bilibili link detected~"
+  },
   "updater": {
     "title": "New version available!",
     "latest": "You're up to date",
@@ -256,6 +260,10 @@
     "clipboard": {
       "name": "Clipboard Monitor",
       "desc": "If enabled, auto-detect Bilibili links in the clipboard and search."
+    },
+    "drag_search": {
+      "name": "Listen for Drag & Drop",
+      "desc": "If enabled, automatically search when Bilibili links are dragged into the app."
     },
     "notify": {
       "name": "Notifications",

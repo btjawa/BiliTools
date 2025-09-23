@@ -33,6 +33,7 @@ pub struct Settings {
     pub convert: SettingsConvert,
     pub default: SettingsDefault,
     pub down_dir: PathBuf,
+    pub drag_search: bool,
     pub format: SettingsFormat,
     pub language: String,
     pub max_conc: usize,

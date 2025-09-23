@@ -147,6 +147,10 @@
     "selectLimit": "一度に 30 件超の選択は非推奨です",
     "skipTask": "タスク {0} には {1} がなく、スキップします。"
   },
+  "drag": {
+    "hint": "リリースして検索",
+    "description": "有効な Bilibili リンクを検出しました～"
+  },
   "updater": {
     "title": "新しいバージョンがあります！",
     "latest": "最新です",
@@ -256,6 +260,10 @@
     "clipboard": {
       "name": "クリップボード監視",
       "desc": "有効時、クリップボードの Bilibili リンクを自動検出して検索します。"
+    },
+    "drag_search": {
+      "name": "ドラッグ&ドロップ監視",
+      "desc": "有効時、アプリへ Bilibili リンクをドラッグした際に自動検索します。"
     },
     "notify": {
       "name": "通知",
