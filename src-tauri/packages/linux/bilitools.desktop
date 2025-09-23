@@ -2,7 +2,6 @@
 Type=Application
 Name=BiliTools
 Exec={{{exec}}} %u
-Path=/usr/libexec/bilitools
 Icon={{{icon}}}
 Terminal=false
 Comment={{{comment}}}

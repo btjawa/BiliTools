@@ -30,6 +30,7 @@
       "resources/LICENSE.OpenSSL": "LICENSE.OpenSSL"
     },
     "macOS": {
+      "entitlements": "./packages/macos/entitlements.plist",
       "dmg": {
         "appPosition": {
           "x": 180,

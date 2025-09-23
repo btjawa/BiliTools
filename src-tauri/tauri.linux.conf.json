@@ -19,6 +19,17 @@
   },
   "bundle": {
     "targets": ["deb", "rpm", "appimage"],
+    "externalBin": [
+      "binaries/linux/bilitools-aria2c",
+      "binaries/linux/bilitools-ffmpeg",
+      "binaries/linux/bilitools-DanmakuFactory"
+    ],
+    "resources": {
+      "resources/COPYING.aria2c": "COPYING.aria2c",
+      "resources/COPYING.LGPLv3.ffmpeg": "COPYING.LGPLv3.ffmpeg",
+      "resources/LICENSE.DanmakuFactory": "LICENSE.DanmakuFactory",
+      "resources/LICENSE.OpenSSL": "LICENSE.OpenSSL"
+    },
     "linux": {
       "deb": {
         "desktopTemplate": "./packages/linux/bilitools.desktop"

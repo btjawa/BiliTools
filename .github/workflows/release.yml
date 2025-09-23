@@ -16,19 +16,19 @@ jobs:
           # Windows x86_64
           - platform: 'windows-2025'
             target: 'x86_64-pc-windows-msvc'
-            args: '--target x86_64-pc-windows-msvc'
+            args: --target x86_64-pc-windows-msvc
           # Windows arm64
           # - platform: 'windows-11-arm'
           #   target: 'aarch64-pc-windows-msvc'
-          #   args: '--target aarch64-pc-windows-msvc'
+          #   args: --target aarch64-pc-windows-msvc
           # Linux x86_64
           - platform: 'ubuntu-22.04'
             target: 'x86_64-unknown-linux-gnu'
-            args: --target x86_64-unknown-linux-gnu --config ./src-tauri/tauri.linux.conf.json --config ./src-tauri/tauri.linux.amd64.conf.json
+            args: --target x86_64-unknown-linux-gnu
           # Linux arm64
           - platform: 'ubuntu-22.04-arm'
             target: 'aarch64-unknown-linux-gnu'
-            args: --target aarch64-unknown-linux-gnu --config ./src-tauri/tauri.linux.conf.json --config ./src-tauri/tauri.linux.arm64.conf.json
+            args: --target aarch64-unknown-linux-gnu
           # macOS x86_64 (Intel)
           - platform: 'macos-14'
             target: 'x86_64-apple-darwin'

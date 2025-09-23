@@ -29,11 +29,11 @@ use crate::{
 
 static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(|| Arc::new(Aria2Rpc::new()));
 
-#[cfg(all(target_os = "linux", not(debug_assertions)))]
-const EXEC: &str = "/usr/libexec/bilitools/aria2c";
-
-#[cfg(not(all(target_os = "linux", not(debug_assertions))))]
+#[cfg(not(target_os = "linux"))]
 const EXEC: &str = "aria2c";
+
+#[cfg(target_os = "linux")]
+const EXEC: &str = "bilitools-aria2c";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aria2Error {

@@ -206,11 +206,11 @@ async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Ta
         return Ok(());
     }
     const NAME: &str = "DanmakuFactory";
-    #[cfg(all(target_os = "linux", not(debug_assertions)))]
-    const EXEC: &str = "/usr/libexec/bilitools/DanmakuFactory";
-
-    #[cfg(not(all(target_os = "linux", not(debug_assertions))))]
+    #[cfg(not(target_os = "linux"))]
     const EXEC: &str = "DanmakuFactory";
+
+    #[cfg(target_os = "linux")]
+    const EXEC: &str = "bilitools-DanmakuFactory";
 
     let cfg = WORKING_PATH.join("DanmakuFactory.json");
     if !cfg.exists() {

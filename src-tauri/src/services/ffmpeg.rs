@@ -19,11 +19,11 @@ use crate::{
     TauriError, TauriResult,
 };
 
-#[cfg(all(target_os = "linux", not(debug_assertions)))]
-const EXEC: &str = "/usr/libexec/bilitools/ffmpeg";
-
-#[cfg(not(all(target_os = "linux", not(debug_assertions))))]
+#[cfg(not(target_os = "linux"))]
 const EXEC: &str = "ffmpeg";
+
+#[cfg(target_os = "linux")]
+const EXEC: &str = "bilitools-ffmpeg";
 
 fn clean_log(raw_log: &[u8]) -> String {
     String::from_utf8_lossy(raw_log)
