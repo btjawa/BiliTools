@@ -47,6 +47,14 @@
   </section>
   <section>
     <h3>
+      <i :class="[$fa.weight, 'fa-hand-pointer']"></i>
+      <span>{{ $t('settings.drag_search.name') }}</span>
+    </h3>
+    <Switch v-model="settings.drag_search" />
+    <span class="desc">{{ $t('settings.drag_search.desc') }}</span>
+  </section>
+  <section>
+    <h3>
       <i :class="[$fa.weight, 'fa-bell']"></i>
       <span>{{ $t('settings.notify.name') }}</span>
     </h3>

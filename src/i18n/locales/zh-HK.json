@@ -142,10 +142,14 @@
   },
   "error": {
     "risk": "觸發風控，請進行驗證",
-    "checkUpdate": "請到 GitHub 檢查最新更新",
+    "checkUpdate": "請於 GitHub 檢查最新更新",
     "invalidInput": "無法解析輸入",
     "selectLimit": "不建議一次選擇超過 30 個選項",
     "skipTask": "任務 {0} 無{1}，跳過該子任務"
+  },
+  "drag": {
+    "hint": "釋放以開始搜尋",
+    "description": "檢測到有效的嗶哩嗶哩連結～"
   },
   "updater": {
     "title": "發現新版本！",
@@ -256,6 +260,10 @@
     "clipboard": {
       "name": "監聽剪貼簿",
       "desc": "若啟用，則會自動檢測剪貼簿中的嗶哩嗶哩連結並搜尋。"
+    },
+    "drag_search": {
+      "name": "監聽拖拽連結",
+      "desc": "若啟用，則會在拖拽嗶哩嗶哩連結到程式界面時自動搜尋。"
     },
     "notify": {
       "name": "通知系統",

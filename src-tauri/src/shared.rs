@@ -51,6 +51,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
             .path()
             .desktop_dir()
             .expect("Failed to get desktop_dir"),
+        drag_search: false,
         format: SettingsFormat {
             series: "{container} - {showtitle} ({downtime:YYYY-MM-DD_HH-mm-ss})".into(),
             item: "({index}) {mediaType} - {title}".into(),
