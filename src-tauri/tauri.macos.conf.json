@@ -19,9 +19,9 @@
   "bundle": {
     "targets": ["app", "dmg"],
     "externalBin": [
-      "binaries/aria2c",
-      "binaries/ffmpeg",
-      "binaries/DanmakuFactory"
+      "binaries/macos/aria2c",
+      "binaries/macos/ffmpeg",
+      "binaries/macos/DanmakuFactory"
     ],
     "resources": {
       "resources/COPYING.aria2c": "COPYING.aria2c",

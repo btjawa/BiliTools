@@ -19,9 +19,9 @@
   "bundle": {
     "targets": "nsis",
     "externalBin": [
-      "binaries/aria2c",
-      "binaries/ffmpeg",
-      "binaries/DanmakuFactory"
+      "binaries/windows/aria2c",
+      "binaries/windows/ffmpeg",
+      "binaries/windows/DanmakuFactory"
     ],
     "resources": {
       "resources/COPYING.aria2c": "COPYING.aria2c",

@@ -20,7 +20,7 @@ export const useSettingsStore = defineStore('settings', () => {
       enc: Number(),
     },
     down_dir: String(),
-    drag_search: false,
+    drag_search: true,
     format: {
       series: String(),
       item: String(),

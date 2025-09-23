@@ -148,8 +148,7 @@
     "skipTask": "Task {0} has no {1}, skipping this subtask"
   },
   "drag": {
-    "hint": "Release to Search",
-    "description": "Valid Bilibili link detected~"
+    "title": "Release to Search"
   },
   "updater": {
     "title": "New version available!",

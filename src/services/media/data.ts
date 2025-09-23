@@ -268,12 +268,16 @@ export async function getMediaInfo(
           : undefined,
         credits: {
           actors: data.actors.split('\n').map((actor) => {
-            const [role, name] = actor.split(/(?:\u2014\u2014|\u2014|\uFF0F|\u3001)/);
+            const [role, name] = actor.split(
+              /(?:\u2014\u2014|\u2014|\uFF0F|\u3001)/,
+            );
             return { name, role: role ?? '' };
           }),
           staff: mapBangumiStaffs(
             data.staff.split('\n').map((staff) => {
-              const [name, role] = staff.split(/(?:\u2014\u2014|\u2014|\uFF0F|\u3001)/);
+              const [name, role] = staff.split(
+                /(?:\u2014\u2014|\u2014|\uFF0F|\u3001)/,
+              );
               return [name, role];
             }),
           ),

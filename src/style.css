@@ -154,7 +154,7 @@
     @apply hover:cursor-pointer hover:brightness-85 text-(--desc-color);
   }
   .popup {
-    @apply absolute flex w-full h-full inset-0 bg-black/50;
+    @apply absolute flex w-full h-full top-0 right-0 bg-black/50;
     @apply pointer-events-none opacity-0 transition-opacity;
     &.active {
       @apply pointer-events-auto opacity-100;
@@ -204,37 +204,4 @@
   .dp--tp-wrap {
     @apply hidden;
   }
-}
-
-.drag-overlay {
-  @apply fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm;
-  @apply flex items-center justify-center;
-}
-
-.drag-hint {
-  @apply bg-(--solid-block-color) rounded-2xl shadow-2xl p-8 text-center;
-  @apply border-2 border-dashed max-w-sm mx-4;
-  border-color: color-mix(in srgb, var(--primary-color) 50%, transparent);
-}
-
-.drag-hint i {
-  color: var(--primary-color);
-}
-
-.drag-hint h2 {
-  @apply text-2xl font-bold text-(--content-color) mb-2;
-}
-
-.drag-hint p {
-  @apply text-(--desc-color) text-sm;
-}
-
-.drag-fade-enter-active,
-.drag-fade-leave-active {
-  transition: opacity 0.2s ease-in-out;
-}
-
-.drag-fade-enter-from,
-.drag-fade-leave-to {
-  opacity: 0;
 }

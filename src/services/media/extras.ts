@@ -95,7 +95,7 @@ export async function getSubtitle(
   if (!_url) return -1;
   const subtitle = (await tryFetch(
     _url.startsWith('//') ? 'https:' + _url : _url,
-    { ignoreErr: true }
+    { ignoreErr: true },
   )) as Resps.SubtitleInfo;
   // Only works when input < 24 hour
   const getTime = (s: number) =>

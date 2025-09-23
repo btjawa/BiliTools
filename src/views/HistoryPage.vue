@@ -208,7 +208,7 @@ watch(
 async function search(item: HistoryItem) {
   router.push('/');
   const page = await waitPage(searchPage, 'search');
-  page.value?.search(item.history.bvid);
+  page.value.search(item.history.bvid);
 }
 
 async function update() {

@@ -7,3 +7,4 @@ export { default as TitleBar } from './TitleBar.vue';
 export { default as Updater } from './Updater.vue';
 export { default as ProgressBar } from './ProgressBar.vue';
 export { default as Image } from './Image.vue';
+export { default as LinkDropper } from './LinkDropper.vue';
