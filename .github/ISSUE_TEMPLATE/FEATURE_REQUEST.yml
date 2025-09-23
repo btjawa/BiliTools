@@ -1,4 +1,4 @@
-name: Feature Request / 功能请求
+name: ✨ Feature Request / 功能请求
 description: Feature Request / 功能请求
 title: "[Feature Request] "
 labels: ["type: feature request", "status: needs triage"]
@@ -6,17 +6,19 @@ assignees: []
 
 body:
   - type: markdown
-    value: |
-      ## First of all
-      1. **标题应简要概述主题，不可留空，同时保留模板中已有前缀。**
-      2. 请确保没有重复的 Issue / Discussion。
-      3. 请确保您的功能请求足够合理，同时具有一定的需求量。
-      4. 请确保您已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
-      
-      1. **The title should summarize the topic, CANNOT be left blank, while keeping the existing prefix.**
-      2. Make sure there are no duplicate issues or discussions.
-      3. Make sure that your feature request is reasonable and has a certain demand.
-      4. Make sure you have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
+    attributes:
+      value: |
+        ## First of all
+        
+        **标题应简要概述主题，不可留空，同时保留模板中已有前缀。**
+        1. 请确保没有重复的 Issue / Discussion。
+        2. 请确保您的功能请求足够合理，同时具有一定的需求量。
+        3. 请确保您已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
+        
+        **The title should summarize the topic, CANNOT be left blank, while keeping the existing prefix.**
+        1. Make sure there are no duplicate issues or discussions.
+        2. Make sure that your feature request is reasonable and has a certain demand.
+        3. Make sure you have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
   - type: textarea
     attributes:
       label: Description / 功能简述

@@ -1,4 +1,4 @@
-name: Bug report / 反馈 Bug
+name: 🐞 Bug report / 反馈 Bug
 description: Bug report / 反馈 Bug
 title: "[Bug] "
 labels: ["type: bug", "status: needs triage"]
