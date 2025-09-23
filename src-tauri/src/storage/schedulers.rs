@@ -38,7 +38,7 @@ pub struct ArchiveTable;
 
 impl TableSpec for ArchiveTable {
     const NAME: &'static str = "schedulers";
-    const LATEST: i32 = 1;
+    const LATEST: i32 = 2;
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Schedulers::Table)

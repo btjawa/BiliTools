@@ -228,12 +228,17 @@ pub async fn convert_audio(
         }
         if let Some(staff) = nfo.credits.as_ref().map(|v| &v.staff) {
             c = c.args(staff.iter().flat_map(|s| {
-                let key = if ext == "flac" {
-                    &s.role.to_ascii_uppercase()
-                } else {
-                    &s.role
-                };
-                ["-metadata".into(), format!("{key}={}", s.name)]
+                match (&s.role, &s.name) {
+                    (Some(role), Some(name)) => {
+                        let key = if ext == "flac" {
+                            role.to_ascii_uppercase()
+                        } else {
+                            role.clone()
+                        };
+                        vec!["-metadata".into(), format!("{key}={name}")]
+                    }
+                    _ => vec![],
+                }
             }));
         }
     }

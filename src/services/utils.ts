@@ -506,7 +506,7 @@ export function mapBangumiStaffs(staffs: [role: string, names: string][]): {
   return staffs.flatMap(([role, names]) => {
     const mapped = map[role.trim()];
     return mapped
-      ? names.split(/[\uFF0F\u3001]+/u).map((name) => ({
+      ? names.split(/(?:\u2014\u2014|\u2014|\uFF0F|\u3001)/).map((name) => ({
           role: mapped,
           name: name.trim(),
         }))

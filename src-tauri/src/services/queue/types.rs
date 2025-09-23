@@ -75,8 +75,8 @@ pub struct MediaNfoCredits {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct MediaNfoCredit {
-    pub role: String,
-    pub name: String,
+    pub role: Option<String>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
