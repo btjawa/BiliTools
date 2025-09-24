@@ -240,7 +240,7 @@ export type SubTaskStatus = { chunk: number; content: number }
 export type Task = { id: string; state: TaskState; subtasks: SubTask[]; status: Partial<{ [key in string]: SubTaskStatus }>; ts: number; seq: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo }
 export type TaskState = "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
 export type TaskType = "opusContent" | "opusImages" | "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
-export type TauriError = { code: AnyInt | null; message: string }
+export type TauriError = { code: AnyInt | null; message: string; stack: string }
 export type Theme = 
 /**
  * Light theme.

@@ -541,7 +541,7 @@ impl Scheduler {
                     parent: id.clone(),
                     id: None,
                     message: format!("Task {id} failed: \n{}", e.message),
-                    code: e.code.map(|v| v.saturating_isize()),
+                    code: e.code.map(|v| v.as_isize()),
                 }
                 .emit(app)?;
                 TASK_MANAGER.state(id, TaskState::Failed).await?;

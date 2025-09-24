@@ -58,7 +58,13 @@ export class AppError extends Error {
     }
     // fallback
     const err = input as TauriError;
-    const message = err.message + (err.code ? ` (${err.code})` : '');
+    let message = err.message;
+    if (err.code) {
+      message += ` (${err.code})`;
+    }
+    if (err.stack) {
+      message += `\n${err.stack}`;
+    }
     return {
       message,
       name: options?.name ?? 'AppError',

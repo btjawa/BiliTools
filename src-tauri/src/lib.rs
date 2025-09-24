@@ -15,8 +15,7 @@ use tauri_plugin_log::fern::colors::{Color, ColoredLevelConfig};
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::panic::set_hook(Box::new(|e| {
         let bt = std::backtrace::Backtrace::force_capture();
-        log::error!("Panicked: {e}");
-        log::error!("Backtrace:\n{bt:?}");
+        log::error!("Panicked: {e}\n{bt:?}");
     }));
     let builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
