@@ -227,18 +227,16 @@ pub async fn convert_audio(
                 .arg(format!("year={}", date.year()));
         }
         if let Some(staff) = nfo.credits.as_ref().map(|v| &v.staff) {
-            c = c.args(staff.iter().flat_map(|s| {
-                match (&s.role, &s.name) {
-                    (Some(role), Some(name)) => {
-                        let key = if ext == "flac" {
-                            role.to_ascii_uppercase()
-                        } else {
-                            role.clone()
-                        };
-                        vec!["-metadata".into(), format!("{key}={name}")]
-                    }
-                    _ => vec![],
+            c = c.args(staff.iter().flat_map(|s| match (&s.role, &s.name) {
+                (Some(role), Some(name)) => {
+                    let key = if ext == "flac" {
+                        role.to_ascii_uppercase()
+                    } else {
+                        role.clone()
+                    };
+                    vec!["-metadata".into(), format!("{key}={name}")]
                 }
+                _ => vec![],
             }));
         }
     }

@@ -5,9 +5,18 @@ const SIDECARS = ['aria2c', 'ffmpeg', 'DanmakuFactory'];
 
 // https://tauri.app/develop/sidecar/
 
-const extension = process.platform === 'win32' ? '.exe' : '';
+const os = (() => {
+  switch (process.platform) {
+    case 'win32':
+      return 'windows';
+    case 'darwin':
+      return 'macos';
+    default:
+      return 'linux';
+  }
+})();
 
-const rustInfo = execSync('rustc -vV');
+const rustInfo = execSync('rustc -vV').toString();
 const targetTriple = /host: (\S+)/g.exec(rustInfo)[1];
 if (!targetTriple) {
   console.error('Failed to determine platform target triple');
@@ -19,7 +28,8 @@ for (const name of SIDECARS) {
     process.cwd(),
     'src-tauri',
     'binaries',
-    `${name}-${targetTriple}${extension}`,
+    os,
+    `${os === 'linux' ? 'bilitools-' : ''}${name}-${targetTriple}${os === 'windows' ? '.exe' : ''}`,
   );
   const args = [];
   switch (name) {

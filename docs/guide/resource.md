@@ -64,7 +64,7 @@ AI总结的实际数据来自 **哔哩哔哩 AI 小助手**（实际为 `Shangha
 
 - 分段标题 - [00:00](https://www.bilibili.com/video/${BV号}?t=${分段时间})
 ```
-你可以在 [`/src/services/media/extras.ts:36:1`](https://github.com/btjawa/BiliTools/blob/v1.4.0/src/services/media/extras.ts#L36) 查看实际处理逻辑 (`function getAISummary`)。
+你可以在 [`/src/services/media/extras.ts:36:1`](https://github.com/btjawa/BiliTools/blob/v1.4.3/src/services/media/extras.ts#L53) 查看实际处理逻辑 (`function getAISummary`)。
 
 图文/专栏/动态的内容以 Markdown 格式保存：
 
@@ -104,7 +104,7 @@ NFO 数据结构遵循 [KODI 规范](https://kodi.wiki/view/NFO_files)，Emby �
 
 自 `v1.4.0` 起，弹幕请求全面迁移至 ProtoBuf 协议接口，应用会自动处理为 XML 格式，以供存档或其他弹幕转换工具处理。
 
-你可以在 [`/src/services/media/dm.ts:7:1`](https://github.com/btjawa/BiliTools/blob/v1.4.0/src/services/media/dm.ts#L7) 查看 XML 的实际转换逻辑 (`function DanmakuEventToXML`)。
+你可以在 [`/src/services/media/dm.ts:7:1`](https://github.com/btjawa/BiliTools/blob/v1.4.3/src/services/media/dm.ts#L7) 查看 XML 的实际转换逻辑 (`function DanmakuEventToXML`)。
 
 应用目前内置 [DanmakuFactory](https://github.com/hihkm/DanmakuFactory) Sidecar，可在 [设置 -> 策略 -> 转换策略](/guide/settings#将-xml-弹幕转换为-ass-字幕) 了解更多。
 

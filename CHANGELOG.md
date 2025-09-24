@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.3] - 2025-09-24
+
+### 新增功能
+
+- [`efc3ed6`](https://github.com/btjawa/BiliTools/commit/efc3ed670ead3821b6861709a7c01b2451d5539c) 支持拖拽并自动搜索哔哩哔哩链接 ([#183](https://github.com/btjawa/BiliTools/issues/183))
+- [`b5a760f`](https://github.com/btjawa/BiliTools/commit/b5a760fb8ce05e06283b5c4bc4b06e9d534815c4) 支持解析用户完整投稿视频列表
+
+### 问题修复
+
+- [`d8b09fb`](https://github.com/btjawa/BiliTools/commit/d8b09fb5733ea0c15285dc8ea12e68bd55ffe42c) 修复数据库迁移与 `staff` 解析不完整的问题 ([#182](https://github.com/btjawa/BiliTools/issues/182))
+- [`78b5f06`](https://github.com/btjawa/BiliTools/commit/78b5f06088f13150f753f7b23055fc4293887b6f) 修复 Linux 下 Sidecar 的打包策略问题 ([#182](https://github.com/btjawa/BiliTools/issues/182))
+
 ## [1.4.2] - 2025-09-23
 
 ### 新增功能

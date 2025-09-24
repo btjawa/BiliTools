@@ -85,4 +85,4 @@
 
 该功能可以导出 JSON 格式的媒体存档信息。
 
-你可以在 [`/src/types/shared.d.ts:153:1`](https://github.com/btjawa/BiliTools/blob/v1.4.0/src/types/shared.d.ts#L153) 找到数据结构定义（`interface MediaInfo`）。
+你可以在 [`/src/types/shared.d.ts:202:1`](https://github.com/btjawa/BiliTools/blob/v1.4.3/src/types/shared.d.ts#L202) 找到数据结构定义（`interface MediaInfo`）。

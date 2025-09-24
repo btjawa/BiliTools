@@ -14,7 +14,7 @@ use tokio::{
     sync::{Notify, RwLock},
 };
 
-use crate::shared::{DATABASE_URL, STORAGE_PATH, get_ts};
+use crate::shared::{get_ts, DATABASE_URL, STORAGE_PATH};
 
 static DB: RwLock<Option<SqlitePool>> = RwLock::const_new(None);
 static DB_READY: Notify = Notify::const_new();
@@ -42,7 +42,7 @@ pub trait TableSpec: Send + Sync + 'static {
                 let rename_sql = Table::rename()
                     .table(
                         Alias::new(Self::NAME),
-                        Alias::new(format!("{}_{}", Self::NAME, ts))
+                        Alias::new(format!("{}_{}", Self::NAME, ts)),
                     )
                     .to_string(SqliteQueryBuilder);
 
