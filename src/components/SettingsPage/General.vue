@@ -23,6 +23,21 @@
   </section>
   <section>
     <h3>
+      <i class="fa-solid fa-magnifying-glass-plus"></i>
+      <span>{{ $t('settings.ui_scale.name') }}</span>
+    </h3>
+    <Dropdown
+      v-model="settings.ui_scale"
+      :drop="
+        ['100', '125', '150', '175', '200', 'auto'].map((id) => ({
+          id,
+          name: $t('settings.ui_scale.' + id),
+        }))
+      "
+    />
+  </section>
+  <section>
+    <h3>
       <i class="fa-solid fa-window-maximize"></i>
       <span>{{ $t('settings.window_effect.name') }}</span>
     </h3>

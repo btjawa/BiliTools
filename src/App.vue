@@ -70,6 +70,25 @@ watch(
   { immediate: true },
 );
 
+// Watch UI scale changes and apply to CSS
+watch(
+  () => settings.ui_scale,
+  (scale) => {
+    let scaleFactor = 1;
+    
+    if (scale === 'auto') {
+      scaleFactor = window.devicePixelRatio || 1;
+      scaleFactor = Math.max(1, Math.min(2, scaleFactor));
+    } else {
+      const scaleNum = parseInt(scale);
+      scaleFactor = scaleNum / 100;
+    }
+    
+    document.documentElement.style.setProperty('--ui-scale-factor', scaleFactor.toString());
+  },
+  { immediate: true },
+);
+
 context.app.config.errorHandler = (e) =>
   new AppError(e, { name: 'AppError' }).handle();
 

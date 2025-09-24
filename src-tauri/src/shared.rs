@@ -80,6 +80,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
             .temp_dir()
             .expect("Failed to get temp_dir"),
         theme: Theme::Auto,
+        ui_scale: "auto".into(),
         window_effect: WindowEffect::Auto,
         organize: SettingsOrganize {
             auto_rename: true,

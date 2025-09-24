@@ -40,6 +40,7 @@ pub struct Settings {
     pub notify: bool,
     pub temp_dir: PathBuf,
     pub theme: Theme,
+    pub ui_scale: String,
     pub window_effect: WindowEffect,
     pub organize: SettingsOrganize,
     pub proxy: SettingsProxy,

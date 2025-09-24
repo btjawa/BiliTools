@@ -248,6 +248,15 @@
       "dark": "Dark",
       "auto": "Follow System"
     },
+    "ui_scale": {
+      "name": "Interface Scale",
+      "100": "100%",
+      "125": "125%",
+      "150": "150%",
+      "175": "175%",
+      "200": "200%",
+      "auto": "Follow System"
+    },
     "window_effect": {
       "name": "Window Effect",
       "auto": "Auto",
