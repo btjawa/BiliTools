@@ -439,6 +439,26 @@ export interface OpusInfo {
   };
 }
 
+export interface UploadsInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    list: {
+      vlist: {
+        aid: number;
+        bvid: string;
+        pic: string;
+        mid: number;
+        title: string;
+        description: string;
+        length: string;
+        created: number;
+      }[];
+    };
+  };
+}
+
 export interface UploadsSeriesInfo {
   code: number;
   message: string;

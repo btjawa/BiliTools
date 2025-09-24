@@ -585,46 +585,85 @@ export async function getMediaInfo(
     };
   } else if (type === Types.MediaType.UserVideo) {
     const { seasons_list } = (body as Resps.UploadsSeriesInfo).data.items_lists;
-    const target = options?.target ?? seasons_list[0].meta.season_id;
-    const listBody = (await tryFetch(
-      'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list',
-      {
-        params: { ...params, season_id: target },
-      },
-    )) as Resps.UploadsArchivesInfo;
-    const { archives, meta } = listBody.data;
-    const list = archives.map((item, index) => ({
-      title: item.title,
-      cover: item.pic,
-      desc: meta.description, // fallback
-      aid: item.aid,
-      bvid: item.bvid,
-      duration: item.duration,
-      pubtime: item.pubdate,
-      type: Types.MediaType.Video,
-      isTarget: index === 0,
-      index,
-    }));
-    return {
-      type,
-      id,
-      pn: true,
-      sections: {
+    const upper = await getUserInfo(idNum);
+    let sections = undefined;
+    let nfo;
+    let list;
+    if (seasons_list.length) {
+      const target = options?.target ?? seasons_list[0].meta.season_id;
+      const listBody = (await tryFetch(
+        'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list',
+        {
+          params: { ...params, season_id: target },
+        },
+      )) as Resps.UploadsArchivesInfo;
+      const { archives, meta } = listBody.data;
+      sections = {
         target,
         tabs: seasons_list.map((v) => ({
           id: v.meta.season_id,
           name: v.meta.name,
         })),
-      },
-      nfo: {
+      };
+      nfo = {
         showtitle: meta.name,
         intro: meta.description,
         tags: [],
         stat: {},
-        upper: await getUserInfo(idNum),
+        upper,
         thumbs: getPublicImages(meta),
         premiered: meta.ptime,
-      },
+      };
+      list = archives.map((item, index) => ({
+        title: item.title,
+        cover: item.pic,
+        desc: meta.description, // fallback
+        aid: item.aid,
+        bvid: item.bvid,
+        duration: item.duration,
+        pubtime: item.pubdate,
+        type: Types.MediaType.Video,
+        isTarget: index === 0,
+        index,
+      }));
+    } else {
+      const listBody = (await tryFetch(
+        'https://api.bilibili.com/x/space/wbi/arc/search',
+        {
+          params: {
+            mid: idNum,
+            ps: 25,
+            pn: options?.pn ?? 1,
+          },
+          auth: 'wbi',
+        },
+      )) as Resps.UploadsInfo;
+      const { vlist } = listBody.data.list;
+      nfo = {
+        tags: [],
+        stat: {},
+        upper,
+        thumbs: getPublicImages(vlist[0]),
+      };
+      list = vlist.map((item, index) => ({
+        title: item.title,
+        cover: item.pic,
+        desc: item.description,
+        aid: item.aid,
+        bvid: item.bvid,
+        duration: item.length.split(':').reduce((h, s) => h * 60 + +s, 0),
+        pubtime: item.created,
+        type: Types.MediaType.Video,
+        isTarget: index === 0,
+        index,
+      }));
+    }
+    return {
+      type,
+      id,
+      pn: true,
+      sections,
+      nfo,
       list,
     };
   } else if (type === Types.MediaType.UserOpus) {
