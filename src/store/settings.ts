@@ -31,6 +31,7 @@ export const useSettingsStore = defineStore('settings', () => {
     notify: true,
     temp_dir: String(),
     theme: 'auto',
+    ui_scale: 'auto',
     window_effect: 'auto',
     organize: {
       auto_rename: true,
