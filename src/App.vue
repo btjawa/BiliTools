@@ -38,7 +38,7 @@ import { useRouter } from 'vue-router';
 import { SearchPage } from './views';
 
 import { fetchUser, activateCookies } from '@/services/login';
-import { setEventHook, waitPage } from '@/services/utils';
+import { parseId, setEventHook, waitPage } from '@/services/utils';
 import { commands } from '@/services/backend';
 import { AppError } from '@/services/error';
 import * as clipboard from '@/services/clipboard';
@@ -82,9 +82,14 @@ provide('page', page);
 provide('updater', updater);
 
 clipboard.register(async (s) => {
-  router.push('/');
-  const result = await waitPage(page, 'search');
-  (result.value as InstanceType<typeof SearchPage>).search(s);
+  try {
+    await parseId(s);
+    router.push('/');
+    const result = await waitPage(page, 'search');
+    (result.value as InstanceType<typeof SearchPage>).search(s);
+  } catch {
+    /**/
+  }
 });
 
 onMounted(async () => {

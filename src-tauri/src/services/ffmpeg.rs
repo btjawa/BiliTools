@@ -168,7 +168,7 @@ pub async fn convert_audio(
             "-map",
             "1:v:0",
             "-c:v",
-            "copy",
+            "mjpeg",
             "-disposition:v:0",
             "attached_pic",
         ]);

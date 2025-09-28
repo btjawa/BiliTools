@@ -31,6 +31,10 @@ sudo chown root:admin /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 sudo chmod +sx /Applications/BiliTools.app/Contents/MacOS/DanmakuFactory
 ```
 
+## SSL/TLS handshake failure: Error: 由于吊销服务器已脱机，吊销功能无法检查吊销。(80092013)
+
+这是加速器、代理或VPN导致的问题，请关闭上述服务后重试
+
 ## ... operation timeout
 
 > [!IMPORTANT]
