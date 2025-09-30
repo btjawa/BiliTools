@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.4.4] - 2025-10-01
+
+### 新增功能
+
+- [`9cb50bd`](https://github.com/btjawa/BiliTools/commit/9cb50bdf2da3773f974d59ba296432ddaa2842e4) 支持解析分享链接 ([#187](https://github.com/btjawa/BiliTools/issues/187))
+- [`9cb50bd`](https://github.com/btjawa/BiliTools/commit/9cb50bdf2da3773f974d59ba296432ddaa2842e4) 支持网络限速 ([#187](https://github.com/btjawa/BiliTools/issues/187))
+- [`9cb50bd`](https://github.com/btjawa/BiliTools/commit/9cb50bdf2da3773f974d59ba296432ddaa2842e4) 支持自定义各 Sidecar 的执行路径
+- [`764ad4f`](https://github.com/btjawa/BiliTools/commit/764ad4f043ceaafa98dda8699eefd1e69f845376) 支持为视频嵌入元数据
+- [`764ad4f`](https://github.com/btjawa/BiliTools/commit/764ad4f043ceaafa98dda8699eefd1e69f845376) 支持为媒体嵌入原始 URL ([#147](https://github.com/btjawa/BiliTools/issues/147))
+
+### 问题修复
+
+- [`764ad4f`](https://github.com/btjawa/BiliTools/commit/764ad4f043ceaafa98dda8699eefd1e69f845376) 修复合集视频 `section_id` 不匹配的问题
+- [`7bd30ae`](https://github.com/btjawa/BiliTools/commit/7bd30ae311762945aa8cff858eee1f1a912bc447) 修复剪贴板识别其他内容报错的问题 ([#188](https://github.com/btjawa/BiliTools/issues/188))
+- [`7bd30ae`](https://github.com/btjawa/BiliTools/commit/7bd30ae311762945aa8cff858eee1f1a912bc447) 修复 macOS 下 `Could not find codec parameters` 的问题 ([#189](https://github.com/btjawa/BiliTools/issues/189))
+
+### 优化改进
+
+- [`96f967f`](https://github.com/btjawa/BiliTools/commit/96f967f2b1c01055eabe69357abe90ecb776c111) 后端更加详细的错误栈处理
+
 ## [1.4.3] - 2025-09-24
 
 ### 新增功能
