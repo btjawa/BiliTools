@@ -282,6 +282,13 @@
       "down_dir": "Output Files",
       "temp_dir": "Temp Files"
     },
+    "sidecar": {
+      "name": "Custom executables path",
+      "desc": "Set paths for Sidecars. Ensure permissions. Takes effect after restart.",
+      "aria2c": "Aria2c",
+      "ffmpeg": "FFmpeg",
+      "danmakufactory": "DanmakuFactory"
+    },
     "cache": {
       "name": "Cache",
       "desc": "The database stores settings, login info, and download records.",
@@ -305,6 +312,10 @@
     "max_conc": {
       "name": "Max Concurrent Downloads",
       "desc": "Controls how many tasks run at once. Higher values may raise risk."
+    },
+    "speed_limit": {
+      "name": "Download speed limit",
+      "desc": "Limit in KiB/s; 0 disables. Takes effect after restart."
     },
     "proxy": {
       "name": "Network Proxy",
@@ -368,7 +379,7 @@
     "donate": "Donate",
     "paid": "This is a free public project. If you paid for it, you may have been scammed.",
     "star": "If you find it useful, give the project a Star on GitHub!",
-    "data": "All generated and fetched data is stored locally on your device.",
+    "data": "All data used for persistence is stored locally on your device.",
     "others": "All consequences of using this project are the user’s responsibility. The author assumes no liability.\n“哔哩哔哩” and “Bilibili”, including related logos and graphics, are trademarks of Shanghai Hode Information Technology Co., Ltd.\nThis project has no affiliation, cooperation, authorization, or endorsement relationship with Bilibili or its associated companies."
   }
 }
