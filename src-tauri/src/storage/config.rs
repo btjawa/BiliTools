@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use specta::Type;
 use sqlx::Row;
-use std::{path::PathBuf, sync::Arc};
+use std::{env, path::PathBuf, sync::Arc};
 use tauri::Manager;
 
 use super::db::{get_db, TableSpec};
-use crate::shared::{get_app_handle, Theme, WindowEffect, CONFIG};
+use crate::shared::{get_app_handle, Sidecar, Theme, WindowEffect, CONFIG};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -43,6 +43,8 @@ pub struct Settings {
     pub window_effect: WindowEffect,
     pub organize: SettingsOrganize,
     pub proxy: SettingsProxy,
+    pub sidecar: SettingsSidecar,
+    pub speed_limit: serde_json::Number,
 }
 
 impl Settings {
@@ -62,6 +64,18 @@ impl Settings {
             CacheKey::Database => path.app_data_dir()?.join("Storage"),
         };
         Ok(result)
+    }
+    pub fn sidecar(&self, key: Sidecar) -> PathBuf {
+        let raw_path = match key {
+            Sidecar::Aria2c => &self.sidecar.aria2c,
+            Sidecar::FFmpeg => &self.sidecar.ffmpeg,
+            Sidecar::DanmakuFactory => &self.sidecar.danmakufactory,
+        };
+        if raw_path.exists() {
+            raw_path.clone()
+        } else {
+            SettingsSidecar::get_default(key.as_str())
+        }
     }
     pub fn temp_dir(&self) -> PathBuf {
         self.temp_dir.join("com.btjawa.bilitools")
@@ -101,6 +115,40 @@ pub struct SettingsOrganize {
     pub auto_rename: bool,
     pub top_folder: bool,
     pub sub_folder: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+pub struct SettingsSidecar {
+    pub aria2c: PathBuf,
+    pub ffmpeg: PathBuf,
+    pub danmakufactory: PathBuf,
+}
+
+impl Default for SettingsSidecar {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SettingsSidecar {
+    pub fn new() -> Self {
+        Self {
+            aria2c: SettingsSidecar::get_default("aria2c"),
+            ffmpeg: SettingsSidecar::get_default("ffmpeg"),
+            danmakufactory: SettingsSidecar::get_default("DanmakuFactory"),
+        }
+    }
+    pub fn get_default(name: &str) -> PathBuf {
+        let parent = std::env::current_exe()
+            .ok()
+            .and_then(|v| v.parent().map(|v| v.to_path_buf()))
+            .expect("Failed to get parent dir");
+        match env::consts::OS {
+            "windows" => parent.join(name).with_extension("exe"),
+            "linux" => parent.join(format!("bilitools-{name}")),
+            _ => parent.join(name),
+        }
+    }
 }
 
 #[derive(Iden)]

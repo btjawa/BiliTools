@@ -7,15 +7,10 @@ use tokio::sync::mpsc;
 
 use crate::{
     queue::{runtime::Progress, types::ProgressTask},
-    shared::{get_app_handle, get_image, random_string},
+    shared::{get_app_handle, get_image, random_string, Sidecar},
+    storage::config,
     TauriError, TauriResult,
 };
-
-#[cfg(not(target_os = "linux"))]
-const EXEC: &str = "ffmpeg";
-
-#[cfg(target_os = "linux")]
-const EXEC: &str = "bilitools-ffmpeg";
 
 fn clean_log(raw_log: &[u8]) -> String {
     String::from_utf8_lossy(raw_log)
@@ -29,7 +24,7 @@ pub async fn test() -> Result<()> {
     let app = get_app_handle();
     let result = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-version"])
         .output()
         .await?;
@@ -48,7 +43,7 @@ async fn get_duration(path: &Path) -> Result<u64> {
     let path = path.to_string_lossy().to_string();
     let result = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args([
             "-hide_banner",
             "-nostats",
@@ -91,7 +86,7 @@ pub async fn merge(
 
     let mut c = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning"])
         .arg("-i")
         .arg(video.as_os_str())
@@ -142,7 +137,7 @@ pub async fn add_meta(
 
     let mut c = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
         .arg(input.as_os_str());
 
@@ -194,12 +189,10 @@ pub async fn add_meta(
                 "attached_pic",
             ]);
         }
+    } else if is_video {
+        c = c.args(["-map", "0", "-c", "copy"]);
     } else {
-        if is_video {
-            c = c.args(["-map", "0", "-c", "copy"]);
-        } else {
-            c = c.args(["-map", "0:a:0", "-c:a", "copy"]);
-        }
+        c = c.args(["-map", "0:a:0", "-c:a", "copy"]);
     }
 
     c = c
@@ -293,7 +286,7 @@ pub async fn convert_mp3(
 
     let (rx, _) = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
         .arg(input.as_os_str())
         .args(["-c:a", "libmp3lame", "-q:a", "2", "-id3v2_version", "4"])
@@ -317,7 +310,7 @@ pub async fn convert_mp4(
 
     let (rx, _) = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
         .arg(input.as_os_str())
         .args([

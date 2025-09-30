@@ -43,6 +43,12 @@ export const useSettingsStore = defineStore('settings', () => {
       username: String(),
       password: String(),
     },
+    sidecar: {
+      aria2c: String(),
+      ffmpeg: String(),
+      danmakufactory: String(),
+    },
+    speed_limit: Number(),
   });
 
   const isDark = ref(false);

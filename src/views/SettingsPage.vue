@@ -10,7 +10,7 @@
     </h1>
     <div class="flex w-full h-full mt-4 gap-4 min-h-0">
       <Transition mode="out-in">
-        <div :key="tab" class="flex flex-col flex-1 overflow-auto pr-3">
+        <div :key="tab" class="flex flex-col flex-1 overflow-auto pr-3 pb-6">
           <component :is="list[tab].comp" :key="tab" />
         </div>
       </Transition>

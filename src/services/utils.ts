@@ -238,7 +238,6 @@ export async function parseId(
 }> {
   const raw = input.trim();
   const err = () => new AppError(i18n.global.t('error.invalidInput'));
-  if (/[^a-zA-Z0-9-._~:/?#@!$&'()*+,;=%]/g.test(raw)) throw err();
 
   if (/^(av\d+|BV\w{10}|ep\d+|ss\d+|md\d+|au\d+|am\d+|cv\d+)$/i.test(raw)) {
     const map: Record<string, MediaType> = {
@@ -256,8 +255,22 @@ export async function parseId(
 
   let url: URL;
   try {
+    const picked = input
+      .split(/\s+/)
+      .find(
+        (v) =>
+          /^(?:https?:\/\/)?(?:[\w-]+\.)*(?:bilibili\.com|b23\.tv)\/.+$/i.test(
+            v,
+          ) && /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/.test(v),
+      );
     url = new URL(
-      /\.(bilibili\.com|b23\.tv)$/i.test(raw) ? `https://${raw}` : raw,
+      picked
+        ? /^https?:\/\//i.test(picked)
+          ? picked
+          : `https://${picked}`
+        : /\.(bilibili\.com|b23\.tv)$/i.test(raw)
+          ? `https://${raw}`
+          : raw,
     );
   } catch {
     if (ignore)
@@ -285,7 +298,7 @@ export async function parseId(
       return {
         id: mid,
         type: MediaType.Favorite,
-        target: typeof fid === 'number' ? Number(fid) : undefined,
+        target: /^\d+$/.test(fid ?? '') ? Number(fid) : undefined,
       };
     }
     if (
@@ -297,7 +310,7 @@ export async function parseId(
       return {
         id: mid,
         type: MediaType.UserVideo,
-        target: typeof id === 'number' ? Number(id) : undefined,
+        target: /^\d+$/.test(id ?? '') ? Number(id) : undefined,
       };
     }
     if (segs[2] === 'opus' || type === 'article') {

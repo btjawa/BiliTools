@@ -184,8 +184,9 @@ async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Ta
     fs::write(&xml, &*danmaku).await?;
     let output_file = ptask.folder.join(&*ptask.filename);
     let output_file = output_file.to_string_lossy();
+    let config = config::read();
 
-    if !config::read().convert.danmaku {
+    if !config.convert.danmaku {
         fs::copy(
             &xml,
             get_unique_path(PathBuf::from(format!("{output_file}.xml"))),
@@ -193,12 +194,8 @@ async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Ta
         .await?;
         return Ok(());
     }
-    const NAME: &str = "DanmakuFactory";
-    #[cfg(not(target_os = "linux"))]
-    const EXEC: &str = "DanmakuFactory";
 
-    #[cfg(target_os = "linux")]
-    const EXEC: &str = "bilitools-DanmakuFactory";
+    const NAME: &str = "DanmakuFactory";
 
     let cfg = WORKING_PATH.join("DanmakuFactory.json");
     if !cfg.exists() {
@@ -207,7 +204,7 @@ async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Ta
 
     let (mut _rx, child) = get_app_handle()
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(&*config.sidecar.danmakufactory)?
         .args([
             "-c",
             cfg.to_string_lossy().as_ref(),

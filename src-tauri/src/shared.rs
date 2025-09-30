@@ -21,7 +21,7 @@ use tokio::sync::{OnceCell, RwLock};
 use crate::storage::{
     config::{
         self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsOrganize,
-        SettingsProxy,
+        SettingsProxy, SettingsSidecar,
     },
     cookies,
 };
@@ -92,6 +92,8 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
             username: String::new(),
             password: String::new(),
         },
+        sidecar: SettingsSidecar::new(),
+        speed_limit: serde_json::Number::from(0),
     })
 });
 pub static HEADERS: LazyLock<Headers> = LazyLock::new(Headers::new);
@@ -177,6 +179,23 @@ impl WindowEffect {
             WindowEffect::Acrylic => Some(TauriWindowEffect::Acrylic),
             WindowEffect::Sidebar => Some(TauriWindowEffect::Sidebar),
             WindowEffect::None => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Sidecar {
+    Aria2c,
+    FFmpeg,
+    DanmakuFactory,
+}
+
+impl Sidecar {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Sidecar::Aria2c => "aria2c",
+            Sidecar::FFmpeg => "ffmpeg",
+            Sidecar::DanmakuFactory => "DanmakuFactory",
         }
     }
 }

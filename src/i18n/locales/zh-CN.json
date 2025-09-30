@@ -281,6 +281,13 @@
       "down_dir": "输出文件",
       "temp_dir": "临时文件"
     },
+    "sidecar": {
+      "name": "自定义执行路径",
+      "desc": "此处可以自定义各 Sidecar 的执行路径，请注意权限等问题。重启后生效。",
+      "aria2c": "Aria2c",
+      "ffmpeg": "FFmpeg",
+      "danmakufactory": "DanmakuFactory"
+    },
     "cache": {
       "name": "缓存",
       "desc": "数据库存储配置、登录信息、下载记录等数据。",
@@ -304,6 +311,10 @@
     "max_conc": {
       "name": "最大并发下载数",
       "desc": "控制最大并发处理任务的数量。若该值较高，可能导致风控概率上升。"
+    },
+    "speed_limit": {
+      "name": "下载限速",
+      "desc": "此处可以控制下载时的最大速率，单位为 KiB/s，填入 0 即取消限速。重启后生效。"
     },
     "proxy": {
       "name": "网络代理",

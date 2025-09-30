@@ -29,6 +29,16 @@
   </section>
   <hr />
   <section>
+    <h3>
+      <i :class="[$fa.weight, 'fa-gauge']"></i>
+      <span>{{ $t('settings.speed_limit.name') }}</span>
+    </h3>
+    <input v-model="settings.speed_limit" type="number" @input="checkSpeed" />
+    <br />
+    <span class="desc">{{ $t('settings.speed_limit.desc') }}</span>
+  </section>
+  <hr />
+  <section>
     <h2>
       <i :class="[$fa.weight, 'fa-globe']"></i>
       <span>{{ $t('settings.proxy.name') }}</span>
@@ -52,4 +62,10 @@ import { useSettingsStore } from '@/store';
 import { Dropdown } from '@/components';
 
 const settings = useSettingsStore();
+
+function checkSpeed(e: Event) {
+  const val = +(e.target as HTMLInputElement).value;
+  // 10 GiB
+  settings.speed_limit = val > 10485760 ? 0 : val;
+}
 </script>

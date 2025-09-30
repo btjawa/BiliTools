@@ -8,7 +8,24 @@
     <div v-for="v in pathList" :key="v" class="io">
       <h3>{{ $t('settings.paths.' + v) }}</h3>
       <button @click="openPath(settings[v])">{{ settings[v] }}</button>
-      <button @click="getFolder(v)">
+      <button @click="newPath(v)">
+        <i class="fa-light fa-folder-open"></i>
+      </button>
+    </div>
+  </section>
+  <hr />
+  <section>
+    <h2>
+      <i :class="[$fa.weight, 'fa-binary-circle-check']"></i>
+      <span>{{ $t('settings.sidecar.name') }}</span>
+    </h2>
+    <span class="desc">{{ $t('settings.sidecar.desc') }}</span>
+    <div v-for="v in sidecarList" :key="v" class="io">
+      <h3>{{ $t('settings.sidecar.' + v) }}</h3>
+      <button @click="openPath(settings.sidecar[v])">
+        {{ settings.sidecar[v] }}
+      </button>
+      <button @click="newSidecar(v)">
         <i class="fa-light fa-folder-open"></i>
       </button>
     </div>
@@ -52,7 +69,6 @@
 import { onMounted } from 'vue';
 import i18n from '@/i18n';
 
-import { relaunch } from '@tauri-apps/plugin-process';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { Channel } from '@tauri-apps/api/core';
 import * as dialog from '@tauri-apps/plugin-dialog';
@@ -65,6 +81,7 @@ const settings = useSettingsStore();
 const app = useAppStore();
 
 const pathList = ['down_dir', 'temp_dir'] as const;
+const sidecarList = ['aria2c', 'ffmpeg', 'danmakufactory'] as const;
 const cacheList = ['log', 'temp', 'webview', 'database'] as const;
 type CacheKey = keyof typeof app.cache;
 
@@ -89,13 +106,22 @@ async function openCache(type: CacheKey) {
   await commands.openCache(type);
 }
 
-async function getFolder(type: (typeof pathList)[number]) {
+async function newPath(type: (typeof pathList)[number]) {
   const path = await dialog.open({
     directory: true,
     defaultPath: settings[type],
   });
   if (!path) return;
   settings[type] = path;
+}
+
+async function newSidecar(type: (typeof sidecarList)[number]) {
+  const path = await dialog.open({
+    filters: [{ name: 'Executable File', extensions: ['exe'] }],
+    defaultPath: settings.sidecar[type],
+  });
+  if (!path) return;
+  settings.sidecar[type] = path;
 }
 
 async function importDb() {
@@ -105,7 +131,6 @@ async function importDb() {
   if (!path) return;
   const result = await commands.dbImport(path);
   if (result.status === 'error') throw result.error;
-  await relaunch();
 }
 
 async function exportDb() {
@@ -123,7 +148,7 @@ async function exportDb() {
 @reference 'tailwindcss';
 
 .io button {
-  @apply m-0;
+  @apply m-0 truncate;
   &:nth-of-type(1) {
     @apply min-w-24 max-w-[420px] rounded-r-none;
   }

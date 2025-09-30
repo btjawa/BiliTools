@@ -113,9 +113,9 @@ pub async fn db_export(output: PathBuf) -> TauriResult<()> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn db_import(input: PathBuf) -> TauriResult<()> {
+pub async fn db_import(app: tauri::AppHandle, input: PathBuf) -> TauriResult<()> {
     db::import(input).await?;
-    Ok(())
+    app.restart();
 }
 
 #[tauri::command(async)]

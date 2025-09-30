@@ -22,17 +22,12 @@ use tokio::{fs, sync::RwLock, time::sleep};
 use crate::{
     errors::TauriError,
     queue::{runtime::Progress, types::ProgressTask},
-    shared::{get_app_handle, random_string, ProcessError, USER_AGENT, WORKING_PATH},
+    shared::{get_app_handle, random_string, ProcessError, Sidecar, USER_AGENT, WORKING_PATH},
+    storage::config,
     TauriResult,
 };
 
 static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(|| Arc::new(Aria2Rpc::new()));
-
-#[cfg(not(target_os = "linux"))]
-const EXEC: &str = "aria2c";
-
-#[cfg(target_os = "linux")]
-const EXEC: &str = "bilitools-aria2c";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aria2Error {
@@ -246,12 +241,13 @@ pub async fn init() -> Result<()> {
             .context("Failed to write session_file")?;
     }
     let session_file = session_file.to_string_lossy();
+    let cfg = config::read();
 
     let log_file = app.path().app_log_dir()?.join("aria2.log");
     let log_file = log_file.to_string_lossy();
     let (mut rx, child) = app
         .shell()
-        .sidecar(EXEC)?
+        .sidecar(cfg.sidecar(Sidecar::Aria2c))?
         .args([
             "--enable-rpc".into(),
             "--rpc-listen-all=false".into(),
@@ -260,6 +256,7 @@ pub async fn init() -> Result<()> {
             "--pause=true".into(),
             "--referer=https://www.bilibili.com/".into(),
             "--header=Origin: https://www.bilibili.com".into(),
+            format!("--max-download-limit={}K", cfg.speed_limit),
             format!("--input-file={session_file}"),
             format!("--save-session-interval={}", 5),
             format!("--save-session={session_file}"),

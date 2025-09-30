@@ -21,7 +21,8 @@
         <a>{pubtime:YYYY-MM-DD_HH-mm-ss}</a>
       </template>
     </i18n-t>
-    <template v-for="(val, key) in placeholders" :key>
+    <template v-for="(val, key, idx) in placeholders" :key>
+      <hr v-if="idx" />
       <div>
         <i :class="[$fa.weight, val.icon]"></i>
         <span>{{ $t('settings.naming.' + key) }}</span>
@@ -35,7 +36,6 @@
         </div>
       </template>
       <input v-model="settings.format[key]" type="text" spellcheck="false" />
-      <hr />
     </template>
   </section>
 </template>

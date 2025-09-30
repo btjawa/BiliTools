@@ -153,7 +153,7 @@
 - 因使用本项目而产生的任何后果（包括但不限于非法用途、账号风控或其他损失），均由用户个人承担，**与[本人](https://github.com/btjawa)无关，概不负责**
 - 本项目 **开源免费**，作者未从中获得经济收益
 - 本项目不会绕过身份验证机制、破解付费资源或实施其他非法行为
-- 本项目产生与获取的所有数据将使用 `SQLite` 格式明文存储于用户本地：
+- 本项目用于持久化的所有数据将使用 `SQLite` 格式 **明文** 存储于用户本地：
 
 > Windows: `%APPDATA%\com.btjawa.bilitools`<br>
 > macOS: `$HOME/Library/Application Support/com.btjawa.bilitools`<br>
