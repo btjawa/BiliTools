@@ -22,6 +22,8 @@
   - https://b23.tv/pigt3PQ
   - av11451
   - BV1tx411c77w
+- 分享链接
+  - 【【手描き】 End of Daylight PV 【描いてみたよん】】 https://www.bilibili.com/video/BV1tx411c77w/?share_source=copy_web&vd_source=xxx
 - 稍后再看
   - https://www.bilibili.com/watchlater/list
   - https://www.bilibili.com/list/watchlater/?bvid=BV1tx411c77w&oid=11451
@@ -85,4 +87,4 @@
 
 该功能可以导出 JSON 格式的媒体存档信息。
 
-你可以在 [`/src/types/shared.d.ts:202:1`](https://github.com/btjawa/BiliTools/blob/v1.4.3/src/types/shared.d.ts#L202) 找到数据结构定义（`interface MediaInfo`）。
+你可以在 [`/src/types/shared.d.ts:202:1`](https://github.com/btjawa/BiliTools/blob/v1.4.4/src/types/shared.d.ts#L204) 找到数据结构定义（`interface MediaInfo`）。
