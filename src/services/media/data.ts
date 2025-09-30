@@ -20,9 +20,6 @@ export async function getMediaInfo(
   let params = {};
   const idType = id.slice(0, 2).toLowerCase();
   const idNum = id.match(/\d+/)?.[0].toString();
-  if (!idNum) {
-    throw new AppError('Could not find valid num in ' + idNum);
-  }
   switch (type) {
     case Types.MediaType.Video:
       url += '/x/web-interface/view';
@@ -93,11 +90,13 @@ export async function getMediaInfo(
   }
   const body = await tryFetch(url, { params });
   if (type === Types.MediaType.Video) {
+    const link = 'https://www.bilibili.com/video/';
     const data = (body as Resps.VideoInfo).data;
     const map = (ep: Resps.UgcInfo, index: number) => ({
       title: ep.title,
       cover: ep.arc.pic,
       desc: ep.arc.desc,
+      url: link + ep.bvid,
       aid: ep.aid,
       bvid: ep.bvid,
       cid: ep.cid,
@@ -107,25 +106,28 @@ export async function getMediaInfo(
       isTarget: ep.aid === data.aid,
       index,
     });
-    let sections = undefined;
-    let edge = undefined;
-    let list = data.pages?.map((page, index) => ({
+    const pageMap = (page: Resps.VideoPage, index: number) => ({
       title: page.part || data.title,
       cover: data.pic,
       desc: data.desc,
+      url: link + data.bvid,
       aid: data.aid,
       bvid: data.bvid,
       cid: page.cid,
       duration: page.duration,
-      pubtime: data.pubdate,
+      pubtime: page.ctime ?? data.pubdate,
       type: Types.MediaType.Video,
       isTarget: index === 0,
       index,
-    })) ?? [
+    });
+    let sections = undefined;
+    let edge = undefined;
+    let list = data.pages?.map(pageMap) ?? [
       {
         title: data.title,
         cover: data.pic,
         desc: data.desc,
+        url: link + data.bvid,
         aid: data.aid,
         bvid: data.bvid,
         cid: data.cid,
@@ -139,25 +141,44 @@ export async function getMediaInfo(
     if (data.ugc_season) {
       const ep = data.ugc_season.sections
         .flatMap((v) => v.episodes)
-        .find((v) => v.aid === data.aid);
+        .find((v) =>
+          options?.target ? v.id === options.target : v.aid === data.aid,
+        );
       if (!ep) {
-        throw new AppError(`No ugc section for aid ${data.aid} found`);
+        if (options?.target) {
+          throw new AppError(`No ugc ep for id ${options.target} found`);
+        } else {
+          throw new AppError(`No ugc ep for aid ${data.aid} found`);
+        }
       }
-      const section_id = options?.target ?? ep.section_id;
-      const section = data.ugc_season.sections.find((v) => v.id === section_id);
-      if (!section) {
-        throw new AppError(`No ugc section for section_id ${section_id} found`);
-      }
-      if (ep && ep.pages.length > 1) {
-        // fallback to pages
+      if ((data.pages?.length ?? 0) > 1) {
+        const section_id = ep.section_id;
+        const section = data.ugc_season.sections.find(
+          (v) => v.id === section_id,
+        );
+        if (!section) {
+          throw new AppError(
+            `No ugc section for section_id ${section_id} found`,
+          );
+        }
+        list = ep.pages.map(pageMap);
         sections = {
-          target: ep.aid,
+          target: ep.id,
           tabs: section.episodes.map((v) => ({
-            id: v.aid,
+            id: v.id,
             name: v.title,
           })),
         };
       } else {
+        const section_id = options?.target ?? ep.section_id;
+        const section = data.ugc_season.sections.find(
+          (v) => v.id === section_id,
+        );
+        if (!section) {
+          throw new AppError(
+            `No ugc section for section_id ${section_id} found`,
+          );
+        }
         list = section.episodes.map(map);
         sections = {
           target: section_id,
@@ -191,6 +212,7 @@ export async function getMediaInfo(
         showtitle: data.ugc_season?.title ?? data.title,
         intro: data.desc,
         tags: (tagsResp as Resps.VideoTags).data.map((v) => v.tag_name),
+        url: link + data.bvid,
         stat: {
           play: data.stat.view,
           danmaku: data.stat.danmaku,
@@ -222,7 +244,7 @@ export async function getMediaInfo(
       title: ep.show_title ?? ep.title ?? String(),
       cover: ep.cover,
       desc: data.evaluate,
-      section: data.positive.id,
+      url: ep.share_url,
       aid: ep.aid,
       bvid: ep.bvid,
       cid: ep.cid,
@@ -245,6 +267,7 @@ export async function getMediaInfo(
         showtitle: data.season_title,
         intro: data.evaluate,
         tags: data.styles,
+        url: data.share_url,
         stat: {
           play: data.stat.views,
           danmaku: data.stat.danmakus,
@@ -309,6 +332,7 @@ export async function getMediaInfo(
         showtitle: data.title,
         intro: `${data.subtitle}\n${data.faq.title}\n${data.faq.content}`,
         tags: [],
+        url: data.share_url,
         stat: {
           play: data.stat.play,
         },
@@ -330,6 +354,7 @@ export async function getMediaInfo(
         title: ep.title,
         cover: ep.cover,
         desc: data.subtitle,
+        url: data.share_url,
         aid: ep.aid,
         cid: ep.cid,
         epid: ep.id,
@@ -343,6 +368,7 @@ export async function getMediaInfo(
     };
   } else if (type === Types.MediaType.Music) {
     const data = (body as Resps.MusicInfo).data;
+    const url = `https://www.bilibili.com/audio/au${data.id}`;
     const tagsResp = await tryFetch(
       'https://www.bilibili.com/audio/music-service-c/web/tag/song',
       { params },
@@ -364,6 +390,7 @@ export async function getMediaInfo(
         showtitle: data.title,
         intro: data.intro,
         tags: (tagsResp as Resps.MusicTagsInfo).data.map((v) => v.info),
+        url,
         stat: {
           play: data.statistic.play,
           reply: data.statistic.comment,
@@ -392,6 +419,7 @@ export async function getMediaInfo(
           title: data.title,
           cover: data.cover,
           desc: data.intro,
+          url,
           aid: data.aid,
           sid: data.id,
           bvid: data.bvid,
@@ -405,6 +433,7 @@ export async function getMediaInfo(
       ],
     };
   } else if (type === Types.MediaType.MusicList) {
+    const link = `https://www.bilibili.com/audio/`;
     const data = (body as Resps.MusicListInfo).data;
     const listInfo = (await tryFetch(
       'https://www.bilibili.com/audio/music-service-c/web/song/of-menu',
@@ -420,6 +449,7 @@ export async function getMediaInfo(
         showtitle: data.title,
         intro: data.intro,
         tags: [],
+        url: link + `am${data.menuId}`,
         stat: {
           play: data.statistic.play,
           reply: data.statistic.comment,
@@ -438,6 +468,7 @@ export async function getMediaInfo(
         title: item.title,
         cover: item.cover,
         desc: data.intro,
+        url: link + `au${item.id}`,
         aid: item.aid,
         sid: item.id,
         bvid: item.bvid,
@@ -459,6 +490,7 @@ export async function getMediaInfo(
       nfo: {
         tags: [],
         stat: {},
+        url: 'https://www.bilibili.com/watchlater/list',
         upper: {
           name: user.name,
           mid: user.mid,
@@ -470,6 +502,7 @@ export async function getMediaInfo(
         title: item.title,
         cover: item.pic,
         desc: item.desc,
+        url: `https://www.bilibili.com/video/${item.bvid}`,
         aid: item.aid,
         bvid: item.bvid,
         duration: item.duration,
@@ -503,6 +536,7 @@ export async function getMediaInfo(
       title: item.title,
       cover: item.cover,
       desc: info.intro,
+      url: `https://www.bilibili.com/video/${item.bvid}`,
       aid: item.id,
       fid: info.id,
       bvid: item.bvid,
@@ -520,6 +554,7 @@ export async function getMediaInfo(
         showtitle: info.title,
         intro: info.intro,
         tags: [],
+        url: `https://space.bilibili.com/${info.upper.mid}/favlist`,
         stat: {
           play: info.cnt_info.play,
           like: info.cnt_info.thumb_up,
@@ -552,6 +587,7 @@ export async function getMediaInfo(
     if (!title) {
       throw new AppError('No title found for opus ' + id);
     }
+    const url = `https://www.bilibili.com/opus/${opid}`;
     return {
       type,
       id,
@@ -559,6 +595,7 @@ export async function getMediaInfo(
         showtitle: title,
         intro: title,
         tags: [],
+        url,
         stat: {
           coin: stat?.coin.count,
           reply: stat?.comment.count,
@@ -574,6 +611,7 @@ export async function getMediaInfo(
           title,
           cover: common_card.cover,
           desc: title,
+          url,
           opid,
           duration: 0,
           pubtime: author?.pub_ts ?? 0,
@@ -609,6 +647,7 @@ export async function getMediaInfo(
         showtitle: meta.name,
         intro: meta.description,
         tags: [],
+        url: `https://space.bilibili.com/${upper.mid}/lists/${target}`,
         stat: {},
         upper,
         thumbs: getPublicImages(meta),
@@ -618,6 +657,7 @@ export async function getMediaInfo(
         title: item.title,
         cover: item.pic,
         desc: meta.description, // fallback
+        url: `https://www.bilibili.com/video/${item.bvid}`,
         aid: item.aid,
         bvid: item.bvid,
         duration: item.duration,
@@ -642,6 +682,7 @@ export async function getMediaInfo(
       nfo = {
         tags: [],
         stat: {},
+        url: `https://space.bilibili.com/${upper.mid}/upload/video`,
         upper,
         thumbs: getPublicImages(vlist[0]),
       };
@@ -649,6 +690,7 @@ export async function getMediaInfo(
         title: item.title,
         cover: item.pic,
         desc: item.description,
+        url: `https://www.bilibili.com/video/${item.bvid}`,
         aid: item.aid,
         bvid: item.bvid,
         duration: item.length.split(':').reduce((h, s) => h * 60 + +s, 0),
@@ -668,6 +710,8 @@ export async function getMediaInfo(
     };
   } else if (type === Types.MediaType.UserOpus) {
     const { items, offset } = (body as Resps.UserOpusInfo).data;
+    const upper = await getUserInfo(idNum);
+    const url = `https://space.bilibili.com/${upper.mid}/upload/opus`;
     const cover = items[0].cover;
     return {
       type,
@@ -676,7 +720,8 @@ export async function getMediaInfo(
       nfo: {
         tags: [],
         stat: {},
-        upper: await getUserInfo(idNum),
+        upper,
+        url,
         thumbs: cover
           ? [
               {
@@ -691,6 +736,7 @@ export async function getMediaInfo(
         title: item.content,
         cover: item.cover?.url ?? '',
         desc: item.content,
+        url,
         opid: item.opus_id,
         duration: 0,
         pubtime: 0,
@@ -701,6 +747,7 @@ export async function getMediaInfo(
     };
   } else if (type === Types.MediaType.UserAudio) {
     const { data } = (body as Resps.UserAudioInfo).data;
+    const upper = await getUserInfo(idNum);
     return {
       type,
       id,
@@ -708,13 +755,15 @@ export async function getMediaInfo(
       nfo: {
         tags: [],
         stat: {},
-        upper: await getUserInfo(idNum),
+        url: `https://space.bilibili.com/${upper.mid}/upload/audio`,
+        upper,
         thumbs: getPublicImages(data[0]),
       },
       list: data.map((item, index) => ({
         title: item.title,
         cover: item.cover,
         desc: item.title,
+        url: `https://www.bilibili.com/audio/au${item.id}`,
         aid: item.aid,
         sid: item.id,
         bvid: item.bvid,

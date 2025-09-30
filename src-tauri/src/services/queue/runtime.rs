@@ -496,7 +496,7 @@ impl Scheduler {
             let scheduler = self.clone();
             handles.push(async_runtime::spawn(async move {
                 scheduler.handle_task(&id).await?;
-                Ok::<(), TauriError>(())
+                Ok::<_, TauriError>(())
             }));
         }
         for h in handles {

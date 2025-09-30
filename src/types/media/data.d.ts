@@ -40,6 +40,14 @@ export interface UgcInfo {
   bvid: string;
 }
 
+export interface VideoPage {
+  cid: number;
+  page: number;
+  part?: string;
+  duration: number;
+  ctime?: number;
+}
+
 export interface VideoItemInfo {
   bvid: string;
   aid: number;
@@ -67,13 +75,7 @@ export interface VideoItemInfo {
     like: number;
   };
   cid: number;
-  pages?: {
-    cid: number;
-    page: number;
-    part: string;
-    duration: number;
-    ctime: number;
-  }[];
+  pages?: VideoPage[];
 }
 
 export interface VideoInfo {
@@ -122,6 +124,7 @@ interface EpisodeInfo {
   show_title?: string;
   pub_time: number;
   share_copy: string;
+  share_url: string;
   short_link: string;
 }
 

@@ -316,8 +316,8 @@
     },
     "strategy": "Strategy",
     "add_metadata": {
-      "name": "Embed metadata into audio files",
-      "desc": "If enabled, embed audio metadata automatically when downloading."
+      "name": "Embed metadata into video & audio files",
+      "desc": "If enabled, embed video & audio metadata automatically when downloading."
     },
     "block_pcdn": {
       "name": "Try blocking PCDN",

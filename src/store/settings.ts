@@ -13,6 +13,7 @@ export const useSettingsStore = defineStore('settings', () => {
     convert: {
       danmaku: true,
       mp3: false,
+      mp4: false,
     },
     default: {
       res: Number(),

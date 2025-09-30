@@ -1,21 +1,13 @@
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
-use std::{
-    path::{Path, PathBuf},
-    pin::pin,
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 use time::{macros::format_description, OffsetDateTime, UtcOffset};
-use tokio::{
-    fs,
-    sync::{mpsc, oneshot},
-};
+use tokio::sync::mpsc;
 
 use crate::{
-    config,
-    queue::{runtime::Progress, types::Task},
-    shared::{get_app_handle, get_image},
+    queue::{runtime::Progress, types::ProgressTask},
+    shared::{get_app_handle, get_image, random_string},
     TauriError, TauriResult,
 };
 
@@ -86,23 +78,20 @@ async fn get_duration(path: &Path) -> Result<u64> {
 }
 
 pub async fn merge(
-    id: Arc<String>,
-    ext: &str,
+    ptask: &ProgressTask,
     tx: &Progress,
-    mut cancel: oneshot::Receiver<()>,
     video: &Path,
     audio: &Path,
+    ext: &str,
 ) -> TauriResult<PathBuf> {
+    let id = ptask.task.id.clone();
     let app = get_app_handle();
-    let temp_root = config::read().temp_dir().join(&*id);
-    fs::create_dir_all(&temp_root).await?;
-
-    let output = temp_root.join(format!("{id}.{ext}"));
+    let output = ptask.temp.join(format!("{id}.{ext}"));
     let duration = get_duration(video).await?;
 
-    let mut c = app.shell().sidecar(EXEC)?;
-
-    c = c
+    let mut c = app
+        .shell()
+        .sidecar(EXEC)?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning"])
         .arg("-i")
         .arg(video.as_os_str())
@@ -119,142 +108,242 @@ pub async fn merge(
         .arg(output.as_os_str())
         .arg("-y");
 
-    let (mut _rx, child) = c.spawn()?;
-    let mut child = Some(child);
-    let mut monitor = pin!(monitor(duration, _rx, tx));
-    tokio::select! {
-        res = &mut monitor => res?,
-        _ = &mut cancel => if let Some(c) = child.take() {
-            c.kill()?;
-        }
-    };
+    let (rx, _) = c.spawn()?;
+    monitor(duration, rx, tx).await?;
     Ok(output)
 }
 
-pub async fn convert_audio(
-    id: Arc<String>,
-    mut ext: &str,
+pub async fn add_meta(
+    ptask: &ProgressTask,
     tx: &Progress,
     input: &Path,
-    task: Arc<Task>,
-) -> TauriResult<(PathBuf, String)> {
+    ext: &str,
+) -> TauriResult<PathBuf> {
     let app = get_app_handle();
-    let cfg = config::read();
-
-    if cfg.convert.mp3 {
-        ext = "mp3";
-    }
-
-    let add_meta = ext != "eac3" && cfg.add_metadata;
-    let temp_root = cfg.temp_dir().join(&*id);
-    fs::create_dir_all(&temp_root).await?;
-
     let duration = get_duration(input).await?;
+    let task = ptask.task.clone();
     let nfo = task.nfo.as_ref();
+    let output = ptask.temp.join(random_string(8)).with_extension(ext);
 
-    let mut c = app.shell().sidecar(EXEC)?;
+    let is_mp4 = ext == "mp4";
+    let is_mkv = ext == "mkv";
+    let is_mp3 = ext == "mp3";
+    let is_m4a = ext == "m4a";
+    let is_flac = ext == "flac";
+    let is_video = is_mp4 || is_mkv;
 
-    c = c
+    let k = |s: &str| {
+        if is_mkv || is_flac {
+            s.to_ascii_uppercase()
+        } else {
+            s.to_string()
+        }
+    };
+
+    let mut c = app
+        .shell()
+        .sidecar(EXEC)?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
         .arg(input.as_os_str());
 
-    if let Some(thumb) = nfo.thumbs.first().filter(|_| add_meta) {
-        let cover_url = format!("{}@.jpg", thumb.url);
-        let cover = &temp_root.join("cover.jpg");
-        get_image(cover, &cover_url).await?;
-        c = c.arg("-i").arg(cover.as_os_str()).args([
-            "-map",
-            "0:a:0",
-            "-map",
-            "1:v:0",
-            "-c:v",
-            "mjpeg",
-            "-disposition:v:0",
-            "attached_pic",
-        ]);
-    } else {
-        c = c.args(["-map", "0:a:0"]);
-    }
+    let ts = nfo.premiered.as_ref().and_then(|v| v.as_i64()).unwrap_or(0);
+    let utc = OffsetDateTime::from_unix_timestamp(ts)?;
+    let offset = UtcOffset::from_hms(8, 0, 0)?;
+    let date = utc.to_offset(offset);
+    let fmt = format_description!("[year]-[month]-[day]");
 
-    if cfg.convert.mp3 {
-        c = c.args(["-c:a", "libmp3lame", "-q:a", "2"]);
-        ext = "mp3";
-    } else {
-        c = c.args(["-c:a", "copy"]);
-        if ext == "m4a" {
-            c = c.args([
-                "-bsf:a",
-                "aac_adtstoasc",
-                "-movflags",
-                "+faststart",
-                "-f",
-                "mp4",
+    if let Some(thumb) = nfo.thumbs.first() {
+        let cover_url = format!("{}@.jpg", thumb.url);
+        let cover = &ptask.temp.join(random_string(8)).with_extension("jpg");
+        get_image(cover, &cover_url).await?;
+        if is_mkv {
+            c = c
+                .arg("-attach")
+                .arg(cover.as_os_str())
+                .args([
+                    "-metadata:s:t",
+                    "mimetype=image/jpeg",
+                    "-metadata:s:t",
+                    "filename=cover.jpg",
+                ])
+                .args(["-map", "0", "-c", "copy"]);
+        } else if is_mp4 {
+            c = c.arg("-i").arg(cover.as_os_str()).args([
+                "-map",
+                "0",
+                "-map",
+                "1:v:0",
+                "-c",
+                "copy",
+                "-c:v:1",
+                "mjpeg",
+                "-disposition:v:1",
+                "attached_pic",
+            ]);
+        } else {
+            c = c.arg("-i").arg(cover.as_os_str()).args([
+                "-map",
+                "0:a:0",
+                "-map",
+                "1:v:0",
+                "-c:a",
+                "copy",
+                "-c:v",
+                "mjpeg",
+                "-disposition:v:0",
+                "attached_pic",
             ]);
         }
-    }
-
-    if add_meta {
-        let ts = nfo.premiered.as_ref().and_then(|v| v.as_i64()).unwrap_or(0);
-        let utc = OffsetDateTime::from_unix_timestamp(ts)?;
-        let offset = UtcOffset::from_hms(8, 0, 0)?;
-        let date = utc.to_offset(offset);
-        let fmt = format_description!("[year]-[month]-[day]");
-        c = c
-            .arg("-metadata")
-            .arg(format!("title={}", task.item.title))
-            .arg("-metadata")
-            .arg(format!("comment={}", task.item.desc))
-            .arg("-metadata")
-            .arg(format!("track={}", task.seq + 1));
-        if ext == "flac" {
-            c = c
-                .arg("-metadata")
-                .arg(format!("DATE={}", date.format(&fmt)?))
-                .arg("-metadata")
-                .arg(format!("YEAR={}", date.year()))
-                .args(
-                    nfo.tags
-                        .iter()
-                        .flat_map(|tag| ["-metadata".into(), format!("GENRE={tag}")]),
-                );
+    } else {
+        if is_video {
+            c = c.args(["-map", "0", "-c", "copy"]);
         } else {
-            c = c
-                .arg("-metadata")
-                .arg(format!("genre={}", nfo.tags.join("; ")))
-                .arg("-metadata")
-                .arg(format!("date={}", date.format(&fmt)?))
-                .arg("-metadata")
-                .arg(format!("year={}", date.year()));
-        }
-        if let Some(staff) = nfo.credits.as_ref().map(|v| &v.staff) {
-            c = c.args(staff.iter().flat_map(|s| match (&s.role, &s.name) {
-                (Some(role), Some(name)) => {
-                    let key = if ext == "flac" {
-                        role.to_ascii_uppercase()
-                    } else {
-                        role.clone()
-                    };
-                    vec!["-metadata".into(), format!("{key}={name}")]
-                }
-                _ => vec![],
-            }));
+            c = c.args(["-map", "0:a:0", "-c:a", "copy"]);
         }
     }
-
-    if ext == "mp3" {
-        c = c.args(["-id3v2_version", "4"])
-    }
-
-    let output = temp_root.join(&*id);
 
     c = c
-        .args(["-map_metadata", "0", "-progress", "pipe:1"])
-        .arg(output.with_extension(ext).as_os_str())
-        .arg("-y");
+        .arg("-metadata")
+        .arg(format!("{}={}", k("title"), task.item.title))
+        .arg("-metadata")
+        .arg(format!("{}={}", k("comment"), task.item.desc))
+        .arg("-metadata")
+        .arg(format!("{}={}", k("date"), date.format(&fmt)?))
+        .arg("-metadata")
+        .arg(format!("{}={}", k("year"), date.year()));
 
-    let (mut _rx, _) = c.spawn()?;
-    monitor(duration, _rx, tx).await?;
-    Ok((output, ext.into()))
+    if is_flac {
+        c = c
+            .args(
+                nfo.tags
+                    .iter()
+                    .flat_map(|tag| ["-metadata".into(), format!("GENRE={tag}")]),
+            )
+            .arg("-metadata")
+            .arg(format!("TRACKNUMBER={}", task.seq + 1));
+    } else if !is_video {
+        c = c
+            .arg("-metadata")
+            .arg(format!("{}={}", k("track"), task.seq + 1));
+    } else {
+        if is_mkv {
+            c = c
+                .arg("-metadata")
+                .arg(format!("DATE_RELEASED={}", date.format(&fmt)?));
+        }
+        c = c
+            .arg("-metadata")
+            .arg(format!("{}={}", k("genre"), nfo.tags.join("; ")));
+    }
+
+    let org_url = &task.item.url;
+
+    if is_mp3 {
+        c = c
+            .arg("-metadata")
+            .arg(format!("WOAS={org_url}"))
+            .arg("-metadata")
+            .arg(format!("TXXX={org_url}"));
+    } else {
+        c = c
+            .arg("-metadata")
+            .arg(format!("{}={}", k("original_url"), org_url));
+    }
+
+    if let Some(staff) = nfo.credits.as_ref().map(|v| &v.staff) {
+        c = c.args(staff.iter().flat_map(|s| match (&s.role, &s.name) {
+            (Some(role), Some(name)) => {
+                let key = k(role);
+                vec!["-metadata".into(), format!("{key}={name}")]
+            }
+            _ => vec![],
+        }));
+    }
+
+    if is_mp3 {
+        c = c.args(["-id3v2_version", "4"]);
+    }
+
+    if is_m4a || is_mp4 {
+        c = c.args(["-movflags", "+faststart"]);
+    }
+
+    if is_video {
+        c = c.args(["-map_chapters", "0"]);
+    }
+
+    let (rx, _) = c
+        .args(["-map_metadata", "0", "-progress", "pipe:1"])
+        .arg(output.as_os_str())
+        .arg("-y")
+        .spawn()?;
+
+    monitor(duration, rx, tx).await?;
+    Ok(output)
+}
+
+pub async fn convert_mp3(
+    ptask: &ProgressTask,
+    tx: &Progress,
+    input: &Path,
+) -> TauriResult<PathBuf> {
+    let app = get_app_handle();
+    let duration = get_duration(input).await?;
+    let output = ptask.temp.join(random_string(8)).with_extension("mp3");
+
+    let (rx, _) = app
+        .shell()
+        .sidecar(EXEC)?
+        .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
+        .arg(input.as_os_str())
+        .args(["-c:a", "libmp3lame", "-q:a", "2", "-id3v2_version", "4"])
+        .args(["-map_metadata", "0", "-progress", "pipe:1"])
+        .arg(output.as_os_str())
+        .arg("-y")
+        .spawn()?;
+
+    monitor(duration, rx, tx).await?;
+    Ok(output)
+}
+
+pub async fn convert_mp4(
+    ptask: &ProgressTask,
+    tx: &Progress,
+    input: &Path,
+) -> TauriResult<PathBuf> {
+    let app = get_app_handle();
+    let duration = get_duration(input).await?;
+    let output = ptask.temp.join(random_string(8)).with_extension("mp4");
+
+    let (rx, _) = app
+        .shell()
+        .sidecar(EXEC)?
+        .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
+        .arg(input.as_os_str())
+        .args([
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+        ])
+        .args([
+            "-map_metadata",
+            "0",
+            "-map_chapters",
+            "0",
+            "-progress",
+            "pipe:1",
+        ])
+        .arg(output.as_os_str())
+        .arg("-y")
+        .spawn()?;
+
+    monitor(duration, rx, tx).await?;
+    Ok(output)
 }
 
 async fn monitor(

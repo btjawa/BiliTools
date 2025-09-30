@@ -119,6 +119,7 @@ function getId(task: Task) {
   if (item.bvid) result.push(item.bvid);
   if (item.ssid) result.push('ss' + item.ssid);
   if (item.epid) result.push('ep' + item.epid);
+  if (item.opid) result.push('op:' + item.opid);
   if (item.sid) result.push('au' + item.sid);
   if (item.cid) result.push('cid:' + item.cid);
   if (item.fid) result.push('fid:' + item.fid);

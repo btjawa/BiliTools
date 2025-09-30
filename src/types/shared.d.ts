@@ -145,6 +145,7 @@ export interface MediaItem {
   pubtime: number; // sec timestamp
   isTarget: boolean;
   type: MediaType;
+  url: string;
   aid?: number;
   sid?: number;
   fid?: number;
@@ -160,6 +161,7 @@ export interface MediaNfo {
   showtitle?: string;
   intro?: string;
   tags: string[];
+  url: string;
   stat: {
     play?: number;
     danmaku?: number;

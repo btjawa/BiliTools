@@ -18,6 +18,8 @@ pub struct MediaItem {
     pub pubtime: Number,
     #[serde(rename = "type")]
     pub media_type: String,
+    #[serde(default)]
+    pub url: String,
     #[specta(optional)]
     pub aid: Option<Number>,
     #[specta(optional)]
@@ -44,7 +46,9 @@ pub struct MediaNfo {
     #[specta(optional)]
     pub intro: Option<String>,
     pub tags: Vec<String>,
-    pub stat: serde_json::Value, // We don't want to handle this
+    #[serde(default)]
+    pub url: String,
+    pub stat: serde_json::Value, // We don't need to handle this
     pub thumbs: Vec<MediaNfoThumb>,
     #[specta(optional)]
     pub premiered: Option<Number>,
@@ -197,6 +201,16 @@ impl QueueType {
             _ => QueueType::Waiting,
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct ProgressTask {
+    pub task: Arc<Task>,
+    pub subtask: Arc<SubTask>,
+    pub urls: Option<Arc<MediaUrls>>,
+    pub temp: Arc<PathBuf>,
+    pub folder: Arc<PathBuf>,
+    pub filename: Arc<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]

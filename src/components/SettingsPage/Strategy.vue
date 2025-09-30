@@ -21,7 +21,7 @@
       <i :class="[$fa.weight, 'fa-rotate']"></i>
       <span>{{ $t('settings.convert.name') }}</span>
     </h2>
-    <div v-for="v in ['danmaku', 'mp3'] as const" :key="v">
+    <div v-for="v in ['danmaku', 'mp3', 'mp4'] as const" :key="v">
       <h3>{{ $t(`settings.convert.${v}.name`) }}</h3>
       <Switch v-model="settings.convert[v]" />
       <span class="desc">{{ $t(`settings.convert.${v}.desc`) }}</span>

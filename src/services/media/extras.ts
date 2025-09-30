@@ -1,11 +1,13 @@
 import { tryFetch, timestamp, getRandomInRange, duration } from '../utils';
 import { DanmakuEventToXML } from '@/services/media/dm';
+import { useUserStore } from '@/store';
 import { AppError } from '../error';
 import { UserInfo } from '@/types/login.d';
 import * as Types from '@/types/shared.d';
 import * as Resps from '@/types/media/extras.d';
 
-export async function getUserInfo(mid: number | string) {
+export async function getUserInfo(id?: number | string) {
+  const mid = id ?? useUserStore().mid;
   const info = (
     (await tryFetch('https://api.bilibili.com/x/space/wbi/acc/info', {
       auth: 'wbi',

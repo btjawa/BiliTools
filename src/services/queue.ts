@@ -176,11 +176,12 @@ async function handleThumbs(task: Types.Task) {
       (v) => select.thumb.includes(v.id) || select.thumb.includes(alias[v.id]),
     )
     .map((v) => ({
-      id: v.id.includes('-')
+      id: (v.id.includes('-')
         ? i18n.global.t(`popup.thumb.${v.id.split('-')[0]}`, {
             num: v.id.split('-')[1],
           })
-        : i18n.global.t('popup.thumb.' + v.id),
+        : i18n.global.t('popup.thumb.' + v.id)
+      ).replace(/[/\\:*?"<>|]/g, '_'),
       url: v.url.replace('http:', 'https:'),
     }));
 }

@@ -40,6 +40,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
         clipboard: false,
         convert: SettingsConvert {
             danmaku: true,
+            mp4: false,
             mp3: false,
         },
         default: SettingsDefault {

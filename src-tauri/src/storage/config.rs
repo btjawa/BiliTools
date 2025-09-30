@@ -92,6 +92,7 @@ pub struct SettingsFormat {
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct SettingsConvert {
     pub danmaku: bool,
+    pub mp4: bool,
     pub mp3: bool,
 }
 

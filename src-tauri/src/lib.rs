@@ -108,7 +108,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             tauri::async_runtime::spawn(async move {
                 storage::init().await?;
                 services::init().await?;
-                Ok::<(), crate::TauriError>(())
+                Ok::<_, crate::TauriError>(())
             });
             Ok(())
         })

@@ -6,7 +6,7 @@ use std::{
 };
 use tokio::{
     fs,
-    sync::{broadcast::Receiver, oneshot, OnceCell, RwLock},
+    sync::{broadcast::Receiver, OnceCell, RwLock},
 };
 
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
@@ -15,19 +15,11 @@ use crate::{
     aria2c, config, ffmpeg,
     queue::{
         runtime::{request_frontend, CtrlEvent, Progress, RequestAction, Scheduler},
-        types::{MediaNfo, MediaNfoThumb, MediaUrls, SubTask, Task, TaskType},
+        types::{MediaNfo, MediaNfoThumb, MediaUrls, ProgressTask, Task, TaskType},
     },
     shared::{get_app_handle, get_image, get_unique_path, WORKING_PATH},
     TauriError, TauriResult,
 };
-
-struct ProgressTask {
-    task: Arc<Task>,
-    subtask: Arc<SubTask>,
-    urls: Option<Arc<MediaUrls>>,
-    folder: Arc<PathBuf>,
-    filename: Arc<String>,
-}
 
 fn get_ext(task_type: TaskType, abr: usize) -> &'static str {
     match task_type {
@@ -186,12 +178,8 @@ async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Ta
     let danmaku =
         request_frontend::<Vec<u8>>(parent, Some(id.clone()), RequestAction::GetDanmaku).await?;
 
-    let temp_root = config::read().temp_dir();
-    let temp_dir = temp_root.join(&*id);
-    fs::create_dir_all(&temp_dir).await?;
-
-    let xml = temp_dir.join("raw.xml");
-    let ass = temp_dir.join("out.ass");
+    let xml = ptask.temp.join("raw.xml");
+    let ass = ptask.temp.join("out.ass");
 
     fs::write(&xml, &*danmaku).await?;
     let output_file = ptask.folder.join(&*ptask.filename);
@@ -280,7 +268,6 @@ async fn handle_danmaku(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Ta
         get_unique_path(PathBuf::from(format!("{output_file}.ass"))),
     )
     .await?;
-    fs::remove_file(&xml).await?;
     prog.send(1, 1).await?;
     Ok(())
 }
@@ -317,6 +304,37 @@ async fn handle_thumbs(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -> Tau
     Ok(())
 }
 
+async fn post_media(ptask: &ProgressTask, tx: &Progress, input: PathBuf) -> TauriResult<()> {
+    let subtask = &ptask.subtask;
+    let select = ptask.task.select.clone();
+    let config = config::read();
+
+    let abr = ptask.task.select.abr.unwrap_or(0);
+    let mut ext = get_ext(subtask.task_type.clone(), abr).to_string();
+    let mut path = input;
+
+    if subtask.task_type == TaskType::Audio {
+        if config.convert.mp3 {
+            ext = "mp3".into();
+            path = ffmpeg::convert_mp3(ptask, tx, &path).await?;
+        }
+    } else if config.convert.mp4 {
+        ext = "mp4".into();
+        path = ffmpeg::convert_mp4(ptask, tx, &path).await?;
+    }
+
+    if config.add_metadata && ext != "eac3" {
+        path = ffmpeg::add_meta(ptask, tx, &path, &ext).await?;
+    }
+
+    let output = ptask.folder.join(&*ptask.filename).with_extension(ext);
+    if select.media.video || select.media.audio || subtask.task_type == TaskType::AudioVideo {
+        fs::copy(&path, &output).await?;
+    }
+
+    Ok(())
+}
+
 async fn handle_merge(
     ptask: &ProgressTask,
     mut rx: Receiver<CtrlEvent>,
@@ -331,34 +349,21 @@ async fn handle_merge(
     let audio = audio_path.get().ok_or(anyhow!("No path for audio found"))?;
 
     let prog = Progress::new(parent.clone(), id.clone());
-    let (cancel_tx, cancel_rx) = oneshot::channel();
 
     let abr = ptask.task.select.abr.unwrap_or(0);
     let ext = get_ext(subtask.task_type.clone(), abr);
 
-    let mut merge = pin!(ffmpeg::merge(
-        id.clone(),
-        ext,
-        &prog,
-        cancel_rx,
-        video,
-        audio,
-    ));
-    let path = tokio::select! {
-        res = &mut merge => res,
+    let mut process = pin!(async {
+        let path = ffmpeg::merge(ptask, &prog, video, audio, ext).await?;
+        post_media(ptask, &prog, path).await?;
+        Ok::<_, TauriError>(())
+    });
+    tokio::select! {
+        res = &mut process => res,
         Ok(CtrlEvent::Cancel) = rx.recv() => {
-            let _ = cancel_tx.send(());
             return Ok(());
         }
     }?;
-
-    let output_file = get_unique_path(ptask.folder.join(format!("{}.{}", &ptask.filename, ext)));
-
-    fs::copy(&path, output_file).await?;
-    fs::remove_file(path).await?;
-
-    fs::remove_file(video).await?;
-    fs::remove_file(audio).await?;
     Ok(())
 }
 
@@ -369,7 +374,6 @@ async fn handle_media(
     audio_path: &Arc<OnceCell<PathBuf>>,
 ) -> TauriResult<()> {
     let subtask = &ptask.subtask;
-    let select = ptask.task.select.clone();
     let parent = ptask.task.id.clone();
     let id = subtask.id.clone();
 
@@ -388,10 +392,22 @@ async fn handle_media(
 
     let prog = Progress::new(parent.clone(), id.clone());
 
-    let mut download = pin!(aria2c::download(id.clone(), &prog, urls));
-    let mut path = loop {
+    let mut process = pin!(async {
+        let path = aria2c::download(ptask, &prog, urls).await?;
+        post_media(ptask, &prog, path.clone()).await?;
+        if subtask.task_type == TaskType::Video {
+            video_path
+        } else if subtask.task_type == TaskType::Audio {
+            audio_path
+        } else {
+            return Err(anyhow!("No path for type {:?} found", &subtask.task_type).into());
+        }
+        .set(path)?;
+        Ok::<_, TauriError>(())
+    });
+    loop {
         tokio::select! {
-            res = &mut download => break res,
+            res = &mut process => break res,
             Ok(msg) = rx.recv() => match msg {
                 CtrlEvent::Cancel => {
                     let _ = aria2c::cancel(id.clone()).await;
@@ -408,48 +424,19 @@ async fn handle_media(
         }
     }?;
 
-    let abr = ptask.task.select.abr.unwrap_or(0);
-    let mut ext = get_ext(subtask.task_type.clone(), abr).to_string();
-
-    if subtask.task_type == TaskType::Video {
-        video_path
-    } else if subtask.task_type == TaskType::Audio {
-        audio_path
-    } else {
-        return Err(anyhow!("No path for type {:?} found", &subtask.task_type).into());
-    }
-    .set(path.clone())?;
-
-    if subtask.task_type == TaskType::Audio {
-        let (file, suffix) =
-            ffmpeg::convert_audio(id, &ext, &prog, &path, ptask.task.clone()).await?;
-        path = file.with_extension(&suffix);
-        ext = suffix;
-    }
-
-    if select.media.video || select.media.audio {
-        fs::copy(
-            &path,
-            &ptask.folder.join(&*ptask.filename).with_extension(ext),
-        )
-        .await?;
-    }
-    if !select.media.audio_video {
-        fs::remove_file(&path).await?;
-    }
     Ok(())
 }
 
 pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> TauriResult<()> {
-    let temp_root = config::read().temp_dir();
+    let task_snapshot = Arc::new(task.read().await.clone());
+    let id = task_snapshot.id.clone();
+    let temp_root = config::read().temp_dir().join(&*task_snapshot.id);
+
     fs::create_dir_all(&temp_root)
         .await
         .context("Failed to create temp folder")?;
 
-    let task_snapshot = Arc::new(task.read().await.clone());
-    let id = task_snapshot.id.clone();
     let select = task_snapshot.select.clone();
-
     let nfo = request_frontend::<MediaNfo>(id.clone(), None, RequestAction::RefreshNfo).await?;
     let mut guard = task.write().await;
     guard.nfo = nfo;
@@ -491,71 +478,55 @@ pub async fn handle_task(scheduler: Arc<Scheduler>, task: Arc<RwLock<Task>>) -> 
             subtask.task_type
         );
 
+        let temp = Arc::new(temp_root.join(&*sub_id));
+        fs::create_dir_all(&*temp)
+            .await
+            .context(format!("Failed to create temp Task#{} folder", &*sub_id))?;
+
         let filename = request_frontend::<String>(
             id.clone(),
             Some(sub_id.clone()),
             RequestAction::GetFilename,
         )
         .await?;
+
         let ptask = ProgressTask {
             task: task.clone(),
             subtask: subtask.clone(),
             urls: urls.clone(),
             folder: folder.clone(),
             filename,
+            temp,
         };
         let folder = scheduler.folder.clone();
         let video = video_path.clone();
         let audio = audio_path.clone();
-        match subtask.task_type {
-            TaskType::Video | TaskType::Audio => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_media(&ptask, rx, &video, &audio))
-                    .await?;
-            }
-            TaskType::AudioVideo => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_merge(&ptask, rx, &video, &audio))
-                    .await?;
-            }
-            TaskType::Thumb => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_thumbs(&ptask, rx))
-                    .await?;
-            }
-            TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_danmaku(&ptask, rx))
-                    .await?;
-            }
-            TaskType::AlbumNfo | TaskType::SingleNfo => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| {
-                        handle_nfo(&ptask, rx, &folder, &task.nfo)
-                    })
-                    .await?;
-            }
-            TaskType::AiSummary => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_ai_summary(&ptask, rx))
-                    .await?;
-            }
-            TaskType::Subtitles => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_subtitle(&ptask, rx))
-                    .await?;
-            }
-            TaskType::OpusContent => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_opus_content(&ptask, rx))
-                    .await?;
-            }
-            TaskType::OpusImages => {
-                scheduler
-                    .try_join(&id, &sub_id, |rx| handle_opus_images(&ptask, rx))
-                    .await?;
-            }
-        }
+        let nfo = &task.nfo;
+        scheduler
+            .try_join(&id, &sub_id, |rx| async {
+                match subtask.task_type {
+                    TaskType::Video | TaskType::Audio => {
+                        handle_media(&ptask, rx, &video, &audio).await
+                    }
+                    TaskType::AudioVideo => handle_merge(&ptask, rx, &video, &audio).await,
+                    TaskType::Thumb => handle_thumbs(&ptask, rx).await,
+                    TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
+                        handle_danmaku(&ptask, rx).await
+                    }
+                    TaskType::AlbumNfo | TaskType::SingleNfo => {
+                        handle_nfo(&ptask, rx, &folder, nfo).await
+                    }
+                    TaskType::AiSummary => handle_ai_summary(&ptask, rx).await,
+                    TaskType::Subtitles => handle_subtitle(&ptask, rx).await,
+                    TaskType::OpusContent => handle_opus_content(&ptask, rx).await,
+                    TaskType::OpusImages => handle_opus_images(&ptask, rx).await,
+                }
+            })
+            .await?;
     }
+
+    fs::remove_dir_all(temp_root)
+        .await
+        .context("Failed to cleanup temp folder")?;
     Ok(())
 }

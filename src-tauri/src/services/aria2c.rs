@@ -20,9 +20,8 @@ use tauri_specta::Event;
 use tokio::{fs, sync::RwLock, time::sleep};
 
 use crate::{
-    config,
     errors::TauriError,
-    queue::runtime::Progress,
+    queue::{runtime::Progress, types::ProgressTask},
     shared::{get_app_handle, random_string, ProcessError, USER_AGENT, WORKING_PATH},
     TauriResult,
 };
@@ -303,12 +302,12 @@ pub async fn resume(gid: Arc<String>) -> TauriResult<()> {
     Ok(())
 }
 
-pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> TauriResult<PathBuf> {
-    let temp_root = config::read().temp_dir();
-    let dir = temp_root.join(&*gid);
-    fs::create_dir_all(&dir)
-        .await
-        .context("Failed to create temp dir")?;
+pub async fn download(
+    ptask: &ProgressTask,
+    tx: &Progress,
+    urls: Vec<String>,
+) -> TauriResult<PathBuf> {
+    let gid = ptask.subtask.id.clone();
 
     let url = reqwest::Url::parse(&urls[0])?;
     let name = url
@@ -316,7 +315,7 @@ pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> Tau
         .ok_or(anyhow!("Failed to get path segments: {url:?}"))?
         .next_back()
         .ok_or(anyhow!("Failed to get file name: {url:?}"))?;
-    let output = dir.join(name);
+    let output = ptask.temp.join(name);
     let result = ARIA2_RPC
         .request::<Aria2TellStatus>("tellStatus", vec![json!(gid)])
         .await;
@@ -339,7 +338,10 @@ pub async fn download(gid: Arc<String>, tx: &Progress, urls: Vec<String>) -> Tau
             ARIA2_RPC
                 .request::<Value>(
                     "addUri",
-                    vec![json!(urls), json!({"dir": dir, "out": name, "gid": gid})],
+                    vec![
+                        json!(urls),
+                        json!({"dir": ptask.temp, "out": name, "gid": gid}),
+                    ],
                 )
                 .await?;
         }
