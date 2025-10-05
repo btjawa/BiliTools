@@ -462,6 +462,29 @@ export interface UploadsInfo {
   };
 }
 
+export interface UploadsArchive {
+  aid: number;
+  bvid: string;
+  ctime: number;
+  duration: number;
+  pic: string;
+  pubdate: number;
+  stat: {
+    view: number;
+  };
+  title: string;
+}
+
+export interface UploadsMeta {
+  cover: string;
+  description: string;
+  mid: number;
+  name: string;
+  ptime: number;
+  season_id: number;
+  series_id: number;
+}
+
 export interface UploadsSeriesInfo {
   code: number;
   message: string;
@@ -469,14 +492,12 @@ export interface UploadsSeriesInfo {
   data: {
     items_lists: {
       seasons_list: {
-        meta: {
-          cover: string;
-          description: string;
-          mid: number;
-          name: string;
-          ptime: number;
-          season_id: number;
-        };
+        archives: UploadsArchive[];
+        meta: UploadsMeta;
+      }[];
+      series_list: {
+        archives: UploadsArchive[];
+        meta: UploadsMeta;
       }[];
     };
   };
@@ -487,26 +508,7 @@ export interface UploadsArchivesInfo {
   message: string;
   ttl: number;
   data: {
-    archives: {
-      aid: number;
-      bvid: string;
-      ctime: number;
-      duration: number;
-      pic: string;
-      pubdate: number;
-      stat: {
-        view: number;
-      };
-      title: string;
-    }[];
-    meta: {
-      cover: string;
-      description: string;
-      mid: number;
-      name: string;
-      ptime: number;
-      season_id: number;
-    };
+    archives: UploadsArchive[];
   };
 }
 

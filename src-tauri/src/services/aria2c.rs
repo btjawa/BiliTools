@@ -363,10 +363,10 @@ pub async fn download(
         }
         tx.send(content, chunk).await?;
         if data.status.as_str() == "complete" {
-            tx.send(1, 1).await?;
+            tx.send(content, content).await?;
             break;
         }
-        sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_secs(1)).await;
     }
     Ok(output)
 }

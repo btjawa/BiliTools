@@ -622,27 +622,61 @@ export async function getMediaInfo(
       ],
     };
   } else if (type === Types.MediaType.UserVideo) {
-    const { seasons_list } = (body as Resps.UploadsSeriesInfo).data.items_lists;
+    const { seasons_list, series_list } = (body as Resps.UploadsSeriesInfo).data
+      .items_lists;
     const upper = await getUserInfo(idNum);
     let sections = undefined;
     let nfo;
     let list;
-    if (seasons_list.length) {
-      const target = options?.target ?? seasons_list[0].meta.season_id;
-      const listBody = (await tryFetch(
-        'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list',
-        {
-          params: { ...params, season_id: target },
-        },
-      )) as Resps.UploadsArchivesInfo;
-      const { archives, meta } = listBody.data;
-      sections = {
-        target,
-        tabs: seasons_list.map((v) => ({
-          id: v.meta.season_id,
-          name: v.meta.name,
-        })),
-      };
+    if (seasons_list.length || series_list.length) {
+      let target = options?.target;
+      let archives;
+      let meta;
+
+      if (seasons_list.length) {
+        if (!target) target = seasons_list[0].meta.season_id;
+        const listBody = (await tryFetch(
+          'https://api.bilibili.com/x/polymer/web-space/seasons_archives_list',
+          {
+            params: {
+              ...params,
+              season_id: target,
+            },
+          },
+        )) as Resps.UploadsArchivesInfo;
+        sections = {
+          target,
+          tabs: seasons_list.map((v) => ({
+            id: v.meta.season_id,
+            name: v.meta.name,
+          })),
+        };
+        archives = listBody.data.archives;
+        meta = seasons_list.find((v) => v.meta.season_id === target)?.meta;
+      } else {
+        if (!target) target = series_list[0].meta.series_id;
+        const listBody = (await tryFetch(
+          'https://api.bilibili.com/x/series/archives',
+          {
+            params: {
+              ...params,
+              series_id: target,
+            },
+          },
+        )) as Resps.UploadsArchivesInfo;
+        sections = {
+          target,
+          tabs: series_list.map((v) => ({
+            id: v.meta.series_id,
+            name: v.meta.name,
+          })),
+        };
+        archives = listBody.data.archives;
+        meta = series_list.find((v) => v.meta.series_id === target)?.meta;
+      }
+
+      if (!meta) throw new AppError(`No meta found for target ${target}`);
+
       nfo = {
         showtitle: meta.name,
         intro: meta.description,

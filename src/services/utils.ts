@@ -349,7 +349,6 @@ export async function parseId(
   }
 
   if (/(cv\d+)/i.test(id) || type === 'opus') {
-    console.log(id);
     return {
       id,
       type: MediaType.Opus,

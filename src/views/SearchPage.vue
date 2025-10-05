@@ -185,9 +185,11 @@ async function handlePage() {
   }
   const pn = v.pageIndex;
   const offset = v.offsetMap.get(pn) ?? v.mediaInfo.offset;
+  const target = v.mediaInfo.sections ? v.tab : undefined;
   v.searching = true;
   const result = await data.getMediaInfo(v.mediaInfo.id, v.mediaInfo.type, {
     pn,
+    target,
     offset,
   });
   if (result.offset) v.offsetMap.set(pn + 1, result.offset);
@@ -198,6 +200,7 @@ async function handlePage() {
 
 async function updateTab(t: number) {
   v.tab = t;
+  v.pageIndex = 1;
   v.searching = true;
   const info = await data.getMediaInfo(v.mediaInfo.id, v.mediaInfo.type, {
     target: t,

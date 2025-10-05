@@ -4,6 +4,7 @@ use std::{
     pin::pin,
     sync::Arc,
 };
+use tauri_plugin_http::reqwest;
 use tokio::{
     fs,
     sync::{broadcast::Receiver, OnceCell, RwLock},
@@ -60,13 +61,23 @@ async fn handle_opus_images(ptask: &ProgressTask, mut rx: Receiver<CtrlEvent>) -
         if let Ok(CtrlEvent::Cancel) = rx.try_recv() {
             return Ok(());
         }
-        let url = format!("{}@.jpg", thumb);
+        let url = reqwest::Url::parse(thumb)?;
+
+        let segs = url
+            .path_segments()
+            .ok_or(anyhow!("Failed to get path segments: {url:?}"))?;
+        let segs_path = segs.collect::<PathBuf>();
+        let ext = segs_path
+            .extension()
+            .and_then(|s| s.to_str())
+            .ok_or(anyhow!("Failed to get extension from {segs_path:?}"))?;
+
         let path = get_unique_path(
             ptask
                 .folder
-                .join(format!("{}.{}.jpg", &ptask.filename, index)),
+                .join(format!("{}.{}.{}", &ptask.filename, index, ext)),
         );
-        get_image(&path, &url).await?;
+        get_image(&path, thumb).await?;
         prog.send(content, index as u64).await?;
     }
 
@@ -329,6 +340,8 @@ async fn post_media(ptask: &ProgressTask, tx: &Progress, input: PathBuf) -> Taur
         fs::copy(&path, &output).await?;
     }
 
+    tx.send(1, 1).await?;
+
     Ok(())
 }
 
@@ -361,6 +374,8 @@ async fn handle_merge(
             return Ok(());
         }
     }?;
+
+    prog.send(1, 1).await?;
     Ok(())
 }
 

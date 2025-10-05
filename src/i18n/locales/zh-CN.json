@@ -24,8 +24,8 @@
     "userAudio": "用户音频"
   },
   "taskType": {
-    "opusContent": "图文/专栏/动态内容",
-    "opusImages": "图文/专栏/动态图像",
+    "opusContent": "图文内容",
+    "opusImages": "图文图像",
     "aiSummary": "AI 总结",
     "subtitles": "字幕",
     "albumNfo": "合集/剧集刮削",

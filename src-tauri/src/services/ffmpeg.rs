@@ -374,9 +374,7 @@ async fn monitor(
             }
             CommandEvent::Terminated(msg) => {
                 let code = msg.code.unwrap_or(0);
-                if code == 0 {
-                    tx.send(1, 1).await?;
-                } else {
+                if code != 0 {
                     return Err(TauriError::new(
                         format!(
                             "FFmpeg task failed\n{}",
