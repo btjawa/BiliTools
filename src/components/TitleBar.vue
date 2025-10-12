@@ -1,10 +1,10 @@
 <template>
   <div
     data-tauri-drag-region
-    class="titlebar absolute right-0 h-[30px] w-[calc(100vw-56px)] bg-transparent"
+    class="z-100 h-[30px] bg-transparent"
     @dblclick="appWindow.toggleMaximize()"
   >
-    <div v-if="osType() !== 'macos'" class="relative z-100 float-right">
+    <div v-if="osType() !== 'macos'" class="relative float-right">
       <div class="button" @click="toggleTop">
         <i :class="[isTop ? 'fa-solid' : 'fa-light', 'fa-thumbtack']"></i>
       </div>

@@ -292,7 +292,7 @@ function buildPaths(
     }),
   )
     .replace(/[/\\:*?"<>|]/g, '_')
-    .replace(/\.+$/, ''); // #165
+    .replace(/\.+$/, ''); // Issue#165
 }
 
 async function handleTask(

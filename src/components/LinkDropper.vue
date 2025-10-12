@@ -1,16 +1,15 @@
 <template>
-  <div
-    ref="dropper"
-    :class="{ active: v.active }"
-    class="absolute popup w-[calc(100vw-56px)]"
-  >
-    <Transition name="slide">
-      <div v-if="v.active" class="inner flex flex-col items-center">
+  <Transition name="slide">
+    <div
+      v-if="v.active"
+      class="popup"
+    >
+      <div class="inner flex flex-col items-center">
         <i class="fa-solid fa-download"></i>
         <h1>{{ $t('drag.title') }}</h1>
       </div>
-    </Transition>
-  </div>
+    </div>
+  </Transition>
 </template>
 
 <script lang="ts" setup>

@@ -18,7 +18,7 @@
             :ratio="856 / 170"
           />
         </div>
-        <div class="flex p-6 gap-4 items-end">
+        <div class="flex p-6 gap-6 items-end">
           <div class="relative w-fit">
             <Image class="rounded-full! z-0" :height="100" :src="user.avatar" />
             <img

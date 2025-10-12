@@ -10,7 +10,7 @@
       @click="click(v.path)"
     >
       <template v-if="v.path === '/user-page'">
-        <Image v-if="user.isLogin" :src="v.icon" class="rounded-full!" />
+        <Image v-if="user.isLogin" :src="v.icon" class="rounded-full!" prevent />
         <img v-else class="w-9 h-9 rounded-full" :src="v.icon" />
       </template>
       <i

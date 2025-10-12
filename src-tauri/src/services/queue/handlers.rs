@@ -335,7 +335,10 @@ async fn post_media(ptask: &ProgressTask, tx: &Progress, input: PathBuf) -> Taur
         path = ffmpeg::add_meta(ptask, tx, &path, &ext).await?;
     }
 
-    let output = ptask.folder.join(&*ptask.filename).with_extension(ext);
+    // Issue#198
+    let output = ptask.folder
+        .join(&*ptask.filename)
+        .with_file_name(format!("{}.{}", ptask.filename, ext));
     if select.media.video || select.media.audio || subtask.task_type == TaskType::AudioVideo {
         fs::copy(&path, &output).await?;
     }

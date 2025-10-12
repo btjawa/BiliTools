@@ -56,6 +56,19 @@
     text-rendering: optimizeLegibility;
     @apply select-none box-border;
   }
+  #app {
+    @apply flex w-full h-full;
+  }
+  #main {
+    @apply flex flex-col relative w-full h-full overflow-hidden;
+    &::before {
+      @apply content-[''] absolute inset-0 bg-black/60 z-[1];
+      @apply transition-opacity opacity-0 pointer-events-none;
+    }
+    &:has(.popup)::before {
+      @apply opacity-100 pointer-events-auto;
+    }
+  }
   h1 {
     @apply text-2xl font-semibold;
   }
@@ -154,15 +167,8 @@
     @apply hover:cursor-pointer hover:brightness-85 text-(--desc-color);
   }
   .popup {
-    @apply absolute flex w-full h-full top-0 right-0 bg-black/50;
-    @apply pointer-events-none opacity-0 transition-opacity;
-    &.active {
-      @apply pointer-events-auto opacity-100;
-    }
-    & > div {
-      @apply flex flex-col relative rounded-lg shadow-lg bg-(--solid-block-color);
-      @apply w-fit! h-fit! gap-2 m-auto p-4;
-    }
+    @apply flex flex-col rounded-lg shadow-lg bg-(--solid-block-color);
+    @apply absolute inset-0 m-auto w-fit! h-fit! gap-2 p-4 z-[2];
     .close {
       @apply absolute top-4 right-4 rounded-full w-8 h-8;
     }

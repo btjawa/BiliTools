@@ -13,7 +13,7 @@
         >
           <div>
             <Empty v-if="item == 'empty'" :text="$t('down.empty')" />
-            <Scheduler v-else v-model="tab" :sche="item" />
+            <Scheduler v-else v-model="tab" :sche="item" :popup="(v) => popup?.init(v)" />
           </div>
         </VList>
       </Transition>
@@ -30,6 +30,7 @@
         </button>
       </div>
     </div>
+    <Popup ref="popup" />
   </div>
 </template>
 
@@ -38,8 +39,8 @@ import { useQueueStore } from '@/store';
 import { computed, ref } from 'vue';
 import { VList } from 'virtua/vue';
 
+import { Scheduler, Popup } from '@/components/DownPage';
 import { Empty } from '@/components';
-import { Scheduler } from '@/components/DownPage';
 
 const tabs = {
   waiting: 'fa-stopwatch',
@@ -53,6 +54,7 @@ const queueData = computed(() =>
 );
 
 const tab = ref<Key>('waiting');
+const popup = ref<InstanceType<typeof Popup>>();
 const queue = useQueueStore();
 
 defineExpose({ tab });

@@ -82,7 +82,7 @@
       </div>
     </div>
     <div class="flex w-full gap-4 *:shrink-0 items-center">
-      <button @click="popup?.init(task)">
+      <button @click="props.popup(task)">
         <i :class="[$fa.weight, 'fa-list']"></i>
         <span>{{ $t('down.taskInfo') }}</span>
       </button>
@@ -95,26 +95,24 @@
       </div>
     </div>
   </div>
-  <Popup ref="popup" />
 </template>
 
 <script lang="ts" setup>
 import { Task, Scheduler } from '@/types/shared.d';
 import { getPlayUrl } from '@/services/media/data';
 import { useQueueStore } from '@/store';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive } from 'vue';
 
 import { commands, CtrlEvent } from '@/services/backend';
 import { timestamp } from '@/services/utils';
-import Popup from './Popup.vue';
-import ProgressBar from '../ProgressBar.vue';
+import { ProgressBar, Dropdown } from '..';
 
 const queue = useQueueStore();
-const popup = ref<InstanceType<typeof Popup>>();
 
 const props = defineProps<{
   sche: Scheduler;
   task: Task;
+  popup: (task: Task) => void;
 }>();
 
 const cache = reactive({

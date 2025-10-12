@@ -1,7 +1,7 @@
 <template>
-  <TitleBar />
-  <div class="main">
-    <SideBar />
+  <SideBar />
+  <div id="main" @contextmenu.prevent="contextMenu?.init">
+    <TitleBar />
     <ContextMenu ref="contextMenu" />
     <div class="loading"></div>
     <router-view v-slot="{ Component }">
@@ -75,7 +75,6 @@ context.app.config.errorHandler = (e) =>
 
 document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  contextMenu.value?.init(e);
 });
 
 provide('page', page);
@@ -113,12 +112,8 @@ onMounted(async () => {
 <style>
 @reference 'tailwindcss';
 
-.main {
-  @apply absolute right-0 bottom-0 h-[calc(100vh-30px)];
-  @apply flex w-full items-end bg-transparent overflow-visible;
-}
 .loading {
-  @apply absolute w-8 h-8 top-2 right-6 opacity-0 z-99 pointer-events-none transition-opacity;
+  @apply absolute w-8 h-8 top-[38px] right-6 opacity-0 z-99 pointer-events-none transition-opacity;
   @apply border-solid border-2 border-(--solid-block-color) border-l-(--content-color) rounded-full;
   animation: circle infinite 0.75s linear;
   &.active {

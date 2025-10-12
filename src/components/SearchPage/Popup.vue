@@ -276,7 +276,7 @@ function exit() {
 @reference 'tailwindcss';
 
 .el {
-  @apply absolute inset-0 mx-6 w-[calc(100%-48px)] bg-(--block-color);
+  @apply absolute inset-0 mx-6 bg-(--block-color);
 }
 hr {
   @apply my-2.5;

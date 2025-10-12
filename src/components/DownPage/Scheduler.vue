@@ -31,14 +31,14 @@
       :data="sche.list.map((v) => queue.tasks[v])"
       class="contain-paint!"
     >
-      <SchedulerTask :sche :task="item" />
+      <SchedulerTask :sche :task="item" :popup />
     </VList>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { commands, CtrlEvent } from '@/services/backend';
-import { Scheduler } from '@/types/shared.d';
+import { Scheduler, Task } from '@/types/shared.d';
 import { processQueue } from '@/services/queue';
 import { timestamp } from '@/services/utils';
 import { useQueueStore } from '@/store';
@@ -50,6 +50,7 @@ import SchedulerTask from './SchedulerTask.vue';
 
 const props = defineProps<{
   sche: Scheduler;
+  popup: (task: Task) => void;
 }>();
 
 const queue = useQueueStore();
