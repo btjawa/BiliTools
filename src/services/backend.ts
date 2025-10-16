@@ -136,17 +136,9 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async submitTask(task: Task) : Promise<Result<null, TauriError>> {
+async ctrlEvent(event: CtrlEvent, sid: string, id: string | null) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("submit_task", { task }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async processQueue(sid: string, folder: string) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("process_queue", { sid, folder }) };
+    return { status: "ok", data: await TAURI_INVOKE("ctrl_event", { event, sid, id }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -160,25 +152,25 @@ async openFolder(sid: string, id: string | null) : Promise<Result<null, TauriErr
     else return { status: "error", error: e  as any };
 }
 },
-async ctrlEvent(event: CtrlEvent, sid: string, list: string[]) : Promise<Result<null, TauriError>> {
+async submitTask(id: string, value: TaskView) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("ctrl_event", { event, sid, list }) };
+    return { status: "ok", data: await TAURI_INVOKE("submit_task", { id, value }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateMaxConc(newConc: number) : Promise<Result<null, TauriError>> {
+async planScheduler(sid: string, folder: string) : Promise<Result<SchedulerView, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_max_conc", { newConc }) };
+    return { status: "ok", data: await TAURI_INVOKE("plan_scheduler", { sid, folder }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async updateSelect(id: string, select: PopupSelect) : Promise<Result<null, TauriError>> {
+async processScheduler(sid: string) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("update_select", { id, select }) };
+    return { status: "ok", data: await TAURI_INVOKE("process_scheduler", { sid }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -223,10 +215,11 @@ export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boo
 export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
 export type ProcessError = { name: string; error: string }
-export type QueueData = { waiting: string[]; doing: string[]; complete: string[] }
-export type QueueEvent = { type: "snapshot"; init: boolean; queue: QueueData; tasks?: Partial<{ [key in string]: Task }> | null; schedulers?: Partial<{ [key in string]: SchedulerView }> | null } | { type: "state"; parent: string; state: TaskState } | { type: "progress"; parent: string; id: string; status: SubTaskStatus } | { type: "request"; parent: string; subtask: string | null; action: RequestAction } | { type: "error"; parent: string; id?: string | null; message: string; code: number | null }
-export type RequestAction = "refreshNfo" | "refreshUrls" | "refreshFolder" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent" | "getOpusImages"
-export type SchedulerView = { sid: string; ts: number; list: string[] }
+export type QueueEvent = { type: "taskState"; task: string; state: TaskState } | { type: "schedulerState"; scheduler: string; state: SchedulerState } | { type: "schedulerQueue"; scheduler: string; queue: QueueType } | { type: "progress"; task: string; subtask: string; content: number; chunk: number } | { type: "queue"; name: QueueType; value: string[] } | { type: "request"; task: string; subtask: string | null; action: RequestAction; endpoint: string } | { type: "error"; task: string; subtask: string | null; message: string; code: number | null }
+export type QueueType = "backlog" | "pending" | "doing" | "complete"
+export type RequestAction = "prepareTask" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent" | "getOpusImages"
+export type SchedulerState = "idle" | "running" | "paused" | "completed" | "failed" | "cancelled"
+export type SchedulerView = { sid: string; ts: number; list: string[]; queue: QueueType; state: SchedulerState }
 export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; drag_search: boolean; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy; sidecar: SettingsSidecar; speed_limit: number }
 export type SettingsConvert = { danmaku: boolean; mp4: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
@@ -238,9 +231,12 @@ export type StreamFormat = "dash" | "mp4" | "flv"
 export type StringOrFalse = string | boolean
 export type SubTask = { id: string; type: TaskType }
 export type SubTaskStatus = { chunk: number; content: number }
-export type Task = { id: string; state: TaskState; subtasks: SubTask[]; status: Partial<{ [key in string]: SubTaskStatus }>; ts: number; seq: number; folder: string; select: PopupSelect; item: MediaItem; type: string; nfo: MediaNfo }
-export type TaskState = "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
+export type TaskHotData = { status: Partial<{ [key in string]: SubTaskStatus }>; state: TaskState }
+export type TaskMeta = { id: string; ts: number; seq: number; item: MediaItem; type: string }
+export type TaskPrepare = { select: PopupSelect; subtasks: SubTask[]; nfo: MediaNfo; folder: string }
+export type TaskState = "backlog" | "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
 export type TaskType = "opusContent" | "opusImages" | "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
+export type TaskView = { meta: TaskMeta; prepare: TaskPrepare; hot: TaskHotData }
 export type TauriError = { code: AnyInt | null; message: string; stack: string }
 export type Theme = 
 /**

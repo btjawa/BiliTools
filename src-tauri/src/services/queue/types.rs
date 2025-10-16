@@ -1,11 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
 use specta::Type;
-use std::{
-    collections::{HashMap, VecDeque},
-    path::PathBuf,
-    sync::Arc,
-};
 
 // Media
 
@@ -39,7 +34,7 @@ pub struct MediaItem {
     pub index: usize,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Type)]
 pub struct MediaNfo {
     #[specta(optional)]
     pub showtitle: Option<String>,
@@ -81,16 +76,6 @@ pub struct MediaNfoCredits {
 pub struct MediaNfoCredit {
     pub role: Option<String>,
     pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MediaUrls {
-    #[serde(rename = "videoUrls")]
-    pub video_urls: Option<Vec<String>>,
-    #[serde(rename = "audioUrls")]
-    pub audio_urls: Option<Vec<String>>,
-    pub subtasks: Vec<Arc<SubTask>>,
-    pub folder: Arc<PathBuf>,
 }
 
 // Select
@@ -166,106 +151,4 @@ impl PopupSelectMedia {
     pub fn any_true(&self) -> bool {
         self.video || self.audio || self.audio_video
     }
-}
-
-// Tasks
-
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-pub struct QueueData {
-    pub waiting: VecDeque<Arc<String>>,
-    pub doing: VecDeque<Arc<String>>,
-    pub complete: VecDeque<Arc<String>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "lowercase")]
-pub enum QueueType {
-    Waiting,
-    Doing,
-    Complete,
-}
-
-impl QueueType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            QueueType::Waiting => "waiting",
-            QueueType::Doing => "doing",
-            QueueType::Complete => "complete",
-        }
-    }
-    pub fn from_str_lossy(str: &str) -> QueueType {
-        match str {
-            "waiting" => QueueType::Waiting,
-            "doing" => QueueType::Doing,
-            "complete" => QueueType::Complete,
-            _ => QueueType::Waiting,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ProgressTask {
-    pub task: Arc<Task>,
-    pub subtask: Arc<SubTask>,
-    pub urls: Option<Arc<MediaUrls>>,
-    pub temp: Arc<PathBuf>,
-    pub folder: Arc<PathBuf>,
-    pub filename: Arc<String>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Type)]
-pub struct Task {
-    pub id: Arc<String>,
-    pub state: TaskState,
-    pub subtasks: Vec<Arc<SubTask>>,
-    pub status: HashMap<Arc<String>, Arc<SubTaskStatus>>,
-    pub ts: u64,
-    pub seq: usize,
-    pub folder: Arc<PathBuf>,
-    pub select: Arc<PopupSelect>,
-    pub item: Arc<MediaItem>,
-    #[serde(rename = "type")]
-    pub media_type: String,
-    pub nfo: Arc<MediaNfo>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]
-#[serde(rename_all = "camelCase")]
-pub enum TaskState {
-    Pending,
-    Active,
-    Completed,
-    Paused,
-    Failed,
-    Cancelled,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Type)]
-pub struct SubTask {
-    pub id: Arc<String>,
-    #[serde(rename = "type")]
-    pub task_type: TaskType,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Type)]
-#[serde(rename_all = "camelCase")]
-pub enum TaskType {
-    OpusContent,
-    OpusImages,
-    AiSummary,
-    Subtitles,
-    AlbumNfo,
-    SingleNfo,
-    LiveDanmaku,
-    HistoryDanmaku,
-    Thumb,
-    Video,
-    Audio,
-    AudioVideo,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Type)]
-pub struct SubTaskStatus {
-    pub chunk: u64,
-    pub content: u64,
 }

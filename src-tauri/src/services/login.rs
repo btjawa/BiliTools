@@ -234,10 +234,10 @@ pub async fn get_buvid() -> TauriResult<()> {
         .collect();
     let mut has_buvid_3 = false;
     for cookie in cookies {
-        cookies::insert(cookie.clone()).await?;
         if cookie.starts_with("buvid3") {
             has_buvid_3 = true;
         }
+        cookies::insert(cookie).await?;
     }
 
     let buvid_resp = client

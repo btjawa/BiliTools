@@ -50,7 +50,6 @@ export function setEventHook() {
       i18n.global.locale.value = v.language;
       const result = await Promise.all([
         commands.setWindow(v.theme, v.window_effect),
-        commands.updateMaxConc(v.max_conc),
         commands.configWrite(v),
       ]);
       for (const r of result) {

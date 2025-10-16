@@ -1,16 +1,23 @@
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
-use std::path::{Path, PathBuf};
-use tauri_plugin_shell::{process::CommandEvent, ShellExt};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use tauri_plugin_shell::{
+    process::{CommandChild, CommandEvent},
+    ShellExt,
+};
 use time::{macros::format_description, OffsetDateTime, UtcOffset};
 use tokio::sync::mpsc;
 
 use crate::{
-    queue::{runtime::Progress, types::ProgressTask},
     shared::{get_app_handle, get_image, random_string, Sidecar},
     storage::config,
     TauriError, TauriResult,
 };
+
+use super::queue::{handlers::SubTaskReq, runtime::CtrlHandle};
 
 fn clean_log(raw_log: &[u8]) -> String {
     String::from_utf8_lossy(raw_log)
@@ -73,15 +80,14 @@ async fn get_duration(path: &Path) -> Result<u64> {
 }
 
 pub async fn merge(
-    ptask: &ProgressTask,
-    tx: &Progress,
+    req: &SubTaskReq,
+    ctrl: Arc<CtrlHandle>,
     video: &Path,
     audio: &Path,
     ext: &str,
 ) -> TauriResult<PathBuf> {
-    let id = ptask.task.id.clone();
     let app = get_app_handle();
-    let output = ptask.temp.join(format!("{id}.{ext}"));
+    let output = req.temp.join(format!("{}.{ext}", req.task.id));
     let duration = get_duration(video).await?;
 
     let mut c = app
@@ -103,22 +109,23 @@ pub async fn merge(
         .arg(output.as_os_str())
         .arg("-y");
 
-    let (rx, _) = c.spawn()?;
-    monitor(duration, rx, tx).await?;
+    let cmd = c.spawn()?;
+    monitor(duration, cmd, ctrl, req).await?;
     Ok(output)
 }
 
 pub async fn add_meta(
-    ptask: &ProgressTask,
-    tx: &Progress,
+    req: &SubTaskReq,
+    ctrl: Arc<CtrlHandle>,
     input: &Path,
     ext: &str,
 ) -> TauriResult<PathBuf> {
     let app = get_app_handle();
     let duration = get_duration(input).await?;
-    let task = ptask.task.clone();
-    let nfo = task.nfo.as_ref();
-    let output = ptask.temp.join(random_string(8)).with_extension(ext);
+    let item = &req.task.item;
+    let seq = &req.task.seq;
+    let nfo = req.task.nfo.load_full();
+    let output = req.temp.join(random_string(8)).with_extension(ext);
 
     let is_mp4 = ext == "mp4";
     let is_mkv = ext == "mkv";
@@ -149,7 +156,7 @@ pub async fn add_meta(
 
     if let Some(thumb) = nfo.thumbs.first() {
         let cover_url = format!("{}@.jpg", thumb.url);
-        let cover = &ptask.temp.join(random_string(8)).with_extension("jpg");
+        let cover = &req.temp.join(random_string(8)).with_extension("jpg");
         get_image(cover, &cover_url).await?;
         if is_mkv {
             c = c
@@ -197,9 +204,9 @@ pub async fn add_meta(
 
     c = c
         .arg("-metadata")
-        .arg(format!("{}={}", k("title"), task.item.title))
+        .arg(format!("{}={}", k("title"), item.title))
         .arg("-metadata")
-        .arg(format!("{}={}", k("comment"), task.item.desc))
+        .arg(format!("{}={}", k("comment"), item.desc))
         .arg("-metadata")
         .arg(format!("{}={}", k("date"), date.format(&fmt)?))
         .arg("-metadata")
@@ -213,11 +220,11 @@ pub async fn add_meta(
                     .flat_map(|tag| ["-metadata".into(), format!("GENRE={tag}")]),
             )
             .arg("-metadata")
-            .arg(format!("TRACKNUMBER={}", task.seq + 1));
+            .arg(format!("TRACKNUMBER={}", seq + 1));
     } else if !is_video {
         c = c
             .arg("-metadata")
-            .arg(format!("{}={}", k("track"), task.seq + 1));
+            .arg(format!("{}={}", k("track"), seq + 1));
     } else {
         if is_mkv {
             c = c
@@ -229,7 +236,7 @@ pub async fn add_meta(
             .arg(format!("{}={}", k("genre"), nfo.tags.join("; ")));
     }
 
-    let org_url = &task.item.url;
+    let org_url = &item.url;
 
     if is_mp3 {
         c = c
@@ -265,26 +272,26 @@ pub async fn add_meta(
         c = c.args(["-map_chapters", "0"]);
     }
 
-    let (rx, _) = c
+    let cmd = c
         .args(["-map_metadata", "0", "-progress", "pipe:1"])
         .arg(output.as_os_str())
         .arg("-y")
         .spawn()?;
 
-    monitor(duration, rx, tx).await?;
+    monitor(duration, cmd, ctrl, req).await?;
     Ok(output)
 }
 
 pub async fn convert_mp3(
-    ptask: &ProgressTask,
-    tx: &Progress,
+    req: &SubTaskReq,
+    ctrl: Arc<CtrlHandle>,
     input: &Path,
 ) -> TauriResult<PathBuf> {
     let app = get_app_handle();
     let duration = get_duration(input).await?;
-    let output = ptask.temp.join(random_string(8)).with_extension("mp3");
+    let output = req.temp.join(random_string(8)).with_extension("mp3");
 
-    let (rx, _) = app
+    let cmd = app
         .shell()
         .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
@@ -295,20 +302,20 @@ pub async fn convert_mp3(
         .arg("-y")
         .spawn()?;
 
-    monitor(duration, rx, tx).await?;
+    monitor(duration, cmd, ctrl, req).await?;
     Ok(output)
 }
 
 pub async fn convert_mp4(
-    ptask: &ProgressTask,
-    tx: &Progress,
+    req: &SubTaskReq,
+    ctrl: Arc<CtrlHandle>,
     input: &Path,
 ) -> TauriResult<PathBuf> {
     let app = get_app_handle();
     let duration = get_duration(input).await?;
-    let output = ptask.temp.join(random_string(8)).with_extension("mp4");
+    let output = req.temp.join(random_string(8)).with_extension("mp4");
 
-    let (rx, _) = app
+    let cmd = app
         .shell()
         .sidecar(config::read().sidecar(Sidecar::FFmpeg))?
         .args(["-hide_banner", "-nostats", "-loglevel", "warning", "-i"])
@@ -335,17 +342,23 @@ pub async fn convert_mp4(
         .arg("-y")
         .spawn()?;
 
-    monitor(duration, rx, tx).await?;
+    monitor(duration, cmd, ctrl, req).await?;
     Ok(output)
 }
 
 async fn monitor(
     duration: u64,
-    mut rx: mpsc::Receiver<CommandEvent>,
-    tx: &Progress,
+    mut cmd: (mpsc::Receiver<CommandEvent>, CommandChild),
+    ctrl: Arc<CtrlHandle>,
+    req: &SubTaskReq,
 ) -> TauriResult<()> {
     let mut stderr: Vec<String> = vec![];
-    while let Some(msg) = rx.recv().await {
+    ctrl.reg_cleaner(async move {
+        cmd.1.kill()?;
+        Ok(())
+    })
+    .await?;
+    while let Some(msg) = cmd.0.recv().await {
         match msg {
             CommandEvent::Stdout(line) => {
                 let line = String::from_utf8_lossy(&line);
@@ -356,7 +369,7 @@ async fn monitor(
                 match key.trim() {
                     "out_time_us" | "out_time_ms" => {
                         let chunk = value.parse::<u64>().unwrap_or(0);
-                        tx.send(duration, chunk / 1_000_000).await?;
+                        req.subtask.send(duration, chunk / 1_000_000).await?;
                     }
                     "progress" => {
                         if value.trim() == "end" {
@@ -382,6 +395,8 @@ async fn monitor(
                         ),
                         Some(code),
                     ));
+                } else {
+                    req.subtask.send(duration, duration).await?;
                 }
             }
             _ => (),

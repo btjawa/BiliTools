@@ -20,6 +20,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let builder = Builder::<tauri::Wry>::new()
         // Then register them (separated by a comma)
         .commands(collect_commands![
+            // Essentials
             meta,
             init,
             set_window,
@@ -29,25 +30,27 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             clean_cache,
             db_import,
             db_export,
-            export_data, // Essentials
+            export_data,
+            // Login
             stop_login,
             exit,
             sms_login,
             pwd_login,
             switch_cookie,
             scan_login,
-            refresh_cookie, // Login
-            submit_task,
-            process_queue,
-            open_folder,
+            refresh_cookie,
+            // Queue
             ctrl_event,
-            update_max_conc,
-            update_select // Queue
+            open_folder,
+            submit_task,
+            plan_scheduler,
+            process_scheduler,
+            // update_max_conc,
         ])
         .events(collect_events![
             shared::HeadersData,
             shared::ProcessError,
-            queue::runtime::QueueEvent
+            queue::frontend::QueueEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

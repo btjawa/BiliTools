@@ -1,0 +1,77 @@
+use anyhow::Result;
+use sea_query::{
+    ColumnDef, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement,
+};
+use sea_query_binder::SqlxBinder;
+use sqlx::Row;
+use std::{collections::VecDeque, sync::Arc};
+
+use crate::queue::{atomics::QueueType, manager::MANAGER};
+
+use super::db::{get_db, TableSpec};
+
+#[derive(Iden, Clone, Copy)]
+pub enum Queue {
+    Table,
+    Name,
+    Value,
+}
+
+pub struct QueueTable;
+
+impl TableSpec for QueueTable {
+    const NAME: &'static str = "queue";
+    const LATEST: i32 = 1;
+    fn create_stmt() -> TableCreateStatement {
+        Table::create()
+            .table(Queue::Table)
+            .col(
+                ColumnDef::new(Queue::Name)
+                    .integer()
+                    .not_null()
+                    .primary_key(),
+            )
+            .col(ColumnDef::new(Queue::Value).integer().not_null())
+            .to_owned()
+    }
+}
+
+pub async fn load() -> Result<()> {
+    let (sql, values) = Query::select()
+        .columns([Queue::Table, Queue::Name, Queue::Value])
+        .from(Queue::Table)
+        .build_sqlx(SqliteQueryBuilder);
+
+    let pool = get_db().await?;
+    let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
+
+    for r in rows {
+        let q = r.try_get::<u8, _>("name")?;
+        let v: Vec<Arc<String>> = serde_json::from_str(&r.try_get::<String, _>("value")?)?;
+        let mut queue = MANAGER.get_queue(&q.into()).write().await;
+
+        queue.clear();
+        queue.extend(v);
+
+        drop(queue);
+    }
+    Ok(())
+}
+
+pub async fn upsert(name: QueueType, value: &VecDeque<Arc<String>>) -> Result<()> {
+    let pool = get_db().await?;
+    let val = serde_json::to_string(value)?;
+    let (sql, values) = Query::insert()
+        .into_table(Queue::Table)
+        .columns([Queue::Name, Queue::Value])
+        .values_panic([(name as u8).into(), val.into()])
+        .on_conflict(
+            OnConflict::column(Queue::Name)
+                .update_columns([Queue::Value])
+                .to_owned(),
+        )
+        .build_sqlx(SqliteQueryBuilder);
+
+    sqlx::query_with(&sql, values).execute(&pool).await?;
+    Ok(())
+}

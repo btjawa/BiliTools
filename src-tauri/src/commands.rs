@@ -16,16 +16,19 @@ pub use crate::{
         },
         queue::{
             self,
-            runtime::{
-                ctrl_event, open_folder, process_queue, submit_task, update_max_conc, update_select,
-            },
+            ctrl_event,
+            open_folder,
+            plan_scheduler,
+            process_scheduler,
+            // update_max_conc,
+            submit_task,
         },
     },
     shared::{self, get_app_handle, set_window, HEADERS, READY},
     storage::{
-        self, archive,
+        self,
         config::{self, CacheKey},
-        cookies, db,
+        cookies, db, tasks,
     },
 };
 
@@ -146,7 +149,6 @@ pub async fn init() -> TauriResult<()> {
         #[cfg(not(debug_assertions))]
         return Err(anyhow::anyhow!("403 Forbidden").into());
     }
-    queue::runtime::TASK_MANAGER.snapshot(true).await?;
     login::stop_login();
     login::get_buvid().await?;
     login::get_bili_ticket().await?;

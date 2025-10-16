@@ -201,9 +201,9 @@ impl Sidecar {
 }
 
 #[derive(Clone, Serialize, Deserialize, Type, Event)]
-pub struct ProcessError {
-    pub name: String,
-    pub error: String,
+pub struct ProcessError<'a> {
+    pub name: &'a str,
+    pub error: &'a str,
 }
 
 #[derive(Clone, Serialize, Deserialize, Type, Event)]
@@ -340,8 +340,8 @@ pub fn process_err<T: ToString>(e: T, name: &str) -> T {
     let app = get_app_handle();
     log::error!("{name}: {}", e.to_string());
     let _ = ProcessError {
-        name: name.into(),
-        error: e.to_string(),
+        name,
+        error: &e.to_string(),
     }
     .emit(app);
     e

@@ -143,12 +143,11 @@ async function handleMedia(task: Types.Task) {
     audioUrls = urlFilter(audioUrls);
   }
 
-  backend.commands.updateSelect(task.id, select);
   return {
     videoUrls,
     audioUrls,
+    select,
     subtasks: task.subtasks,
-    folder: buildPaths('item', task),
   };
 }
 
@@ -159,9 +158,10 @@ async function handleDanmaku(task: Types.Task, subtask: Types.SubTask) {
     (content, chunk) =>
       handleEvent({
         type: 'progress',
-        parent: task.id,
-        id: subtask.id,
-        status: { content, chunk },
+        task: task.id,
+        subtask: subtask.id,
+        content,
+        chunk,
       }),
     item,
     type,
@@ -295,22 +295,43 @@ function buildPaths(
     .replace(/\.+$/, ''); // Issue#165
 }
 
+async function prepareTask(
+  task: Types.Task,
+) {
+  /* URLS, SUBTASKS */
+  const {
+    videoUrls,
+    audioUrls,
+    select,
+    subtasks,
+  } = await handleMedia(task);
+
+  /* NFO */
+  const item = task.item;
+  const id = item.opid ?? item.epid ?? item.ssid ?? item.sid ?? item.aid;
+  if (!id) throw new AppError(`No id for task#${task.id} found`);
+  const { nfo } = await getMediaInfo(id.toString(), item.type);
+
+  /* SUB FOLDER */
+  const subFolder = buildPaths('item', task);
+
+  return {
+    videoUrls,
+    audioUrls,
+    select,
+    subtasks,
+    subFolder,
+    nfo,
+  }
+}
+
 async function handleTask(
   task: Types.Task,
   type: backend.RequestAction,
   subtask?: Types.SubTask,
 ) {
-  if (type === 'refreshNfo') {
-    const item = task.item;
-    const id = item.opid ?? item.epid ?? item.ssid ?? item.sid ?? item.aid;
-    if (!id) throw new AppError('No opid / sid / aid / epid / ssid found');
-    const info = await getMediaInfo(id.toString(), item.type);
-    task.nfo = info.nfo;
-    return task.nfo;
-  } else if (type === 'refreshUrls') {
-    return await handleMedia(task);
-  } else if (type === 'refreshFolder') {
-    return buildPaths('item', task);
+  if (type === 'prepareTask') {
+    return await prepareTask(task);
   }
   if (!subtask) throw new AppError('Subtask missing for action ' + type);
   if (type === 'getFilename') {
@@ -335,27 +356,25 @@ async function handleTask(
 export async function handleEvent(event: backend.QueueEvent) {
   const { type } = event;
   const queue = useQueueStore();
-  if (type === 'snapshot') {
-    queue.$patch({ ...event.queue });
-    if (event.schedulers)
-      queue.$patch({
-        schedulers: event.schedulers,
-      });
-    if (event.tasks)
-      queue.$patch({
-        tasks: event.tasks as Record<string, Types.Task>,
-      });
-    if (event.init && queue.doing.length) {
-      AppLog(i18n.global.t('down.restored'), 'info');
-    }
-  } else if (type === 'state') {
-    const task = queue.tasks?.[event.parent];
+  if (type === 'taskState') {
+    const task = queue.tasks?.[event.task];
     if (task) task.state = event.state;
+  } else if (type === 'schedulerState') {
+    const scheduler = queue.schedulers?.[event.scheduler];
+    if (scheduler) scheduler.state = event.state;
+  } else if (type === 'schedulerQueue') {
+    const scheduler = queue.schedulers?.[event.scheduler];
+    if (scheduler) scheduler.queue = event.queue;
   } else if (type === 'progress') {
-    const status = queue.tasks?.[event.parent]?.status?.[event.id];
-    if (status) Object.assign(status, event.status);
+    const status = queue.tasks?.[event.task]?.status?.[event.subtask];
+  if (status) {
+    status.content = event.content;
+    status.chunk = event.chunk;
+  }
+  } else if (type === 'queue') {
+    queue[event.name] = event.value;
   } else if (type === 'request') {
-    const task = queue.tasks[event.parent];
+    const task = queue.tasks[event.task];
     const subtask = task.subtasks.find((v) => v.id === event.subtask);
     let result: unknown = null;
     try {
@@ -364,20 +383,28 @@ export async function handleEvent(event: backend.QueueEvent) {
       new AppError(e).handle();
     }
     const app = getCurrentWindow();
-    app.emit(`${event.action}_${event.subtask ?? event.parent}`, result);
+    app.emit(event.endpoint, result);
   } else if (type === 'error') {
     new AppError(event.message, { code: event.code as number }).handle();
   }
+  // if (event.init && queue.doing.length) {
+  //   AppLog(i18n.global.t('down.restored'), 'info');
+  // }
 }
 
 export async function processQueue() {
   try {
     const queue = useQueueStore();
-    const snapshot = queue.tasks[queue.schedulers[queue.waiting[0]].list[0]];
+    const snapshot = queue.tasks[queue.schedulers[queue.backlog[0]].list[0]];
     const folder = buildPaths('series', snapshot);
     const sid = randomString(8);
-    const result = await backend.commands.processQueue(sid, folder);
-    if (result.status === 'error') throw new AppError(result.error);
+
+    const scheduler = await backend.commands.planScheduler(sid, folder);
+    if (scheduler.status === 'error') throw new AppError(scheduler.error);
+    queue.schedulers[sid] = scheduler.data;
+
+    const process = await backend.commands.processScheduler(sid);
+    if (process.status === 'error') throw new AppError(process.error);
   } catch (err) {
     new AppError(err).handle();
   }
@@ -411,7 +438,7 @@ function selectToSubTasks(id: string, select: Types.PopupSelect) {
 
 export async function submit(
   info: Types.MediaInfo,
-  _select: Types.PopupSelect,
+  select: Types.PopupSelect,
   checkboxs: number[],
 ) {
   // avoid reference issues
@@ -420,7 +447,6 @@ export async function submit(
   const settings = useSettingsStore();
   for (const idx of checkboxs) {
     const id = randomString(8);
-    const select = detach(_select);
     const subtasks = selectToSubTasks(id, select);
     const status = subtasks.reduce<Record<string, Types.SubTaskStatus>>(
       (acc, item) => {
@@ -432,21 +458,31 @@ export async function submit(
       },
       {},
     );
-    const task: Types.Task = {
-      id,
-      state: 'pending',
-      subtasks,
-      status,
-      ts: Math.floor(Date.now() / 1000),
-      seq: queue.schedulers[queue.waiting[0]].list.length,
-      folder: String(),
-      select: select,
-      item: detach(info.list[idx]),
-      type: detach(info.type),
-      nfo: detach(info.nfo),
+    const view: backend.TaskView = {
+      meta: {
+        id,
+        ts: Math.floor(Date.now() / 1000),
+        seq: queue.backlog[0].length,
+        item: detach(info.list[idx]),
+        type: detach(info.type),        
+      },
+      prepare: {
+        select: detach(select),
+        subtasks,
+        nfo: detach(info.nfo),
+        folder: String(),
+      },
+      hot: {
+        state: 'backlog',
+        status,
+      }
     };
-    queue.tasks[id] = task;
-    const result = await backend.commands.submitTask(task);
+    queue.tasks[id] = {
+      ...view.meta,
+      ...view.prepare,
+      ...view.hot,
+    } as Types.Task;
+    const result = await backend.commands.submitTask(id, view);
     if (result.status === 'error') throw new AppError(result.error);
   }
   if (settings.auto_download) processQueue();
