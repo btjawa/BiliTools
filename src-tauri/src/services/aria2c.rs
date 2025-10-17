@@ -1,11 +1,10 @@
 use anyhow::{anyhow, Context, Result};
-use arc_swap::ArcSwap;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     net::TcpListener,
     path::PathBuf,
-    sync::{Arc, LazyLock},
+    sync::LazyLock,
     time::Duration,
 };
 use tauri::{
@@ -18,7 +17,7 @@ use tauri_plugin_shell::{
     ShellExt,
 };
 use tauri_specta::Event;
-use tokio::{fs, time::sleep};
+use tokio::{fs, time::sleep, sync::RwLock};
 
 use crate::{
     errors::TauriError,
@@ -29,7 +28,7 @@ use crate::{
 
 use super::queue::handlers::SubTaskReq;
 
-static ARIA2_RPC: LazyLock<Arc<Aria2Rpc>> = LazyLock::new(|| Arc::new(Aria2Rpc::new()));
+static ARIA2_RPC: LazyLock<Aria2Rpc> = LazyLock::new(Aria2Rpc::new);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Aria2Error {
@@ -78,8 +77,8 @@ struct Aria2TellStatus {
 
 struct Aria2Rpc {
     client: Client,
-    endpoint: ArcSwap<String>,
-    secret: ArcSwap<String>,
+    endpoint: RwLock<String>,
+    secret: RwLock<String>,
 }
 
 impl Aria2Rpc {
@@ -103,8 +102,8 @@ impl Aria2Rpc {
     }
     pub async fn update(&self, port: u16, secret: String) -> Result<()> {
         let endpoint = format!("http://127.0.0.1:{port}/jsonrpc");
-        self.endpoint.store(Arc::new(endpoint));
-        self.secret.store(Arc::new(secret));
+        *self.endpoint.write().await = endpoint;
+        *self.secret.write().await = secret;
         Ok(())
     }
     pub async fn request<T: DeserializeOwned + std::fmt::Debug>(
@@ -112,9 +111,11 @@ impl Aria2Rpc {
         action: &str,
         mut params: Vec<Value>,
     ) -> TauriResult<T> {
+        let endpoint = &self.endpoint.read().await;
+        let secret = &self.secret.read().await;
         params.insert(
             0,
-            Value::String(format!("token:{}", self.secret.load_full())),
+            Value::String(format!("token:{secret}")),
         );
         let payload = json!({
             "jsonrpc": "2.0",
@@ -124,7 +125,7 @@ impl Aria2Rpc {
         });
         let response = self
             .client
-            .post(&*self.endpoint.load_full())
+            .post(&**endpoint)
             .json(&payload)
             .send()
             .await?;
@@ -269,7 +270,7 @@ pub async fn init() -> Result<()> {
     Ok(())
 }
 
-pub async fn cancel(gid: Arc<String>) -> TauriResult<()> {
+pub async fn cancel(gid: &str) -> TauriResult<()> {
     let _ = ARIA2_RPC
         .request::<Value>("purgeDownloadResult", vec![json!(gid)])
         .await;
@@ -282,21 +283,21 @@ pub async fn cancel(gid: Arc<String>) -> TauriResult<()> {
     Ok(())
 }
 
-pub async fn pause(gid: Arc<String>) -> TauriResult<()> {
+pub async fn pause(gid: &str) -> TauriResult<()> {
     ARIA2_RPC
         .request::<Value>("pause", vec![json!(gid)])
         .await?;
     Ok(())
 }
 
-pub async fn resume(gid: Arc<String>) -> TauriResult<()> {
+pub async fn resume(gid: &str) -> TauriResult<()> {
     ARIA2_RPC
         .request::<Value>("unpause", vec![json!(gid)])
         .await?;
     Ok(())
 }
 
-pub async fn download(req: &SubTaskReq, urls: Vec<String>) -> TauriResult<PathBuf> {
+pub async fn download(req: &SubTaskReq, urls: &Vec<String>) -> TauriResult<PathBuf> {
     let gid = &req.subtask.id;
     let sub = &req.subtask;
 

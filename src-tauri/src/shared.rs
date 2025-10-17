@@ -28,10 +28,10 @@ use crate::storage::{
 
 use crate::{TauriError, TauriResult};
 
-pub static APP_HANDLE: LazyLock<Arc<OnceCell<AppHandle<Wry>>>> =
-    LazyLock::new(|| Arc::new(OnceCell::new()));
+pub static APP_HANDLE: LazyLock<OnceCell<AppHandle<Wry>>> =
+    LazyLock::new(OnceCell::new);
 pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
-    ArcSwap::from_pointee(Settings {
+    ArcSwap::new(Arc::new(Settings {
         add_metadata: true,
         auto_check_update: true,
         auto_download: false,
@@ -94,7 +94,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
         },
         sidecar: SettingsSidecar::new(),
         speed_limit: serde_json::Number::from(0),
-    })
+    }))
 });
 pub static HEADERS: LazyLock<Headers> = LazyLock::new(Headers::new);
 pub static READY: LazyLock<OnceCell<()>> = LazyLock::new(OnceCell::new);

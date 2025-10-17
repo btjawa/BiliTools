@@ -76,11 +76,9 @@ pub async fn load() -> Result<()> {
     schedulers.clear();
 
     for r in rows {
-        let sid = Arc::new(r.try_get::<String, _>("name")?);
-
+        let sid = r.try_get::<String, _>("name")?;
         let ts = r.try_get::<i64, _>("created_at")?;
-
-        let list: Vec<Arc<String>> = serde_json::from_str(&r.try_get::<String, _>("list")?)?;
+        let list = serde_json::from_str(&r.try_get::<String, _>("list")?)?;
 
         let queue = r.try_get::<u8, _>("queue")?;
         let mut state = r.try_get::<u8, _>("state")?;
@@ -89,7 +87,7 @@ pub async fn load() -> Result<()> {
             state = SchedulerState::Idle as u8;
         }
 
-        let folder: Arc<PathBuf> = serde_json::from_str(&r.try_get::<String, _>("folder")?)?;
+        let folder = PathBuf::from(&r.try_get::<String, _>("folder")?);
 
         let scheduler = Arc::new(Scheduler {
             sid: sid.clone(),
@@ -105,14 +103,14 @@ pub async fn load() -> Result<()> {
     Ok(())
 }
 
-pub async fn update<T: Serialize>(id: &Arc<String>, name: Schedulers, value: &T) -> Result<()> {
+pub async fn update<T: Serialize>(id: &str, name: Schedulers, value: &T) -> Result<()> {
     let pool = get_db().await?;
     let now = get_ts(true);
     let val = serde_json::to_string(value)?;
     let (sql, values) = Query::insert()
         .into_table(Schedulers::Table)
         .columns([Schedulers::Name, name, Schedulers::UpdatedAt])
-        .values_panic([id.as_str().into(), val.into(), now.into()])
+        .values_panic([id.into(), val.into(), now.into()])
         .on_conflict(
             OnConflict::column(Schedulers::Name)
                 .update_columns([name, Schedulers::UpdatedAt])
@@ -124,8 +122,8 @@ pub async fn update<T: Serialize>(id: &Arc<String>, name: Schedulers, value: &T)
     Ok(())
 }
 
-pub async fn upsert(id: &Arc<String>, value: &Scheduler) -> Result<()> {
-    update(id, Schedulers::Name, id).await?;
+pub async fn upsert(id: &str, value: &Scheduler) -> Result<()> {
+    update(id, Schedulers::Name, &id).await?;
     update(id, Schedulers::CreatedAt, &value.ts).await?;
     update(
         id,
@@ -144,18 +142,18 @@ pub async fn upsert(id: &Arc<String>, value: &Scheduler) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_queue(id: &Arc<String>, queue: u8) -> Result<()> {
+pub async fn update_queue(id: &str, queue: u8) -> Result<()> {
     update(id, Schedulers::Queue, &queue).await
 }
 
-pub async fn update_state(id: &Arc<String>, state: u8) -> Result<()> {
+pub async fn update_state(id: &str, state: u8) -> Result<()> {
     update(id, Schedulers::State, &state).await
 }
 
-pub async fn delete(id: &Arc<String>) -> Result<()> {
+pub async fn delete(id: &str) -> Result<()> {
     let (sql, values) = Query::delete()
         .from_table(Schedulers::Table)
-        .cond_where(Expr::col(Schedulers::Name).eq(id.as_str()))
+        .cond_where(Expr::col(Schedulers::Name).eq(id))
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;

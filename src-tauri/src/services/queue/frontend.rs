@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use specta::Type;
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 use tauri::Listener;
 use tauri_specta::Event;
 use tokio::sync::oneshot;
@@ -44,7 +44,7 @@ pub enum QueueEvent<'a> {
     },
     Queue {
         name: &'a QueueType,
-        value: &'a VecDeque<Arc<String>>,
+        value: &'a VecDeque<String>,
     },
     Request {
         task: &'a str,
@@ -95,7 +95,7 @@ pub fn progress<'a>(
     Ok(())
 }
 
-pub fn queue<'a>(name: &'a QueueType, value: &'a VecDeque<Arc<String>>) -> Result<()> {
+pub fn queue<'a>(name: &'a QueueType, value: &'a VecDeque<String>) -> Result<()> {
     let app = get_app_handle();
     QueueEvent::Queue { name, value }.emit(app)?;
     Ok(())
@@ -128,7 +128,7 @@ pub async fn request<'a, T: DeserializeOwned + Send + 'static>(
     task: &'a str,
     subtask: Option<&'a str>,
     action: &'a RequestAction,
-) -> TauriResult<Arc<T>> {
+) -> TauriResult<T> {
     let (tx, rx) = oneshot::channel();
     let app = get_app_handle();
     let ts = get_ts(true);
@@ -147,22 +147,22 @@ pub async fn request<'a, T: DeserializeOwned + Send + 'static>(
     }
     .emit(app)?;
     let res = rx.await.context("No response from frontend")??;
-    Ok(Arc::new(
+    Ok(
         res.ok_or(anyhow!("Error occurred from frontend"))?,
-    ))
+    )
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
-pub struct PrepareTask {
+pub struct TaskPrepareResp {
+    pub nfo: MediaNfo,
+    #[serde(rename = "subFolder")]
+    pub sub_folder: String,
     #[serde(rename = "videoUrls")]
     pub video_urls: Option<Vec<String>>,
     #[serde(rename = "audioUrls")]
     pub audio_urls: Option<Vec<String>>,
-    #[serde(rename = "subFolder")]
-    pub select: Arc<PopupSelect>,
-    pub subtasks: Arc<Vec<Arc<SubTask>>>,
-    pub sub_folder: Arc<String>,
-    pub nfo: Arc<MediaNfo>,
+    pub subtasks: Vec<SubTask>,
+    pub select: PopupSelect,
 }
 
 pub fn error<'a>(

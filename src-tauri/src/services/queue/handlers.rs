@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::{
-    frontend::{self, PrepareTask, RequestAction},
+    frontend::{self, TaskPrepareResp, RequestAction},
     runtime::{CtrlEvent, CtrlHandle, RUNTIME},
     scheduler::Scheduler,
     task::{SubTask, Task, TaskType},
@@ -26,11 +26,10 @@ use super::{
 #[derive(Clone, Debug)]
 pub struct SubTaskReq {
     pub task: Arc<Task>,
-    pub prepare: Arc<PrepareTask>,
-    pub subtask: Arc<SubTask>,
-    pub temp: Arc<PathBuf>,
-    pub folder: Arc<PathBuf>,
-    pub filename: Arc<String>,
+    pub subtask: SubTask,
+    pub temp: PathBuf,
+    pub folder: PathBuf,
+    pub filename: String,
 }
 
 fn get_ext(task_type: &TaskType, abr: usize) -> &'static str {
@@ -118,7 +117,7 @@ async fn handle_subtitle(req: &SubTaskReq, _ctrl: Arc<CtrlHandle>) -> TauriResul
     let result =
         frontend::request::<Vec<u8>>(id, Some(sub_id), &RequestAction::GetSubtitle).await?;
 
-    let select = req.task.select.load_full();
+    let select = &req.task.select.read().await;
     let lang = select
         .misc
         .subtitles
@@ -152,7 +151,7 @@ async fn handle_nfo(req: &SubTaskReq, _ctrl: Arc<CtrlHandle>, folder: &Path) -> 
     let subtask = &req.subtask;
     let id = &req.task.id;
     let sub_id = &subtask.id;
-    let nfo = req.task.nfo.load_full();
+    let nfo = &req.task.nfo.read().await;
 
     subtask.send(1, 0).await?;
 
@@ -303,7 +302,7 @@ async fn handle_thumbs(req: &SubTaskReq, _ctrl: Arc<CtrlHandle>) -> TauriResult<
 
 async fn post_media(req: &SubTaskReq, ctrl: Arc<CtrlHandle>, input: PathBuf) -> TauriResult<()> {
     let subtask = &req.subtask;
-    let select = &req.task.select.load_full();
+    let select = &req.task.select.read().await;
     let config = config::read();
 
     let abr = select.abr.unwrap_or(0);
@@ -339,11 +338,11 @@ async fn post_media(req: &SubTaskReq, ctrl: Arc<CtrlHandle>, input: PathBuf) -> 
 async fn handle_merge(
     req: &SubTaskReq,
     ctrl: Arc<CtrlHandle>,
-    video_path: &Arc<OnceCell<PathBuf>>,
-    audio_path: &Arc<OnceCell<PathBuf>>,
+    video_path: &OnceCell<PathBuf>,
+    audio_path: &OnceCell<PathBuf>,
 ) -> TauriResult<()> {
     let subtask = &req.subtask;
-    let select = &req.task.select.load_full();
+    let select = &req.task.select.read().await;
 
     let video = video_path.get().ok_or(anyhow!("No path for video found"))?;
     let audio = audio_path.get().ok_or(anyhow!("No path for audio found"))?;
@@ -359,26 +358,28 @@ async fn handle_merge(
 async fn handle_media(
     req: &SubTaskReq,
     ctrl: Arc<CtrlHandle>,
-    video_path: &Arc<OnceCell<PathBuf>>,
-    audio_path: &Arc<OnceCell<PathBuf>>,
+    video_urls: &Option<Vec<String>>,
+    audio_urls: &Option<Vec<String>>,
+    video_path: &OnceCell<PathBuf>,
+    audio_path: &OnceCell<PathBuf>,
 ) -> TauriResult<()> {
     let subtask = &req.subtask;
     let id = &req.task.id;
 
     let urls = if subtask.task_type == TaskType::Video {
-        req.prepare.video_urls.clone()
+        video_urls.as_ref()
     } else if subtask.task_type == TaskType::Audio {
-        req.prepare.audio_urls.clone()
+        audio_urls.as_ref()
     } else {
         None
     }
     .ok_or(anyhow!("No urls for type {:?} found", &subtask.task_type))?;
 
     let cleaner = RUNTIME.ctrl.get_handle(id).await?;
-    let id_clone = id.clone();
+    let id_clenaer = id.to_string();
     cleaner
         .reg_cleaner(async move {
-            aria2c::cancel(id_clone).await?;
+            aria2c::cancel(&id_clenaer).await?;
             Ok(())
         })
         .await?;
@@ -403,10 +404,10 @@ async fn handle_media(
             res = &mut process => break res,
             Ok(msg) = rx.recv() => match msg {
                 CtrlEvent::Pause => {
-                    aria2c::pause(id.clone()).await?;
+                    aria2c::pause(id).await?;
                 },
                 CtrlEvent::Resume => {
-                    aria2c::resume(id.clone()).await?;
+                    aria2c::resume(id).await?;
                 },
                 _ => (),
             }
@@ -418,28 +419,28 @@ async fn handle_media(
 
 pub async fn handle_task(
     scheduler: Arc<Scheduler>,
-    temp_root: Arc<PathBuf>,
+    temp_root: &PathBuf,
     task: Arc<Task>,
 ) -> TauriResult<()> {
     let id = &task.id;
 
-    let prepare = frontend::request::<PrepareTask>(id, None, &RequestAction::PrepareTask).await?;
+    let prepare = frontend::request::<TaskPrepareResp>(id, None, &RequestAction::PrepareTask).await?;
 
     let folder = if config::read().organize.sub_folder {
-        Arc::new(scheduler.folder.join(&*prepare.sub_folder))
+        scheduler.folder.join(&*prepare.sub_folder)
     } else {
         scheduler.folder.clone()
     };
+    
+    task.prepare(&prepare, folder.clone()).await?;
 
-    task.prepare(&prepare, &folder).await?;
-
-    let out_str = folder.to_string_lossy().into_owned();
-    fs::create_dir_all(&*folder)
+    let folder_str = folder.to_string_lossy().into_owned();
+    fs::create_dir_all(&folder_str)
         .await
-        .context(format!("Failed to create output folder {out_str}"))?;
+        .context(format!("Failed to create output folder {folder_str}"))?;
 
-    let video_path = Arc::new(OnceCell::new());
-    let audio_path = Arc::new(OnceCell::new());
+    let video_path = OnceCell::new();
+    let audio_path = OnceCell::new();
 
     let ctrl = RUNTIME.ctrl.get_handle(id).await?;
     let temp_str = temp_root.to_string_lossy().into_owned();
@@ -451,43 +452,53 @@ pub async fn handle_task(
     })
     .await?;
 
-    for subtask in prepare.subtasks.iter() {
-        let sub_id = &subtask.id;
+    for subtask in prepare.subtasks.iter().cloned() {
+        let sub_id = subtask.id.clone();
+        let task_type = subtask.task_type.clone();
+
         log::info!(
-            "Handling subtask#{sub_id}\n    task_type: {:?}\n    task#{id}",
-            subtask.task_type
+            "Handling subtask#{sub_id}\n    type: {task_type:?}\n    task#{id}",
         );
 
-        let temp = Arc::new(temp_root.join(&**sub_id));
+        let temp = temp_root.join(&sub_id);
         let temp_str = temp.to_string_lossy().into_owned();
         fs::create_dir_all(&*temp)
             .await
             .context(format!("Failed to create temp folder {temp_str}"))?;
 
         let filename =
-            frontend::request::<String>(id, Some(sub_id), &RequestAction::GetFilename).await?;
-
-        let req = SubTaskReq {
-            task: task.clone(),
-            prepare: prepare.clone(),
-            subtask: subtask.clone(),
-            temp,
-            folder: folder.clone(),
-            filename,
-        };
+            frontend::request::<String>(id, Some(&sub_id), &RequestAction::GetFilename).await?;
 
         subtask.reg_task(&task);
 
         let ctrl = ctrl.clone();
-        let video = video_path.clone();
-        let audio = audio_path.clone();
+
+        let req = SubTaskReq {
+            task: task.clone(),
+            subtask,
+            temp,
+            folder: folder.clone(),
+            filename,
+        };
         scheduler
-            .try_join(id, sub_id, || async {
-                match subtask.task_type {
+            .try_join(id, &sub_id, async {
+                match task_type {
                     TaskType::Video | TaskType::Audio => {
-                        handle_media(&req, ctrl, &video, &audio).await
+                        handle_media(
+                            &req,
+                            ctrl,
+                            &prepare.video_urls,
+                            &prepare.audio_urls,
+                            &video_path,
+                            &audio_path
+                        ).await
                     }
-                    TaskType::AudioVideo => handle_merge(&req, ctrl, &video, &audio).await,
+                    TaskType::AudioVideo => handle_merge(
+                        &req,
+                        ctrl,
+                        &video_path,
+                        &audio_path
+                    ).await,
                     TaskType::Thumb => handle_thumbs(&req, ctrl).await,
                     TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
                         handle_danmaku(&req, ctrl).await

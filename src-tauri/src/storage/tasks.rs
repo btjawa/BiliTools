@@ -5,13 +5,13 @@ use sea_query::{
 use sea_query_binder::SqlxBinder;
 use serde::Serialize;
 use sqlx::Row;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
     queue::{
         atomics::TaskState,
         manager::MANAGER,
-        task::{SubTaskStatus, Task, TaskHotData, TaskMeta, TaskPrepare, TaskView},
+        task::{SubTaskStatus, Task, TaskHotData, TaskPrepare, TaskView},
     },
     shared::get_ts,
 };
@@ -67,13 +67,10 @@ pub async fn load() -> Result<()> {
     tasks.clear();
 
     for r in rows {
-        let id = Arc::new(r.try_get::<String, _>("name")?);
-        let meta: Arc<TaskMeta> = serde_json::from_str(&r.try_get::<String, _>("meta")?)?;
-
-        let prepare: Arc<TaskPrepare> = serde_json::from_str(&r.try_get::<String, _>("prepare")?)?;
-
-        let status: HashMap<Arc<String>, Arc<SubTaskStatus>> =
-            serde_json::from_str(&r.try_get::<String, _>("status")?)?;
+        let id = r.try_get::<String, _>("name")?;
+        let meta = serde_json::from_str(&r.try_get::<String, _>("meta")?)?;
+        let prepare = serde_json::from_str(&r.try_get::<String, _>("prepare")?)?;
+        let status = serde_json::from_str(&r.try_get::<String, _>("status")?)?;
 
         let mut state = r.try_get::<u8, _>("state")?;
 
@@ -84,10 +81,10 @@ pub async fn load() -> Result<()> {
         let view = TaskView {
             meta,
             prepare,
-            hot: Arc::new(TaskHotData {
+            hot: TaskHotData {
                 status,
                 state: state.into(),
-            }),
+            },
         };
 
         tasks.insert(id, Task::new(view));
@@ -95,14 +92,14 @@ pub async fn load() -> Result<()> {
     Ok(())
 }
 
-pub async fn update<T: Serialize>(id: &Arc<String>, name: Tasks, value: &T) -> Result<()> {
+pub async fn update<T: Serialize>(id: &str, name: Tasks, value: &T) -> Result<()> {
     let pool = get_db().await?;
     let now = get_ts(true);
     let val = serde_json::to_string(value)?;
     let (sql, values) = Query::insert()
         .into_table(Tasks::Table)
         .columns([Tasks::Name, name, Tasks::UpdatedAt])
-        .values_panic([id.as_str().into(), val.into(), now.into()])
+        .values_panic([id.into(), val.into(), now.into()])
         .on_conflict(OnConflict::column(Tasks::Name).do_nothing().to_owned())
         .build_sqlx(SqliteQueryBuilder);
 
@@ -110,7 +107,7 @@ pub async fn update<T: Serialize>(id: &Arc<String>, name: Tasks, value: &T) -> R
     Ok(())
 }
 
-pub async fn upsert(id: &Arc<String>, value: &TaskView) -> Result<()> {
+pub async fn upsert(id: &str, value: &TaskView) -> Result<()> {
     update(id, Tasks::Meta, &value.meta).await?;
     update_prepare(id, &value.prepare).await?;
     update_status(id, &value.hot.status).await?;
@@ -118,26 +115,26 @@ pub async fn upsert(id: &Arc<String>, value: &TaskView) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_prepare(id: &Arc<String>, prepare: &Arc<TaskPrepare>) -> Result<()> {
+pub async fn update_prepare(id: &str, prepare: &TaskPrepare) -> Result<()> {
     update(id, Tasks::Prepare, &prepare).await?;
     Ok(())
 }
 
 pub async fn update_status(
-    id: &Arc<String>,
-    status: &HashMap<Arc<String>, Arc<SubTaskStatus>>,
+    id: &str,
+    status: &HashMap<String, SubTaskStatus>,
 ) -> Result<()> {
     update(id, Tasks::Status, status).await
 }
 
-pub async fn update_state(id: &Arc<String>, state: u8) -> Result<()> {
+pub async fn update_state(id: &str, state: u8) -> Result<()> {
     update(id, Tasks::State, &state).await
 }
 
-pub async fn delete(id: &Arc<String>) -> Result<()> {
+pub async fn delete(id: &str) -> Result<()> {
     let (sql, values) = Query::delete()
         .from_table(Tasks::Table)
-        .cond_where(Expr::col(Tasks::Name).eq(id.as_str()))
+        .cond_where(Expr::col(Tasks::Name).eq(id))
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;

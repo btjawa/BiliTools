@@ -21,12 +21,12 @@ use crate::{
 pub static MANAGER: LazyLock<Manager> = LazyLock::new(Manager::new);
 
 pub struct Manager {
-    pub schedulers: RwLock<HashMap<Arc<String>, Arc<Scheduler>>>,
-    pub tasks: RwLock<HashMap<Arc<String>, Arc<Task>>>,
-    pub backlog: RwLock<VecDeque<Arc<String>>>, // Task#id
-    pub pending: RwLock<VecDeque<Arc<String>>>, // Scheduler#sid
-    pub doing: RwLock<VecDeque<Arc<String>>>,
-    pub complete: RwLock<VecDeque<Arc<String>>>,
+    pub schedulers: RwLock<HashMap<String, Arc<Scheduler>>>,
+    pub tasks: RwLock<HashMap<String, Arc<Task>>>,
+    pub backlog: RwLock<VecDeque<String>>, // Task#id
+    pub pending: RwLock<VecDeque<String>>, // Scheduler#sid
+    pub doing: RwLock<VecDeque<String>>,
+    pub complete: RwLock<VecDeque<String>>,
 }
 
 impl Manager {
@@ -41,15 +41,15 @@ impl Manager {
         }
     }
 
-    pub async fn get_task(&self, id: &Arc<String>) -> Option<Arc<Task>> {
+    pub async fn get_task(&self, id: &str) -> Option<Arc<Task>> {
         self.tasks.read().await.get(id).cloned()
     }
 
-    pub async fn get_scheduler(&self, sid: &Arc<String>) -> Option<Arc<Scheduler>> {
+    pub async fn get_scheduler(&self, sid: &str) -> Option<Arc<Scheduler>> {
         self.schedulers.read().await.get(sid).cloned()
     }
 
-    pub fn get_queue(&self, queue: &QueueType) -> &RwLock<VecDeque<Arc<String>>> {
+    pub fn get_queue(&self, queue: &QueueType) -> &RwLock<VecDeque<String>> {
         match queue {
             QueueType::Backlog => &self.backlog,
             QueueType::Pending => &self.pending,
@@ -59,7 +59,6 @@ impl Manager {
     }
 
     async fn submit_backlog(&self, id: String, value: TaskView) -> Result<()> {
-        let id = Arc::new(id);
         tasks::upsert(&id, &value).await?;
 
         let task = Task::new(value);
@@ -78,8 +77,6 @@ impl Manager {
     }
 
     async fn plan_scheduler(&self, sid: String, top_folder: PathBuf) -> Result<Arc<Scheduler>> {
-        let sid = Arc::new(sid);
-
         let mut backlog = self.backlog.write().await;
         let list = backlog.clone();
         backlog.clear();
@@ -100,7 +97,7 @@ impl Manager {
         Ok(scheduler)
     }
 
-    pub async fn move_scheduler(&self, sid: &Arc<String>, t: QueueType) -> Result<()> {
+    pub async fn move_scheduler(&self, sid: &str, t: QueueType) -> Result<()> {
         let Some(scheduler) = self.get_scheduler(sid).await else {
             return Ok(());
         };
@@ -112,7 +109,7 @@ impl Manager {
         }
 
         let mut from = self.get_queue(&f).write().await;
-        if let Some(pos) = from.iter().position(|v| v.as_str() == sid.as_str()) {
+        if let Some(pos) = from.iter().position(|v| v == sid) {
             from.remove(pos);
         }
         frontend::queue(&f, &from)?;
@@ -120,7 +117,7 @@ impl Manager {
         drop(from);
 
         let mut to = self.get_queue(&t).write().await;
-        to.push_back(sid.clone());
+        to.push_back(sid.to_string());
         frontend::queue(&t, &to)?;
         queue::upsert(t, &to).await?;
         drop(to);
@@ -131,7 +128,7 @@ impl Manager {
         Ok(())
     }
 
-    pub async fn remove(&self, sid: &Arc<String>, id: Option<&Arc<String>>) -> Result<()> {
+    pub async fn remove(&self, sid: &str, id: Option<&str>) -> Result<()> {
         let Some(scheduler) = self.get_scheduler(sid).await else {
             return Ok(());
         };
@@ -142,7 +139,7 @@ impl Manager {
             drop(tasks);
 
             let mut list = scheduler.list.write().await;
-            list.retain(|v| v.as_str() != id.as_str());
+            list.retain(|v| v != id);
             drop(list);
         } else {
             let mut schedulers = self.schedulers.write().await;
@@ -151,7 +148,7 @@ impl Manager {
 
             let mut queue = self.get_queue(&scheduler.queue.get()).write().await;
 
-            if let Some(pos) = queue.iter().position(|v| v.as_str() == sid.as_str()) {
+            if let Some(pos) = queue.iter().position(|v| v == sid) {
                 queue.remove(pos);
             }
         }
@@ -176,7 +173,7 @@ pub async fn plan_scheduler(sid: String, folder: String) -> TauriResult<Schedule
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn process_scheduler(sid: Arc<String>) -> TauriResult<()> {
+pub async fn process_scheduler(sid: String) -> TauriResult<()> {
     let Some(scheduler) = MANAGER.get_scheduler(&sid).await else {
         return Err(anyhow!(format!("Scheduler#{sid} not found")).into());
     };

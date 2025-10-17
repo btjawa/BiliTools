@@ -20,19 +20,19 @@ use crate::{
 };
 
 pub struct Scheduler {
-    pub sid: Arc<String>,
+    pub sid: String,
     pub ts: i64,
-    pub list: RwLock<Vec<Arc<String>>>,
+    pub list: RwLock<Vec<String>>,
     pub queue: Atomic<QueueType>,
     pub state: Atomic<SchedulerState>,
-    pub folder: Arc<PathBuf>,
+    pub folder: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct SchedulerView {
-    pub sid: Arc<String>,
+    pub sid: String,
     pub ts: i64,
-    pub list: Vec<Arc<String>>,
+    pub list: Vec<String>,
     pub queue: QueueType,
     pub state: SchedulerState,
 }
@@ -50,7 +50,7 @@ impl SchedulerView {
 }
 
 impl Scheduler {
-    pub fn new(sid: Arc<String>, list: Vec<Arc<String>>, top_folder: PathBuf) -> Arc<Self> {
+    pub fn new(sid: String, list: Vec<String>, top_folder: PathBuf) -> Arc<Self> {
         let folder = if config::read().organize.top_folder {
             get_unique_path(config::read().down_dir.join(top_folder))
         } else {
@@ -63,7 +63,7 @@ impl Scheduler {
             list: RwLock::new(list),
             queue: Atomic::new(QueueType::Pending),
             state: Atomic::new(SchedulerState::Idle),
-            folder: Arc::new(folder),
+            folder: folder,
         })
     }
 
@@ -129,16 +129,12 @@ impl Scheduler {
         Ok(())
     }
 
-    pub async fn try_join<F, Fut>(
+    pub async fn try_join(
         &self,
-        id: &Arc<String>,
-        sub_id: &Arc<String>,
-        func: F,
-    ) -> TauriResult<()>
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = TauriResult<()>>,
-    {
+        id: &str,
+        sub_id: &str,
+        fut: impl Future<Output = TauriResult<()>>,
+    ) -> TauriResult<()> {
         let ctrl = RUNTIME.ctrl.get_handle(id).await?;
         if ctrl.is_cancelled() {
             return Ok(());
@@ -146,7 +142,7 @@ impl Scheduler {
         let mut rx = ctrl.tx.subscribe();
 
         let res = tokio::select! {
-            r = &mut pin!(func()) => r,
+            r = &mut pin!(fut) => r,
             _ = ctrl.cancel.cancelled() => return Ok(()),
         };
 

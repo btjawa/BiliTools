@@ -74,7 +74,7 @@ impl CtrlHandle {
 }
 
 pub struct Ctrl {
-    map: RwLock<HashMap<Arc<String>, Arc<CtrlHandle>>>,
+    map: RwLock<HashMap<String, Arc<CtrlHandle>>>,
 }
 
 impl Ctrl {
@@ -83,7 +83,7 @@ impl Ctrl {
             map: Default::default(),
         }
     }
-    pub async fn get_handle(&self, id: &Arc<String>) -> Result<Arc<CtrlHandle>> {
+    pub async fn get_handle(&self, id: &str) -> Result<Arc<CtrlHandle>> {
         self.map
             .read()
             .await
@@ -91,7 +91,7 @@ impl Ctrl {
             .ok_or(anyhow!("Missing ctrl handle for {id}"))
             .cloned()
     }
-    pub async fn reg(&self, id: Arc<String>) {
+    pub async fn reg(&self, id: String) {
         let mut map = self.map.write().await;
         map.insert(
             id,
@@ -106,8 +106,8 @@ impl Ctrl {
     }
     pub async fn send_task(
         &self,
-        sid: &Arc<String>,
-        id: &Arc<String>,
+        sid: &str,
+        id: &str,
         event: &CtrlEvent,
         state: TaskState,
     ) -> Result<()> {
@@ -127,7 +127,7 @@ impl Ctrl {
                 ctrl.cancel.cancel();
                 task.cancel(sid).await?;
                 ctrl.epoch.fetch_add(1, SeqCst);
-                self.reg(id.clone()).await;
+                self.reg(id.to_string()).await;
             }
             CtrlEvent::Pause => {
                 ctrl.paused.store(true, SeqCst);
@@ -141,7 +141,7 @@ impl Ctrl {
     }
     pub async fn send_scheduler(
         &self,
-        sid: &Arc<String>,
+        sid: &str,
         event: &CtrlEvent,
         state: SchedulerState,
     ) -> Result<()> {
@@ -182,8 +182,8 @@ impl Runtime {
 #[specta::specta]
 pub async fn ctrl_event(
     event: CtrlEvent,
-    sid: Arc<String>,
-    id: Option<Arc<String>>,
+    sid: &str,
+    id: Option<&str>,
 ) -> TauriResult<()> {
     if let Some(id) = id {
         let state = match event {
@@ -207,14 +207,15 @@ pub async fn ctrl_event(
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn open_folder(sid: Arc<String>, id: Option<Arc<String>>) -> TauriResult<()> {
+pub async fn open_folder(sid: &str, id: Option<&str>) -> TauriResult<()> {
     let path = if let Some(id) = id {
         let Some(task) = MANAGER.get_task(&id).await else {
             return Ok(());
         };
-        task.folder.load_full()
+        let folder = task.folder.read().await;
+        folder.clone()
     } else {
-        let Some(scheduler) = MANAGER.get_scheduler(&sid).await else {
+        let Some(scheduler) = MANAGER.get_scheduler(sid).await else {
             return Ok(());
         };
         scheduler.folder.clone()

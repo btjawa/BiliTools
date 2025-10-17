@@ -6,8 +6,7 @@ use serde_json::Value;
 use sha2::Sha256;
 use std::fmt::Write;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, LazyLock,
+    atomic::{AtomicBool, Ordering}, LazyLock,
 };
 use tauri::http::{header, StatusCode};
 use tokio::time::{sleep, Duration};
@@ -18,8 +17,8 @@ use crate::{
     TauriError, TauriResult,
 };
 
-static LOGIN_POLLING: LazyLock<Arc<AtomicBool>> =
-    LazyLock::new(|| Arc::new(AtomicBool::new(false)));
+static LOGIN_POLLING: LazyLock<AtomicBool> =
+    LazyLock::new(|| AtomicBool::new(false));
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ExitLoginResponse {

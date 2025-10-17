@@ -124,7 +124,7 @@ pub async fn add_meta(
     let duration = get_duration(input).await?;
     let item = &req.task.item;
     let seq = &req.task.seq;
-    let nfo = req.task.nfo.load_full();
+    let nfo = &req.task.nfo.read().await;
     let output = req.temp.join(random_string(8)).with_extension(ext);
 
     let is_mp4 = ext == "mp4";

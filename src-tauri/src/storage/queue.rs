@@ -4,7 +4,7 @@ use sea_query::{
 };
 use sea_query_binder::SqlxBinder;
 use sqlx::Row;
-use std::{collections::VecDeque, sync::Arc};
+use std::{collections::VecDeque};
 
 use crate::queue::{atomics::QueueType, manager::MANAGER};
 
@@ -47,7 +47,7 @@ pub async fn load() -> Result<()> {
 
     for r in rows {
         let q = r.try_get::<u8, _>("name")?;
-        let v: Vec<Arc<String>> = serde_json::from_str(&r.try_get::<String, _>("value")?)?;
+        let v: Vec<String> = serde_json::from_str(&r.try_get::<String, _>("value")?)?;
         let mut queue = MANAGER.get_queue(&q.into()).write().await;
 
         queue.clear();
@@ -58,7 +58,7 @@ pub async fn load() -> Result<()> {
     Ok(())
 }
 
-pub async fn upsert(name: QueueType, value: &VecDeque<Arc<String>>) -> Result<()> {
+pub async fn upsert(name: QueueType, value: &VecDeque<String>) -> Result<()> {
     let pool = get_db().await?;
     let val = serde_json::to_string(value)?;
     let (sql, values) = Query::insert()
