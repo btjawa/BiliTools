@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 use specta::Type;
-use std::{env, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
 use tauri::async_runtime;
 use tokio::fs;
 
@@ -16,19 +16,22 @@ pub use crate::{
         },
         queue::{
             self,
+            atomics::QueueType,
             ctrl_event,
             open_folder,
             plan_scheduler,
             process_scheduler,
+            scheduler::SchedulerView,
             // update_max_conc,
             submit_task,
+            task::TaskView,
         },
     },
     shared::{self, get_app_handle, set_window, HEADERS, READY},
     storage::{
         self,
         config::{self, CacheKey},
-        cookies, db, tasks,
+        cookies, db, queue as queues, schedulers, tasks,
     },
 };
 
@@ -37,6 +40,9 @@ pub struct InitData {
     version: String,
     hash: String,
     config: Arc<config::Settings>,
+    tasks: HashMap<String, TaskView>,
+    schedulers: HashMap<String, SchedulerView>,
+    queue: HashMap<QueueType, Vec<String>>,
 }
 
 #[tauri::command(async)]
@@ -135,10 +141,18 @@ pub async fn meta(app: tauri::AppHandle) -> TauriResult<InitData> {
     let version = app.package_info().version.to_string();
     let hash = env!("GIT_HASH").to_string();
     let config = config::read();
+
+    let tasks = tasks::load().await?;
+    let schedulers = schedulers::load().await?;
+    let queue = queues::load().await?;
+
     Ok(InitData {
         version,
         hash,
         config,
+        tasks,
+        schedulers,
+        queue,
     })
 }
 

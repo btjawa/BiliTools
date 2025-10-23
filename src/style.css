@@ -57,7 +57,7 @@
     @apply select-none box-border;
   }
   #app {
-    @apply flex w-full h-full;
+    @apply flex w-full h-full text-(--content-color);
   }
   #main {
     @apply flex flex-col relative w-full h-full overflow-hidden;
@@ -77,7 +77,7 @@
   input[type='password'],
   input[type='number'] {
     @apply appearance-none outline-none leading-none h-8 rounded-lg text-sm px-2.5 py-1.5;
-    @apply bg-(--button-color) text-(--content-color) transition-[filter];
+    @apply bg-(--button-color) transition-[filter];
   }
   button {
     @apply cursor-pointer;
@@ -112,7 +112,10 @@
 @layer components {
   .page {
     @apply flex flex-col relative justify-center items-center w-full h-full;
-    @apply text-(--content-color) px-6 overflow-hidden;
+    @apply px-6 overflow-hidden transition-opacity opacity-100;
+    &.hide {
+      @apply opacity-0;
+    }
   }
   .desc {
     @apply text-sm text-(--desc-color) inline-block whitespace-pre-wrap shrink-0;

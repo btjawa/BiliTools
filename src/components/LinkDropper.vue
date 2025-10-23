@@ -1,9 +1,6 @@
 <template>
   <Transition name="slide">
-    <div
-      v-if="v.active"
-      class="popup"
-    >
+    <div v-if="v.active" class="popup">
       <div class="inner flex flex-col items-center">
         <i class="fa-solid fa-download"></i>
         <h1>{{ $t('drag.title') }}</h1>
@@ -13,18 +10,15 @@
 </template>
 
 <script lang="ts" setup>
-import { useSettingsStore } from '@/store';
-import { inject, reactive, Ref } from 'vue';
-import { parseId, waitPage } from '@/services/utils';
-import SearchPage from '@/views/SearchPage.vue';
-import router from '@/router';
+import { useComponentsStore, useSettingsStore } from '@/store';
+import { reactive } from 'vue';
+import { parseId } from '@/services/utils';
 
+const components = useComponentsStore();
 const settings = useSettingsStore();
 const v = reactive({
   active: false,
 });
-
-const searchPage = inject<Ref<InstanceType<typeof SearchPage>>>('page');
 
 window.addEventListener('dragenter', (e) => {
   e.preventDefault();
@@ -56,9 +50,8 @@ window.addEventListener('drop', async (e) => {
     }
   }
   if (!text) return;
-  router.push('/');
-  const page = await waitPage(searchPage, 'search');
-  page.value.search(text);
+  const page = await components.r.searchPage.navigate();
+  page.search(text);
 });
 
 window.addEventListener('dragleave', (e) => {

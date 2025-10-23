@@ -1,6 +1,6 @@
 import { useQueueStore, useSettingsStore } from '@/store';
 import { AppLog, getDefaultQuality, randomString, strip } from './utils';
-import { getMediaInfo, getPlayUrl } from './media/data';
+import { getNfoByItem, getPlayUrl } from './media/data';
 import { AppError } from './error';
 
 import * as Types from '@/types/shared.d';
@@ -295,22 +295,12 @@ function buildPaths(
     .replace(/\.+$/, ''); // Issue#165
 }
 
-async function prepareTask(
-  task: Types.Task,
-) {
+async function prepareTask(task: Types.Task) {
   /* URLS, SUBTASKS */
-  const {
-    videoUrls,
-    audioUrls,
-    select,
-    subtasks,
-  } = await handleMedia(task);
+  const { videoUrls, audioUrls, select, subtasks } = await handleMedia(task);
 
   /* NFO */
-  const item = task.item;
-  const id = item.opid ?? item.epid ?? item.ssid ?? item.sid ?? item.aid;
-  if (!id) throw new AppError(`No id for task#${task.id} found`);
-  const { nfo } = await getMediaInfo(id.toString(), item.type);
+  const nfo = await getNfoByItem(task.item);
 
   /* SUB FOLDER */
   const subFolder = buildPaths('item', task);
@@ -322,7 +312,7 @@ async function prepareTask(
     subtasks,
     subFolder,
     nfo,
-  }
+  };
 }
 
 async function handleTask(
@@ -356,21 +346,41 @@ async function handleTask(
 export async function handleEvent(event: backend.QueueEvent) {
   const { type } = event;
   const queue = useQueueStore();
-  if (type === 'taskState') {
-    const task = queue.tasks?.[event.task];
-    if (task) task.state = event.state;
-  } else if (type === 'schedulerState') {
-    const scheduler = queue.schedulers?.[event.scheduler];
-    if (scheduler) scheduler.state = event.state;
-  } else if (type === 'schedulerQueue') {
-    const scheduler = queue.schedulers?.[event.scheduler];
-    if (scheduler) scheduler.queue = event.queue;
+  if (type === 'taskUpdated') {
+    const task = queue.tasks[event.id];
+    if (!task) throw new AppError(`Task#${event.id} not found`);
+
+    if (event.state) {
+      task.state = event.state;
+    }
+    if (event.prepare) {
+      Object.assign(task, event.prepare);
+    }
+    if (event.cancelled) {
+      delete queue.tasks[event.id];
+    }
+  } else if (type === 'schedulerUpdated') {
+    const scheduler = queue.schedulers[event.id];
+    if (!scheduler) throw new AppError(`Scheduler#${event.id} not found`);
+
+    if (event.state) {
+      scheduler.state = event.state;
+    }
+    if (event.queue) {
+      scheduler.queue = event.queue;
+    }
+    if (event.list) {
+      scheduler.list = event.list;
+    }
+    if (event.cancelled) {
+      delete queue.schedulers[event.id];
+    }
   } else if (type === 'progress') {
     const status = queue.tasks?.[event.task]?.status?.[event.subtask];
-  if (status) {
-    status.content = event.content;
-    status.chunk = event.chunk;
-  }
+    if (status) {
+      status.content = event.content;
+      status.chunk = event.chunk;
+    }
   } else if (type === 'queue') {
     queue[event.name] = event.value;
   } else if (type === 'request') {
@@ -387,21 +397,21 @@ export async function handleEvent(event: backend.QueueEvent) {
   } else if (type === 'error') {
     new AppError(event.message, { code: event.code as number }).handle();
   }
-  // if (event.init && queue.doing.length) {
-  //   AppLog(i18n.global.t('down.restored'), 'info');
-  // }
 }
 
 export async function processQueue() {
   try {
     const queue = useQueueStore();
-    const snapshot = queue.tasks[queue.schedulers[queue.backlog[0]].list[0]];
+    const snapshot = queue.tasks[queue.backlog[0]];
     const folder = buildPaths('series', snapshot);
     const sid = randomString(8);
 
     const scheduler = await backend.commands.planScheduler(sid, folder);
     if (scheduler.status === 'error') throw new AppError(scheduler.error);
     queue.schedulers[sid] = scheduler.data;
+    scheduler.data.list.forEach((v) => {
+      queue.tasks[v].sid = scheduler.data.sid;
+    });
 
     const process = await backend.commands.processScheduler(sid);
     if (process.status === 'error') throw new AppError(process.error);
@@ -410,7 +420,7 @@ export async function processQueue() {
   }
 }
 
-function selectToSubTasks(id: string, select: Types.PopupSelect) {
+export function selectToSubTasks(id: string, select: Types.PopupSelect) {
   const tasks: Types.SubTask[] = [];
   const push = (type: Types.TaskType) => {
     tasks.push({
@@ -462,9 +472,9 @@ export async function submit(
       meta: {
         id,
         ts: Math.floor(Date.now() / 1000),
-        seq: queue.backlog[0].length,
+        seq: queue.backlog.length,
         item: detach(info.list[idx]),
-        type: detach(info.type),        
+        type: detach(info.type),
       },
       prepare: {
         select: detach(select),
@@ -475,7 +485,7 @@ export async function submit(
       hot: {
         state: 'backlog',
         status,
-      }
+      },
     };
     queue.tasks[id] = {
       ...view.meta,

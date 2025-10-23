@@ -225,14 +225,17 @@
   },
   "down": {
     "title": "下载",
-    "waiting": "等待中",
+    "backlog": "备选区",
+    "pending": "等待中",
     "doing": "进行中",
     "complete": "已完成",
+    "backlogEmpty": "备选区为空~",
     "empty": "此队列为空~",
     "ordering": "备选区",
     "taskInfo": "详细信息",
+    "editSelect": "修改选择",
     "processQueue": "开始处理",
-    "restored": "已恢复下载任务~"
+    "restored": "已恢复进行中的下载任务~"
   },
   "settings": {
     "title": "设置",

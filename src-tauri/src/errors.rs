@@ -1,6 +1,7 @@
-use backtrace::Backtrace;
+use regex::Regex;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 use specta::Type;
+use std::backtrace::Backtrace;
 use std::fmt;
 use tauri::http::StatusCode;
 
@@ -67,50 +68,41 @@ impl TauriError {
         Self {
             code: code.map(Into::into),
             message: message.into(),
-            stack: TauriError::format_backtrace(Backtrace::new(), None),
+            stack: TauriError::format_backtrace(None),
         }
     }
     fn from_anyhow(err: anyhow::Error) -> Self {
         Self {
             code: None,
             message: err.to_string(),
-            stack: TauriError::format_backtrace(Backtrace::new(), Some(err)),
+            stack: TauriError::format_backtrace(Some(err)),
         }
     }
-    fn format_backtrace(bt: Backtrace, err: Option<anyhow::Error>) -> String {
+
+    fn format_backtrace(err: Option<anyhow::Error>) -> String {
         let mut lines = Vec::new();
-        if let Some(e) = err {
-            for (i, l) in e.chain().enumerate().skip(1) {
+
+        let bt = if let Some(err) = err {
+            for (i, l) in err.chain().enumerate().skip(1) {
                 lines.push(format!("    {i}: {l}"));
             }
+            format!("{}", err.backtrace())
+        } else {
+            format!("{}", Backtrace::force_capture())
+        };
+
+        let re = Regex::new(
+            r"(?m)^\s*(\d+):\s+(bilitools_lib[^\n]+)\n\s+at\s+([^\n:]+):(\d+)(?::(\d+))?",
+        )
+        .expect("Failed to create backtrace regex");
+
+        for cap in re.captures_iter(&bt) {
+            let func = cap[2].trim().to_string();
+            let file = cap[3].trim().replace("./", "").replace(".\\", "");
+            let line = cap[4].parse::<usize>().unwrap_or_default();
+            lines.push(format!("    at {file}:{line} ({func})"));
         }
-        for frame in bt.frames() {
-            for sym in frame.symbols() {
-                let Some(func) = sym.name().map(|v| v.to_string()) else {
-                    continue;
-                };
-                if !func.starts_with("bilitools_lib") {
-                    continue;
-                }
-                let Some(filename) = sym
-                    .filename()
-                    .and_then(|v| v.file_name().map(|v| v.to_string_lossy()))
-                else {
-                    continue;
-                };
-                if filename.starts_with("errors.rs") {
-                    continue;
-                }
-                let line = sym.lineno();
-                let col = sym.colno();
-                let src = match (line, col) {
-                    (Some(l), Some(c)) => format!("{filename}:{l}:{c}"),
-                    (Some(l), None) => format!("{filename}:{l}"),
-                    _ => filename.to_string(),
-                };
-                lines.push(format!("    at {src} ({func})"));
-            }
-        }
+
         lines.join("\n")
     }
 }

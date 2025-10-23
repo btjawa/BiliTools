@@ -153,14 +153,13 @@
 <script lang="ts" setup>
 import { onActivated, onDeactivated, reactive, ref } from 'vue';
 import { useUserStore } from '@/store';
-import { useRouter } from 'vue-router';
 import { Dropdown, Image } from '@/components';
 
 import { commands } from '@/services/backend';
 import * as login from '@/services/login';
+import router from '@/router';
 
 const user = useUserStore();
-const router = useRouter();
 
 const qrcode = ref<HTMLCanvasElement>();
 const v = reactive({

@@ -67,7 +67,6 @@ const active = ref(false);
 defineExpose({ check, close, active });
 
 const v = reactive({
-  anim: {} as Animation,
   update: null as updater.Update | null,
   downloading: false,
   progress: 0,
@@ -82,12 +81,7 @@ async function check(notice?: boolean) {
   info('Update: ' + JSON.stringify(update, null, 2));
   if (update) {
     v.update = markRaw(update);
-    v.anim = document
-      .querySelector('.page')!
-      .animate([{ opacity: '1' }, { opacity: '0' }], {
-        duration: 150,
-        fill: 'forwards',
-      });
+    document.querySelector('.page')?.classList.add('hide');
     active.value = true;
   } else if (notice) {
     AppLog(i18n.global.t('updater.latest'), 'success');
@@ -96,7 +90,7 @@ async function check(notice?: boolean) {
 
 function close() {
   active.value = false;
-  v.anim.reverse();
+  document.querySelector('.page')?.classList.remove('hide');
 }
 
 function click(event: Event) {

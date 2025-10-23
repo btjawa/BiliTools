@@ -28,8 +28,7 @@ use crate::storage::{
 
 use crate::{TauriError, TauriResult};
 
-pub static APP_HANDLE: LazyLock<OnceCell<AppHandle<Wry>>> =
-    LazyLock::new(OnceCell::new);
+pub static APP_HANDLE: LazyLock<OnceCell<AppHandle<Wry>>> = LazyLock::new(OnceCell::new);
 pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
     ArcSwap::new(Arc::new(Settings {
         add_metadata: true,

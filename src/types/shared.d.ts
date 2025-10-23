@@ -220,19 +220,20 @@ export interface MediaInfo {
 
 export interface Task {
   id: string;
+  sid: string | null;
   ts: number; // sec
   seq: number;
   select: PopupSelect;
   item: MediaItem;
   type: string;
 
-  select: PopupSelect,
-  subtasks: SubTask[],
-  nfo: MediaNfo,
-  folder: string,
+  select: PopupSelect;
+  subtasks: SubTask[];
+  nfo: MediaNfo;
+  folder: string;
 
-  status: Record<string, SubTaskStatus>,
-  state: TaskState
+  status: Record<string, SubTaskStatus>;
+  state: TaskState;
 }
 
 type TaskState =
@@ -254,11 +255,7 @@ export interface SubTaskStatus {
   content: number;
 }
 
-type QueueType =
-  | 'backlog'
-  | 'pending'
-  | 'doing'
-  | 'complete';
+type QueueType = 'backlog' | 'pending' | 'doing' | 'complete';
 
 type SchedulerState =
   | 'idle'
@@ -272,6 +269,6 @@ export interface Scheduler {
   sid: string;
   ts: number;
   list: string[];
-  queue: QueueType,
-  state: SchedulerState,
+  queue: QueueType;
+  state: SchedulerState;
 }

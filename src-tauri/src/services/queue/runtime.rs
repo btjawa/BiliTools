@@ -53,13 +53,12 @@ impl CtrlHandle {
     pub fn is_cancelled(&self) -> bool {
         self.cancel.is_cancelled()
     }
-    pub async fn reg_cleaner<Fut>(&self, fut: Fut) -> Result<()>
+    pub async fn reg_cleaner<Fut>(&self, fut: Fut)
     where
         Fut: Future<Output = TauriResult<()>> + Send + Sync + 'static,
     {
         let cleaner = Box::new(move || Box::pin(fut) as CleanFnFut) as CleanFn;
         self.cleaners.write().await.push(cleaner);
-        Ok(())
     }
     pub async fn clean_all(&self) {
         let cleaners = { self.cleaners.write().await.split_off(0) };
@@ -111,12 +110,13 @@ impl Ctrl {
         event: &CtrlEvent,
         state: TaskState,
     ) -> Result<()> {
-        let Some(task) = MANAGER.get_task(id).await else {
-            return Ok(());
-        };
+        log::info!("Received event for Task#{id}: {event:?}, state: {state:?}");
+
+        let task = MANAGER.get_task(id).await?;
         let ctrl = self.get_handle(id).await?;
 
         task.state(state).await?;
+        let _ = ctrl.tx.send(event.clone());
 
         match event {
             CtrlEvent::Cancel => {
@@ -125,18 +125,17 @@ impl Ctrl {
             }
             CtrlEvent::Retry => {
                 ctrl.cancel.cancel();
-                task.cancel(sid).await?;
                 ctrl.epoch.fetch_add(1, SeqCst);
-                self.reg(id.to_string()).await;
+                task.retry(sid).await?;
             }
             CtrlEvent::Pause => {
                 ctrl.paused.store(true, SeqCst);
             }
             CtrlEvent::Resume => {
                 ctrl.paused.store(false, SeqCst);
+                task.restore(sid).await?;
             }
         }
-        let _ = ctrl.tx.send(event.clone());
         Ok(())
     }
     pub async fn send_scheduler(
@@ -145,10 +144,9 @@ impl Ctrl {
         event: &CtrlEvent,
         state: SchedulerState,
     ) -> Result<()> {
-        let Some(scheduler) = MANAGER.get_scheduler(sid).await else {
-            return Ok(());
-        };
+        log::info!("Received event for scheduler#{sid}: {event:?}, state: {state:?}");
 
+        let scheduler = MANAGER.get_scheduler(sid).await?;
         scheduler.state(state).await?;
 
         match event {
@@ -157,7 +155,9 @@ impl Ctrl {
             }
             CtrlEvent::Retry => {}
             CtrlEvent::Pause => {}
-            CtrlEvent::Resume => {}
+            CtrlEvent::Resume => {
+                scheduler.restore().await?;
+            }
         }
         Ok(())
     }
@@ -165,26 +165,38 @@ impl Ctrl {
 
 pub struct Runtime {
     pub semaphore: RwLock<Arc<Semaphore>>,
+    pub max_conc: usize,
     pub ctrl: Ctrl,
 }
 
 impl Runtime {
     fn new() -> Self {
-        let conc = config::read().max_conc;
+        let max_conc = config::read().max_conc;
         Self {
-            semaphore: RwLock::new(Arc::new(Semaphore::new(conc))),
+            semaphore: RwLock::new(Arc::new(Semaphore::new(max_conc))),
+            max_conc,
             ctrl: Ctrl::new(),
+        }
+    }
+    pub async fn new_conc(&self, value: usize) {
+        if value == self.max_conc {
+            return;
+        }
+        let mut sem = self.semaphore.write().await;
+        if value > self.max_conc {
+            sem.add_permits(value - self.max_conc);
+        } else {
+            *sem = Arc::new(Semaphore::new(value));
         }
     }
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn ctrl_event(
-    event: CtrlEvent,
-    sid: &str,
-    id: Option<&str>,
-) -> TauriResult<()> {
+pub async fn ctrl_event(event: CtrlEvent, sid: Option<&str>, id: Option<&str>) -> TauriResult<()> {
+    let Some(sid) = sid else {
+        return Ok(());
+    };
     if let Some(id) = id {
         let state = match event {
             CtrlEvent::Pause => TaskState::Paused,
@@ -192,7 +204,7 @@ pub async fn ctrl_event(
             CtrlEvent::Resume => TaskState::Active,
             CtrlEvent::Retry => TaskState::Pending,
         };
-        RUNTIME.ctrl.send_task(&sid, &id, &event, state).await?;
+        RUNTIME.ctrl.send_task(sid, id, &event, state).await?;
     } else {
         let state = match event {
             CtrlEvent::Pause => SchedulerState::Paused,
@@ -200,25 +212,26 @@ pub async fn ctrl_event(
             CtrlEvent::Resume => SchedulerState::Running,
             CtrlEvent::Retry => SchedulerState::Idle,
         };
-        RUNTIME.ctrl.send_scheduler(&sid, &event, state).await?;
+        RUNTIME.ctrl.send_scheduler(sid, &event, state).await?;
     }
     Ok(())
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn open_folder(sid: &str, id: Option<&str>) -> TauriResult<()> {
-    let path = if let Some(id) = id {
-        let Some(task) = MANAGER.get_task(&id).await else {
-            return Ok(());
-        };
+pub async fn open_folder(sid: Option<&str>, id: Option<&str>) -> TauriResult<()> {
+    let path = if let Some(sid) = sid {
+        let scheduler = MANAGER.get_scheduler(sid).await?;
+        Some(scheduler.folder.clone())
+    } else if let Some(id) = id {
+        let task = MANAGER.get_task(id).await?;
         let folder = task.folder.read().await;
-        folder.clone()
+        Some(folder.clone())
     } else {
-        let Some(scheduler) = MANAGER.get_scheduler(sid).await else {
-            return Ok(());
-        };
-        scheduler.folder.clone()
+        None
+    };
+    let Some(path) = path else {
+        return Ok(());
     };
     tauri_plugin_opener::open_path(&*path, None::<&str>)?;
     Ok(())

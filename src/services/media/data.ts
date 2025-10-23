@@ -943,3 +943,10 @@ export async function getCid(aid: number) {
   });
   return body.data[0].cid as number;
 }
+
+export async function getNfoByItem(item: Types.MediaItem) {
+  const id = item.opid ?? item.epid ?? item.ssid ?? item.sid ?? item.aid;
+  if (!id) throw new AppError(`No id found for url ${item.url}`);
+  const info = await getMediaInfo(id.toString(), item.type);
+  return info.nfo;
+}

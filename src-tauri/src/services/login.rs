@@ -6,7 +6,8 @@ use serde_json::Value;
 use sha2::Sha256;
 use std::fmt::Write;
 use std::sync::{
-    atomic::{AtomicBool, Ordering}, LazyLock,
+    atomic::{AtomicBool, Ordering},
+    LazyLock,
 };
 use tauri::http::{header, StatusCode};
 use tokio::time::{sleep, Duration};
@@ -17,8 +18,7 @@ use crate::{
     TauriError, TauriResult,
 };
 
-static LOGIN_POLLING: LazyLock<AtomicBool> =
-    LazyLock::new(|| AtomicBool::new(false));
+static LOGIN_POLLING: LazyLock<AtomicBool> = LazyLock::new(|| AtomicBool::new(false));
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ExitLoginResponse {
@@ -157,7 +157,10 @@ pub async fn get_bili_ticket() -> TauriResult<()> {
     let client = init_client().await?;
     let ts = get_ts(false);
     let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
+    let bili_csrf = cookies
+        .get("bili_jct")
+        .map(String::as_str)
+        .unwrap_or_default();
     let mut mac = Hmac::<Sha256>::new_from_slice("XgwSnGZ1p".as_bytes())?;
     mac.update(format!("ts{ts}").as_bytes());
     let tag = mac.finalize().into_bytes();
@@ -268,7 +271,10 @@ pub async fn get_buvid() -> TauriResult<()> {
 pub async fn exit() -> TauriResult<isize> {
     let client = init_client().await?;
     let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
+    let bili_csrf = cookies
+        .get("bili_jct")
+        .map(String::as_str)
+        .unwrap_or_default();
     let response = client
         .post("https://passport.bilibili.com/login/exit/v2")
         .query(&[("biliCSRF", bili_csrf)])
@@ -299,7 +305,7 @@ pub async fn exit() -> TauriResult<isize> {
             cookie
                 .split_once('=')
                 .map(|(name, _)| name)
-                .unwrap_or("")
+                .unwrap_or_default()
                 .into(),
         )
         .await?;
@@ -525,11 +531,14 @@ pub async fn scan_login(
 pub async fn refresh_cookie(refresh_csrf: String) -> TauriResult<isize> {
     let client = init_client().await?;
     let cookies = cookies::load().await?;
-    let bili_csrf = cookies.get("bili_jct").map(String::as_str).unwrap_or("");
+    let bili_csrf = cookies
+        .get("bili_jct")
+        .map(String::as_str)
+        .unwrap_or_default();
     let refresh_token = cookies
         .get("refresh_token")
         .map(String::as_str)
-        .unwrap_or("");
+        .unwrap_or_default();
     let refresh_token_resp = client
         .post("https://passport.bilibili.com/x/passport-login/web/cookie/refresh")
         .query(&[

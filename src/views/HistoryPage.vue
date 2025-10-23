@@ -91,88 +91,36 @@
           <i :class="[$fa.weight, 'fa-rotate-right']"></i>
           <span>{{ $t('history.refresh') }}</span>
         </button>
-        <button @click="v.filter = true">
+        <button @click="getFilter">
           <i :class="[$fa.weight, 'fa-filter-list']"></i>
           <span>{{ $t('history.moreFilters') }}</span>
         </button>
       </div>
     </div>
-    <div class="popup" :class="{ active: v.filter }">
-      <Transition name="slide">
-        <div v-if="v.filter" class="gap-4 pr-16">
-          <button class="close" @click="v.filter = false">
-            <i :class="[$fa.weight, 'fa-close']"></i>
-          </button>
-          <div
-            v-for="(val, k) in filters"
-            :key="k"
-            class="flex gap-2 *:flex-shrink-0"
-          >
-            <button
-              v-for="i in val"
-              :key="i"
-              class="border-2 border-transparent"
-              :class="{ 'border-(--primary-color)!': v.select[k] === i }"
-              @click="v.select[k] = i as any"
-            >
-              {{ $t(`history.filter.${k}.${i}`) }}
-            </button>
-            <VueDatePicker
-              v-if="k === 'time'"
-              v-model="v.range"
-              range
-              class="w-60!"
-              :placeholder="$t('history.placeholder')"
-              format="yyyy/MM/dd"
-              :max-date="new Date()"
-              :locale="$i18n.locale"
-              :dark="$fa.isDark"
-            />
-          </div>
-          <hr class="m-0" />
-          <div class="flex gap-4 items-center">
-            <span>{{ $t('history.keyword') }}</span>
-            <input v-model="p.keyword" type="text" />
-          </div>
-          <hr class="m-0" />
-          <button class="primary-color w-fit" @click="apply">
-            <i :class="[$fa.weight, 'fa-filter']"></i>
-            <span>{{ $t('history.filter.apply') }}</span>
-          </button>
-        </div>
-      </Transition>
-    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { inject, onActivated, reactive, Ref, ref, watch } from 'vue';
 import { getHistoryCursor, getHistorySearch } from '@/services/media/extras';
 import { HistoryItem, HistoryTab } from '@/types/media/extras.d';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { timestamp, duration, waitPage } from '@/services/utils';
+import { timestamp, duration } from '@/services/utils';
 import { AppError } from '@/services/error';
 
+import { onActivated, reactive, ref, watch } from 'vue';
 import { Empty, Image, ProgressBar } from '@/components';
-import VueDatePicker from '@vuepic/vue-datepicker';
 import { VList } from 'virtua/vue';
-import SearchPage from './SearchPage.vue';
-import router from '@/router';
+import { useComponentsStore } from '@/store';
 
-const searchPage = inject<Ref<InstanceType<typeof SearchPage>>>('page');
+const components = useComponentsStore();
 
 const tabs = ref<HistoryTab[]>([]);
 const v = reactive({
   listActive: false,
   filter: false,
-  range: [] as Date[],
-  select: {
-    duration: 'all' as (typeof filters.duration)[number],
-    time: 'all' as (typeof filters.time)[number],
-    device: 'all' as (typeof filters.device)[number],
-  },
   list: [] as HistoryItem[],
 });
+
 const p = reactive({
   pn: 1,
   keyword: String(),
@@ -186,12 +134,6 @@ const p = reactive({
 
 const coverCache = ref<Record<string, string>>({});
 
-const filters = {
-  duration: ['all', 'under10', '10to30', '30to60', 'over60'] as const,
-  time: ['all', 'today', 'yesterday', 'week', 'custom'] as const,
-  device: ['all', 'pc', 'phone', 'pad', 'tv'] as const,
-};
-
 watch(
   () => p.business,
   () => {
@@ -200,15 +142,9 @@ watch(
   },
 );
 
-watch(
-  () => v.range,
-  () => (v.select.time = 'custom'),
-);
-
 async function search(item: HistoryItem) {
-  router.push('/');
-  const page = await waitPage(searchPage, 'search');
-  page.value.search(item.history.bvid);
+  const page = await components.navigate('searchPage');
+  page.search(item.history.bvid);
 }
 
 async function update() {
@@ -227,11 +163,6 @@ async function refresh() {
   for (const k in coverCache.value) {
     delete coverCache.value[k];
   }
-  Object.assign(v.select, {
-    duration: 'all',
-    time: 'all',
-    device: 'all',
-  });
   p.pn = 1;
   const cursor = await getHistoryCursor();
   tabs.value = cursor.tab;
@@ -239,36 +170,10 @@ async function refresh() {
   update();
 }
 
-function apply() {
-  const duration = {
-    all: [0, 0],
-    under10: [0, 599],
-    '10to30': [600, 1800],
-    '30to60': [1800, 3600],
-    over60: [3601, 0],
-  }[v.select.duration];
-  p.arc_min_duration = duration[0];
-  p.arc_max_duration = duration[1];
-  const time = {
-    all: [0, 0],
-    today: [new Date().setHours(0, 0, 0, 0) / 1000, 0],
-    yesterday: [
-      new Date().setHours(-24, 0, 0, 0) / 1000,
-      new Date().setHours(0, 0, 0, 0) / 1000 - 1,
-    ],
-    week: [
-      new Date().setHours(-((new Date().getDay() + 1) * 24), 0, 0, 0) / 1000,
-      0,
-    ],
-    custom: [
-      v.range?.[0] ? v.range[0].setHours(0, 0, 0, 0) / 1000 : 0,
-      v.range?.[1] ? v.range[1].setHours(24, 0, 0, 0) / 1000 - 1 : 0,
-    ],
-  }[v.select.time];
-  p.add_time_start = time[0];
-  p.add_time_end = time[1];
-  p.device_type = filters.device.indexOf(v.select.device);
-  v.filter = false;
+async function getFilter() {
+  const filter = await components.c.historyFilter?.getFilter();
+  if (!filter) return;
+  Object.assign(p, filter);
   update();
 }
 

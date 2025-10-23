@@ -36,7 +36,10 @@
           <i :class="[$fa.weight, 'fa-memo']"></i
           ><span>{{ $t('info.changelog') }}</span>
         </button>
-        <button class="primary-color" @click="updater?.check(true)">
+        <button
+          class="primary-color"
+          @click="components.c.updater?.check(true)"
+        >
           <i :class="[$fa.weight, 'fa-clock-rotate-left']"></i
           ><span>{{ $t('info.checkUpdate') }}</span>
         </button>
@@ -85,12 +88,10 @@
 </template>
 
 <script lang="ts" setup>
-import Updater from '@/components/Updater.vue';
-import { useAppStore } from '@/store';
+import { useAppStore, useComponentsStore } from '@/store';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { inject, Ref } from 'vue';
 
-const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
+const components = useComponentsStore();
 
 const app = useAppStore();
 </script>

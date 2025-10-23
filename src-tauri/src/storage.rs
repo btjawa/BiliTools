@@ -18,6 +18,9 @@ pub async fn init() -> anyhow::Result<()> {
 
     db::init_db().await.map_err(|e| err(e, "db"))?;
 
+    queue::QueueTable::check_latest()
+        .await
+        .map_err(|e| err(e, "queue"))?;
     tasks::TasksTable::check_latest()
         .await
         .map_err(|e| err(e, "tasks"))?;
@@ -31,8 +34,6 @@ pub async fn init() -> anyhow::Result<()> {
         .await
         .map_err(|e| err(e, "config"))?;
 
-    tasks::load().await.map_err(|e| err(e, "tasks"))?;
-    schedulers::load().await.map_err(|e| err(e, "schedulers"))?;
     config::load().await.map_err(|e| err(e, "config"))?;
     Ok(())
 }

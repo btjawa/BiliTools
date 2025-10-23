@@ -10,7 +10,12 @@
       @click="click(v.path)"
     >
       <template v-if="v.path === '/user-page'">
-        <Image v-if="user.isLogin" :src="v.icon" class="rounded-full!" prevent />
+        <Image
+          v-if="user.isLogin"
+          :src="v.icon"
+          class="rounded-full!"
+          prevent
+        />
         <img v-else class="w-9 h-9 rounded-full" :src="v.icon" />
       </template>
       <i
@@ -22,18 +27,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, Ref } from 'vue';
+import { computed } from 'vue';
 import { type as osType } from '@tauri-apps/plugin-os';
 import { useUserStore, useSettingsStore } from '@/store';
-import Updater from './Updater.vue';
 import router from '@/router';
 import Image from './Image.vue';
 
 const user = useUserStore();
 const settings = useSettingsStore();
 const os = osType();
-
-const updater = inject<Ref<InstanceType<typeof Updater>>>('updater');
 
 const list = computed(() => [
   { path: '/user-page', icon: user.getAvatar },
@@ -49,9 +51,11 @@ function setTheme() {
   settings.theme = settings.isDark ? 'light' : 'dark';
 }
 
-async function click(path: string) {
+function click(path: string) {
   if (path === 'theme') return setTheme();
-  if (updater?.value.active) updater.value?.close();
+  if (document.querySelector('.page')?.classList.contains('hide')) {
+    return;
+  }
   router.push(path);
 }
 </script>

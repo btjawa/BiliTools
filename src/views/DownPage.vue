@@ -6,16 +6,7 @@
     </h1>
     <div class="flex w-full h-full mt-4 flex-1 gap-3 min-h-0">
       <Transition mode="out-in">
-        <VList
-          :key="tab"
-          v-slot="{ item }"
-          :data="queueData.length ? queueData : ['empty']"
-        >
-          <div>
-            <Empty v-if="item == 'empty'" :text="$t('down.empty')" />
-            <Scheduler v-else v-model="tab" :sche="item" :popup="(v) => popup?.init(v)" />
-          </div>
-        </VList>
+        <Queue :key="tab" v-model="tab" />
       </Transition>
       <div class="tab">
         <button
@@ -30,32 +21,32 @@
         </button>
       </div>
     </div>
-    <Popup ref="popup" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { useQueueStore } from '@/store';
-import { computed, ref } from 'vue';
-import { VList } from 'virtua/vue';
+import { ref } from 'vue';
 
-import { Scheduler, Popup } from '@/components/DownPage';
-import { Empty } from '@/components';
+import { Queue } from '@/components/DownPage';
 
 const tabs = {
-  waiting: 'fa-stopwatch',
+  backlog: 'fa-books-medical',
+  pending: 'fa-stopwatch',
   doing: 'fa-hourglass-half',
   complete: 'fa-check',
 };
-type Key = keyof typeof tabs;
+type Tab = keyof typeof tabs;
 
-const queueData = computed(() =>
-  queue[tab.value].map((v) => queue.schedulers[v]),
-);
-
-const tab = ref<Key>('waiting');
-const popup = ref<InstanceType<typeof Popup>>();
-const queue = useQueueStore();
+const tab = ref<Tab>('backlog');
 
 defineExpose({ tab });
 </script>
+
+<style scoped>
+@reference 'tailwindcss';
+
+:deep(.wrapper) {
+  @apply flex flex-col p-3 rounded-lg text-sm bg-(--block-color);
+  @apply gap-0.5 my-px border border-(--split-color) w-full min-h-0;
+}
+</style>

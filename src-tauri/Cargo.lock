@@ -487,7 +487,6 @@ version = "1.4.4"
 dependencies = [
  "anyhow",
  "arc-swap",
- "backtrace",
  "base64 0.22.1",
  "dark-light",
  "hmac",

@@ -136,7 +136,7 @@ pub async fn insert(cookie: String) -> Result<()> {
             Cookies::Httponly,
             Cookies::Secure,
         ])
-        .values_panic([
+        .values([
             row.name.into(),
             row.value.into(),
             row.path.into(),
@@ -144,7 +144,7 @@ pub async fn insert(cookie: String) -> Result<()> {
             row.expires.into(),
             row.httponly.into(),
             row.secure.into(),
-        ])
+        ])?
         .on_conflict(
             OnConflict::column(Cookies::Name)
                 .update_columns([

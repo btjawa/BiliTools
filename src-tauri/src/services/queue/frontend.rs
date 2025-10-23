@@ -13,7 +13,7 @@ use crate::{
 
 use super::{
     atomics::{QueueType, SchedulerState, TaskState},
-    task::SubTask,
+    task::{SubTask, TaskPrepare},
     types::{MediaNfo, PopupSelect},
 };
 
@@ -24,17 +24,18 @@ use super::{
     tag = "type"
 )]
 pub enum QueueEvent<'a> {
-    TaskState {
-        task: &'a str,
-        state: &'a TaskState,
+    TaskUpdated {
+        id: &'a str,
+        state: Option<&'a TaskState>,
+        prepare: Option<&'a TaskPrepare>,
+        cancelled: Option<bool>,
     },
-    SchedulerState {
-        scheduler: &'a str,
-        state: &'a SchedulerState,
-    },
-    SchedulerQueue {
-        scheduler: &'a str,
-        queue: &'a QueueType,
+    SchedulerUpdated {
+        id: &'a str,
+        state: Option<&'a SchedulerState>,
+        queue: Option<&'a QueueType>,
+        list: Option<&'a Vec<String>>,
+        cancelled: Option<bool>,
     },
     Progress {
         task: &'a str,
@@ -60,21 +61,39 @@ pub enum QueueEvent<'a> {
     },
 }
 
-pub fn task_state<'a>(task: &'a str, state: &'a TaskState) -> Result<()> {
+pub fn task_updated<'a>(
+    id: &'a str,
+    state: Option<&'a TaskState>,
+    prepare: Option<&'a TaskPrepare>,
+    cancelled: Option<bool>,
+) -> Result<()> {
     let app = get_app_handle();
-    QueueEvent::TaskState { task, state }.emit(app)?;
+    QueueEvent::TaskUpdated {
+        id,
+        state,
+        prepare,
+        cancelled,
+    }
+    .emit(app)?;
     Ok(())
 }
 
-pub fn scheduler_state<'a>(scheduler: &'a str, state: &'a SchedulerState) -> Result<()> {
+pub fn scheduler_updated<'a>(
+    id: &'a str,
+    state: Option<&'a SchedulerState>,
+    queue: Option<&'a QueueType>,
+    list: Option<&'a Vec<String>>,
+    cancelled: Option<bool>,
+) -> Result<()> {
     let app = get_app_handle();
-    QueueEvent::SchedulerState { scheduler, state }.emit(app)?;
-    Ok(())
-}
-
-pub fn scheduler_queue<'a>(scheduler: &'a str, queue: &'a QueueType) -> Result<()> {
-    let app = get_app_handle();
-    QueueEvent::SchedulerQueue { scheduler, queue }.emit(app)?;
+    QueueEvent::SchedulerUpdated {
+        id,
+        state,
+        queue,
+        list,
+        cancelled,
+    }
+    .emit(app)?;
     Ok(())
 }
 
@@ -147,9 +166,7 @@ pub async fn request<'a, T: DeserializeOwned + Send + 'static>(
     }
     .emit(app)?;
     let res = rx.await.context("No response from frontend")??;
-    Ok(
-        res.ok_or(anyhow!("Error occurred from frontend"))?,
-    )
+    Ok(res.ok_or(anyhow!("Error occurred from frontend"))?)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

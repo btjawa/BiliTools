@@ -47,7 +47,7 @@ impl TableSpec for TasksTable {
     }
 }
 
-pub async fn load() -> Result<()> {
+pub async fn load() -> Result<HashMap<String, TaskView>> {
     let (sql, values) = Query::select()
         .columns([
             Tasks::Name,
@@ -63,6 +63,7 @@ pub async fn load() -> Result<()> {
     let pool = get_db().await?;
     let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
 
+    let mut map = HashMap::new();
     let mut tasks = MANAGER.tasks.write().await;
     tasks.clear();
 
@@ -87,31 +88,66 @@ pub async fn load() -> Result<()> {
             },
         };
 
-        tasks.insert(id, Task::new(view));
+        map.insert(id.clone(), view.clone());
+
+        let task = Task::new(view);
+        task.init().await?;
+
+        tasks.insert(id, task);
     }
-    Ok(())
+    Ok(map)
 }
 
-pub async fn update<T: Serialize>(id: &str, name: Tasks, value: &T) -> Result<()> {
+pub async fn upsert(id: &str, value: &TaskView) -> Result<()> {
     let pool = get_db().await?;
     let now = get_ts(true);
-    let val = serde_json::to_string(value)?;
     let (sql, values) = Query::insert()
         .into_table(Tasks::Table)
-        .columns([Tasks::Name, name, Tasks::UpdatedAt])
-        .values_panic([id.into(), val.into(), now.into()])
-        .on_conflict(OnConflict::column(Tasks::Name).do_nothing().to_owned())
+        .columns([
+            Tasks::Name,
+            Tasks::Meta,
+            Tasks::Prepare,
+            Tasks::Status,
+            Tasks::State,
+            Tasks::UpdatedAt,
+        ])
+        .values([
+            id.into(),
+            serde_json::to_string(&value.meta)?.into(),
+            serde_json::to_string(&value.prepare)?.into(),
+            serde_json::to_string(&value.hot.status)?.into(),
+            (value.hot.state as u8).into(),
+            now.into(),
+        ])?
+        .on_conflict(
+            OnConflict::column(Tasks::Name)
+                .update_columns([
+                    Tasks::Name,
+                    Tasks::Meta,
+                    Tasks::Prepare,
+                    Tasks::Status,
+                    Tasks::State,
+                    Tasks::UpdatedAt,
+                ])
+                .to_owned(),
+        )
         .build_sqlx(SqliteQueryBuilder);
 
     sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }
 
-pub async fn upsert(id: &str, value: &TaskView) -> Result<()> {
-    update(id, Tasks::Meta, &value.meta).await?;
-    update_prepare(id, &value.prepare).await?;
-    update_status(id, &value.hot.status).await?;
-    update_state(id, value.hot.state as u8).await?;
+pub async fn update<T: Serialize>(id: &str, col: Tasks, value: &T) -> Result<()> {
+    let pool = get_db().await?;
+    let now = get_ts(true);
+    let val = serde_json::to_string(value)?;
+    let (sql, values) = Query::update()
+        .table(Tasks::Table)
+        .values([(col, val.into()), (Tasks::UpdatedAt, now.into())])
+        .and_where(Expr::col(Tasks::Name).eq(id))
+        .build_sqlx(SqliteQueryBuilder);
+
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
 }
 
@@ -120,10 +156,7 @@ pub async fn update_prepare(id: &str, prepare: &TaskPrepare) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_status(
-    id: &str,
-    status: &HashMap<String, SubTaskStatus>,
-) -> Result<()> {
+pub async fn update_status(id: &str, status: &HashMap<String, SubTaskStatus>) -> Result<()> {
     update(id, Tasks::Status, status).await
 }
 

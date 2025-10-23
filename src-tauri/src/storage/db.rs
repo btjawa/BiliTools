@@ -135,7 +135,7 @@ pub async fn set_version(name: &str, value: i32) -> Result<()> {
     let (sql, values) = Query::insert()
         .into_table(Meta::Table)
         .columns([Meta::Name, Meta::Version])
-        .values_panic([name.into(), value.into()])
+        .values([name.into(), value.into()])?
         .on_conflict(
             OnConflict::column(Meta::Name)
                 .update_columns([Meta::Version])

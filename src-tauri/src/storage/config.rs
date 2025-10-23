@@ -11,7 +11,10 @@ use std::{env, path::PathBuf, sync::Arc};
 use tauri::Manager;
 
 use super::db::{get_db, TableSpec};
-use crate::shared::{get_app_handle, Sidecar, Theme, WindowEffect, CONFIG};
+use crate::{
+    queue::runtime::RUNTIME,
+    shared::{get_app_handle, Sidecar, Theme, WindowEffect, CONFIG},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -218,10 +221,14 @@ pub async fn load() -> Result<()> {
 }
 
 pub async fn insert(name: &str, value: &Value) -> Result<()> {
+    if let Some(value) = value.as_u64().filter(|_| name == "max_conc") {
+        RUNTIME.new_conc(value as usize).await;
+    }
+
     let (sql, values) = Query::insert()
         .into_table(Config::Table)
         .columns([Config::Name, Config::Value])
-        .values_panic([name.into(), serde_json::to_string(&value)?.into()])
+        .values([name.into(), serde_json::to_string(&value)?.into()])?
         .on_conflict(
             OnConflict::column(Config::Name)
                 .update_columns([Config::Value])

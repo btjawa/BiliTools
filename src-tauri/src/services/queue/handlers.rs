@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::{
-    frontend::{self, TaskPrepareResp, RequestAction},
+    frontend::{self, RequestAction, TaskPrepareResp},
     runtime::{CtrlEvent, CtrlHandle, RUNTIME},
     scheduler::Scheduler,
     task::{SubTask, Task, TaskType},
@@ -226,7 +226,7 @@ async fn handle_danmaku(req: &SubTaskReq, ctrl: Arc<CtrlHandle>) -> TauriResult<
         child.kill()?;
         Ok(())
     })
-    .await?;
+    .await;
 
     let mut stderr: Vec<String> = vec![];
 
@@ -244,10 +244,8 @@ async fn handle_danmaku(req: &SubTaskReq, ctrl: Arc<CtrlHandle>) -> TauriResult<
                 log::error!("{NAME} ERROR: {line}");
             }
             CommandEvent::Terminated(msg) => {
-                let code = msg.code.unwrap_or(0);
-                if code == 0 {
-                    break;
-                } else {
+                let code = msg.code.unwrap_or(-1);
+                if code != 0 {
                     return Err(TauriError::new(
                         format!("{NAME} task failed\n{}", stderr.join("\n")),
                         Some(code as isize),
@@ -375,17 +373,8 @@ async fn handle_media(
     }
     .ok_or(anyhow!("No urls for type {:?} found", &subtask.task_type))?;
 
-    let cleaner = RUNTIME.ctrl.get_handle(id).await?;
-    let id_clenaer = id.to_string();
-    cleaner
-        .reg_cleaner(async move {
-            aria2c::cancel(&id_clenaer).await?;
-            Ok(())
-        })
-        .await?;
-
     let mut process = pin!(async {
-        let path = aria2c::download(req, urls).await?;
+        let path = aria2c::download(req, ctrl.clone(), urls).await?;
         post_media(req, ctrl.clone(), path.clone()).await?;
         if subtask.task_type == TaskType::Video {
             video_path
@@ -419,19 +408,20 @@ async fn handle_media(
 
 pub async fn handle_task(
     scheduler: Arc<Scheduler>,
-    temp_root: &PathBuf,
+    temp_root: &Path,
     task: Arc<Task>,
 ) -> TauriResult<()> {
     let id = &task.id;
 
-    let prepare = frontend::request::<TaskPrepareResp>(id, None, &RequestAction::PrepareTask).await?;
+    let prepare =
+        frontend::request::<TaskPrepareResp>(id, None, &RequestAction::PrepareTask).await?;
 
     let folder = if config::read().organize.sub_folder {
         scheduler.folder.join(&*prepare.sub_folder)
     } else {
         scheduler.folder.clone()
     };
-    
+
     task.prepare(&prepare, folder.clone()).await?;
 
     let folder_str = folder.to_string_lossy().into_owned();
@@ -450,15 +440,13 @@ pub async fn handle_task(
             .context(format!("Failed to remove temp folder {temp_str}"))?;
         Ok(())
     })
-    .await?;
+    .await;
 
     for subtask in prepare.subtasks.iter().cloned() {
         let sub_id = subtask.id.clone();
         let task_type = subtask.task_type.clone();
 
-        log::info!(
-            "Handling subtask#{sub_id}\n    type: {task_type:?}\n    task#{id}",
-        );
+        log::info!("Handling Subtask#{sub_id}\n    type: {task_type:?}\n    Task#{id}",);
 
         let temp = temp_root.join(&sub_id);
         let temp_str = temp.to_string_lossy().into_owned();
@@ -490,15 +478,13 @@ pub async fn handle_task(
                             &prepare.video_urls,
                             &prepare.audio_urls,
                             &video_path,
-                            &audio_path
-                        ).await
+                            &audio_path,
+                        )
+                        .await
                     }
-                    TaskType::AudioVideo => handle_merge(
-                        &req,
-                        ctrl,
-                        &video_path,
-                        &audio_path
-                    ).await,
+                    TaskType::AudioVideo => {
+                        handle_merge(&req, ctrl, &video_path, &audio_path).await
+                    }
                     TaskType::Thumb => handle_thumbs(&req, ctrl).await,
                     TaskType::LiveDanmaku | TaskType::HistoryDanmaku => {
                         handle_danmaku(&req, ctrl).await

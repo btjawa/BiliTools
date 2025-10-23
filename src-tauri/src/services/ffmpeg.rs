@@ -65,18 +65,16 @@ async fn get_duration(path: &Path) -> Result<u64> {
         .output()
         .await?;
 
-    log::info!("Stream info for {path}\n:{}", &clean_log(&result.stderr));
-
-    Regex::new(r"Duration:\s*(\d+):(\d+):(\d+)")?
-        .captures_iter(&clean_log(&result.stderr))
-        .filter_map(|caps| {
-            let h = caps[1].parse::<u64>().ok()?;
-            let m = caps[2].parse::<u64>().ok()?;
-            let s = caps[3].parse::<u64>().ok()?;
-            Some((h * 60 + m) * 60 + s)
-        })
-        .min()
-        .context("No duration found in stream info")
+    let mut best = None;
+    let re = Regex::new(r"Duration:\s*(\d+):(\d+):(\d+)(?:\.(\d+))?")?;
+    for caps in re.captures_iter(&clean_log(&result.stderr)) {
+        let h = caps[1].parse::<u64>().unwrap_or(0);
+        let m = caps[2].parse::<u64>().unwrap_or(0);
+        let s = caps[3].parse::<u64>().unwrap_or(0);
+        let total = ((h * 60 + m) * 60 + s).max(best.unwrap_or(0));
+        best = Some(total);
+    }
+    best.context(format!("No duration found in {}", path.to_string()))
 }
 
 pub async fn merge(
@@ -352,27 +350,27 @@ async fn monitor(
     ctrl: Arc<CtrlHandle>,
     req: &SubTaskReq,
 ) -> TauriResult<()> {
-    let mut stderr: Vec<String> = vec![];
+    let mut stderr = Vec::<String>::with_capacity(50);
     ctrl.reg_cleaner(async move {
         cmd.1.kill()?;
         Ok(())
     })
-    .await?;
+    .await;
     while let Some(msg) = cmd.0.recv().await {
         match msg {
             CommandEvent::Stdout(line) => {
                 let line = String::from_utf8_lossy(&line);
-                let (key, value) = line
-                    .trim()
-                    .split_once('=')
-                    .ok_or(anyhow!("Failed to parse FFmpeg stdout"))?;
+                let Some((key, value)) = line.trim().split_once('=') else {
+                    continue;
+                };
                 match key.trim() {
                     "out_time_us" | "out_time_ms" => {
-                        let chunk = value.parse::<u64>().unwrap_or(0);
-                        req.subtask.send(duration, chunk / 1_000_000).await?;
+                        let chunk = value.parse::<u64>().unwrap_or(0) / 1_000_000;
+                        req.subtask.send(duration, chunk).await?;
                     }
                     "progress" => {
                         if value.trim() == "end" {
+                            req.subtask.send(duration, duration).await?;
                             break;
                         }
                     }
@@ -380,13 +378,25 @@ async fn monitor(
                 }
             }
             CommandEvent::Stderr(line) => {
-                stderr.push(String::from_utf8_lossy(&line).into());
+                let line = String::from_utf8_lossy(&line);
+                if !line.trim().is_empty() {
+                    stderr.push(line.into());
+                    if stderr.len() > 50 {
+                        stderr.remove(0);
+                    }
+                }
             }
             CommandEvent::Error(line) => {
-                stderr.push(line);
+                log::error!("FFmpeg ERROR: {line}");
+                if !line.trim().is_empty() {
+                    stderr.push(line.into());
+                    if stderr.len() > 50 {
+                        stderr.remove(0);
+                    }
+                }
             }
             CommandEvent::Terminated(msg) => {
-                let code = msg.code.unwrap_or(0);
+                let code = msg.code.unwrap_or(-1);
                 if code != 0 {
                     return Err(TauriError::new(
                         format!(
@@ -395,9 +405,8 @@ async fn monitor(
                         ),
                         Some(code),
                     ));
-                } else {
-                    req.subtask.send(duration, duration).await?;
                 }
+                req.subtask.send(duration, duration).await?;
             }
             _ => (),
         }

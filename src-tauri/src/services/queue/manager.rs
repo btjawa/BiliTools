@@ -41,12 +41,22 @@ impl Manager {
         }
     }
 
-    pub async fn get_task(&self, id: &str) -> Option<Arc<Task>> {
-        self.tasks.read().await.get(id).cloned()
+    pub async fn get_task(&self, id: &str) -> Result<Arc<Task>> {
+        self.tasks
+            .read()
+            .await
+            .get(id)
+            .ok_or(anyhow!(format!("Task#{id} not found")))
+            .cloned()
     }
 
-    pub async fn get_scheduler(&self, sid: &str) -> Option<Arc<Scheduler>> {
-        self.schedulers.read().await.get(sid).cloned()
+    pub async fn get_scheduler(&self, sid: &str) -> Result<Arc<Scheduler>> {
+        self.schedulers
+            .read()
+            .await
+            .get(sid)
+            .ok_or(anyhow!(format!("Scheduler#{sid} not found")))
+            .cloned()
     }
 
     pub fn get_queue(&self, queue: &QueueType) -> &RwLock<VecDeque<String>> {
@@ -59,6 +69,8 @@ impl Manager {
     }
 
     async fn submit_backlog(&self, id: String, value: TaskView) -> Result<()> {
+        let to = QueueType::Backlog;
+
         tasks::upsert(&id, &value).await?;
 
         let task = Task::new(value);
@@ -68,19 +80,26 @@ impl Manager {
         tasks.insert(id.clone(), task);
         drop(tasks);
 
-        let mut backlog = self.backlog.write().await;
-        backlog.push_back(id.clone());
-        drop(backlog);
+        let mut queue = self.get_queue(&to).write().await;
+        queue.push_back(id.clone());
+        frontend::queue(&to, &queue)?;
+        queue::upsert(to, &queue).await?;
+        drop(queue);
 
-        log::info!("Pushed new task: {id}");
+        log::info!("Queue {to:?} pushed new Task#{id}");
         Ok(())
     }
 
     async fn plan_scheduler(&self, sid: String, top_folder: PathBuf) -> Result<Arc<Scheduler>> {
-        let mut backlog = self.backlog.write().await;
-        let list = backlog.clone();
-        backlog.clear();
-        drop(backlog);
+        let f = QueueType::Backlog;
+        let t = QueueType::Pending;
+
+        let mut from = self.get_queue(&f).write().await;
+        let list = from.clone();
+        from.clear();
+        frontend::queue(&f, &from)?;
+        queue::upsert(f, &from).await?;
+        drop(from);
 
         let scheduler = Scheduler::new(sid.clone(), list.into(), top_folder);
         schedulers::upsert(&sid, &scheduler).await?;
@@ -89,19 +108,18 @@ impl Manager {
         schedulers.insert(sid.clone(), scheduler.clone());
         drop(schedulers);
 
-        let mut pending = self.pending.write().await;
-        pending.push_back(sid.clone());
-        drop(pending);
+        let mut to = self.get_queue(&t).write().await;
+        to.push_back(sid.clone());
+        frontend::queue(&t, &to)?;
+        queue::upsert(t, &to).await?;
+        drop(to);
 
-        log::info!("Planed new scheduler: {sid}");
+        log::info!("Planed new Scheduler#{sid}");
         Ok(scheduler)
     }
 
     pub async fn move_scheduler(&self, sid: &str, t: QueueType) -> Result<()> {
-        let Some(scheduler) = self.get_scheduler(sid).await else {
-            return Ok(());
-        };
-
+        let scheduler = self.get_scheduler(sid).await?;
         let f = scheduler.queue.get();
 
         if f == t || t == QueueType::Backlog {
@@ -124,14 +142,12 @@ impl Manager {
 
         scheduler.queue(t).await?;
 
-        log::info!("Scheduler {sid} moved: from {f:?} to {t:?}");
+        log::info!("Scheduler#{sid} moved: from {f:?} to {t:?}");
         Ok(())
     }
 
     pub async fn remove(&self, sid: &str, id: Option<&str>) -> Result<()> {
-        let Some(scheduler) = self.get_scheduler(sid).await else {
-            return Ok(());
-        };
+        let scheduler = self.get_scheduler(sid).await?;
 
         if let Some(id) = id {
             let mut tasks = self.tasks.write().await;
@@ -140,17 +156,24 @@ impl Manager {
 
             let mut list = scheduler.list.write().await;
             list.retain(|v| v != id);
-            drop(list);
+
+            frontend::scheduler_updated(sid, None, None, Some(&list), None)?;
+
+            schedulers::update_list(id, &list).await?;
         } else {
             let mut schedulers = self.schedulers.write().await;
             schedulers.remove(sid);
             drop(schedulers);
 
-            let mut queue = self.get_queue(&scheduler.queue.get()).write().await;
+            let q = scheduler.queue.get();
 
+            let mut queue = self.get_queue(&q).write().await;
             if let Some(pos) = queue.iter().position(|v| v == sid) {
                 queue.remove(pos);
             }
+
+            frontend::queue(&q, &queue)?;
+            queue::upsert(q, &queue).await?;
         }
         Ok(())
     }
@@ -174,9 +197,7 @@ pub async fn plan_scheduler(sid: String, folder: String) -> TauriResult<Schedule
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn process_scheduler(sid: String) -> TauriResult<()> {
-    let Some(scheduler) = MANAGER.get_scheduler(&sid).await else {
-        return Err(anyhow!(format!("Scheduler#{sid} not found")).into());
-    };
+    let scheduler = MANAGER.get_scheduler(&sid).await?;
     let folder = scheduler.folder.clone().to_string_lossy().into_owned();
     if scheduler.dispatch().await.is_ok() {
         MANAGER.move_scheduler(&sid, QueueType::Complete).await?;

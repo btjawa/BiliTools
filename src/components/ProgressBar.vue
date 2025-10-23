@@ -1,6 +1,6 @@
 <template>
   <div
-    class="progress relative flex-1 rounded-full bg-(--button-color) h-1.5 w-64"
+    class="progress relative flex-1 rounded-full bg-(--button-color) h-1.5 w-64 mx-2"
     :style="{ '--progress': progress + '%' }"
   ></div>
 </template>

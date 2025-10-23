@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use std::{
     net::TcpListener,
     path::PathBuf,
-    sync::LazyLock,
+    sync::{Arc, LazyLock},
     time::Duration,
 };
 use tauri::{
@@ -16,17 +16,15 @@ use tauri_plugin_shell::{
     process::{CommandChild, CommandEvent},
     ShellExt,
 };
-use tauri_specta::Event;
-use tokio::{fs, time::sleep, sync::RwLock};
+use tokio::{fs, sync::RwLock, time::sleep};
 
 use crate::{
-    errors::TauriError,
-    shared::{get_app_handle, random_string, ProcessError, Sidecar, USER_AGENT, WORKING_PATH},
+    shared::{get_app_handle, process_err, random_string, Sidecar, USER_AGENT, WORKING_PATH},
     storage::config,
-    TauriResult,
+    TauriError, TauriResult,
 };
 
-use super::queue::handlers::SubTaskReq;
+use super::queue::{handlers::SubTaskReq, runtime::CtrlHandle};
 
 static ARIA2_RPC: LazyLock<Aria2Rpc> = LazyLock::new(Aria2Rpc::new);
 
@@ -77,8 +75,9 @@ struct Aria2TellStatus {
 
 struct Aria2Rpc {
     client: Client,
-    endpoint: RwLock<String>,
-    secret: RwLock<String>,
+    child: RwLock<Option<CommandChild>>,
+    endpoint: RwLock<Option<String>>,
+    secret: RwLock<Option<String>>,
 }
 
 impl Aria2Rpc {
@@ -96,39 +95,38 @@ impl Aria2Rpc {
 
         Self {
             client,
+            child: Default::default(),
             endpoint: Default::default(),
             secret: Default::default(),
         }
     }
-    pub async fn update(&self, port: u16, secret: String) -> Result<()> {
+    pub async fn update(&self, child: CommandChild, port: u16, secret: String) -> Result<()> {
         let endpoint = format!("http://127.0.0.1:{port}/jsonrpc");
-        *self.endpoint.write().await = endpoint;
-        *self.secret.write().await = secret;
+        *self.child.write().await = Some(child);
+        *self.endpoint.write().await = Some(endpoint);
+        *self.secret.write().await = Some(secret);
         Ok(())
     }
-    pub async fn request<T: DeserializeOwned + std::fmt::Debug>(
+    pub async fn request<T: DeserializeOwned>(
         &self,
         action: &str,
         mut params: Vec<Value>,
     ) -> TauriResult<T> {
-        let endpoint = &self.endpoint.read().await;
-        let secret = &self.secret.read().await;
-        params.insert(
-            0,
-            Value::String(format!("token:{secret}")),
-        );
+        let Some(endpoint) = self.endpoint.read().await.clone() else {
+            return Err(anyhow!("No endpoint found for requesting aria2c rpc").into());
+        };
+        let Some(secret) = self.secret.read().await.clone() else {
+            return Err(anyhow!("No secret found for requesting aria2c rpc").into());
+        };
+
+        params.insert(0, Value::String(format!("token:{secret}")));
         let payload = json!({
             "jsonrpc": "2.0",
             "id": "1",
             "method": format!("aria2.{action}"),
             "params": params,
         });
-        let response = self
-            .client
-            .post(&**endpoint)
-            .json(&payload)
-            .send()
-            .await?;
+        let response = self.client.post(endpoint).json(&payload).send().await?;
 
         let body: Aria2Resp<T> = response
             .json()
@@ -144,9 +142,8 @@ impl Aria2Rpc {
     }
 }
 
-async fn daemon(name: &'static str, child: &CommandChild, rx: &mut Receiver<CommandEvent>) {
+async fn daemon(name: &'static str, pid: u32, rx: &mut Receiver<CommandEvent>) {
     let app = get_app_handle();
-    let pid = child.pid();
     #[cfg(target_os = "windows")]
     let cmd = (
         "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
@@ -173,16 +170,12 @@ async fn daemon(name: &'static str, child: &CommandChild, rx: &mut Receiver<Comm
         ],
     );
     let _ = app.shell().command(cmd.0).args(cmd.1).spawn();
-    let mut stderr: Vec<String> = vec![];
+    let mut stderr = Vec::<String>::with_capacity(50);
 
     let mut daemon = std::pin::pin!(async {
         loop {
             if let Err(e) = ARIA2_RPC.request::<Value>("getGlobalStat", vec![]).await {
-                let _ = ProcessError {
-                    name,
-                    error: &e.message,
-                }
-                .emit(app);
+                process_err(&e, name);
             }
             sleep(Duration::from_secs(3)).await;
         }
@@ -199,18 +192,26 @@ async fn daemon(name: &'static str, child: &CommandChild, rx: &mut Receiver<Comm
                 },
                 CommandEvent::Stderr(line) => {
                     let line = String::from_utf8_lossy(&line);
-                    log::warn!("{name} STDERR: {line}");
-                    stderr.push(line.into());
+                    if !line.trim().is_empty() {
+                        log::warn!("{name} STDERR: {line}");
+                        stderr.push(line.into());
+                        if stderr.len() > 50 {
+                            stderr.remove(0);
+                        }
+                    }
                 },
                 CommandEvent::Error(line) => {
                     log::error!("{name} ERROR: {line}");
+                    if !line.trim().is_empty() {
+                        stderr.push(line.into());
+                        if stderr.len() > 50 {
+                            stderr.remove(0);
+                        }
+                    }
                 },
                 CommandEvent::Terminated(msg) => {
-                    let code = msg.code.unwrap_or(0);
-                    let _ = ProcessError {
-                        name,
-                        error: &format!("Process {name} ({pid}) exited ({code})\nSee logs for more infos.")
-                    }.emit(app);
+                    let code = msg.code.unwrap_or(-1);
+                    process_err(&format!("Process {name} ({pid}) exited ({code})\nSee logs for more infos."), name);
                     log::error!("{name} exited with following STDERR:\n {}", stderr.join("\n"));
                     break;
                 },
@@ -263,9 +264,10 @@ pub async fn init() -> Result<()> {
         ])
         .spawn()?;
 
-    ARIA2_RPC.update(port, secret_r).await?;
+    let pid = child.pid();
+    ARIA2_RPC.update(child, port, secret_r).await?;
     async_runtime::spawn(async move {
-        daemon("aria2c", &child, &mut rx).await;
+        daemon("aria2c", pid, &mut rx).await;
     });
     Ok(())
 }
@@ -297,7 +299,11 @@ pub async fn resume(gid: &str) -> TauriResult<()> {
     Ok(())
 }
 
-pub async fn download(req: &SubTaskReq, urls: &Vec<String>) -> TauriResult<PathBuf> {
+pub async fn download(
+    req: &SubTaskReq,
+    ctrl: Arc<CtrlHandle>,
+    urls: &Vec<String>,
+) -> TauriResult<PathBuf> {
     let gid = &req.subtask.id;
     let sub = &req.subtask;
 
@@ -316,17 +322,22 @@ pub async fn download(req: &SubTaskReq, urls: &Vec<String>) -> TauriResult<PathB
         Ok(v) => match v.status.as_str() {
             "complete" => {
                 let total = v.total_length.parse::<u64>()?;
+                log::info!("aria2c task#{gid} already completed with total {total}");
                 sub.send(total, total).await?;
                 return Ok(output);
             }
             "paused" => {
+                log::info!("aria2c task#{gid} paused, resuming...");
                 ARIA2_RPC
                     .request::<Value>("unpause", vec![json!(gid)])
                     .await?;
             }
-            _ => (),
+            _ => {
+                log::info!("aria2c task#{gid} state: {}", v.status);
+            }
         },
         Err(_) => {
+            log::info!("aria2c task#{gid} not found, adding uri...");
             ARIA2_RPC
                 .request::<Value>(
                     "addUri",
@@ -338,6 +349,14 @@ pub async fn download(req: &SubTaskReq, urls: &Vec<String>) -> TauriResult<PathB
                 .await?;
         }
     };
+
+    let gid_str = gid.to_string();
+    ctrl.reg_cleaner(async move {
+        cancel(&gid_str).await?;
+        Ok(())
+    })
+    .await;
+
     loop {
         let data = ARIA2_RPC
             .request::<Aria2TellStatus>("tellStatus", vec![json!(gid)])
@@ -346,20 +365,25 @@ pub async fn download(req: &SubTaskReq, urls: &Vec<String>) -> TauriResult<PathB
             let code = code.parse::<isize>()?;
             if code != 0 {
                 return Err(TauriError::new(
-                    data.error_message.unwrap_or(String::new()),
+                    data.error_message.unwrap_or_default(),
                     Some(code),
                 ));
             }
         }
         let content = data.total_length.parse::<u64>()?;
         let chunk = data.completed_length.parse::<u64>()?;
-        if chunk == 0 {
-            continue;
-        }
-        sub.send(content, chunk).await?;
-        if data.status.as_str() == "complete" {
-            sub.send(content, content).await?;
-            break;
+        match data.status.as_str() {
+            "active" => {
+                if chunk == 0 {
+                    continue;
+                }
+                sub.send(content, chunk).await?;
+            }
+            "complete" => {
+                sub.send(content, content).await?;
+                break;
+            }
+            _ => (),
         }
         sleep(Duration::from_secs(1)).await;
     }

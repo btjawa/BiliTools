@@ -63,29 +63,35 @@ impl Scheduler {
             list: RwLock::new(list),
             queue: Atomic::new(QueueType::Pending),
             state: Atomic::new(SchedulerState::Idle),
-            folder: folder,
+            folder,
         })
     }
 
+    pub fn interrupted(&self) -> bool {
+        self.queue.get() == QueueType::Doing && self.state.get() == SchedulerState::Idle
+    }
+
     pub async fn dispatch(self: Arc<Self>) -> TauriResult<()> {
-        let sem = { RUNTIME.semaphore.read().await.clone() };
+        log::info!("Scheduler#{} dispatch started", self.sid);
         let mut set = JoinSet::new();
         let list = { self.list.read().await.clone() };
         for id in list {
-            let this = self.clone();
-            let sem = sem.clone();
-            let Some(task) = MANAGER.get_task(&id).await else {
+            let Ok(task) = MANAGER.get_task(&id).await else {
                 continue;
             };
-            if !matches!(
+            if matches!(
                 task.state.get(),
-                TaskState::Pending | TaskState::Paused | TaskState::Active
+                TaskState::Completed | TaskState::Cancelled
             ) {
                 continue;
             }
+            task.state(TaskState::Pending).await?;
+            let sem = RUNTIME.semaphore.read().await.clone();
+            let permit = sem.acquire_owned().await;
+            let this = self.clone();
             set.spawn(async move {
-                task.state(TaskState::Pending).await?;
-                let _permit = sem.acquire_owned().await;
+                // Extend the lifetime of permit.
+                let _permit = permit;
                 task.state(TaskState::Active).await?;
                 MANAGER.move_scheduler(&this.sid, QueueType::Doing).await?;
 
@@ -143,6 +149,7 @@ impl Scheduler {
 
         let res = tokio::select! {
             r = &mut pin!(fut) => r,
+            // Stop polling the future to avoid further execution.
             _ = ctrl.cancel.cancelled() => return Ok(()),
         };
 
@@ -177,7 +184,7 @@ impl Scheduler {
         self.queue.set(queue);
 
         /* FRONTEND */
-        frontend::scheduler_queue(&self.sid, &queue)?;
+        frontend::scheduler_updated(&self.sid, None, Some(&queue), None, None)?;
 
         /* DATABASE */
         schedulers::update_queue(&self.sid, queue as u8).await?;
@@ -189,7 +196,7 @@ impl Scheduler {
         self.state.set(state);
 
         /* FRONTEND */
-        frontend::scheduler_state(&self.sid, &state)?;
+        frontend::scheduler_updated(&self.sid, Some(&state), None, None, None)?;
 
         /* DATABASE */
         schedulers::update_state(&self.sid, state as u8).await?;
@@ -197,20 +204,41 @@ impl Scheduler {
     }
 
     pub async fn cancel(self: Arc<Self>) -> Result<()> {
-        if self.state.get() == SchedulerState::Cancelled {
-            return Ok(());
-        }
+        /* BACKEND */
         self.state(SchedulerState::Cancelled).await?;
 
-        /* FRONTEND */
-
-        for id in self.list.read().await.iter() {
-            let Some(task) = MANAGER.get_task(id).await else {
+        // `task.cancel()` will deadlock if we iterate while holding the lock.
+        let list = self.list.read().await.clone();
+        for id in list {
+            let Ok(task) = MANAGER.get_task(&id).await else {
                 continue;
             };
             task.cancel(&self.sid).await?;
         }
         MANAGER.remove(&self.sid, None).await?;
+
+        /* BACKEND */
+        frontend::scheduler_updated(&self.sid, None, None, None, Some(true))?;
+
+        /* DATABASE */
+        schedulers::delete(&self.sid).await?;
+
+        Ok(())
+    }
+
+    pub async fn restore(self: Arc<Self>) -> Result<()> {
+        if !self.interrupted() {
+            return Ok(());
+        }
+        let sid = self.sid.clone();
+        log::info!("Scheduler#{sid} respawned via restore");
+
+        tauri::async_runtime::spawn(async move {
+            let _ = self
+                .dispatch()
+                .await
+                .map_err(|e| process_err(e, "dispatch"));
+        });
         Ok(())
     }
 }

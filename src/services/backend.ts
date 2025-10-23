@@ -136,7 +136,7 @@ async refreshCookie(refreshCsrf: string) : Promise<Result<number, TauriError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async ctrlEvent(event: CtrlEvent, sid: string, id: string | null) : Promise<Result<null, TauriError>> {
+async ctrlEvent(event: CtrlEvent, sid: string | null, id: string | null) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("ctrl_event", { event, sid, id }) };
 } catch (e) {
@@ -144,7 +144,7 @@ async ctrlEvent(event: CtrlEvent, sid: string, id: string | null) : Promise<Resu
     else return { status: "error", error: e  as any };
 }
 },
-async openFolder(sid: string, id: string | null) : Promise<Result<null, TauriError>> {
+async openFolder(sid: string | null, id: string | null) : Promise<Result<null, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("open_folder", { sid, id }) };
 } catch (e) {
@@ -201,7 +201,7 @@ export type AnyInt = number
 export type CacheKey = "log" | "temp" | "webview" | "database"
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
-export type InitData = { version: string; hash: string; config: Settings }
+export type InitData = { version: string; hash: string; config: Settings; tasks: Partial<{ [key in string]: TaskView }>; schedulers: Partial<{ [key in string]: SchedulerView }>; queue: Partial<{ [key in QueueType]: string[] }> }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; url?: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; opid?: string | null; index: number }
 export type MediaNfo = { showtitle?: string | null; intro?: string | null; tags: string[]; url?: string; stat: JsonValue; thumbs: MediaNfoThumb[]; premiered?: number | null; upper?: MediaNfoUpper | null; credits?: MediaNfoCredits | null }
@@ -215,7 +215,7 @@ export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boo
 export type PopupSelectMisc = { aiSummary: boolean; subtitles: StringOrFalse }
 export type PopupSelectNfo = { album: boolean; single: boolean }
 export type ProcessError = { name: string; error: string }
-export type QueueEvent = { type: "taskState"; task: string; state: TaskState } | { type: "schedulerState"; scheduler: string; state: SchedulerState } | { type: "schedulerQueue"; scheduler: string; queue: QueueType } | { type: "progress"; task: string; subtask: string; content: number; chunk: number } | { type: "queue"; name: QueueType; value: string[] } | { type: "request"; task: string; subtask: string | null; action: RequestAction; endpoint: string } | { type: "error"; task: string; subtask: string | null; message: string; code: number | null }
+export type QueueEvent = { type: "taskUpdated"; id: string; state: TaskState | null; prepare: TaskPrepare | null; cancelled: boolean | null } | { type: "schedulerUpdated"; id: string; state: SchedulerState | null; queue: QueueType | null; list: string[] | null; cancelled: boolean | null } | { type: "progress"; task: string; subtask: string; content: number; chunk: number } | { type: "queue"; name: QueueType; value: string[] } | { type: "request"; task: string; subtask: string | null; action: RequestAction; endpoint: string } | { type: "error"; task: string; subtask: string | null; message: string; code: number | null }
 export type QueueType = "backlog" | "pending" | "doing" | "complete"
 export type RequestAction = "prepareTask" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent" | "getOpusImages"
 export type SchedulerState = "idle" | "running" | "paused" | "completed" | "failed" | "cancelled"

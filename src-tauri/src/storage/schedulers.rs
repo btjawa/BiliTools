@@ -5,14 +5,14 @@ use sea_query::{
 use sea_query_binder::SqlxBinder;
 use serde::Serialize;
 use sqlx::Row;
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 
 use crate::{
     queue::{
         atomics::{Atomic, SchedulerState},
         manager::MANAGER,
-        scheduler::Scheduler,
+        scheduler::{Scheduler, SchedulerView},
     },
     shared::get_ts,
 };
@@ -55,7 +55,7 @@ impl TableSpec for SchedulersTable {
     }
 }
 
-pub async fn load() -> Result<()> {
+pub async fn load() -> Result<HashMap<String, SchedulerView>> {
     let (sql, values) = Query::select()
         .columns([
             Schedulers::Name,
@@ -72,13 +72,14 @@ pub async fn load() -> Result<()> {
     let pool = get_db().await?;
     let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
 
+    let mut map = HashMap::new();
     let mut schedulers = MANAGER.schedulers.write().await;
     schedulers.clear();
 
     for r in rows {
         let sid = r.try_get::<String, _>("name")?;
         let ts = r.try_get::<i64, _>("created_at")?;
-        let list = serde_json::from_str(&r.try_get::<String, _>("list")?)?;
+        let list: Vec<String> = serde_json::from_str(&r.try_get::<String, _>("list")?)?;
 
         let queue = r.try_get::<u8, _>("queue")?;
         let mut state = r.try_get::<u8, _>("state")?;
@@ -88,6 +89,16 @@ pub async fn load() -> Result<()> {
         }
 
         let folder = PathBuf::from(&r.try_get::<String, _>("folder")?);
+
+        let view = SchedulerView {
+            sid: sid.clone(),
+            ts,
+            list: list.clone(),
+            queue: queue.into(),
+            state: queue.into(),
+        };
+
+        map.insert(sid.clone(), view);
 
         let scheduler = Arc::new(Scheduler {
             sid: sid.clone(),
@@ -100,20 +111,43 @@ pub async fn load() -> Result<()> {
         schedulers.insert(sid, scheduler);
     }
 
-    Ok(())
+    Ok(map)
 }
 
-pub async fn update<T: Serialize>(id: &str, name: Schedulers, value: &T) -> Result<()> {
+pub async fn upsert(id: &str, value: &Scheduler) -> Result<()> {
     let pool = get_db().await?;
     let now = get_ts(true);
-    let val = serde_json::to_string(value)?;
     let (sql, values) = Query::insert()
         .into_table(Schedulers::Table)
-        .columns([Schedulers::Name, name, Schedulers::UpdatedAt])
-        .values_panic([id.into(), val.into(), now.into()])
+        .columns([
+            Schedulers::Name,
+            Schedulers::CreatedAt,
+            Schedulers::List,
+            Schedulers::Queue,
+            Schedulers::State,
+            Schedulers::Folder,
+            Schedulers::UpdatedAt,
+        ])
+        .values([
+            id.into(),
+            value.ts.into(),
+            serde_json::to_string(&value.list.read().await.clone())?.into(),
+            (value.queue.get() as u8).into(),
+            (value.state.get() as u8).into(),
+            value.folder.to_str().unwrap_or_default().into(),
+            now.into(),
+        ])?
         .on_conflict(
             OnConflict::column(Schedulers::Name)
-                .update_columns([name, Schedulers::UpdatedAt])
+                .update_columns([
+                    Schedulers::Name,
+                    Schedulers::CreatedAt,
+                    Schedulers::List,
+                    Schedulers::Queue,
+                    Schedulers::State,
+                    Schedulers::Folder,
+                    Schedulers::UpdatedAt,
+                ])
                 .to_owned(),
         )
         .build_sqlx(SqliteQueryBuilder);
@@ -122,24 +156,22 @@ pub async fn update<T: Serialize>(id: &str, name: Schedulers, value: &T) -> Resu
     Ok(())
 }
 
-pub async fn upsert(id: &str, value: &Scheduler) -> Result<()> {
-    update(id, Schedulers::Name, &id).await?;
-    update(id, Schedulers::CreatedAt, &value.ts).await?;
-    update(
-        id,
-        Schedulers::List,
-        &serde_json::to_string(&value.list.read().await.clone())?,
-    )
-    .await?;
-    update(
-        id,
-        Schedulers::Folder,
-        &value.folder.to_str().unwrap_or_default(),
-    )
-    .await?;
-    update_queue(id, value.queue.get() as u8).await?;
-    update_state(id, value.state.get() as u8).await?;
+pub async fn update<T: Serialize>(id: &str, col: Schedulers, value: &T) -> Result<()> {
+    let pool = get_db().await?;
+    let now = get_ts(true);
+    let val = serde_json::to_string(value)?;
+    let (sql, values) = Query::update()
+        .table(Schedulers::Table)
+        .values([(col, val.into()), (Schedulers::UpdatedAt, now.into())])
+        .and_where(Expr::col(Schedulers::Name).eq(id))
+        .build_sqlx(SqliteQueryBuilder);
+
+    sqlx::query_with(&sql, values).execute(&pool).await?;
     Ok(())
+}
+
+pub async fn update_list(id: &str, list: &Vec<String>) -> Result<()> {
+    update(id, Schedulers::List, list).await
 }
 
 pub async fn update_queue(id: &str, queue: u8) -> Result<()> {

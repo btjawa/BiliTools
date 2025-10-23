@@ -1,28 +1,13 @@
 <template>
-  <div class="sche min-h-0 max-h-[calc(100vh-92px)]">
+  <div class="wrapper">
     <div class="flex mb-2.5 mx-[14px] text items-center">
       <i :class="[$fa.weight, 'fa-id-badge']"></i>
-      <span class="mr-auto">{{
-        sche.sid === '__waiting__' ? $t('down.ordering') : sche.sid
-      }}</span>
+      <span class="mr-auto">{{ sche.sid }} ({{ sche.list.length }})</span>
       <div class="flex gap-2 items-center">
-        <button
-          v-if="sche.sid === '__waiting__' && sche.list.length"
-          class="ml-auto w-fit primary-color"
-          @click="
-            processQueue();
-            tab = 'doing';
-          "
-        >
-          <i :class="[$fa.weight, 'fa-download']"></i>
-          <span>{{ $t('down.processQueue') }}</span>
+        <span class="mr-2 ml-auto">{{ timestamp(sche.ts / 1000) }}</span>
+        <button v-for="(v, k) in buttons" :key="k" @click="event(k)">
+          <i :class="[$fa.weight, v]"></i>
         </button>
-        <template v-if="sche.sid !== '__waiting__'">
-          <span class="mr-2 ml-auto">{{ timestamp(sche.ts / 1000) }}</span>
-          <button v-for="(v, k) in buttons" :key="k" @click="event(k)">
-            <i :class="[$fa.weight, v]"></i>
-          </button>
-        </template>
       </div>
     </div>
     <Empty v-if="!sche.list.length" :text="$t('down.empty')" />
@@ -31,58 +16,44 @@
       :data="sche.list.map((v) => queue.tasks[v])"
       class="contain-paint!"
     >
-      <SchedulerTask :sche :task="item" :popup />
+      <Task :sid="sche.sid" :task="item" />
     </VList>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { commands, CtrlEvent } from '@/services/backend';
-import { Scheduler, Task } from '@/types/shared.d';
-import { processQueue } from '@/services/queue';
 import { timestamp } from '@/services/utils';
 import { useQueueStore } from '@/store';
 import { computed } from 'vue';
 
+import * as Types from '@/types/shared.d';
 import { VList } from 'virtua/vue';
 import { Empty } from '@/components';
-import SchedulerTask from './SchedulerTask.vue';
+import Task from './Task.vue';
 
 const props = defineProps<{
-  sche: Scheduler;
-  popup: (task: Task) => void;
+  sche: Types.Scheduler;
+  dispatch: () => void;
 }>();
 
 const queue = useQueueStore();
-const tab = defineModel<'waiting' | 'doing' | 'complete'>();
 
 const buttons = computed(() => ({
-  ...(tab.value === 'doing' && {
+  ...(props.sche.state === 'running' && {
     pause: 'fa-pause',
     resume: 'fa-play',
   }),
-  ...(tab.value !== 'waiting' && {
-    openFolder: 'fa-folder-open',
-  }),
+  openFolder: 'fa-folder-open',
   cancel: 'fa-trash',
 }));
 
 async function event(event: CtrlEvent | 'openFolder') {
   const sid = props.sche.sid;
-  const sch = queue.schedulers[sid];
   const result =
     event === 'openFolder'
       ? await commands.openFolder(sid, null)
-      : await commands.ctrlEvent(event, sid, sch.list);
+      : await commands.ctrlEvent(event, sid, null);
   if (result.status === 'error') throw result.error;
 }
 </script>
-
-<style scoped>
-@reference 'tailwindcss';
-
-.sche {
-  @apply flex flex-col p-3 rounded-lg text-sm bg-(--block-color);
-  @apply gap-0.5 my-px border border-(--split-color);
-}
-</style>

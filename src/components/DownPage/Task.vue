@@ -1,7 +1,7 @@
 <template>
   <div
     :key="task.id"
-    class="flex flex-col p-3 rounded-lg text-sm bg-(--block-color) gap-1.5 px-4 border-2"
+    class="flex flex-col p-3 rounded-lg text-sm bg-(--block-color) gap-1.5 px-4 border-2 h-28"
     :style="{ 'border-color': getBorder(task.id) }"
   >
     <div class="flex w-full text">
@@ -15,39 +15,13 @@
         <template
           v-if="task.select.media.video || task.select.media.audioVideo"
         >
-          <Dropdown
-            v-if="task.state === 'pending'"
-            v-model="queue.tasks[task.id].select.res"
-            class="flat min-w-0! mr-1"
-            :drop="
-              cache.res.map((id) => ({
-                id,
-                name: $t(`quality.res.${id}`),
-              }))
-            "
-            @click.once="dropdown(task)"
-            @click="commands.updateSelect(task.id, task.select)"
-          />
-          <span v-else>{{ $t(`quality.res.${task.select.res}`) }}</span>
+          <span>{{ $t(`quality.res.${task.select.res}`) }}</span>
           <span>{{ $t(`quality.enc.${task.select.enc}`) }}</span>
         </template>
         <template
-          v-if="task.select.media.audio || task.select.media.audioVideo"
+          v-if="task.select.media.audioVideo || task.select.media.audio"
         >
-          <Dropdown
-            v-if="task.state === 'pending'"
-            v-model="queue.tasks[task.id].select.abr"
-            class="flat min-w-0! mr-1"
-            :drop="
-              cache.abr.map((id) => ({
-                id,
-                name: $t(`quality.abr.${id}`),
-              }))
-            "
-            @click.once="dropdown(task)"
-            @click="commands.updateSelect(task.id, task.select)"
-          />
-          <span v-else>{{ $t(`quality.abr.${task.select.abr}`) }}</span>
+          <span>{{ $t(`quality.abr.${task.select.abr}`) }}</span>
         </template>
         <span v-if="Object.entries(task.select.media).some(([_, k]) => k)">
           {{ $t(`quality.fmt.${task.select.fmt}`) }}
@@ -81,46 +55,43 @@
         {{ String(task.seq + 1).padStart(2, '0') }}
       </div>
     </div>
-    <div class="flex w-full gap-4 *:shrink-0 items-center">
-      <button @click="props.popup(task)">
+    <div class="flex w-full gap-2 *:shrink-0 items-center">
+      <button @click="components.c.taskPopup?.init(task)">
         <i :class="[$fa.weight, 'fa-list']"></i>
         <span>{{ $t('down.taskInfo') }}</span>
       </button>
+      <button v-if="task.state === 'backlog'" @click="editSelect">
+        <i :class="[$fa.weight, 'fa-pen-to-square']"></i>
+        <span>{{ $t('down.editSelect') }}</span>
+      </button>
       <ProgressBar :progress="getProgress(task)" />
       <span class="w-14">{{ getProgress(task).toFixed(2) }}%</span>
-      <div class="flex gap-2 text-sm">
-        <button v-for="(v, k) in buttons" :key="k" @click="event(k)">
-          <i :class="[$fa.weight, v]"></i>
-        </button>
-      </div>
+      <button v-for="(v, k) in buttons" :key="k" @click="event(k)">
+        <i :class="[$fa.weight, v]"></i>
+      </button>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { Task, Scheduler } from '@/types/shared.d';
-import { getPlayUrl } from '@/services/media/data';
-import { useQueueStore } from '@/store';
-import { computed, reactive } from 'vue';
+import { useQueueStore, useComponentsStore } from '@/store';
+import { computed } from 'vue';
+import * as Types from '@/types/shared.d';
 
 import { commands, CtrlEvent } from '@/services/backend';
 import { timestamp } from '@/services/utils';
-import { ProgressBar, Dropdown } from '..';
+import ProgressBar from '../ProgressBar.vue';
+import { selectToSubTasks } from '@/services/queue';
 
+const components = useComponentsStore();
 const queue = useQueueStore();
 
 const props = defineProps<{
-  sche: Scheduler;
-  task: Task;
-  popup: (task: Task) => void;
+  sid?: string;
+  task: Types.Task;
 }>();
 
-const cache = reactive({
-  res: [props.task.select.res],
-  abr: [props.task.select.abr],
-});
-
-function getProgress(task: Task) {
+function getProgress(task: Types.Task) {
   const subtasks = task.subtasks;
   const content = subtasks.length;
   let chunk = 0;
@@ -145,19 +116,12 @@ function getBorder(id: string) {
   }
 }
 
-async function dropdown(task: Task) {
-  const { item, select } = task;
-  const playurl = await getPlayUrl(item, item.type, select.fmt);
-  cache.res = [...new Set(playurl.video?.map((v) => v.id) ?? [])];
-  cache.abr = [...new Set(playurl.audio?.map((v) => v.id) ?? [])];
-}
-
 const buttons = computed(() => ({
-  ...(props.task.state !== 'pending' &&
-    props.task.state !== 'completed' && {
+  ...(props.task.state !== 'backlog' &&
+    props.task.state !== 'pending' && {
       retry: 'fa-rotate-right',
     }),
-  ...(props.task.state !== 'pending' && {
+  ...(props.task.state !== 'backlog' && {
     openFolder: 'fa-folder-open',
   }),
   ...(props.task.state === 'active' && {
@@ -170,12 +134,23 @@ const buttons = computed(() => ({
 }));
 
 async function event(event: CtrlEvent | 'openFolder') {
-  const sid = props.sche.sid;
+  const sid = props.sid ?? null;
   const id = props.task.id;
   const result =
     event === 'openFolder'
-      ? await commands.openFolder(sid, id)
-      : await commands.ctrlEvent(event, sid, [id]);
+      ? await commands.openFolder(null, id)
+      : await commands.ctrlEvent(event, sid, id);
   if (result.status === 'error') throw result.error;
+}
+
+async function editSelect() {
+  const task = queue.tasks[props.task.id];
+  const select = await components.c.selectPopup?.getSelect(
+    task.item,
+    task.select,
+  );
+  if (!select) return;
+  task.select = select;
+  task.subtasks = selectToSubTasks(task.id, select);
 }
 </script>

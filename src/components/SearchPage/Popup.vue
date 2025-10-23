@@ -7,7 +7,7 @@
       <div class="absolute flex items-center right-4 top-4">
         <i :class="[$fa.weight, 'fa-info-circle']"></i>
         <span class="desc">{{ $t('popup.popupLint') }}</span>
-        <button class="rounded-full ml-4" @click="exit">
+        <button class="rounded-full ml-4" @click="cancel">
           <i class="fa-solid fa-close"></i>
         </button>
       </div>
@@ -81,18 +81,20 @@
           <hr />
         </div>
       </template>
-      <div class="flex gap-2">
+      <div class="flex gap-2 border-2 border-(--primary-color) rounded-xl p-2">
         <template v-for="(i, k) in options" :key="k">
           <button
             v-if="i.data"
-            :class="{ selected: selected('media', k) }"
+            :class="{
+              selected: selected('media', k),
+            }"
             @click="click('media', k)"
           >
             <i :class="[$fa.weight, i.icon]"></i>
             <span>{{ $t('popup.mediaType.' + k) }}</span>
           </button>
         </template>
-        <button class="ml-auto primary-color" @click="submit">
+        <button class="ml-auto primary-color" @click="confirm">
           <i :class="[$fa.weight, 'fa-arrow-right']"></i>
           <span>{{ $t('popup.nextStep') }}</span>
         </button>
@@ -102,27 +104,36 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive } from 'vue';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import VueDatePicker from '@vuepic/vue-datepicker';
-
-import { getDefaultQuality } from '@/services/utils';
 import * as Types from '@/types/shared.d';
-import Dropdown from '../Dropdown.vue';
+import { computed, reactive } from 'vue';
+import { useUserStore } from '@/store';
+import { getNfoByItem, getPlayUrl } from '@/services/media/data';
+import { getAISummary, getSubtitle } from '@/services/media/extras';
+import { getDefaultQuality } from '@/services/utils';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
-const props = defineProps<{
-  fmt: (fmt?: Types.StreamFormat) => void;
-  close: () => void;
-  emit: (select: Types.PopupSelect) => void;
-}>();
+import Dropdown from '../Dropdown.vue';
 
 const v = reactive({
   active: false,
+  promise: {} as {
+    resolve: (value: null | Types.PopupSelect) => void;
+  },
+
   subtitle: String(),
   date: String(),
+  item: {} as Types.MediaItem,
   prov: {} as Types.PopupProvider,
   select: {} as Types.PopupSelect,
 });
+
+function selected(key: keyof typeof extras.value | 'media', id: string) {
+  if (key === 'thumb') {
+    return v.select.thumb?.includes(id);
+  }
+  const k = v.select[key] as Record<string, boolean>;
+  return k?.[id];
+}
 
 const extras = computed(() => ({
   misc: {
@@ -176,8 +187,8 @@ const quality = computed(() => ({
 }));
 
 const options = computed(() => ({
+  // #81
   audioVideo: {
-    // #81
     icon: 'fa-video',
     data: v.prov.video?.length && v.prov.audio?.length,
   },
@@ -191,45 +202,116 @@ const options = computed(() => ({
   },
 }));
 
-defineExpose({ init });
-
-async function init(provider: Types.PopupProvider) {
-  v.active = true;
-  v.prov = provider;
-  (['res', 'abr', 'enc'] as const).forEach((i) => {
-    v.select[i] = getDefaultQuality([...quality.value[i].data], i);
+defineExpose({ getSelect });
+async function getSelect(item: Types.MediaItem, select?: Types.PopupSelect) {
+  const promise = new Promise<null | Types.PopupSelect>((res) => {
+    v.promise.resolve = res;
   });
-  v.select.fmt = v.prov.codec ?? Types.StreamFormat.Dash;
-  v.select.misc = {
-    opusContent: false,
-    opusImages: false,
-    aiSummary: false,
-    subtitles: false,
+
+  const user = useUserStore();
+  const type = item.type;
+  const nfo = await getNfoByItem(item);
+
+  v.item = item;
+  const p: Types.PopupProvider = {
+    misc: {
+      opusContent: false,
+      opusImages: false,
+      aiSummary: false,
+      subtitles: [],
+    },
+    nfo: {
+      album: false,
+      single: false,
+    },
+    danmaku: [],
+    thumb: nfo?.thumbs.map((v) => v.id) ?? [],
   };
-  v.select.nfo = {
-    album: false,
-    single: false,
-  };
-  v.select.danmaku = {
-    live: false,
-    history: false,
-  };
-  v.select.thumb = [];
-  v.subtitle = v.prov.misc.subtitles[0]?.id ?? '';
+
+  if (user.isLogin && type === 'video') {
+    p.misc.aiSummary = await getAISummary(item, { check: true });
+  }
+
+  if (type === 'opus') {
+    p.misc.opusContent = true;
+    p.misc.opusImages = true;
+  } else {
+    Object.assign(p, await getPlayUrl(item, type, Types.StreamFormat.Dash));
+    p.nfo = {
+      album: true,
+      single: true,
+    };
+  }
+
+  if (type !== 'music' && type !== 'opus') {
+    if (user.isLogin) {
+      p.misc.subtitles = (await getSubtitle(item)).map((v) => ({
+        id: v.lan,
+        name: v.lan_doc,
+      }));
+      p.danmaku = ['live', 'history'];
+    } else {
+      p.danmaku = ['live'];
+    }
+  }
+
+  v.prov = p;
+  if (select) {
+    Object.assign(v.select, select);
+  } else {
+    (['res', 'abr', 'enc'] as const).forEach((i) => {
+      v.select[i] = getDefaultQuality([...quality.value[i].data], i);
+    });
+    Object.assign(v.select, {
+      fmt: p.codec ?? Types.StreamFormat.Dash,
+      misc: {
+        opusContent: false,
+        opusImages: false,
+        aiSummary: false,
+        subtitles: false,
+      },
+      nfo: {
+        album: false,
+        single: false,
+      },
+      danmaku: {
+        live: false,
+        history: false,
+      },
+      thumb: [],
+      media: {
+        video: false,
+        audio: false,
+        audioVideo: false,
+      },
+    });
+  }
+
+  v.subtitle = p.misc.subtitles[0]?.id ?? '';
   v.date = new Intl.DateTimeFormat('en-CA').format(new Date());
-  v.select.media = {
-    video: false,
-    audio: false,
-    audioVideo: false,
-  };
+
+  document.querySelector('.page')?.classList.add('hide');
+
+  v.active = true;
+  return promise;
 }
 
-function submit() {
-  props.emit(v.select);
+function exit() {
+  document.querySelector('.page')?.classList.remove('hide');
+  v.active = false;
+}
+
+function cancel() {
   exit();
+  v.promise.resolve(null);
 }
 
-function qualityClick<K extends keyof typeof quality.value>(
+function confirm() {
+  exit();
+  v.promise.resolve(v.select);
+}
+
+async function qualityClick<K extends keyof typeof quality.value>(
   key: K,
   value: Types.PopupSelect[K],
 ) {
@@ -237,8 +319,12 @@ function qualityClick<K extends keyof typeof quality.value>(
   if (key === 'res') {
     v.select.enc = getDefaultQuality([...quality.value.enc.data], 'enc');
   } else if (key === 'fmt') {
-    props.fmt(value as Types.StreamFormat);
-    exit();
+    v.active = false;
+    Object.assign(
+      v.prov,
+      await getPlayUrl(v.item, v.item.type, value as Types.StreamFormat),
+    );
+    v.active = true;
   }
 }
 
@@ -257,26 +343,13 @@ function click(key: keyof typeof extras.value | 'media', id: string) {
   const k = v.select[key] as Record<string, boolean>;
   k[id] = !k[id];
 }
-
-function selected(key: keyof typeof extras.value | 'media', id: string) {
-  if (key === 'thumb') {
-    return v.select.thumb?.includes(id);
-  }
-  const k = v.select[key] as Record<string, boolean>;
-  return k?.[id];
-}
-
-function exit() {
-  props.close();
-  v.active = false;
-}
 </script>
 
 <style scoped>
 @reference 'tailwindcss';
 
 .el {
-  @apply absolute inset-0 mx-6 bg-(--block-color);
+  @apply absolute inset-0 mx-6 bg-(--block-color) mt-[30px];
 }
 hr {
   @apply my-2.5;

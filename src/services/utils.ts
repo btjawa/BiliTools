@@ -1,7 +1,7 @@
 import { useSettingsStore, useAppStore } from '@/store';
 import { TYPE, useToast } from 'vue-toastification';
 import { MediaType } from '@/types/shared.d';
-import { Ref, watch } from 'vue';
+import { watch } from 'vue';
 import i18n from '@/i18n';
 
 import { fetch } from '@tauri-apps/plugin-http';
@@ -385,22 +385,6 @@ export async function parseId(
       };
   }
   throw err();
-}
-
-export function waitPage<T, K extends keyof T>(
-  component: Ref<T | undefined> | undefined,
-  tag: K,
-): Promise<Ref<T>> {
-  return new Promise((resolve) => {
-    if (component?.value?.[tag]) resolve(component as Ref<T>);
-    watch(
-      () => component?.value?.[tag],
-      (v) => {
-        if (v) resolve(component as Ref<T>);
-      },
-      { once: true },
-    );
-  });
 }
 
 export function randomString(len: number = 8) {

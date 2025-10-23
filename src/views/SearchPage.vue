@@ -1,124 +1,109 @@
 <template>
-  <div>
+  <div class="w-full h-full flex flex-col justify-center items-center">
     <div
-      ref="topEl"
-      class="w-full h-full flex flex-col justify-center items-center"
+      class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-(--block-color) border border-(--split-color)"
     >
-      <div
-        class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-(--block-color) border border-(--split-color)"
-      >
-        <input
-          v-model="v.searchInput"
-          class="w-full rounded-2xl"
-          type="text"
-          spellcheck="false"
-          :placeholder="$t('search.input', [$t('bilibili')])"
-          @keydown.enter="search()"
-        />
-        <Dropdown
-          v-model="v.mediaType"
-          :drop="[
-            { id: 'auto', name: $t('search.autoDetect') },
-            ...Object.values(Types.MediaType).map((id) => ({
-              id,
-              name: $t('mediaType.' + id),
-            })),
-          ]"
-        />
-        <button
-          :class="[$fa.weight, 'fa-search rounded-full']"
-          @click="search()"
-        ></button>
-      </div>
-      <Transition>
-        <Empty
-          v-if="!v.listActive && !v.searching"
-          class="absolute"
-          :text="$t('search.suggest')"
-        />
-      </Transition>
-      <Transition>
-        <img
-          v-if="v.searching"
-          src="@/assets/img/searching.png"
-          class="absolute"
-        />
-      </Transition>
-      <Transition>
-        <Empty
-          v-if="!v.searching && v.listActive && !v.mediaInfo.list?.length"
-          class="absolute"
-          :text="$t('empty')"
-        />
-      </Transition>
-      <Transition>
-        <div
-          v-if="v.listActive"
-          class="flex flex-col flex-1 mt-3 w-full min-h-0"
-        >
-          <MediaInfo :info="v.mediaInfo" />
-          <div class="flex mt-3 gap-3 flex-1 min-h-0">
-            <Transition name="slide">
-              <MediaList
-                v-if="!v.searching && v.mediaInfo.list.length"
-                ref="mediaList"
-                v-model="v.checkboxs"
-                :list="v.mediaInfo.list"
-                :edge="v.mediaInfo.edge"
-                :update-edge="updateEdge"
-              />
-            </Transition>
-            <div class="flex flex-col gap-3 ml-auto min-w-32 max-w-48 pb-6">
+      <input
+        v-model="v.searchInput"
+        class="w-full rounded-2xl"
+        type="text"
+        spellcheck="false"
+        :placeholder="$t('search.input', [$t('bilibili')])"
+        @keydown.enter="search()"
+      />
+      <Dropdown
+        v-model="v.mediaType"
+        :drop="[
+          { id: 'auto', name: $t('search.autoDetect') },
+          ...Object.values(Types.MediaType).map((id) => ({
+            id,
+            name: $t('mediaType.' + id),
+          })),
+        ]"
+      />
+      <button
+        :class="[$fa.weight, 'fa-search rounded-full']"
+        @click="search()"
+      ></button>
+    </div>
+    <Transition>
+      <Empty
+        v-if="!v.listActive && !v.searching"
+        class="absolute"
+        :text="$t('search.suggest')"
+      />
+    </Transition>
+    <Transition>
+      <img
+        v-if="v.searching"
+        src="@/assets/img/searching.png"
+        class="absolute"
+      />
+    </Transition>
+    <Transition>
+      <Empty
+        v-if="!v.searching && v.listActive && !v.mediaInfo.list?.length"
+        class="absolute"
+        :text="$t('empty')"
+      />
+    </Transition>
+    <Transition>
+      <div v-if="v.listActive" class="flex flex-col flex-1 mt-3 w-full min-h-0">
+        <MediaInfo :info="v.mediaInfo" />
+        <div class="flex mt-3 gap-3 flex-1 min-h-0">
+          <Transition name="slide">
+            <MediaList
+              v-if="!v.searching && v.mediaInfo.list.length"
+              ref="mediaList"
+              v-model="v.checkboxs"
+              :list="v.mediaInfo.list"
+              :edge="v.mediaInfo.edge"
+              :update-edge="updateEdge"
+            />
+          </Transition>
+          <div class="flex flex-col gap-3 ml-auto min-w-32 max-w-48 pb-6 h-6">
+            <button
+              v-for="(i, k) in buttons"
+              :key="k"
+              class="shrink-0"
+              @click="i.action"
+            >
+              <i :class="[$fa.weight, i.icon]"></i>
+              <span>{{ $t(i.text) }}</span>
+            </button>
+            <template v-if="v.mediaInfo.pn">
+              <span>{{ $t('page') }}</span>
+              <input v-model="v.pageIndex" type="number" @input="handlePage" />
+            </template>
+            <div class="tab overflow-auto">
               <button
-                v-for="(i, k) in buttons"
+                v-for="(t, k) in v.mediaInfo.sections?.tabs"
                 :key="k"
-                class="shrink-0"
-                @click="i.action"
+                class="w-full!"
+                :class="{ active: v.tab === t.id }"
+                @click="updateTab(t.id)"
               >
-                <i :class="[$fa.weight, i.icon]"></i>
-                <span>{{ $t(i.text) }}</span>
+                <span class="truncate">{{ t.name }}</span>
+                <label class="primary-color"></label>
               </button>
-              <template v-if="v.mediaInfo.pn">
-                <span>{{ $t('page') }}</span>
-                <input
-                  v-model="v.pageIndex"
-                  type="number"
-                  @input="handlePage"
-                />
-              </template>
-              <div class="tab overflow-auto">
-                <button
-                  v-for="(t, k) in v.mediaInfo.sections?.tabs"
-                  :key="k"
-                  class="w-full!"
-                  :class="{ active: v.tab === t.id }"
-                  @click="updateTab(t.id)"
-                >
-                  <span class="truncate">{{ t.name }}</span>
-                  <label class="primary-color"></label>
-                </button>
-              </div>
             </div>
           </div>
         </div>
-      </Transition>
-    </div>
-    <Popup ref="popup" :fmt="initPopup" :close="() => v.anim.reverse()" :emit />
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { MediaInfo, MediaList, Popup } from '@/components/SearchPage';
+import { MediaInfo, MediaList } from '@/components/SearchPage';
 import { Dropdown, Empty } from '@/components';
-import DownPage from './DownPage.vue';
 
-import { inject, nextTick, onActivated, reactive, Ref, ref, watch } from 'vue';
+import { nextTick, onActivated, reactive, ref, watch } from 'vue';
 import * as log from '@tauri-apps/plugin-log';
-import { useRouter } from 'vue-router';
 import pLimit from 'p-limit';
 
-import { useSettingsStore, useUserStore } from '@/store';
-import { AppLog, parseId, strip, waitPage } from '@/services/utils';
+import { useSettingsStore, useComponentsStore } from '@/store';
+import { AppLog, parseId, strip } from '@/services/utils';
 import { data, extras } from '@/services/media';
 import { save } from '@tauri-apps/plugin-dialog';
 import { commands } from '@/services/backend';
@@ -161,14 +146,10 @@ const buttons = [
   },
 ];
 
-const popup = ref<InstanceType<typeof Popup>>();
-const downPage = inject<Ref<InstanceType<typeof DownPage>>>('page');
 const mediaList = ref<InstanceType<typeof MediaList>>();
-const topEl = ref<HTMLElement>();
 
-const router = useRouter();
-const user = useUserStore();
 const settings = useSettingsStore();
+const components = useComponentsStore();
 
 function updateIndex() {
   const raw = v.mediaInfo.list.findIndex((v) => v.isTarget);
@@ -278,7 +259,7 @@ async function updateEdge(edge_id: number) {
   });
 }
 
-async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
+async function initPopup() {
   if (!v.checkboxs.length) return;
   v.checkboxs = v.checkboxs.filter(
     (i) => i >= 0 && i < v.mediaInfo.list.length,
@@ -294,64 +275,12 @@ async function initPopup(fmt: Types.StreamFormat = Types.StreamFormat.Dash) {
     }),
   );
   await Promise.all(tasks);
-  const info = v.mediaInfo.list[v.checkboxs[0]];
-  const nfo = v.mediaInfo.nfo;
-  const type = info.type;
-
-  const prov: Types.PopupProvider = {
-    misc: {
-      opusContent: false,
-      opusImages: false,
-      aiSummary: false,
-      subtitles: [],
-    },
-    nfo: {
-      album: false,
-      single: false,
-    },
-    danmaku: [],
-    thumb: nfo?.thumbs.map((v) => v.id) ?? [],
-  };
-
-  if (user.isLogin && type === 'video') {
-    prov.misc.aiSummary = await extras.getAISummary(info, { check: true });
-  }
-
-  if (type === 'opus') {
-    prov.misc.opusContent = true;
-    prov.misc.opusImages = true;
-  } else {
-    Object.assign(prov, await data.getPlayUrl(info, type, fmt));
-    prov.nfo = {
-      album: true,
-      single: true,
-    };
-  }
-
-  if (type !== 'music' && type !== 'opus') {
-    if (user.isLogin) {
-      prov.misc.subtitles = (await extras.getSubtitle(info)).map((v) => ({
-        id: v.lan,
-        name: v.lan_doc,
-      }));
-      prov.danmaku = ['live', 'history'];
-    } else {
-      prov.danmaku = ['live'];
-    }
-  }
-
-  v.anim = topEl.value!.animate([{ opacity: '1' }, { opacity: '0' }], {
-    duration: 150,
-    fill: 'forwards',
-  });
-  popup.value?.init(prov);
-}
-
-async function emit(select: Types.PopupSelect) {
+  const item = v.mediaInfo.list[v.checkboxs[0]];
+  const select = await components.c.selectPopup?.getSelect(item);
+  if (!select) return;
   queue.submit(v.mediaInfo, select, v.checkboxs);
-  router.push('/down-page');
-  const page = await waitPage(downPage, 'tab');
-  page.value.tab = 'waiting';
+  const page = await components.navigate('downPage');
+  page.tab = 'backlog';
 }
 
 async function exportData() {
