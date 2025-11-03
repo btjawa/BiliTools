@@ -97,9 +97,15 @@ impl TauriError {
         .expect("Failed to create backtrace regex");
 
         for cap in re.captures_iter(&bt) {
-            let func = cap[2].trim().to_string();
-            let file = cap[3].trim().replace("./", "").replace(".\\", "");
-            let line = cap[4].parse::<usize>().unwrap_or_default();
+            let Some(func) = cap.get(2).map(|v| v.as_str().trim()) else {
+                continue;
+            };
+            let Some(file) = cap.get(3).map(|v| v.as_str().trim().replace("./", "").replace(".\\", "")) else {
+                continue;
+            };
+            let Some(line) = cap.get(4).and_then(|v| v.as_str().parse::<usize>().ok()) else {
+                continue;
+            };
             lines.push(format!("    at {file}:{line} ({func})"));
         }
 

@@ -91,6 +91,7 @@ export enum MediaType {
   WatchLater = 'watchLater',
   Favorite = 'favorite',
   Opus = 'opus',
+  OpusList = 'opusList',
   UserVideo = 'userVideo',
   UserOpus = 'userOpus',
   UserAudio = 'userAudio',
@@ -154,6 +155,7 @@ export interface MediaItem {
   epid?: number;
   ssid?: number;
   opid?: string;
+  rlid?: number;
   index: number;
 }
 

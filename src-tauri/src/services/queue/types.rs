@@ -31,6 +31,8 @@ pub struct MediaItem {
     pub ssid: Option<usize>,
     #[specta(optional)]
     pub opid: Option<String>,
+    #[specta(optional)]
+    pub rlid: Option<usize>,
     pub index: usize,
 }
 

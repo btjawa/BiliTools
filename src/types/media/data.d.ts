@@ -442,6 +442,53 @@ export interface OpusInfo {
   };
 }
 
+export interface OpusListInfo {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    list: {
+      id: number,
+      mid: number,
+      name: string,
+      image_url: string,
+      update_time: number,
+      ctime: number,
+      publish_time: number,
+      summary: string,
+      words: number,
+      read: number,
+      articles_count: number,
+    },
+    articles: {
+      id: number,
+      title: string,
+      publish_time: number,
+      words: number,
+      image_urls: string[],
+      categories: {
+        name: string;
+      }[],
+      summary: string;
+      dyn_id_str: string;
+      author_uid: number,
+      stats: {
+        view: number,
+        favorite: number,
+        like: number,
+        reply: number,
+        share: number,
+        coin: number,
+      }
+    }[],
+    author: {
+      mid: number,
+      name: string,
+      face: string,
+    }
+  }
+}
+
 export interface UploadsInfo {
   code: number;
   message: string;

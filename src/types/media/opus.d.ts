@@ -35,11 +35,7 @@ type OpusModule =
     }
   | {
       module_content: {
-        paragraphs: Array<
-          {
-            align: 0 | 1 | 2;
-          } & OpusContentPara
-        >;
+        paragraphs: OpusContentParas[];
       };
       module_type: 'MODULE_TYPE_CONTENT';
     }
@@ -63,6 +59,13 @@ type OpusModule =
       };
       module_type: 'MODULE_TYPE_STAT';
     };
+
+type OpusContentParas = {
+  format?: {
+    align: 0 | 1 | 2;
+    indent: null;
+  };
+} & OpusContentPara;
 
 type OpusContentPara =
   | {
@@ -92,17 +95,17 @@ type OpusContentPara =
     }
   | {
       para_type: 4;
-      text: {
-        nodes: OpusContentNode[];
+      blockquote: {
+        children: OpusContentParas[];
       };
     }
   | {
       para_type: 5;
       list: {
-        items: {
+        children: {
           level: number;
           order: number;
-          nodes: OpusContentNode[];
+          children: OpusContentParas[];
         }[];
         style: 1 | 2;
       };

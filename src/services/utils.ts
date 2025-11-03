@@ -375,6 +375,13 @@ export async function parseId(
       };
   }
 
+  if (/rl\d+/i.test(id)) {
+    return {
+      id,
+      type: MediaType.OpusList
+    }
+  }
+
   type = segs[1];
   if (type === 'watchlater') {
     const id = prms.get('aid') ?? prms.get('oid') ?? prms.get('bvid');

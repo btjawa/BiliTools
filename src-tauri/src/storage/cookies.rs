@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use regex::Regex;
 use sea_query::{
     ColumnDef, Expr, Iden, OnConflict, Query, SqliteQueryBuilder, Table, TableCreateStatement,
@@ -77,37 +77,30 @@ pub async fn load() -> Result<BTreeMap<String, String>> {
 }
 
 pub async fn insert(cookie: String) -> Result<()> {
-    let re_name_value = Regex::new(r"^([^=]+)=([^;]+)")?;
-    let re_attribute = Regex::new(r"(?i)\b(path|domain|expires|httponly|secure)\b(?:=([^;]*))?")?;
-    let captures = re_name_value
-        .captures(&cookie)
-        .context(anyhow!("Invalid Cookie"))?;
-    let name = captures
-        .get(1)
-        .ok_or(anyhow!("Failed to get name from {captures:?}"))?
-        .as_str()
-        .trim()
-        .into();
-
-    let value = captures
-        .get(2)
-        .ok_or(anyhow!("Failed to get value from {captures:?}"))?
-        .as_str()
-        .trim()
-        .into();
+    let re = Regex::new(r"([^=;\s]+)=?([^;]*)").context("Invalid Cookie")?;
 
     let mut row = CookieRow {
-        name,
-        value,
+        name: Default::default(),
+        value: Default::default(),
         path: None,
         domain: None,
         expires: None,
         httponly: false,
         secure: false,
     };
-    for cap in re_attribute.captures_iter(&cookie) {
-        let key = cap.get(1).map_or("", |m| m.as_str().trim()).to_lowercase();
-        let value = cap.get(2).map_or("", |m| m.as_str().trim()).to_string();
+
+    for (idx, cap) in re.captures_iter(&cookie).enumerate() {
+        let key = cap.get(1).map(|v| v.as_str().trim().to_string())
+            .context("No key found in cookie")?;
+        let value = cap.get(2).map(|v| v.as_str().trim().to_string())
+            .unwrap_or_default();
+
+        if idx == 0 {
+            row.name = key;
+            row.value = value;
+            continue;
+        }
+
         match key.as_str() {
             "path" => row.path = Some(value),
             "domain" => row.domain = Some(value),
@@ -125,6 +118,7 @@ pub async fn insert(cookie: String) -> Result<()> {
             _ => continue,
         }
     }
+
     let (sql, values) = Query::insert()
         .into_table(Cookies::Table)
         .columns([

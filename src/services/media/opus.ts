@@ -127,8 +127,67 @@ function handleOpusNode(
   return {
     line,
     h2,
-    quote: options?.quote ?? false,
   };
+}
+
+function handleOpusParas(
+  md: string,
+  id: string,
+  paras: Types.OpusContentParas[],
+) {
+    for (const p of paras) {
+    const t = p.para_type;
+    let line = '';
+    let quote = false;
+    let h2 = false;
+    if (t === 1) {
+      const r = handleOpusNode(id, p.text.nodes);
+      line += r.line;
+      h2 = r.h2;
+    }
+    if (t === 2) {
+      for (const n of p.pic.pics) {
+        const { height, url: src } = n;
+        line += `<p align=center><img src="${toHttpsUrl(src)}" height=${height} /></p>`;
+      }
+    }
+    if (t === 3) {
+      const { height, url: src } = p.line.pic;
+      line += `<p align=center><img src="${toHttpsUrl(src)}" height=${height} /></p>`;
+    }
+    if (t === 4) {
+      quote = true;
+      handleOpusParas(md, id, p.blockquote.children);
+    }
+    if (t === 5) {
+      for (const [i, n] of p.list.children.entries()) {
+        line += `${'\u0020'.repeat(n.level)} `;
+        let prefix = `${i}. `;
+        if (p.list.style === 2) {
+          prefix = '- ';
+        }
+        line += prefix;
+        handleOpusParas(md, id, n.children);
+      }
+    }
+    if (t === 6) {
+      const { opus, item_null } = p.link_card.card;
+      const title = opus?.title ?? item_null?.text;
+      const jump_url = toHttpsUrl(opus?.jump_url ?? '');
+      line += `[${title}](${jump_url})`;
+    }
+    if (p.format?.align) {
+      const map = {
+        0: 'left',
+        1: 'center',
+        2: 'right',
+      };
+      line = `<p align=${map[p.format.align]}>${line}</p>`;
+    }
+    if (h2) line = `## ${line}`;
+    if (quote) line = `> ${line}`;
+    md += `${line}\n\n`;
+  }
 }
 
 export async function getOpusMarkdown(title: string, opid: string) {
@@ -157,63 +216,8 @@ export async function getOpusMarkdown(title: string, opid: string) {
     md += `> ${s}\n\n`;
   }
 
-  for (const p of content?.paragraphs ?? []) {
-    const t = p.para_type;
-    let line = '';
-    let quote = false;
-    let h2 = false;
-    if (t === 1 || t === 4) {
-      if (t === 4) quote = true;
-      const r = handleOpusNode(id, p.text.nodes, {
-        quote: t === 4,
-      });
-      line += r.line;
-      h2 = r.h2;
-      quote = r.quote;
-    }
-    if (t === 2) {
-      for (const n of p.pic.pics) {
-        const { height, url: src } = n;
-        line += `<p align=center><img src="${toHttpsUrl(src)}" height=${height} /></p>`;
-      }
-    }
-    if (t === 3) {
-      const { height, url: src } = p.line.pic;
-      line += `<p align=center><img src="${toHttpsUrl(src)}" height=${height} /></p>`;
-    }
-    if (t === 5) {
-      for (const [i, n] of p.list.items.entries()) {
-        line += `${'\u0020'.repeat(n.level)} `;
-        let prefix = `${i}. `;
-        if (p.list.style === 2) {
-          prefix = '- ';
-        }
-        line += prefix;
-        const r = handleOpusNode(id, n.nodes);
-        line += r.line;
-        h2 = r.h2;
-        quote = r.quote;
-        line += '\n';
-      }
-    }
-    if (t === 6) {
-      const { opus, item_null } = p.link_card.card;
-      const title = opus?.title ?? item_null?.text;
-      const jump_url = toHttpsUrl(opus?.jump_url ?? '');
-      line += `[${title}](${jump_url})`;
-    }
-    if (p.align) {
-      const map = {
-        0: 'left',
-        1: 'center',
-        2: 'right',
-      };
-      line = `<p align=${map[p.align]}>${line}</p>`;
-    }
-    if (h2) line = `## ${line}`;
-    if (quote) line = `> ${line}`;
-    md += `${line}\n\n`;
-  }
+  handleOpusParas(md, id, content?.paragraphs ?? []);
+
   return new TextEncoder().encode(md);
 }
 

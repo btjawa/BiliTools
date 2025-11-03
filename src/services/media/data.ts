@@ -70,6 +70,10 @@ export async function getMediaInfo(
         params = { id };
       }
       break;
+    case Types.MediaType.OpusList:
+      url += '/x/article/list/web/articles';
+      params = { id: idNum }
+      break;
     case Types.MediaType.UserVideo:
       url += '/x/polymer/web-space/home/seasons_series';
       params = { mid: idNum, page_size: 10, page_num: options?.pn ?? 1 };
@@ -621,6 +625,44 @@ export async function getMediaInfo(
         },
       ],
     };
+  } else if (type === Types.MediaType.OpusList) {
+    const { list, articles, author } = (body as Resps.OpusListInfo).data;
+    const url = `https://www.bilibili.com/read/readlist/rl${list.id}`;
+    return {
+      type,
+      id,
+      nfo: {
+        showtitle: list.name,
+        intro: list.summary,
+        tags: articles.length ? articles[0].categories.map(v => v.name) : [],
+        url,
+        stat: {
+          play: list.read,
+        },
+        upper: {
+          name: author.name,
+          mid: author.mid,
+          avatar: author.face
+        },
+        thumbs: [{
+          id: 'cover',
+          url: list.image_url
+        }]
+      },
+      list: articles.map((v, index) => ({
+        title: v.title,
+        cover: v.image_urls[0],
+        desc: v.summary,
+        url: `https://www.bilibili.com/opus/${v.dyn_id_str}`,
+        opid: v.dyn_id_str,
+        rlid: list.id,
+        duration: 0,
+        pubtime: v.publish_time,
+        type: Types.MediaType.Opus,
+        isTarget: index === 0,
+        index,
+      })),
+    }
   } else if (type === Types.MediaType.UserVideo) {
     const { seasons_list, series_list } = (body as Resps.UploadsSeriesInfo).data
       .items_lists;
