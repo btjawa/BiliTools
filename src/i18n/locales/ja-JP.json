@@ -19,6 +19,7 @@
     "watchLater": "あとで見る",
     "favorite": "お気に入り",
     "opus": "記事",
+    "opusList": "記事シリーズ",
     "userVideo": "ユーザー動画",
     "userOpus": "ユーザー記事",
     "userAudio": "ユーザー音声"
@@ -187,7 +188,7 @@
     "suggest": "何を検索しますか？",
     "autoDetect": "自動検出",
     "general": "通常",
-    "extra": "他の情報",
+    "extra": "その他情報",
     "export": "データを書き出し",
     "exported": "データを {0} に書き出しました",
     "selectAll": "全選択"
@@ -343,6 +344,10 @@
       "mp3": {
         "name": "音声を MP3 に変換",
         "desc": "有効時、音声を強制的に MP3 へ。動画+音声は対象外です。"
+      },
+      "mp4": {
+        "name": "動画を MP4 に変換",
+        "desc": "有効時、動画を MP4 に強制変換します。音声は AAC に変換されます。"
       }
     },
     "organize": {
