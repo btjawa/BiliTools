@@ -45,6 +45,9 @@
 - 歌单 / AM 号
   - https://www.bilibili.com/audio/am86055
   - am86055
+- 图文合集 (专栏 & 动态)
+  - https://www.bilibili.com/read/readlist/rl380536
+  - rl380536
 - 用户投稿视频 & 合集
   - https://space.bilibili.com/8047632
   - https://space.bilibili.com/8047632/video
