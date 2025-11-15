@@ -168,28 +168,24 @@ pub async fn add_meta(
                 ])
                 .args(["-map", "0", "-c", "copy"]);
         } else if is_mp4 {
-            c = c.arg("-i").arg(cover.as_os_str()).args([
-                "-map",
-                "0",
-                "-map",
-                "1:v:0",
-                "-c",
-                "copy",
-                "-c:v:1",
-                "mjpeg",
+            c = c.arg("-i").arg(cover.as_os_str())
+            .args([
+                "-map", "0",
+                "-map", "1:v:0",
+                "-c:v:0", "copy",
+                "-c:v:1", "mjpeg",
+                "-filter:v:1", "null",
                 "-disposition:v:1",
                 "attached_pic",
             ]);
         } else {
-            c = c.arg("-i").arg(cover.as_os_str()).args([
-                "-map",
-                "0:a:0",
-                "-map",
-                "1:v:0",
-                "-c:a",
-                "copy",
-                "-c:v",
-                "mjpeg",
+            c = c.arg("-i").arg(cover.as_os_str())
+            .args([
+                "-map", "0:a:0",
+                "-map", "1:v:0",
+                "-c:a", "copy",
+                "-c:v", "mjpeg",
+                "-filter:v:1", "null",
                 "-disposition:v:0",
                 "attached_pic",
             ]);

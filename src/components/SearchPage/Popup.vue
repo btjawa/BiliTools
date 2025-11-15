@@ -324,6 +324,9 @@ async function qualityClick<K extends keyof typeof quality.value>(
       v.prov,
       await getPlayUrl(v.item, v.item.type, value as Types.StreamFormat),
     );
+    if (v.prov.codec) {
+      v.select.fmt = v.prov.codec;
+    }
     v.active = true;
   }
 }

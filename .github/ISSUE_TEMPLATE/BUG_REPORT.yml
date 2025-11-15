@@ -10,13 +10,13 @@ body:
       value: |
         ## First of all
         感谢您愿意反馈 bug！在提交问题前，请先阅读以下几点：
-        1. **标题应简要概述主题，不可留空，同时保留模板中已有前缀。**
+        1. <u>**标题应简要概述主题，不可留空，同时保留模板中已有前缀。**</u>
         2. 请确保没有重复的 Issue / Discussion。
         3. 请确保这是 BiliTools 的问题，而不是其他原因。对于其他原因，您可以发起 [Discussion](https://github.com/btjawa/BiliTools/discussions/new/choose)
         4. 请确保您已阅读 [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md)。
         
         Thank you for reporting bugs! Before submitting, please read the following points:
-        1. **The title should summarize the topic, CANNOT be left blank, while keeping the existing prefix.**
+        1. <u>**The title should summarize the topic, CANNOT be left blank, while keeping the existing prefix.**</u>
         2. Make sure there are no duplicate issues or discussions.
         3. Make sure it's BiliTools' problem and not something else.
         4. Make sure you have read the [Contributing](https://github.com/btjawa/BiliTools/blob/master/CONTRIBUTING.md).
