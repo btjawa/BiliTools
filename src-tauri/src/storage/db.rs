@@ -14,7 +14,7 @@ use tokio::{
     sync::{Notify, RwLock},
 };
 
-use crate::shared::{get_ts, DATABASE_URL, STORAGE_PATH};
+use crate::shared::{get_millis, DATABASE_URL, STORAGE_PATH};
 
 static DB: RwLock<Option<SqlitePool>> = RwLock::const_new(None);
 static DB_READY: Notify = Notify::const_new();
@@ -38,7 +38,7 @@ pub trait TableSpec: Send + Sync + 'static {
             let cur = get_version(Self::NAME).await?;
             if cur != Self::LATEST {
                 let mut tx = pool.begin().await?;
-                let ts = get_ts(true);
+                let ts = get_millis();
                 let rename_sql = Table::rename()
                     .table(
                         Alias::new(Self::NAME),

@@ -3,7 +3,7 @@ use sqlx::{sqlite::SqliteConnectOptions, Connection, SqliteConnection};
 use std::str::FromStr;
 use tokio::fs;
 
-use crate::shared::{get_ts, DATABASE_URL, STORAGE_PATH, WORKING_PATH};
+use crate::shared::{get_millis, DATABASE_URL, STORAGE_PATH, WORKING_PATH};
 
 pub async fn try_migrate() -> Result<()> {
     fs::create_dir_all(&*WORKING_PATH).await?;
@@ -30,7 +30,7 @@ pub async fn try_migrate() -> Result<()> {
         &format!(
             "{}_{}",
             STORAGE_PATH.to_string_lossy().as_ref(),
-            get_ts(true)
+            get_millis()
         ),
     )
     .await?;

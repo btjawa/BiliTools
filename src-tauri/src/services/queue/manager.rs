@@ -119,7 +119,9 @@ impl Manager {
     }
 
     pub async fn move_scheduler(&self, sid: &str, t: QueueType) -> Result<()> {
-        let scheduler = self.get_scheduler(sid).await?;
+        let Ok(scheduler) = self.get_scheduler(sid).await else {
+            return Ok(());
+        };
         let f = scheduler.queue.get();
 
         if f == t || t == QueueType::Backlog {
@@ -143,6 +145,20 @@ impl Manager {
         scheduler.queue(t).await?;
 
         log::info!("Scheduler#{sid} moved: from {f:?} to {t:?}");
+        Ok(())
+    }
+
+    pub async fn remove_backlog(&self, id: &str) -> Result<()> {
+        let mut tasks = self.tasks.write().await;
+        tasks.remove(id);
+        drop(tasks);
+
+        let q = QueueType::Backlog;
+        let mut list = self.backlog.write().await;
+        list.retain(|v| v != id);
+        
+        frontend::queue(&q, &list)?;
+        queue::upsert(q, &list).await?;
         Ok(())
     }
 

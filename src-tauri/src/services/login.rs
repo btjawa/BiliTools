@@ -13,7 +13,7 @@ use tauri::http::{header, StatusCode};
 use tokio::time::{sleep, Duration};
 
 use crate::{
-    shared::{get_ts, init_client, HEADERS},
+    shared::{get_sec, get_millis, init_client, HEADERS},
     storage::cookies,
     TauriError, TauriResult,
 };
@@ -155,7 +155,7 @@ pub fn stop_login() {
 
 pub async fn get_bili_ticket() -> TauriResult<()> {
     let client = init_client().await?;
-    let ts = get_ts(false);
+    let ts = get_sec();
     let cookies = cookies::load().await?;
     let bili_csrf = cookies
         .get("bili_jct")
@@ -205,6 +205,7 @@ pub async fn get_uuid() -> Result<()> {
             .map(|_| DIGIT_MAP[rng.random_range(0..DIGIT_MAP.len())])
             .collect()
     };
+    let ts = (get_millis() % 100_000) as u32;
     let uuid = format!(
         "{}-{}-{}-{}-{}{:05}infoc",
         s(8),
@@ -212,7 +213,7 @@ pub async fn get_uuid() -> Result<()> {
         s(4),
         s(4),
         s(12),
-        get_ts(true)
+        ts
     );
     cookies::insert(format!("_uuid={uuid}")).await?;
     Ok(())

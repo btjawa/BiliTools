@@ -214,6 +214,19 @@ impl Task {
         Ok(())
     }
 
+    pub async fn cancel_backlog(&self) -> Result<()> {
+        /* BACKEND */
+        self.state.set(TaskState::Cancelled);
+        MANAGER.remove_backlog(&self.id).await?;
+
+        /* FRONTEND */
+        frontend::task_updated(&self.id, None, None, Some(true))?;
+
+        /* DATABASE */
+        tasks::delete(&self.id).await?;
+        Ok(())
+    }
+
     pub async fn cancel(&self, sid: &str) -> Result<()> {
         /* BACKEND */
         self.state.set(TaskState::Cancelled);

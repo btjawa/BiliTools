@@ -14,7 +14,7 @@ use super::{
 };
 
 use crate::{
-    shared::{get_ts, get_unique_path, process_err},
+    shared::{get_sec, get_unique_path, process_err},
     storage::{config, schedulers},
     TauriResult,
 };
@@ -59,7 +59,7 @@ impl Scheduler {
 
         Arc::new(Self {
             sid,
-            ts: get_ts(false),
+            ts: get_sec(),
             list: RwLock::new(list),
             queue: Atomic::new(QueueType::Pending),
             state: Atomic::new(SchedulerState::Idle),
@@ -125,7 +125,7 @@ impl Scheduler {
             self.state(SchedulerState::Completed).await?;
         } else {
             log::error!(
-                "Scheduler#{} not fully completed, stuck in {:?}, state {:?}",
+                "Scheduler#{} not fully completed, currently in {:?}, state {:?}",
                 self.sid,
                 self.queue.get(),
                 self.state.get(),

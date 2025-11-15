@@ -14,7 +14,7 @@ use crate::{
         manager::MANAGER,
         scheduler::{Scheduler, SchedulerView},
     },
-    shared::get_ts,
+    shared::get_millis,
 };
 
 use super::db::{get_db, TableSpec};
@@ -116,7 +116,7 @@ pub async fn load() -> Result<HashMap<String, SchedulerView>> {
 
 pub async fn upsert(id: &str, value: &Scheduler) -> Result<()> {
     let pool = get_db().await?;
-    let now = get_ts(true);
+    let now = get_millis();
     let (sql, values) = Query::insert()
         .into_table(Schedulers::Table)
         .columns([
@@ -158,7 +158,7 @@ pub async fn upsert(id: &str, value: &Scheduler) -> Result<()> {
 
 pub async fn update<T: Serialize>(id: &str, col: Schedulers, value: &T) -> Result<()> {
     let pool = get_db().await?;
-    let now = get_ts(true);
+    let now = get_millis();
     let val = serde_json::to_string(value)?;
     let (sql, values) = Query::update()
         .table(Schedulers::Table)

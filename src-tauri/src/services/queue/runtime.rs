@@ -105,7 +105,7 @@ impl Ctrl {
     }
     pub async fn send_task(
         &self,
-        sid: &str,
+        sid: Option<&str>,
         id: &str,
         event: &CtrlEvent,
         state: TaskState,
@@ -114,6 +114,14 @@ impl Ctrl {
 
         let task = MANAGER.get_task(id).await?;
         let ctrl = self.get_handle(id).await?;
+
+        let Some(sid) = sid else {
+            if task.state.get() == TaskState::Backlog {
+                ctrl.cancel.cancel();
+                task.cancel_backlog().await?;
+            }
+            return Ok(());
+        };
 
         task.state(state).await?;
         let _ = ctrl.tx.send(event.clone());
@@ -194,9 +202,6 @@ impl Runtime {
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn ctrl_event(event: CtrlEvent, sid: Option<&str>, id: Option<&str>) -> TauriResult<()> {
-    let Some(sid) = sid else {
-        return Ok(());
-    };
     if let Some(id) = id {
         let state = match event {
             CtrlEvent::Pause => TaskState::Paused,
@@ -205,7 +210,7 @@ pub async fn ctrl_event(event: CtrlEvent, sid: Option<&str>, id: Option<&str>) -
             CtrlEvent::Retry => TaskState::Pending,
         };
         RUNTIME.ctrl.send_task(sid, id, &event, state).await?;
-    } else {
+    } else if let Some(sid) = sid {
         let state = match event {
             CtrlEvent::Pause => SchedulerState::Paused,
             CtrlEvent::Cancel => SchedulerState::Cancelled,

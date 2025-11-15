@@ -7,7 +7,7 @@ use tauri_specta::Event;
 use tokio::sync::oneshot;
 
 use crate::{
-    shared::{get_app_handle, get_ts},
+    shared::{get_app_handle, get_millis},
     TauriError, TauriResult,
 };
 
@@ -150,8 +150,8 @@ pub async fn request<'a, T: DeserializeOwned + Send + 'static>(
 ) -> TauriResult<T> {
     let (tx, rx) = oneshot::channel();
     let app = get_app_handle();
-    let ts = get_ts(true);
-    let endpoint = &format!("{}_{ts}", action.as_string());
+    let ts = get_millis();
+    let endpoint = &format!("{task}_{}_{ts}", action.as_string());
     app.once(endpoint, move |event| {
         let _ = tx.send(
             serde_json::from_str::<Option<T>>(event.payload())

@@ -13,7 +13,7 @@ use crate::{
         manager::MANAGER,
         task::{SubTaskStatus, Task, TaskHotData, TaskPrepare, TaskView},
     },
-    shared::get_ts,
+    shared::get_millis,
 };
 
 use super::db::{get_db, TableSpec};
@@ -100,7 +100,7 @@ pub async fn load() -> Result<HashMap<String, TaskView>> {
 
 pub async fn upsert(id: &str, value: &TaskView) -> Result<()> {
     let pool = get_db().await?;
-    let now = get_ts(true);
+    let now = get_millis();
     let (sql, values) = Query::insert()
         .into_table(Tasks::Table)
         .columns([
@@ -139,7 +139,7 @@ pub async fn upsert(id: &str, value: &TaskView) -> Result<()> {
 
 pub async fn update<T: Serialize>(id: &str, col: Tasks, value: &T) -> Result<()> {
     let pool = get_db().await?;
-    let now = get_ts(true);
+    let now = get_millis();
     let val = serde_json::to_string(value)?;
     let (sql, values) = Query::update()
         .table(Tasks::Table)

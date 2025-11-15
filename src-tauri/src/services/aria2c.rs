@@ -363,7 +363,7 @@ pub async fn download(
             .await?;
         if let Some(code) = data.error_code {
             let code = code.parse::<isize>()?;
-            if code != 0 {
+            if code != 0 && code != 31 {
                 return Err(TauriError::new(
                     data.error_message.unwrap_or_default(),
                     Some(code),

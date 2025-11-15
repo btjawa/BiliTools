@@ -296,14 +296,16 @@ pub fn get_app_handle() -> &'static AppHandle<Wry> {
     APP_HANDLE.get().expect("Failed to get APP_HANDLE")
 }
 
-pub fn get_ts(mills: bool) -> i64 {
+pub fn get_sec() -> i64 {
     let now = OffsetDateTime::now_utc();
     let sec = now.unix_timestamp();
-    if mills {
-        sec
-    } else {
-        sec * 1000 + (now.millisecond() as i64)
-    }
+    sec
+}
+
+pub fn get_millis() -> i64 {
+    let now = OffsetDateTime::now_utc();
+    let sec = now.unix_timestamp();
+    sec * 1000 + (now.millisecond() as i64)
 }
 
 pub fn random_string(len: usize) -> String {
