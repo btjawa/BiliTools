@@ -13,7 +13,7 @@ use tauri::http::{header, StatusCode};
 use tokio::time::{sleep, Duration};
 
 use crate::{
-    shared::{get_sec, get_millis, init_client, HEADERS},
+    shared::{get_millis, get_sec, init_client, HEADERS},
     storage::cookies,
     TauriError, TauriResult,
 };

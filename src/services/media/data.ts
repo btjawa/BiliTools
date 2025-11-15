@@ -72,7 +72,7 @@ export async function getMediaInfo(
       break;
     case Types.MediaType.OpusList:
       url += '/x/article/list/web/articles';
-      params = { id: idNum }
+      params = { id: idNum };
       break;
     case Types.MediaType.UserVideo:
       url += '/x/polymer/web-space/home/seasons_series';
@@ -634,7 +634,7 @@ export async function getMediaInfo(
       nfo: {
         showtitle: list.name,
         intro: list.summary,
-        tags: articles.length ? articles[0].categories.map(v => v.name) : [],
+        tags: articles.length ? articles[0].categories.map((v) => v.name) : [],
         url,
         stat: {
           play: list.read,
@@ -642,12 +642,14 @@ export async function getMediaInfo(
         upper: {
           name: author.name,
           mid: author.mid,
-          avatar: author.face
+          avatar: author.face,
         },
-        thumbs: [{
-          id: 'cover',
-          url: list.image_url
-        }]
+        thumbs: [
+          {
+            id: 'cover',
+            url: list.image_url,
+          },
+        ],
       },
       list: articles.map((v, index) => ({
         title: v.title,
@@ -662,7 +664,7 @@ export async function getMediaInfo(
         isTarget: index === 0,
         index,
       })),
-    }
+    };
   } else if (type === Types.MediaType.UserVideo) {
     const { seasons_list, series_list } = (body as Resps.UploadsSeriesInfo).data
       .items_lists;

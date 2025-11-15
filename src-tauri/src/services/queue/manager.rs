@@ -156,7 +156,7 @@ impl Manager {
         let q = QueueType::Backlog;
         let mut list = self.backlog.write().await;
         list.retain(|v| v != id);
-        
+
         frontend::queue(&q, &list)?;
         queue::upsert(q, &list).await?;
         Ok(())
@@ -226,7 +226,14 @@ pub async fn process_scheduler(sid: String) -> TauriResult<()> {
                 .show()?;
             #[cfg(not(target_os = "windows"))]
             {
-                // TODO
+                use crate::shared::get_app_handle;
+                use tauri_plugin_notification::NotificationExt;
+                let app = get_app_handle();
+                app.notification()
+                    .builder()
+                    .title("BiliTools")
+                    .body(format!("(#{sid}) {folder}\nDownload complete~"))
+                    .show()?;
             }
         }
     };

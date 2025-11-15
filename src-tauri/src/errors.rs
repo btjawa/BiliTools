@@ -100,7 +100,10 @@ impl TauriError {
             let Some(func) = cap.get(2).map(|v| v.as_str().trim()) else {
                 continue;
             };
-            let Some(file) = cap.get(3).map(|v| v.as_str().trim().replace("./", "").replace(".\\", "")) else {
+            let Some(file) = cap
+                .get(3)
+                .map(|v| v.as_str().trim().replace("./", "").replace(".\\", ""))
+            else {
                 continue;
             };
             let Some(line) = cap.get(4).and_then(|v| v.as_str().parse::<usize>().ok()) else {

@@ -203,7 +203,7 @@ async fn daemon(name: &'static str, pid: u32, rx: &mut Receiver<CommandEvent>) {
                 CommandEvent::Error(line) => {
                     log::error!("{name} ERROR: {line}");
                     if !line.trim().is_empty() {
-                        stderr.push(line.into());
+                        stderr.push(line);
                         if stderr.len() > 50 {
                             stderr.remove(0);
                         }

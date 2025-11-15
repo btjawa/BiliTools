@@ -50,7 +50,7 @@ window.addEventListener('drop', async (e) => {
     }
   }
   if (!text) return;
-  const page = await components.r.searchPage.navigate();
+  const page = await components.navigate('searchPage');
   page.search(text);
 });
 

@@ -90,9 +90,13 @@ pub async fn insert(cookie: String) -> Result<()> {
     };
 
     for (idx, cap) in re.captures_iter(&cookie).enumerate() {
-        let key = cap.get(1).map(|v| v.as_str().trim().to_string())
+        let key = cap
+            .get(1)
+            .map(|v| v.as_str().trim().to_string())
             .context("No key found in cookie")?;
-        let value = cap.get(2).map(|v| v.as_str().trim().to_string())
+        let value = cap
+            .get(2)
+            .map(|v| v.as_str().trim().to_string())
             .unwrap_or_default();
 
         if idx == 0 {

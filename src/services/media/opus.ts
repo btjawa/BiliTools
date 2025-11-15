@@ -135,7 +135,7 @@ function handleOpusParas(
   id: string,
   paras: Types.OpusContentParas[],
 ) {
-    for (const p of paras) {
+  for (const p of paras) {
     const t = p.para_type;
     let line = '';
     let quote = false;

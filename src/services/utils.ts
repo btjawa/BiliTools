@@ -378,8 +378,8 @@ export async function parseId(
   if (/rl\d+/i.test(id)) {
     return {
       id,
-      type: MediaType.OpusList
-    }
+      type: MediaType.OpusList,
+    };
   }
 
   type = segs[1];

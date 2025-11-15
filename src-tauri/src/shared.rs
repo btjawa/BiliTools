@@ -298,8 +298,7 @@ pub fn get_app_handle() -> &'static AppHandle<Wry> {
 
 pub fn get_sec() -> i64 {
     let now = OffsetDateTime::now_utc();
-    let sec = now.unix_timestamp();
-    sec
+    now.unix_timestamp()
 }
 
 pub fn get_millis() -> i64 {
