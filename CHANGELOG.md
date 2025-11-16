@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.4.5] - 2025-11-16
+
+### 重大更新
+
+- [`133c63f`](https://github.com/btjawa/BiliTools/commit/133c63f3e67ce8183dac443ba7bec0d712c95466) 完全重构并发模型 ([#193](https://github.com/btjawa/BiliTools/issues/193))
+- [`be67f95`](https://github.com/btjawa/BiliTools/commit/be67f95f3279bf1db12e4912b7b6e3e05598e511) 完全重构任务管理、调度、状态轮转模型
+- [`be67f95`](https://github.com/btjawa/BiliTools/commit/be67f95f3279bf1db12e4912b7b6e3e05598e511) 重构资源清理逻辑，使用基于异步状态机的状态管理机制
+
+### 新增功能
+
+- [`153ac49`](https://github.com/btjawa/BiliTools/commit/153ac49623c86a2a602032081f543db8d150f641) 支持解析图文合集 (专栏 & 动态) ([#191](https://github.com/btjawa/BiliTools/issues/191))
+- [`133c63f`](https://github.com/btjawa/BiliTools/commit/133c63f3e67ce8183dac443ba7bec0d712c95466) 支持在下载界面自定义下载选项
+- [`133c63f`](https://github.com/btjawa/BiliTools/commit/133c63f3e67ce8183dac443ba7bec0d712c95466) 使用正则解析标准库的错误栈
+- [`133c63f`](https://github.com/btjawa/BiliTools/commit/133c63f3e67ce8183dac443ba7bec0d712c95466) 使用状态库管理组件实例
+- [`5e74d75`](https://github.com/btjawa/BiliTools/commit/5e74d75de4b4b2eab997db8fd791da7ae9d3a501) 非 Windows 平台支持通知
+
+### 问题修复
+
+- [`133c63f`](https://github.com/btjawa/BiliTools/commit/133c63f3e67ce8183dac443ba7bec0d712c95466) 修复下载进度不到 100% 的问题 ([#194](https://github.com/btjawa/BiliTools/issues/194))
+- [`133c63f`](https://github.com/btjawa/BiliTools/commit/133c63f3e67ce8183dac443ba7bec0d712c95466) 修复下载界面任务展示性能问题
+- [`7815880`](https://github.com/btjawa/BiliTools/commit/7815880c3fd60742d0cf2ea6a2e4393500c9aec1) 大规模减少 Arc 的使用，提高性能
+- [`566a1ba`](https://github.com/btjawa/BiliTools/commit/566a1ba0de7f1303f9a051ca9b5466202df91d8c) 修复点号被错误替换的问题 ([#198](https://github.com/btjawa/BiliTools/issues/198))
+- [`566a1ba`](https://github.com/btjawa/BiliTools/commit/566a1ba0de7f1303f9a051ca9b5466202df91d8c) 修复合集翻页概率出现的错误问题 ([#192](https://github.com/btjawa/BiliTools/issues/192))
+- [`4418282`](https://github.com/btjawa/BiliTools/commit/441828234f036d69bea80430d8a9313e948e87e8) 调整 UUID 生成逻辑
+- [`4418282`](https://github.com/btjawa/BiliTools/commit/441828234f036d69bea80430d8a9313e948e87e8) 修复概率导致 No URI to download 的问题
+
 ## [1.4.4] - 2025-10-01
 
 ### 新增功能
