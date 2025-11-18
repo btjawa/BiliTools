@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.6] - 2025-11-19
+
+### 问题修复
+
+- [`c671a25`](https://github.com/btjawa/BiliTools/commit/c671a253498ead44cc5babd9d9bba31de5ee9b92) 修复下载界面时间显示错误的问题
+
 ## [1.4.5] - 2025-11-16
 
 ### 重大更新
