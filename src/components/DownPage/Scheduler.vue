@@ -4,7 +4,7 @@
       <i :class="[$fa.weight, 'fa-id-badge']"></i>
       <span class="mr-auto">{{ sche.sid }} ({{ sche.list.length }})</span>
       <div class="flex gap-2 items-center">
-        <span class="mr-2 ml-auto">{{ timestamp(sche.ts / 1000) }}</span>
+        <span class="mr-2 ml-auto">{{ timestamp(sche.ts) }}</span>
         <button v-for="(v, k) in buttons" :key="k" @click="event(k)">
           <i :class="[$fa.weight, v]"></i>
         </button>
