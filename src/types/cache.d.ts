@@ -171,11 +171,19 @@ export type ImportDetailStatus =
 // ============================================================================
 
 /**
+ * 重复处理策略
+ */
+export type DuplicateHandlingStrategy = 
+  | 'skip'      // 跳过重复项
+  | 'overwrite' // 覆盖现有记录
+  | 'ask';      // 询问用户（暂不实现，预留）
+
+/**
  * 导入选项配置
  */
 export interface ImportOptions {
-  /** 跳过重复文件（基于bvid和cid判断） */
-  skipDuplicates: boolean;
+  /** 重复处理策略 */
+  duplicateHandling: DuplicateHandlingStrategy;
   /** 验证文件完整性 */
   verifyIntegrity: boolean;
   /** 导入后删除原文件 */

@@ -172,16 +172,16 @@ pub async fn init() -> TauriResult<()> {
 }
 // 缓存导入相关命令
 
-use crate::services::cache::{ImportService, import::{ImportResult, ImportProgress}};
+use crate::services::cache::{ImportService, import::{ImportResult, ImportProgress, ImportOptions}};
 use crate::storage::cache_records::{self, CacheRecord};
 
 /// 导入缓存目录
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn import_cache_directory(path: String) -> TauriResult<ImportResult> {
+pub async fn import_cache_directory(path: String, options: ImportOptions) -> TauriResult<ImportResult> {
     let import_service = ImportService::new();
     let root_path = PathBuf::from(path);
-    let result = import_service.import_cache_directory(root_path).await?;
+    let result = import_service.import_cache_directory(root_path, options).await?;
     Ok(result)
 }
 

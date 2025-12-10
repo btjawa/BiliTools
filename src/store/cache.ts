@@ -519,7 +519,7 @@ export const useCacheStore = defineStore('cache', () => {
   /**
    * 开始导入
    */
-  async function startImport(path: string, options?: Types.ImportOptions): Promise<string> {
+  async function startImport(path: string, options: Types.ImportOptions): Promise<string> {
     try {
       isImporting.value = true;
       lastError.value = null;

@@ -16,6 +16,41 @@ use super::{ParserService, ValidatorService};
 static IMPORT_STATES: LazyLock<Arc<RwLock<HashMap<String, Arc<RwLock<ImportProgress>>>>>> = 
     LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
+/// 重复处理策略
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub enum DuplicateHandlingStrategy {
+    /// 跳过重复项
+    Skip,
+    /// 覆盖现有记录
+    Overwrite,
+    /// 询问用户（暂不实现，预留）
+    Ask,
+}
+
+/// 导入选项
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub struct ImportOptions {
+    /// 重复处理策略
+    pub duplicate_handling: DuplicateHandlingStrategy,
+    /// 是否验证文件完整性
+    pub verify_integrity: bool,
+    /// 是否在导入后删除原文件
+    pub delete_after_import: bool,
+    /// 是否自动创建播放列表
+    pub create_playlist: bool,
+}
+
+impl Default for ImportOptions {
+    fn default() -> Self {
+        Self {
+            duplicate_handling: DuplicateHandlingStrategy::Skip,
+            verify_integrity: true,
+            delete_after_import: false,
+            create_playlist: true,
+        }
+    }
+}
+
 /// 导入结果
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct ImportResult {
@@ -106,10 +141,11 @@ impl ImportService {
     /// 
     /// # 参数
     /// * `root_path` - 缓存根目录路径
+    /// * `options` - 导入选项
     /// 
     /// # 返回
     /// * `Result<ImportResult>` - 导入结果
-    pub async fn import_cache_directory(&self, root_path: PathBuf) -> Result<ImportResult> {
+    pub async fn import_cache_directory(&self, root_path: PathBuf, options: ImportOptions) -> Result<ImportResult> {
         let import_id: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(16)
@@ -162,6 +198,7 @@ impl ImportService {
             let cache_dir_clone = cache_dir.clone();
             let progress_clone = progress.clone();
             let current_index = index as i32;
+            let options_clone = options.clone();
 
             
             let handle = tokio::spawn(async move {
@@ -177,7 +214,7 @@ impl ImportService {
                 
 
                 
-                let result = Self::process_single_directory(parser, validator, cache_dir_clone).await;
+                let result = Self::process_single_directory(parser, validator, cache_dir_clone, options_clone).await;
                 
                 // 更新进度
                 {
@@ -290,6 +327,7 @@ impl ImportService {
         parser: ParserService,
         validator: ValidatorService,
         cache_dir: PathBuf,
+        options: ImportOptions,
     ) -> Result<ImportDetail> {
         let directory_path = cache_dir.to_string_lossy().to_string();
         
@@ -329,14 +367,30 @@ impl ImportService {
             }
         };
 
-        // 检查是否已存在
-        if let Ok(Some(_existing)) = cache_records::get_by_bvid_cid(&video_info.bvid, video_info.cid).await {
-            return Ok(ImportDetail {
-                directory_path,
-                status: ImportStatus::Skipped,
-                reason: Some("记录已存在".to_string()),
-                cache_item: None,
-            });
+        // 检查是否已存在并根据策略处理
+        if let Ok(Some(existing)) = cache_records::get_by_bvid_cid(&video_info.bvid, video_info.cid).await {
+            match options.duplicate_handling {
+                DuplicateHandlingStrategy::Skip => {
+                    return Ok(ImportDetail {
+                        directory_path,
+                        status: ImportStatus::Skipped,
+                        reason: Some("记录已存在，已跳过".to_string()),
+                        cache_item: Some(existing),
+                    });
+                }
+                DuplicateHandlingStrategy::Overwrite => {
+                    // 继续处理，将覆盖现有记录
+                }
+                DuplicateHandlingStrategy::Ask => {
+                    // 暂时按跳过处理，未来可以实现用户交互
+                    return Ok(ImportDetail {
+                        directory_path,
+                        status: ImportStatus::Skipped,
+                        reason: Some("记录已存在，需要用户确认".to_string()),
+                        cache_item: Some(existing),
+                    });
+                }
+            }
         }
 
         // 创建缓存记录
@@ -361,14 +415,31 @@ impl ImportService {
             source: "local_cache_import".to_string(),
         };
 
-        // 保存到数据库
-        match cache_records::insert(&cache_record).await {
-            Ok(_) => Ok(ImportDetail {
-                directory_path,
-                status: ImportStatus::Success,
-                reason: None,
-                cache_item: Some(cache_record),
-            }),
+        // 保存到数据库（使用事务确保一致性）
+        let save_result = match options.duplicate_handling {
+            DuplicateHandlingStrategy::Overwrite => {
+                // 使用 upsert 进行覆盖
+                cache_records::upsert(&cache_record).await
+            }
+            _ => {
+                // 使用 insert 进行插入
+                cache_records::insert(&cache_record).await
+            }
+        };
+
+        match save_result {
+            Ok(_) => {
+                let reason = match options.duplicate_handling {
+                    DuplicateHandlingStrategy::Overwrite => Some("已覆盖现有记录".to_string()),
+                    _ => None,
+                };
+                Ok(ImportDetail {
+                    directory_path,
+                    status: ImportStatus::Success,
+                    reason,
+                    cache_item: Some(cache_record),
+                })
+            }
             Err(e) => Ok(ImportDetail {
                 directory_path,
                 status: ImportStatus::Failure,

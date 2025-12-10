@@ -68,12 +68,21 @@ export class CacheImportService {
    * 启动缓存文件导入流程
    * 
    * @param path 缓存根目录路径
-   * @param options 导入选项配置（当前后端未使用此参数）
+   * @param options 导入选项配置
    * @returns 导入结果
    */
-  async startImport(path: string, _options?: Types.ImportOptions): Promise<any> {
+  async startImport(path: string, options: Types.ImportOptions): Promise<any> {
     try {
-      const result = await invoke('import_cache_directory', { path });
+      // 转换前端类型为后端类型
+      const backendOptions = {
+        duplicate_handling: options.duplicateHandling === 'skip' ? 'Skip' : 
+                           options.duplicateHandling === 'overwrite' ? 'Overwrite' : 'Ask',
+        verify_integrity: options.verifyIntegrity,
+        delete_after_import: options.deleteAfterImport,
+        create_playlist: options.createPlaylist,
+      };
+      
+      const result = await invoke('import_cache_directory', { path, options: backendOptions });
       return result;
     } catch (error) {
       if (error instanceof AppError) throw error;

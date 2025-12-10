@@ -179,9 +179,9 @@ async processScheduler(sid: string) : Promise<Result<null, TauriError>> {
 /**
  * 导入缓存目录
  */
-async importCacheDirectory(path: string) : Promise<Result<ImportResult, TauriError>> {
+async importCacheDirectory(path: string, options: ImportOptions) : Promise<Result<ImportResult, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("import_cache_directory", { path }) };
+    return { status: "ok", data: await TAURI_INVOKE("import_cache_directory", { path, options }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -293,6 +293,22 @@ export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; 
  */
 export type CacheStats = { total_count: number; total_size: number; available_count: number }
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
+/**
+ * 重复处理策略
+ */
+export type DuplicateHandlingStrategy = 
+/**
+ * 跳过重复项
+ */
+"Skip" | 
+/**
+ * 覆盖现有记录
+ */
+"Overwrite" | 
+/**
+ * 询问用户（暂不实现，预留）
+ */
+"Ask"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 /**
  * 导入详情
@@ -302,6 +318,26 @@ export type ImportDetail = { directory_path: string; status: ImportStatus; reaso
  * 导入错误
  */
 export type ImportError = { directory_path: string; error_message: string; error_type: string }
+/**
+ * 导入选项
+ */
+export type ImportOptions = { 
+/**
+ * 重复处理策略
+ */
+duplicate_handling: DuplicateHandlingStrategy; 
+/**
+ * 是否验证文件完整性
+ */
+verify_integrity: boolean; 
+/**
+ * 是否在导入后删除原文件
+ */
+delete_after_import: boolean; 
+/**
+ * 是否自动创建播放列表
+ */
+create_playlist: boolean }
 /**
  * 导入进度
  */
