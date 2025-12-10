@@ -226,8 +226,9 @@ export class CacheManagementService {
         duration: record.duration,
         fileSize: record.file_size,
         cachePath: record.cache_path,
-        downloadTime: new Date(record.download_time * 1000),
-        importTime: new Date(record.import_time * 1000),
+        // 安全的时间戳转换，处理异常值
+        downloadTime: safeTimestampToDate(record.download_time),
+        importTime: safeTimestampToDate(record.import_time),
         status: record.status as Types.CacheStatus
       }));
 
@@ -399,6 +400,23 @@ export class CacheManagementService {
   }
 
   /**
+   * 检查本地封面文件
+   * 检查指定缓存目录是否存在封面文件
+   * 
+   * @param cachePath 缓存目录路径
+   * @returns 本地封面文件路径，如果不存在则返回null
+   */
+  async checkLocalCover(cachePath: string): Promise<string | null> {
+    try {
+      const result = await invoke('check_local_cover', { cachePath }) as string | null;
+      return result;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('检查本地封面失败');
+    }
+  }
+
+  /**
    * 导出缓存列表
    * 将缓存列表导出为JSON文件
    * 注意：此功能需要后端实现 export_cache_list 命令
@@ -558,6 +576,45 @@ export function formatDuration(seconds: number): string {
   } else {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   }
+}
+
+/**
+ * 安全的时间戳转换
+ * 处理异常时间戳值，确保转换结果合理
+ * 
+ * @param timestamp 时间戳（秒或毫秒）
+ * @returns Date对象
+ */
+function safeTimestampToDate(timestamp: number): Date {
+  // 处理无效值
+  if (!timestamp || timestamp <= 0) {
+    return new Date(0); // 返回 1970-01-01
+  }
+  
+  // 判断是秒还是毫秒时间戳
+  // 如果大于 1e10，认为是毫秒时间戳
+  const isMilliseconds = timestamp > 1e10;
+  const date = new Date(isMilliseconds ? timestamp : timestamp * 1000);
+  
+  // 检查转换结果是否合理（1970-2100年之间）
+  const year = date.getFullYear();
+  if (year < 1970 || year > 2100) {
+    console.warn(`异常时间戳: ${timestamp}, 转换结果: ${date.toISOString()}`);
+    return new Date(); // 返回当前时间
+  }
+  
+  return date;
+}
+
+/**
+ * 检查本地封面文件
+ * 便捷函数，直接调用缓存管理服务的封面检查方法
+ * 
+ * @param cachePath 缓存目录路径
+ * @returns 本地封面文件路径，如果不存在则返回null
+ */
+export async function checkLocalCover(cachePath: string): Promise<string | null> {
+  return await cacheManagementService.checkLocalCover(cachePath);
 }
 
 /**

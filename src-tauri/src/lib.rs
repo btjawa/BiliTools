@@ -55,6 +55,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             get_cache_list_by_status,
             delete_cache_item,
             open_cache_folder,
+            check_local_cover,
             get_cache_stats,
         ])
         .events(collect_events![

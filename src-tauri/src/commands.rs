@@ -5,6 +5,7 @@ use specta::Type;
 use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
 use tauri::async_runtime;
 use tokio::fs;
+use base64::prelude::*;
 
 // Re-export for lib.rs to register commands
 pub use crate::{
@@ -303,6 +304,44 @@ pub async fn open_cache_folder(cache_path: String) -> TauriResult<()> {
         return Err(anyhow::anyhow!("缓存目录不存在: {}", cache_path).into());
     }
     Ok(())
+}
+
+/// 检查本地封面文件
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn check_local_cover(cache_path: String) -> TauriResult<Option<String>> {
+    let cache_dir = PathBuf::from(&cache_path);
+    if !cache_dir.exists() {
+        return Ok(None);
+    }
+
+    // B站缓存的封面文件名（按优先级排序）
+    let cover_files = ["image.jpg", "cover.jpg", "cover.png", "cover.webp", "face.jpg"];
+    
+    for file_name in &cover_files {
+        let cover_path = cache_dir.join(file_name);
+        if cover_path.exists() && cover_path.is_file() {
+            // 读取文件并转换为 base64 data URL
+            match tokio::fs::read(&cover_path).await {
+                Ok(file_data) => {
+                    let base64_data = base64::prelude::BASE64_STANDARD.encode(&file_data);
+                    let mime_type = match cover_path.extension().and_then(|ext| ext.to_str()) {
+                        Some("jpg") | Some("jpeg") => "image/jpeg",
+                        Some("png") => "image/png",
+                        Some("webp") => "image/webp",
+                        _ => "image/jpeg", // 默认
+                    };
+                    return Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)));
+                }
+                Err(e) => {
+                    eprintln!("读取封面文件失败 {:?}: {}", cover_path, e);
+                    continue;
+                }
+            }
+        }
+    }
+    
+    Ok(None)
 }
 
 /// 获取缓存统计信息

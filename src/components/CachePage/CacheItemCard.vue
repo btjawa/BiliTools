@@ -11,10 +11,16 @@
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
       <div class="relative rounded-lg overflow-hidden cursor-pointer" style="min-width: 160px; width: fit-content; height: 96px; display: flex;">
+        <!-- 优先使用本地封面，回退到网络封面，最后显示占位符 -->
+        <div v-if="!coverSrc" class="w-full h-full bg-(--block-color) flex items-center justify-center">
+          <i class="fa-solid fa-image text-2xl text-(--desc-color)"></i>
+        </div>
         <Image
-          :src="item.coverUrl"
+          v-else
+          :src="coverSrc"
           :height="96"
           :width="160"
+          :prevent="true"
           class="object-cover z-10"
           style="height: 96px; width: 160px; max-width: 100%;"
         />
@@ -49,15 +55,35 @@
     <!-- UP主名称 -->
     <a class="text-xs text-nowrap mb-auto" :title="item.uname">{{ item.uname }}</a>
 
-    <!-- 操作按钮 -->
-    <button 
-      class="absolute right-3 bottom-3 flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
-      :disabled="item.status === 'unavailable'"
-      @click.stop="$emit('play', item)"
-    >
-      <i class="fa-solid fa-play"></i>
-      <span>{{ $t('cache.card.play') }}</span>
-    </button>
+    <!-- 所有操作按钮 -->
+    <div class="absolute bottom-3 right-3 z-20 flex gap-1">
+      <button 
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
+        :disabled="item.status === 'unavailable'"
+        @click.stop="$emit('play', item)"
+      >
+        <i class="fa-solid fa-play"></i>
+        <span>{{ $t('cache.card.play') }}</span>
+      </button>
+
+      <button
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
+        :title="$t('cache.card.openFolder')"
+        @click.stop="$emit('openFolder', item)"
+      >
+        <i class="fa-solid fa-folder-open"></i>
+        <span>{{ $t('cache.card.openFolder') }}</span>
+      </button>
+      
+      <button
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-500 text-white hover:bg-red-600 transition-colors"
+        :title="$t('cache.card.delete')"
+        @click.stop="$emit('delete', item)"
+      >
+        <i class="fa-solid fa-trash"></i>
+        <span>{{ $t('cache.card.delete') }}</span>
+      </button>
+    </div>
 
     <!-- 选择复选框 -->
     <div class="absolute top-2 left-2 z-30 opacity-0 hover:opacity-100 transition-opacity">
@@ -82,30 +108,14 @@
       <i :class="statusIcon"></i>
     </div>
 
-    <!-- 右键菜单或悬浮菜单 -->
-    <div class="absolute top-2 right-8 z-20 opacity-0 hover:opacity-100 transition-opacity flex gap-1">
-      <button
-        class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs hover:bg-blue-600"
-        :title="$t('cache.card.openFolder')"
-        @click.stop="$emit('openFolder', item)"
-      >
-        <i class="fa-solid fa-folder-open"></i>
-      </button>
-      
-      <button
-        class="w-6 h-6 rounded-full bg-red-500 text-white text-xs hover:bg-red-600"
-        :title="$t('cache.card.delete')"
-        @click.stop="$emit('delete', item)"
-      >
-        <i class="fa-solid fa-trash"></i>
-      </button>
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { duration } from '@/services/utils';
+import { checkLocalCover } from '@/services/cache';
 import { Image } from '@/components';
 import type * as Types from '@/types/cache.d';
 
@@ -132,8 +142,6 @@ defineEmits<Emits>();
 // 计算属性
 // ============================================================================
 
-// const statusClass = computed(() => `status-${props.item.status}`);
-
 const statusIcon = computed(() => {
   const iconMap = {
     available: 'fa-solid fa-check-circle',
@@ -143,6 +151,28 @@ const statusIcon = computed(() => {
   return iconMap[props.item.status] ?? 'fa-solid fa-question-circle';
 });
 
+// 封面路径状态
+const coverSrc = ref<string | null>(null);
+
+// 异步加载封面路径
+async function loadCoverSrc() {
+  // 1. 优先尝试本地封面文件
+  const localCoverPath = await getLocalCoverPath(props.item.cachePath);
+  if (localCoverPath) {
+    coverSrc.value = localCoverPath;
+    return;
+  }
+  
+  // 2. 如果有网络连接，使用原始封面URL
+  if (props.item.coverUrl && !props.item.coverUrl.startsWith('file://')) {
+    coverSrc.value = props.item.coverUrl;
+    return;
+  }
+  
+  // 3. 无可用封面
+  coverSrc.value = null;
+}
+
 // ============================================================================
 // 方法
 // ============================================================================
@@ -151,8 +181,19 @@ const statusIcon = computed(() => {
  * 格式化导入时间
  */
 function formatImportTime(date: Date): string {
+  // 处理异常时间戳
+  if (!date || isNaN(date.getTime())) {
+    return '未知时间';
+  }
+  
   const importDate = new Date(date);
+  
+  // 检查年份是否合理（1970-2100）
   const year = importDate.getFullYear();
+  if (year < 1970 || year > 2100) {
+    return '时间格式错误';
+  }
+  
   const month = String(importDate.getMonth() + 1).padStart(2, '0');
   const day = String(importDate.getDate()).padStart(2, '0');
   const hours = String(importDate.getHours()).padStart(2, '0');
@@ -161,6 +202,35 @@ function formatImportTime(date: Date): string {
   
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
+/**
+ * 获取本地封面路径
+ */
+async function getLocalCoverPath(cachePath: string): Promise<string | null> {
+  if (!cachePath) return null;
+  
+  try {
+    // 调用缓存服务检查本地封面文件
+    return await checkLocalCover(cachePath);
+  } catch (error) {
+    console.warn('检查本地封面失败:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// 生命周期
+// ============================================================================
+
+// 组件挂载时加载封面
+onMounted(() => {
+  loadCoverSrc();
+});
+
+// 监听缓存路径变化
+watch(() => props.item.cachePath, () => {
+  loadCoverSrc();
+});
 </script>
 
 <style scoped>
