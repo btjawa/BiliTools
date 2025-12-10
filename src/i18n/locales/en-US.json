@@ -390,5 +390,122 @@
     "star": "If you find this project useful, please consider giving it a Star on GitHub!",
     "data": "All data that needs to be persisted is stored locally on your device in plain text.",
     "others": "Any consequences arising from the use of this project are solely the responsibility of the user; the developer bears no liability.\n\"哔哩哔哩\" and \"Bilibili\" (names, logos, and related graphics) are registered trademarks or trademarks of Shanghai Hode Information Technology Co., Ltd.\nThis project has no affiliation, cooperation, authorization, or endorsement relationship with Bilibili or its related companies."
+  },
+  "cache": {
+    "import": {
+      "title": "Cache Import",
+      "selectDirectory": "Select Cache Directory",
+      "directoryPlaceholder": "Please select Bilibili client cache root directory",
+      "browse": "Browse",
+      "pathWarning": "The selected path may not be a valid Bilibili cache directory",
+      "options": "Import Options",
+      "skipDuplicates": "Skip duplicate files",
+      "verifyIntegrity": "Verify file integrity",
+      "createPlaylist": "Auto create playlist",
+      "maxConcurrency": "Max concurrency",
+      "scanResult": "Scan Results",
+      "totalFound": "Total found",
+      "validFound": "Valid count",
+      "invalidFound": "Invalid count",
+      "totalSize": "Total size",
+      "andMore": "and {0} more...",
+      "progress": "Import Progress",
+      "overallProgress": "Overall progress",
+      "currentStatus": "Current status",
+      "currentDirectory": "Current directory",
+      "success": "Success",
+      "failure": "Failure",
+      "skipped": "Skipped",
+      "errors": "Errors",
+      "scanning": "Scanning",
+      "scan": "Scan",
+      "importing": "Importing",
+      "startImport": "Start Import",
+      "cancel": "Cancel",
+      "help": {
+        "title": "Help",
+        "step1": "Select Bilibili cache root directory",
+        "step2": "Scan and preview cache files",
+        "step3": "Configure options and start import"
+      },
+      "status": {
+        "scanning": "Scanning directories",
+        "parsing": "Parsing files",
+        "validating": "Validating integrity",
+        "saving": "Saving to database",
+        "completed": "Import completed",
+        "cancelled": "Cancelled",
+        "error": "Error occurred"
+      },
+      "errorType": {
+        "directory_not_found": "Directory not found",
+        "invalid_json_format": "Invalid JSON format",
+        "missing_required_files": "Missing required files",
+        "file_size_mismatch": "File size mismatch",
+        "database_error": "Database error",
+        "permission_denied": "Permission denied",
+        "unknown_error": "Unknown error"
+      },
+      "progressDialog": {
+        "title": "Import Progress"
+      },
+      "estimatedTime": "Estimated time remaining",
+      "statistics": "Statistics",
+      "totalProcessed": "Total processed",
+      "successCount": "Success count",
+      "failureCount": "Failure count",
+      "skippedCount": "Skipped count",
+      "totalTime": "Total time",
+      "showMoreErrors": "Show more errors ({0})",
+      "showLessErrors": "Hide errors",
+      "viewResults": "View results",
+      "close": "Close"
+    },
+    "list": {
+      "title": "Cache Management",
+      "searchPlaceholder": "Search title or uploader...",
+      "allStatus": "All status",
+      "allUploaders": "All uploaders",
+      "clearFilters": "Clear filters",
+      "selectedCount": "{0} selected",
+      "clearSelection": "Clear selection",
+      "batchDelete": "Batch delete",
+      "noResults": "No matching cache found",
+      "empty": "No cache imported yet",
+      "startImport": "Start import",
+      "loading": "Loading...",
+      "pagination": {
+        "info": "Showing {0}-{1} of {2} items"
+      },
+      "statistics": "Statistics",
+      "total": "Total",
+      "totalSize": "Total size",
+      "importMore": "Import more",
+      "refresh": "Refresh",
+      "export": "Export list",
+      "selection": "Selection",
+      "selectAll": "Select all on page",
+      "unselectAll": "Unselect all",
+      "sort": {
+        "importTimeDesc": "Import time (newest first)",
+        "importTimeAsc": "Import time (oldest first)",
+        "titleAsc": "Title (A-Z)",
+        "titleDesc": "Title (Z-A)",
+        "fileSizeDesc": "File size (largest first)",
+        "fileSizeAsc": "File size (smallest first)",
+        "durationDesc": "Duration (longest first)",
+        "durationAsc": "Duration (shortest first)"
+      }
+    },
+    "status": {
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "incomplete": "Incomplete"
+    },
+    "card": {
+      "play": "Play",
+      "openFolder": "Open folder",
+      "delete": "Delete"
+    }
   }
 }

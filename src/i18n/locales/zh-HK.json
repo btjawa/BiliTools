@@ -229,6 +229,7 @@
     "title": "下載",
     "backlog": "備選區",
     "pending": "等待中",
+    "waiting": "等待中",
     "doing": "進行中",
     "complete": "已完成",
     "backlogEmpty": "備選區為空～",
@@ -389,5 +390,122 @@
     "star": "若覺得好用，歡迎到 GitHub 為此項目點個 Star！",
     "data": "本應用所有需要持久化的資料均僅以明文儲存在使用者本機。",
     "others": "因使用本項目而產生的任何後果均由使用者個人承擔，與開發者無關，概不負責。\n「嗶哩嗶哩」及「Bilibili」名稱、LOGO 及相關圖形為上海幻電資訊科技有限公司之註冊商標或商標。\n本項目與嗶哩嗶哩及其關聯公司無任何關聯、合作、授權或背書關係。"
+  },
+  "cache": {
+    "import": {
+      "title": "快取匯入",
+      "selectDirectory": "選擇快取目錄",
+      "directoryPlaceholder": "請選擇 B 站客戶端快取根目錄",
+      "browse": "瀏覽",
+      "pathWarning": "所選路徑可能不是有效的 B 站快取目錄",
+      "options": "匯入選項",
+      "skipDuplicates": "略過重複檔案",
+      "verifyIntegrity": "驗證檔案完整性",
+      "createPlaylist": "自動建立播放清單",
+      "maxConcurrency": "最大並發數",
+      "scanResult": "掃描結果",
+      "totalFound": "發現總數",
+      "validFound": "有效數量",
+      "invalidFound": "無效數量",
+      "totalSize": "總大小",
+      "andMore": "還有 {0} 個...",
+      "progress": "匯入進度",
+      "overallProgress": "總體進度",
+      "currentStatus": "目前狀態",
+      "currentDirectory": "目前目錄",
+      "success": "成功",
+      "failure": "失敗",
+      "skipped": "略過",
+      "errors": "錯誤",
+      "scanning": "掃描中",
+      "scan": "掃描",
+      "importing": "匯入中",
+      "startImport": "開始匯入",
+      "cancel": "取消",
+      "help": {
+        "title": "使用說明",
+        "step1": "選擇 B 站快取根目錄",
+        "step2": "掃描並預覽快取檔案",
+        "step3": "設定選項並開始匯入"
+      },
+      "status": {
+        "scanning": "掃描目錄中",
+        "parsing": "解析檔案中",
+        "validating": "驗證完整性中",
+        "saving": "儲存至資料庫中",
+        "completed": "匯入完成",
+        "cancelled": "已取消",
+        "error": "發生錯誤"
+      },
+      "errorType": {
+        "directory_not_found": "目錄不存在",
+        "invalid_json_format": "JSON 格式無效",
+        "missing_required_files": "缺少必需檔案",
+        "file_size_mismatch": "檔案大小不符",
+        "database_error": "資料庫錯誤",
+        "permission_denied": "權限不足",
+        "unknown_error": "未知錯誤"
+      },
+      "progressDialog": {
+        "title": "匯入進度"
+      },
+      "estimatedTime": "預計剩餘時間",
+      "statistics": "統計資訊",
+      "totalProcessed": "總處理數",
+      "successCount": "成功數量",
+      "failureCount": "失敗數量",
+      "skippedCount": "略過數量",
+      "totalTime": "總耗時",
+      "showMoreErrors": "顯示更多錯誤 ({0})",
+      "showLessErrors": "收起錯誤",
+      "viewResults": "檢視結果",
+      "close": "關閉"
+    },
+    "list": {
+      "title": "快取管理",
+      "searchPlaceholder": "搜尋標題或 UP 主...",
+      "allStatus": "全部狀態",
+      "allUploaders": "全部 UP 主",
+      "clearFilters": "清除篩選",
+      "selectedCount": "已選擇 {0} 項",
+      "clearSelection": "清除選擇",
+      "batchDelete": "批次刪除",
+      "noResults": "沒有找到符合的快取",
+      "empty": "還沒有匯入任何快取",
+      "startImport": "開始匯入",
+      "loading": "載入中...",
+      "pagination": {
+        "info": "顯示第 {0}-{1} 項，共 {2} 項"
+      },
+      "statistics": "統計資訊",
+      "total": "總數",
+      "totalSize": "總大小",
+      "importMore": "匯入更多",
+      "refresh": "重新整理",
+      "export": "匯出清單",
+      "selection": "選擇操作",
+      "selectAll": "全選目前頁",
+      "unselectAll": "取消全選",
+      "sort": {
+        "importTimeDesc": "匯入時間 (新到舊)",
+        "importTimeAsc": "匯入時間 (舊到新)",
+        "titleAsc": "標題 (A-Z)",
+        "titleDesc": "標題 (Z-A)",
+        "fileSizeDesc": "檔案大小 (大到小)",
+        "fileSizeAsc": "檔案大小 (小到大)",
+        "durationDesc": "時長 (長到短)",
+        "durationAsc": "時長 (短到長)"
+      }
+    },
+    "status": {
+      "available": "可用",
+      "unavailable": "不可用",
+      "incomplete": "不完整"
+    },
+    "card": {
+      "play": "播放",
+      "openFolder": "開啟資料夾",
+      "delete": "刪除"
+    }
   }
 }

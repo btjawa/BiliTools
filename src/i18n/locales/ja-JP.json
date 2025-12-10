@@ -390,5 +390,122 @@
     "star": "役立つと思ったら、GitHub でこのプロジェクトに Star をお願いします！",
     "data": "本アプリで永続化に使用されるすべてのデータは、平文のままユーザー端末内にのみ保存されます。",
     "others": "本プロジェクトの利用による一切の結果はユーザー自身の責任となり、開発者は一切の責任を負いません。\n「哔哩哔哩」および「Bilibili」の名称・ロゴ・関連する図形は、上海幻電信息科技有限公司の登録商標または商標です。\n本プロジェクトは、哔哩哔哩およびその関連会社といかなる提携・所属・許諾・承認関係もありません。"
+  },
+  "cache": {
+    "import": {
+      "title": "キャッシュインポート",
+      "selectDirectory": "キャッシュディレクトリを選択",
+      "directoryPlaceholder": "Bilibili クライアントのキャッシュルートディレクトリを選択してください",
+      "browse": "参照",
+      "pathWarning": "選択されたパスは有効な Bilibili キャッシュディレクトリではない可能性があります",
+      "options": "インポートオプション",
+      "skipDuplicates": "重複ファイルをスキップ",
+      "verifyIntegrity": "ファイル整合性を検証",
+      "createPlaylist": "プレイリストを自動作成",
+      "maxConcurrency": "最大同時実行数",
+      "scanResult": "スキャン結果",
+      "totalFound": "発見総数",
+      "validFound": "有効数",
+      "invalidFound": "無効数",
+      "totalSize": "総サイズ",
+      "andMore": "他 {0} 件...",
+      "progress": "インポート進行状況",
+      "overallProgress": "全体の進行状況",
+      "currentStatus": "現在のステータス",
+      "currentDirectory": "現在のディレクトリ",
+      "success": "成功",
+      "failure": "失敗",
+      "skipped": "スキップ",
+      "errors": "エラー",
+      "scanning": "スキャン中",
+      "scan": "スキャン",
+      "importing": "インポート中",
+      "startImport": "インポート開始",
+      "cancel": "キャンセル",
+      "help": {
+        "title": "ヘルプ",
+        "step1": "Bilibili キャッシュルートディレクトリを選択",
+        "step2": "キャッシュファイルをスキャンしてプレビュー",
+        "step3": "オプションを設定してインポート開始"
+      },
+      "status": {
+        "scanning": "ディレクトリをスキャン中",
+        "parsing": "ファイルを解析中",
+        "validating": "整合性を検証中",
+        "saving": "データベースに保存中",
+        "completed": "インポート完了",
+        "cancelled": "キャンセル済み",
+        "error": "エラーが発生しました"
+      },
+      "errorType": {
+        "directory_not_found": "ディレクトリが見つかりません",
+        "invalid_json_format": "無効な JSON 形式",
+        "missing_required_files": "必要なファイルが不足",
+        "file_size_mismatch": "ファイルサイズが一致しません",
+        "database_error": "データベースエラー",
+        "permission_denied": "権限が拒否されました",
+        "unknown_error": "不明なエラー"
+      },
+      "progressDialog": {
+        "title": "インポート進行状況"
+      },
+      "estimatedTime": "推定残り時間",
+      "statistics": "統計情報",
+      "totalProcessed": "総処理数",
+      "successCount": "成功数",
+      "failureCount": "失敗数",
+      "skippedCount": "スキップ数",
+      "totalTime": "総時間",
+      "showMoreErrors": "エラーをもっと表示 ({0})",
+      "showLessErrors": "エラーを非表示",
+      "viewResults": "結果を表示",
+      "close": "閉じる"
+    },
+    "list": {
+      "title": "キャッシュ管理",
+      "searchPlaceholder": "タイトルまたは投稿者を検索...",
+      "allStatus": "すべてのステータス",
+      "allUploaders": "すべての投稿者",
+      "clearFilters": "フィルターをクリア",
+      "selectedCount": "{0} 件選択中",
+      "clearSelection": "選択をクリア",
+      "batchDelete": "一括削除",
+      "noResults": "一致するキャッシュが見つかりません",
+      "empty": "まだキャッシュがインポートされていません",
+      "startImport": "インポート開始",
+      "loading": "読み込み中...",
+      "pagination": {
+        "info": "{2} 件中 {0}-{1} 件を表示"
+      },
+      "statistics": "統計情報",
+      "total": "総数",
+      "totalSize": "総サイズ",
+      "importMore": "さらにインポート",
+      "refresh": "更新",
+      "export": "リストをエクスポート",
+      "selection": "選択操作",
+      "selectAll": "現在のページをすべて選択",
+      "unselectAll": "すべて選択解除",
+      "sort": {
+        "importTimeDesc": "インポート時間 (新しい順)",
+        "importTimeAsc": "インポート時間 (古い順)",
+        "titleAsc": "タイトル (A-Z)",
+        "titleDesc": "タイトル (Z-A)",
+        "fileSizeDesc": "ファイルサイズ (大きい順)",
+        "fileSizeAsc": "ファイルサイズ (小さい順)",
+        "durationDesc": "再生時間 (長い順)",
+        "durationAsc": "再生時間 (短い順)"
+      }
+    },
+    "status": {
+      "available": "利用可能",
+      "unavailable": "利用不可",
+      "incomplete": "不完全"
+    },
+    "card": {
+      "play": "再生",
+      "openFolder": "フォルダーを開く",
+      "delete": "削除"
+    }
   }
 }

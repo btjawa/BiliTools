@@ -175,6 +175,94 @@ async processScheduler(sid: string) : Promise<Result<null, TauriError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * 导入缓存目录
+ */
+async importCacheDirectory(path: string) : Promise<Result<ImportResult, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("import_cache_directory", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取导入进度（使用 Channel 事件流）
+ */
+async getImportProgress(importId: string, event: TAURI_CHANNEL<ImportProgress>) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_import_progress", { importId, event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 取消导入操作
+ */
+async cancelImport(importId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cancel_import", { importId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取缓存列表
+ */
+async getCacheList() : Promise<Result<CacheRecord[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 根据状态获取缓存列表
+ */
+async getCacheListByStatus(status: string) : Promise<Result<CacheRecord[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_list_by_status", { status }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 删除缓存项
+ */
+async deleteCacheItem(id: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_cache_item", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 打开缓存文件夹
+ */
+async openCacheFolder(cachePath: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_cache_folder", { cachePath }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取缓存统计信息
+ */
+async getCacheStats() : Promise<Result<CacheStats, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_stats") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -199,8 +287,37 @@ queueEvent: "queue-event"
 
 export type AnyInt = number
 export type CacheKey = "log" | "temp" | "webview" | "database"
+export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; title: string; uname: string; cover_url: string; duration: number; file_size: number; cache_path: string; download_time: number; import_time: number; status: string; source: string }
+/**
+ * 缓存统计信息
+ */
+export type CacheStats = { total_count: number; total_size: number; available_count: number }
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
+/**
+ * 导入详情
+ */
+export type ImportDetail = { directory_path: string; status: ImportStatus; reason: string | null; cache_item: CacheRecord | null }
+/**
+ * 导入错误
+ */
+export type ImportError = { directory_path: string; error_message: string; error_type: string }
+/**
+ * 导入进度
+ */
+export type ImportProgress = { import_id: string; total_directories: number; processed_directories: number; current_directory: string; status: ImportProgressStatus; errors: ImportError[] }
+/**
+ * 导入进度状态
+ */
+export type ImportProgressStatus = "Scanning" | "Parsing" | "Validating" | "Saving" | "Completed" | "Cancelled" | "Error"
+/**
+ * 导入结果
+ */
+export type ImportResult = { import_id: string; total_found: number; success_count: number; failure_count: number; skipped_count: number; details: ImportDetail[] }
+/**
+ * 导入状态
+ */
+export type ImportStatus = "Success" | "Failure" | "Skipped"
 export type InitData = { version: string; hash: string; config: Settings; tasks: Partial<{ [key in string]: TaskView }>; schedulers: Partial<{ [key in string]: SchedulerView }>; queue: Partial<{ [key in QueueType]: string[] }> }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; url?: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; opid?: string | null; rlid?: number | null; index: number }
