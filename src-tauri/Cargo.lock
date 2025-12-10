@@ -518,6 +518,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "tauri-specta",
+ "thiserror 1.0.69",
  "time",
  "tokio",
  "tokio-util",

@@ -61,6 +61,7 @@ tauri-plugin-process = "2.3.0"
 tauri-plugin-single-instance = "2.3.2"
 tauri-plugin-shell = "2.3.0"
 tauri-specta = { version = "2.0.0-rc.21", features = ["derive", "typescript"] }
+thiserror = "1.0"
 time = "0.3.41"
 tokio = { version = "1.47", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
 walkdir = "2.5.0"

@@ -29,3 +29,6 @@ dist-ssr
 ._*
 # Kiro
 .kiro/
+
+# Claude
+.claude/
