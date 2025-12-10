@@ -51,14 +51,17 @@
           </h2>
           
           <div class="grid grid-cols-2 gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="importOptions.skipDuplicates"
-                type="checkbox"
-                class="w-4 h-4"
-              />
-              <span class="text-sm">{{ $t('cache.import.skipDuplicates') }}</span>
-            </label>
+            <!-- 重复处理策略 -->
+            <div class="flex flex-col gap-2">
+              <span class="text-sm font-medium">{{ $t('cache.import.duplicateHandling') }}</span>
+              <select
+                v-model="importOptions.duplicateHandling"
+                class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
+              >
+                <option value="skip">{{ $t('cache.import.duplicateSkip') }}</option>
+                <option value="overwrite">{{ $t('cache.import.duplicateOverwrite') }}</option>
+              </select>
+            </div>
             
             <label class="flex items-center gap-2 cursor-pointer">
               <input
@@ -206,58 +209,90 @@
       </div>
 
       <!-- 侧边栏操作区域 -->
-      <div class="flex flex-col w-48 gap-4">
-        <!-- 扫描按钮 -->
+      <div class="flex flex-col w-32 gap-1.5 ml-auto pb-6 h-fit max-h-full overflow-y-auto">
+        <!-- 主要操作按钮 -->
         <button
-          class="w-full px-4 py-3 bg-(--primary-color) text-white rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
           @click="scanDirectory"
           :disabled="!selectedPath || isScanning || isImporting"
         >
           <i :class="[$fa.weight, isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass']"></i>
-          <span>{{ isScanning ? $t('cache.import.scanning') : $t('cache.import.scan') }}</span>
+          <span>{{ isScanning ? '扫描中' : '扫描' }}</span>
         </button>
 
-        <!-- 导入按钮 -->
         <button
-          class="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
           @click="startImport"
           :disabled="!scanResult || scanResult.validDirectories === 0 || isImporting"
+          class="bg-green-500 text-white hover:bg-green-600"
         >
           <i :class="[$fa.weight, isImporting ? 'fa-spinner fa-spin' : 'fa-download']"></i>
-          <span>{{ isImporting ? $t('cache.import.importing') : $t('cache.import.startImport') }}</span>
+          <span>{{ isImporting ? '导入中' : '开始导入' }}</span>
         </button>
 
-        <!-- 取消按钮 -->
         <button
           v-if="isImporting"
-          class="w-full px-4 py-3 bg-red-500 text-white rounded-lg hover:opacity-80 transition-opacity"
           @click="cancelImport"
+          class="bg-red-500 text-white hover:bg-red-600"
         >
           <i :class="[$fa.weight, 'fa-stop']"></i>
-          <span>{{ $t('cache.import.cancel') }}</span>
+          <span>取消</span>
         </button>
 
-        <!-- 重置按钮 -->
         <button
-          class="w-full px-4 py-3 bg-(--desc-color) text-white rounded-lg hover:opacity-80 transition-opacity"
           @click="resetForm"
           :disabled="isScanning || isImporting"
         >
           <i :class="[$fa.weight, 'fa-refresh']"></i>
-          <span>{{ $t('reset') }}</span>
+          <span>重置</span>
         </button>
 
-        <!-- 帮助信息 -->
-        <div class="bg-(--block-color) rounded-lg p-4 text-sm">
-          <h3 class="font-medium mb-2">
-            <i :class="[$fa.weight, 'fa-info-circle']"></i>
-            <span>{{ $t('cache.import.help.title') }}</span>
-          </h3>
-          <ul class="space-y-1 text-(--desc-color)">
-            <li>• {{ $t('cache.import.help.step1') }}</li>
-            <li>• {{ $t('cache.import.help.step2') }}</li>
-            <li>• {{ $t('cache.import.help.step3') }}</li>
-          </ul>
+        <!-- 扫描结果统计 -->
+        <div v-if="scanResult" class="text-xs text-(--desc-color) space-y-0.5 mt-2">
+          <div class="flex justify-between">
+            <span>发现:</span>
+            <span class="font-medium">{{ scanResult.totalDirectories }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-green-500">有效:</span>
+            <span class="font-medium text-green-500">{{ scanResult.validDirectories }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-red-500">无效:</span>
+            <span class="font-medium text-red-500">{{ scanResult.invalidDirectories }}</span>
+          </div>
+          <div class="flex justify-between pt-1 border-t border-(--border-color)">
+            <span>大小:</span>
+            <span class="font-medium">{{ formatBytes(scanResult.estimatedTotalSize) }}</span>
+          </div>
+        </div>
+
+        <!-- 导入进度统计 -->
+        <div v-if="importProgress" class="text-xs text-(--desc-color) space-y-0.5 mt-2 pt-2 border-t border-(--border-color)">
+          <div class="flex justify-between">
+            <span>进度:</span>
+            <span class="font-medium">{{ importProgressPercentage }}%</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-green-500">成功:</span>
+            <span class="font-medium text-green-500">{{ importProgress.successCount }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-red-500">失败:</span>
+            <span class="font-medium text-red-500">{{ importProgress.failureCount }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-yellow-500">跳过:</span>
+            <span class="font-medium text-yellow-500">{{ importProgress.skippedCount }}</span>
+          </div>
+        </div>
+
+        <!-- 简化的帮助信息 -->
+        <div class="text-xs text-(--desc-color) mt-3 pt-2 border-t border-(--border-color)">
+          <div class="font-medium mb-1 text-(--text-color)">使用步骤:</div>
+          <div class="space-y-1">
+            <div>1. 选择B站缓存目录</div>
+            <div>2. 扫描预览文件</div>
+            <div>3. 开始导入</div>
+          </div>
         </div>
       </div>
     </div>
@@ -286,7 +321,7 @@ const isScanning = ref(false);
 
 // 导入选项
 const importOptions = ref<Types.ImportOptions>({
-  skipDuplicates: true,
+  duplicateHandling: 'skip',
   verifyIntegrity: true,
   deleteAfterImport: false,
   createPlaylist: false,
@@ -373,7 +408,7 @@ function resetForm(): void {
   selectedPath.value = '';
   scanResult.value = null;
   Object.assign(importOptions.value, {
-    skipDuplicates: true,
+    duplicateHandling: 'skip',
     verifyIntegrity: true,
     deleteAfterImport: false,
     createPlaylist: false,
@@ -419,5 +454,30 @@ onUnmounted(() => {
 .max-h-64::-webkit-scrollbar-thumb,
 .max-h-32::-webkit-scrollbar-thumb {
   @apply bg-gray-400 rounded hover:bg-gray-500;
+}
+
+/* 侧边栏滚动条样式 */
+.cache-import-page .w-32::-webkit-scrollbar {
+  @apply w-1;
+}
+
+.cache-import-page .w-32::-webkit-scrollbar-thumb {
+  @apply bg-(--scroller-color) rounded;
+}
+
+/* 缓存导入页面侧边栏按钮样式 */
+.cache-import-page .w-32 button {
+  @apply w-full px-2 py-2 text-sm rounded-lg transition-colors;
+  @apply bg-(--button-color) text-(--text-color) hover:bg-(--hover-color);
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center gap-2;
+}
+
+.cache-import-page .w-32 button i {
+  @apply w-4 text-center;
+}
+
+.cache-import-page .w-32 button span {
+  @apply flex-1 text-left;
 }
 </style>

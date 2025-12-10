@@ -495,7 +495,9 @@
         "fileSizeAsc": "文件大小 (小到大)",
         "durationDesc": "时长 (长到短)",
         "durationAsc": "时长 (短到长)"
-      }
+      },
+      "page": "页数",
+      "moreFilters": "更多筛选"
     },
     "status": {
       "available": "可用",

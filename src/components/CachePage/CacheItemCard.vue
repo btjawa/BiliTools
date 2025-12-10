@@ -1,15 +1,66 @@
 <template>
   <div
-    class="cache-item-card"
+    class="flex gap-4 p-3 rounded-lg my-px bg-(--block-color) text-sm h-[120px] relative cursor-pointer"
     :class="{
-      'selected': selected,
-      'unavailable': item.status === 'unavailable',
-      'incomplete': item.status === 'incomplete'
+      'border-2 border-(--primary-color)': selected,
+      'opacity-60': item.status === 'unavailable',
+      'border border-yellow-500': item.status === 'incomplete'
     }"
     @click="$emit('select')"
   >
+    <!-- 封面图片区域 -->
+    <div class="relative flex rounded-lg min-w-40 overflow-hidden">
+      <div class="relative rounded-lg overflow-hidden cursor-pointer" style="min-width: 160px; width: fit-content; height: 96px; display: flex;">
+        <Image
+          :src="item.coverUrl"
+          :height="96"
+          :width="160"
+          class="object-cover z-10"
+          style="height: 96px; width: 160px; max-width: 100%;"
+        />
+      </div>
+      <!-- 渐变遮罩 -->
+      <div class="absolute w-full h-full z-10 bg-gradient-to-b from-transparent to-black/50"></div>
+      <!-- 进度条 (示例进度，可以根据实际需求调整) -->
+      <div 
+        class="progress relative flex-1 rounded-full bg-(--button-color) h-1.5 w-64 mx-2 absolute! h-1! w-full z-20 bottom-0"
+        style="--progress: 54.7%;"
+      ></div>
+    </div>
+
+    <!-- 内容信息区域 -->
+    <div class="w-full flex flex-col gap-1 min-w-0">
+      <!-- 标题 -->
+      <h2 class="text-base truncate" :title="item.title">{{ item.title }}</h2>
+      
+      <!-- 导入时间 -->
+      <div class="desc">
+        <i class="fa-solid fa-clock"></i>
+        <span>{{ formatImportTime(item.importTime) }}</span>
+      </div>
+      
+      <!-- 时长信息 -->
+      <div class="desc">
+        <i class="fa-solid fa-marker"></i>
+        <span>{{ duration(item.duration) }}</span>
+      </div>
+    </div>
+
+    <!-- UP主名称 -->
+    <a class="text-xs text-nowrap mb-auto" :title="item.uname">{{ item.uname }}</a>
+
+    <!-- 操作按钮 -->
+    <button 
+      class="absolute right-3 bottom-3 flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
+      @click.stop="$emit('play', item)"
+      :disabled="item.status === 'unavailable'"
+    >
+      <i class="fa-solid fa-play"></i>
+      <span>{{ $t('cache.card.play') }}</span>
+    </button>
+
     <!-- 选择复选框 -->
-    <div class="selection-checkbox">
+    <div class="absolute top-2 left-2 z-30 opacity-0 hover:opacity-100 transition-opacity">
       <input
         type="checkbox"
         :checked="selected"
@@ -19,106 +70,34 @@
       />
     </div>
 
-    <!-- 封面图片 -->
-    <div class="cover-container">
-      <Image
-        :src="item.coverUrl"
-        :height="120"
-        :width="200"
-        :ratio="5 / 3"
-        class="cover-image"
-      />
-      
-      <!-- 状态标识 -->
-      <div class="status-badge" :class="statusClass">
-        <i :class="statusIcon"></i>
-      </div>
-      
-      <!-- 时长显示 -->
-      <div class="duration-badge">
-        {{ duration(item.duration) }}
-      </div>
-      
-      <!-- 文件大小 -->
-      <div class="size-badge">
-        {{ formatBytes(item.fileSize) }}
-      </div>
+    <!-- 状态标识 -->
+    <div 
+      v-if="item.status !== 'available'"
+      class="absolute top-2 right-2 z-20 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs"
+      :class="{
+        'bg-red-500': item.status === 'unavailable',
+        'bg-yellow-500': item.status === 'incomplete'
+      }"
+    >
+      <i :class="statusIcon"></i>
     </div>
 
-    <!-- 内容信息 -->
-    <div class="content-info">
-      <!-- 标题 -->
-      <h3 class="title" :title="item.title">
-        {{ item.title }}
-      </h3>
-      
-      <!-- UP主 -->
-      <div class="uploader">
-        <i :class="[$fa.weight, 'fa-user']"></i>
-        <span :title="item.uname">{{ item.uname }}</span>
-      </div>
-      
-      <!-- 视频信息 -->
-      <div class="video-info">
-        <span class="bvid">{{ item.bvid }}</span>
-        <span class="separator">•</span>
-        <span class="import-time">{{ formatImportTime(item.importTime) }}</span>
-      </div>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="action-buttons">
+    <!-- 右键菜单或悬浮菜单 -->
+    <div class="absolute top-2 right-8 z-20 opacity-0 hover:opacity-100 transition-opacity flex gap-1">
       <button
-        class="action-btn play-btn"
-        :disabled="item.status === 'unavailable'"
-        @click.stop="$emit('play', item)"
-        :title="$t('cache.card.play')"
-      >
-        <i :class="[$fa.weight, 'fa-play']"></i>
-      </button>
-      
-      <button
-        class="action-btn folder-btn"
+        class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs hover:bg-blue-600"
         @click.stop="$emit('openFolder', item)"
         :title="$t('cache.card.openFolder')"
       >
-        <i :class="[$fa.weight, 'fa-folder-open']"></i>
+        <i class="fa-solid fa-folder-open"></i>
       </button>
       
       <button
-        class="action-btn delete-btn"
+        class="w-6 h-6 rounded-full bg-red-500 text-white text-xs hover:bg-red-600"
         @click.stop="$emit('delete', item)"
         :title="$t('cache.card.delete')"
       >
-        <i :class="[$fa.weight, 'fa-trash']"></i>
-      </button>
-    </div>
-
-    <!-- 悬浮操作菜单 -->
-    <div class="hover-menu">
-      <button
-        v-if="item.status === 'available'"
-        class="menu-item"
-        @click.stop="$emit('play', item)"
-      >
-        <i :class="[$fa.weight, 'fa-play']"></i>
-        <span>{{ $t('cache.card.play') }}</span>
-      </button>
-      
-      <button
-        class="menu-item"
-        @click.stop="$emit('openFolder', item)"
-      >
-        <i :class="[$fa.weight, 'fa-folder-open']"></i>
-        <span>{{ $t('cache.card.openFolder') }}</span>
-      </button>
-      
-      <button
-        class="menu-item danger"
-        @click.stop="$emit('delete', item)"
-      >
-        <i :class="[$fa.weight, 'fa-trash']"></i>
-        <span>{{ $t('cache.card.delete') }}</span>
+        <i class="fa-solid fa-trash"></i>
       </button>
     </div>
   </div>
@@ -172,207 +151,82 @@ const statusIcon = computed(() => {
  * 格式化导入时间
  */
 function formatImportTime(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const importDate = new Date(date);
+  const year = importDate.getFullYear();
+  const month = String(importDate.getMonth() + 1).padStart(2, '0');
+  const day = String(importDate.getDate()).padStart(2, '0');
+  const hours = String(importDate.getHours()).padStart(2, '0');
+  const minutes = String(importDate.getMinutes()).padStart(2, '0');
+  const seconds = String(importDate.getSeconds()).padStart(2, '0');
   
-  if (diffDays === 0) return '今天';
-  if (diffDays === 1) return '昨天';
-  if (diffDays < 7) return `${diffDays}天前`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}个月前`;
-  return `${Math.floor(diffDays / 365)}年前`;
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 </script>
 
 <style scoped>
 @reference 'tailwindcss';
 
-.cache-item-card {
-  @apply relative bg-(--block-color) rounded-lg overflow-hidden cursor-pointer;
-  @apply border-2 border-transparent transition-all duration-200;
-  @apply hover:border-(--primary-color) hover:shadow-lg;
+/* 进度条样式 */
+.progress::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: var(--progress);
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  border-radius: inherit;
+  transition: width 0.3s ease;
 }
 
-.cache-item-card.selected {
-  @apply border-(--primary-color) shadow-lg;
+/* 悬浮效果 */
+div:hover {
+  @apply shadow-lg transition-all duration-200;
 }
 
-.cache-item-card.unavailable {
-  @apply opacity-60;
+/* 操作按钮样式 */
+button {
+  @apply flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors;
 }
 
-.cache-item-card.incomplete {
-  @apply border-yellow-500;
+button:hover {
+  @apply bg-(--hover-color);
 }
 
-/* 选择复选框 */
-.selection-checkbox {
-  @apply absolute top-2 left-2 z-20;
-  @apply opacity-0 transition-opacity duration-200;
+button:disabled {
+  @apply opacity-50 cursor-not-allowed;
 }
 
-.cache-item-card:hover .selection-checkbox,
-.cache-item-card.selected .selection-checkbox {
-  @apply opacity-100;
+/* 描述文本样式 */
+.desc {
+  @apply flex items-center gap-1 text-(--desc-color);
 }
 
-/* 封面容器 */
-.cover-container {
-  @apply relative w-full h-32 overflow-hidden;
+.desc i {
+  @apply w-3 text-center;
 }
 
-.cover-image {
-  @apply w-full h-full object-cover;
-}
-
-/* 状态标识 */
-.status-badge {
-  @apply absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs;
-}
-
-.status-available {
-  @apply bg-green-500;
-}
-
-.status-unavailable {
-  @apply bg-red-500;
-}
-
-.status-incomplete {
-  @apply bg-yellow-500;
-}
-
-/* 时长标识 */
-.duration-badge {
-  @apply absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded;
-}
-
-/* 文件大小标识 */
-.size-badge {
-  @apply absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded;
-}
-
-/* 内容信息 */
-.content-info {
-  @apply p-3 space-y-2;
-}
-
-.title {
-  @apply font-medium text-sm leading-tight line-clamp-2;
-  @apply text-(--text-color);
-}
-
-.uploader {
-  @apply flex items-center gap-1 text-xs text-(--desc-color);
-}
-
-.uploader span {
-  @apply truncate;
-}
-
-.video-info {
-  @apply flex items-center gap-1 text-xs text-(--desc-color);
-}
-
-.bvid {
-  @apply font-mono;
-}
-
-.separator {
-  @apply mx-1;
-}
-
-/* 操作按钮 */
-.action-buttons {
-  @apply absolute bottom-3 right-3 flex gap-1;
-  @apply opacity-0 transition-opacity duration-200;
-}
-
-.cache-item-card:hover .action-buttons {
-  @apply opacity-100;
-}
-
-.action-btn {
-  @apply w-8 h-8 rounded-full flex items-center justify-center text-white text-sm;
-  @apply transition-all duration-200 hover:scale-110;
-}
-
-.play-btn {
-  @apply bg-green-500 hover:bg-green-600;
-}
-
-.play-btn:disabled {
-  @apply bg-gray-400 cursor-not-allowed hover:scale-100;
-}
-
-.folder-btn {
-  @apply bg-blue-500 hover:bg-blue-600;
-}
-
-.delete-btn {
-  @apply bg-red-500 hover:bg-red-600;
-}
-
-/* 悬浮菜单 */
-.hover-menu {
-  @apply absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-2;
-  @apply opacity-0 transition-opacity duration-200 pointer-events-none;
-}
-
-.cache-item-card:hover .hover-menu {
-  @apply opacity-100 pointer-events-auto;
-}
-
-.menu-item {
-  @apply flex items-center gap-2 px-3 py-2 bg-white/20 text-white rounded-lg;
-  @apply hover:bg-white/30 transition-colors duration-200;
-}
-
-.menu-item.danger {
-  @apply bg-red-500/80 hover:bg-red-500;
+/* 截断文本 */
+.truncate {
+  @apply overflow-hidden whitespace-nowrap text-ellipsis;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
   .cache-item-card {
-    @apply flex flex-row h-24;
+    @apply h-auto min-h-[100px] flex-col gap-2;
   }
   
-  .cover-container {
-    @apply w-32 h-full flex-shrink-0;
+  .cache-item-card .relative:first-child {
+    @apply w-full min-w-0;
   }
   
-  .content-info {
-    @apply flex-1 p-2;
+  .cache-item-card .relative:first-child > div {
+    @apply w-full h-24;
   }
   
-  .title {
-    @apply line-clamp-1;
+  .cache-item-card .relative:first-child img {
+    @apply w-full h-24;
   }
-  
-  .action-buttons {
-    @apply opacity-100 relative bottom-auto right-auto;
-    @apply flex-col;
-  }
-  
-  .hover-menu {
-    @apply hidden;
-  }
-}
-
-/* 行限制样式 */
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 </style>
