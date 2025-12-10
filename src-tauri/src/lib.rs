@@ -46,6 +46,15 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             plan_scheduler,
             process_scheduler,
             // update_max_conc,
+            // Cache Import
+            import_cache_directory,
+            get_import_progress,
+            cancel_import,
+            get_cache_list,
+            get_cache_list_by_status,
+            delete_cache_item,
+            open_cache_folder,
+            get_cache_stats,
         ])
         .events(collect_events![
             shared::HeadersData,

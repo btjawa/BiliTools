@@ -170,3 +170,97 @@ pub async fn init() -> TauriResult<()> {
     HEADERS.refresh().await?;
     Ok(())
 }
+// 缓存导入相关命令
+
+use crate::services::cache::{ImportService, import::{ImportResult, ImportProgress}};
+use crate::storage::cache_records::{self, CacheRecord};
+
+/// 导入缓存目录
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn import_cache_directory(path: String) -> TauriResult<ImportResult> {
+    let import_service = ImportService::new();
+    let root_path = PathBuf::from(path);
+    let result = import_service.import_cache_directory(root_path).await?;
+    Ok(result)
+}
+
+/// 获取导入进度（使用 Channel 事件流）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_import_progress(import_id: String, event: tauri::ipc::Channel<ImportProgress>) -> TauriResult<()> {
+    if let Some(progress) = ImportService::get_import_progress(&import_id).await {
+        event.send(progress)?;
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("导入任务不存在: {}", import_id).into())
+    }
+}
+
+/// 取消导入操作
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn cancel_import(import_id: String) -> TauriResult<()> {
+    ImportService::cancel_import(&import_id).await?;
+    Ok(())
+}
+
+/// 获取缓存列表
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_cache_list() -> TauriResult<Vec<CacheRecord>> {
+    let records = cache_records::get_all().await?;
+    Ok(records)
+}
+
+/// 根据状态获取缓存列表
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_cache_list_by_status(status: String) -> TauriResult<Vec<CacheRecord>> {
+    let records = cache_records::get_by_status(&status).await?;
+    Ok(records)
+}
+
+/// 删除缓存项
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn delete_cache_item(id: String) -> TauriResult<()> {
+    cache_records::delete(&id).await?;
+    Ok(())
+}
+
+/// 打开缓存文件夹
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn open_cache_folder(cache_path: String) -> TauriResult<()> {
+    let path = PathBuf::from(&cache_path);
+    if path.exists() {
+        tauri_plugin_opener::open_path(path, None::<&str>)?;
+    } else {
+        return Err(anyhow::anyhow!("缓存目录不存在: {}", cache_path).into());
+    }
+    Ok(())
+}
+
+/// 获取缓存统计信息
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_cache_stats() -> TauriResult<CacheStats> {
+    let total_count = cache_records::count().await?;
+    let total_size = cache_records::total_size().await?;
+    let available_count = cache_records::get_by_status("available").await?.len() as i64;
+    
+    Ok(CacheStats {
+        total_count,
+        total_size,
+        available_count,
+    })
+}
+
+/// 缓存统计信息
+#[derive(Serialize, Type)]
+pub struct CacheStats {
+    pub total_count: i64,
+    pub total_size: i64,
+    pub available_count: i64,
+}

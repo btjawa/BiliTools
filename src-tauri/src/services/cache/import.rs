@@ -3,13 +3,18 @@ use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::sync::Semaphore;
+use std::sync::{Arc, LazyLock};
+use std::collections::HashMap;
+use tokio::sync::{Semaphore, RwLock};
 
 use crate::shared::get_millis;
 use crate::storage::cache_records::{self, CacheRecord};
 
 use super::{ParserService, ValidatorService};
+
+// 全局导入状态管理
+static IMPORT_STATES: LazyLock<Arc<RwLock<HashMap<String, Arc<RwLock<ImportProgress>>>>>> = 
+    LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 /// 导入结果
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -62,6 +67,15 @@ pub enum ImportProgressStatus {
     Error,
 }
 
+/// 缓存导入任务类型（用于队列系统）
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+pub enum CacheImportTaskType {
+    ScanDirectories,
+    ParseMetadata,
+    ValidateFiles,
+    SaveToDatabase,
+}
+
 /// 导入错误
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct ImportError {
@@ -88,7 +102,7 @@ impl ImportService {
         }
     }
 
-    /// 导入缓存目录
+    /// 导入缓存目录（集成队列系统）
     /// 
     /// # 参数
     /// * `root_path` - 缓存根目录路径
@@ -102,9 +116,36 @@ impl ImportService {
             .map(char::from)
             .collect();
         
+        // 初始化进度状态
+        let progress = Arc::new(tokio::sync::RwLock::new(ImportProgress {
+            import_id: import_id.clone(),
+            total_directories: 0,
+            processed_directories: 0,
+            current_directory: "正在扫描目录...".to_string(),
+            status: ImportProgressStatus::Scanning,
+            errors: Vec::new(),
+        }));
+        
+        // 注册进度状态到全局管理器
+        {
+            let mut states = IMPORT_STATES.write().await;
+            states.insert(import_id.clone(), progress.clone());
+        }
+        
+
+        
         // 扫描缓存目录
         let cache_dirs = self.scan_cache_directories(&root_path).await?;
         let total_found = cache_dirs.len() as i32;
+        
+        // 更新进度状态
+        {
+            let mut prog = progress.write().await;
+            prog.total_directories = total_found;
+            prog.status = ImportProgressStatus::Parsing;
+        }
+        
+
         
         let mut details = Vec::new();
         let mut success_count = 0;
@@ -114,15 +155,46 @@ impl ImportService {
         // 并发处理缓存目录
         let mut handles = Vec::new();
         
-        for cache_dir in cache_dirs {
+        for (index, cache_dir) in cache_dirs.into_iter().enumerate() {
             let permit = self.semaphore.clone().acquire_owned().await?;
             let parser = self.parser.clone();
             let validator = self.validator.clone();
             let cache_dir_clone = cache_dir.clone();
+            let progress_clone = progress.clone();
+            let current_index = index as i32;
+
             
             let handle = tokio::spawn(async move {
                 let _permit = permit; // 持有许可证直到任务完成
-                Self::process_single_directory(parser, validator, cache_dir_clone).await
+                
+                // 更新当前处理的目录
+                {
+                    let mut prog = progress_clone.write().await;
+                    prog.current_directory = cache_dir_clone.to_string_lossy().to_string();
+                    prog.processed_directories = current_index;
+                    prog.status = ImportProgressStatus::Validating;
+                }
+                
+
+                
+                let result = Self::process_single_directory(parser, validator, cache_dir_clone).await;
+                
+                // 更新进度
+                {
+                    let mut prog = progress_clone.write().await;
+                    prog.processed_directories = current_index + 1;
+                    if let Err(ref e) = result {
+                        prog.errors.push(ImportError {
+                            directory_path: "unknown".to_string(),
+                            error_message: e.to_string(),
+                            error_type: "processing_error".to_string(),
+                        });
+                    }
+                }
+                
+
+                
+                result
             });
             
             handles.push(handle);
@@ -150,6 +222,15 @@ impl ImportService {
                 }
             }
         }
+
+        // 完成导入
+        {
+            let mut prog = progress.write().await;
+            prog.status = ImportProgressStatus::Completed;
+            prog.current_directory = "导入完成".to_string();
+        }
+        
+
 
         Ok(ImportResult {
             import_id,
@@ -294,6 +375,33 @@ impl ImportService {
                 reason: Some(format!("数据库保存失败: {}", e)),
                 cache_item: None,
             }),
+        }
+    }
+
+    /// 获取导入进度
+    pub async fn get_import_progress(import_id: &str) -> Option<ImportProgress> {
+        let states = IMPORT_STATES.read().await;
+        if let Some(progress_state) = states.get(import_id) {
+            Some(progress_state.read().await.clone())
+        } else {
+            None
+        }
+    }
+    
+    /// 取消导入操作
+    pub async fn cancel_import(import_id: &str) -> Result<()> {
+        let mut states = IMPORT_STATES.write().await;
+        if let Some(progress_state) = states.get(import_id) {
+            {
+                let mut progress = progress_state.write().await;
+                progress.status = ImportProgressStatus::Cancelled;
+            }
+            
+            // 移除已取消的导入任务
+            states.remove(import_id);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("导入任务不存在: {}", import_id))
         }
     }
 }
