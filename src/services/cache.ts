@@ -36,7 +36,7 @@ export class CacheImportService {
       });
       
       return Array.isArray(selected) ? selected[0] : selected;
-    } catch (error) {
+    } catch {
       throw new AppError('选择目录失败');
     }
   }
@@ -44,23 +44,39 @@ export class CacheImportService {
   /**
    * 扫描缓存目录
    * 扫描指定目录下的所有缓存文件，返回扫描结果
-   * 注意：此功能需要后端实现 scan_cache_directory 命令
    * 
    * @param path 缓存根目录路径
    * @returns 扫描结果，包含发现的缓存目录信息
    */
   async scanCacheDirectory(path: string): Promise<Types.ScanResult> {
-    // TODO: 等待后端实现 scan_cache_directory 命令
-    // 目前返回模拟数据用于开发
-    return {
-      rootPath: path,
-      totalDirectories: 0,
-      validDirectories: 0,
-      invalidDirectories: 0,
-      estimatedTotalSize: 0,
-      scanDuration: 0,
-      directories: []
-    };
+    try {
+      const result = await invoke('scan_cache_directory', { path }) as Types.ScanResultRaw;
+      
+      // 转换后端数据格式为前端类型
+      return {
+        rootPath: result.root_path,
+        totalDirectories: result.total_directories,
+        validDirectories: result.valid_directories,
+        invalidDirectories: result.invalid_directories,
+        estimatedTotalSize: result.estimated_total_size,
+        scanDuration: result.scan_duration,
+        directories: result.directories.map((dir: Types.DirectoryInfoRaw) => ({
+          path: dir.path,
+          isValid: dir.is_valid,
+          invalidReason: dir.invalid_reason,
+          preview: dir.preview ? {
+            title: dir.preview.title,
+            uname: dir.preview.uname,
+            bvid: dir.preview.bvid,
+            fileSize: dir.preview.file_size,
+            duration: dir.preview.duration
+          } : undefined
+        }))
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('扫描缓存目录失败');
+    }
   }
 
   /**
@@ -69,9 +85,9 @@ export class CacheImportService {
    * 
    * @param path 缓存根目录路径
    * @param options 导入选项配置
-   * @returns 导入结果
+   * @returns 导入操作ID
    */
-  async startImport(path: string, options: Types.ImportOptions): Promise<any> {
+  async startImport(path: string, options: Types.ImportOptions): Promise<string> {
     try {
       // 转换前端类型为后端类型
       const backendOptions = {
@@ -82,11 +98,11 @@ export class CacheImportService {
         create_playlist: options.createPlaylist,
       };
       
-      const result = await invoke('import_cache_directory', { path, options: backendOptions });
-      return result;
+      const importId = await invoke('import_cache_directory', { path, options: backendOptions }) as string;
+      return importId;
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError('启动导入失败');
+      throw new AppError(`启动导入失败: ${(error as Error)?.message || '未知错误'}`);
     }
   }
 
@@ -98,7 +114,7 @@ export class CacheImportService {
    */
   async cancelImport(importId: string): Promise<void> {
     try {
-      await invoke('cancel_import', { importId });
+      await invoke('cancel_import', { importId: importId });
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError('取消导入失败');
@@ -115,26 +131,29 @@ export class CacheImportService {
    */
   async listenImportProgress(
     importId: string,
-    onProgress: (progress: any) => void
+    onProgress: (progress: Types.ImportProgress) => void
   ): Promise<() => void> {
     try {
-      const channel = new Channel<any>();
+      const channel = new Channel<Types.ImportProgress>();
+      let isCancelled = false;
       
       // 监听进度更新
       channel.onmessage = (progress) => {
-        onProgress(progress);
+        if (!isCancelled) {
+          onProgress(progress);
+        }
       };
 
       // 启动进度监听
-      await invoke('get_import_progress', { importId, event: channel });
+      await invoke('get_import_progress', { importId: importId, event: channel });
 
       // 返回取消监听的函数
       return () => {
-        // Channel会在后端完成时自动关闭
+        isCancelled = true;
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError('监听导入进度失败');
+      throw new AppError(`监听导入进度失败: ${(error as Error)?.message || '未知错误'}`);
     }
   }
 
@@ -181,8 +200,11 @@ export class CacheManagementService {
    * @returns 缓存文件列表
    */
   async getCacheList(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _filter?: Types.CacheFilter,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _sort?: Types.SortOption,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _pagination?: Types.CachePagination
   ): Promise<{
     items: Types.CacheItem[];
@@ -193,7 +215,7 @@ export class CacheManagementService {
       const result = await invoke('get_cache_list');
       
       // 转换后端数据格式为前端类型
-      const items: Types.CacheItem[] = (result as any[]).map((record: any) => ({
+      const items: Types.CacheItem[] = (result as Types.CacheRecordRaw[]).map((record: Types.CacheRecordRaw) => ({
         id: record.id,
         bvid: record.bvid,
         aid: record.aid,
@@ -246,6 +268,7 @@ export class CacheManagementService {
    * @param id 缓存项ID
    * @param deleteFiles 是否同时删除本地文件（当前后端未使用此参数）
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async deleteCacheItem(id: string, _deleteFiles: boolean = false): Promise<void> {
     try {
       await invoke('delete_cache_item', { id });
@@ -357,7 +380,7 @@ export class CacheManagementService {
    */
   async getCacheStatistics(): Promise<Types.CacheStatistics> {
     try {
-      const result = await invoke('get_cache_stats') as any;
+      const result = await invoke('get_cache_stats') as Types.CacheStatisticsRaw;
       
       // 转换后端数据格式为前端类型
       return {

@@ -402,6 +402,7 @@
       "duplicateHandling": "重复处理策略",
       "duplicateSkip": "跳过重复项",
       "duplicateOverwrite": "覆盖现有记录",
+      "duplicateAsk": "询问用户",
       "verifyIntegrity": "验证文件完整性",
       "createPlaylist": "自动创建播放列表",
       "maxConcurrency": "最大并发数",

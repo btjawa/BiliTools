@@ -47,6 +47,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             process_scheduler,
             // update_max_conc,
             // Cache Import
+            scan_cache_directory,
             import_cache_directory,
             get_import_progress,
             cancel_import,

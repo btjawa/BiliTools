@@ -85,13 +85,13 @@ export interface ImportProgress {
  * 导入状态枚举
  */
 export type ImportStatus = 
-  | 'scanning'   // 扫描目录中
-  | 'parsing'    // 解析JSON文件中
-  | 'validating' // 验证文件完整性中
-  | 'saving'     // 保存到数据库中
-  | 'completed'  // 导入完成
-  | 'cancelled'  // 用户取消
-  | 'error';     // 发生错误
+  | 'Scanning'   // 扫描目录中
+  | 'Parsing'    // 解析JSON文件中
+  | 'Validating' // 验证文件完整性中
+  | 'Saving'     // 保存到数据库中
+  | 'Completed'  // 导入完成
+  | 'Cancelled'  // 用户取消
+  | 'Error';     // 发生错误
 
 /**
  * 导入错误信息
@@ -276,7 +276,7 @@ export interface VideoInfo {
   /** 下载时间戳 */
   downloadTime?: number;
   /** 其他可选字段 */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ============================================================================
@@ -399,7 +399,7 @@ export interface CacheEvent {
   /** 事件时间戳 */
   timestamp: Date;
   /** 事件相关数据 */
-  data: any;
+  data: unknown;
 }
 
 // ============================================================================
@@ -440,4 +440,62 @@ export interface BatchOperationResult {
   success: boolean;
   /** 错误信息（如果失败） */
   error?: string;
+}
+// ============================================================================
+// 后端原始数据类型（用于类型转换）
+// ============================================================================
+
+/** 后端扫描结果原始格式 */
+export interface ScanResultRaw {
+  root_path: string;
+  total_directories: number;
+  valid_directories: number;
+  invalid_directories: number;
+  estimated_total_size: number;
+  scan_duration: number;
+  directories: DirectoryInfoRaw[];
+}
+
+/** 后端目录信息原始格式 */
+export interface DirectoryInfoRaw {
+  path: string;
+  is_valid: boolean;
+  invalid_reason?: string;
+  preview?: VideoInfoPreviewRaw;
+}
+
+/** 后端视频预览信息原始格式 */
+export interface VideoInfoPreviewRaw {
+  title: string;
+  uname: string;
+  bvid: string;
+  file_size: number;
+  duration: number;
+}
+
+/** 后端缓存记录原始格式 */
+export interface CacheRecordRaw {
+  id: string;
+  bvid: string;
+  aid: number;
+  cid: number;
+  title: string;
+  uname: string;
+  cover_url: string;
+  duration: number;
+  file_size: number;
+  cache_path: string;
+  download_time: number;
+  import_time: number;
+  status: string;
+  source: string;
+}
+
+/** 后端缓存统计原始格式 */
+export interface CacheStatisticsRaw {
+  total_count: number;
+  available_count: number;
+  total_size: number;
+  average_file_size: number;
+  total_duration: number;
 }

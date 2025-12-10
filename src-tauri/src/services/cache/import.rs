@@ -2,10 +2,11 @@ use anyhow::Result;
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
-use std::collections::HashMap;
-use tokio::sync::{Semaphore, RwLock};
+use tokio::sync::{RwLock, Semaphore};
+use tokio::time::{sleep, Duration};
 
 use crate::shared::get_millis;
 use crate::storage::cache_records::{self, CacheRecord};
@@ -13,7 +14,8 @@ use crate::storage::cache_records::{self, CacheRecord};
 use super::{ParserService, ValidatorService};
 
 // 全局导入状态管理
-static IMPORT_STATES: LazyLock<Arc<RwLock<HashMap<String, Arc<RwLock<ImportProgress>>>>>> = 
+type ImportStatesMap = HashMap<String, Arc<RwLock<ImportProgress>>>;
+static IMPORT_STATES: LazyLock<Arc<RwLock<ImportStatesMap>>> =
     LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 /// 重复处理策略
@@ -138,20 +140,24 @@ impl ImportService {
     }
 
     /// 导入缓存目录（集成队列系统）
-    /// 
+    ///
     /// # 参数
     /// * `root_path` - 缓存根目录路径
     /// * `options` - 导入选项
-    /// 
+    ///
     /// # 返回
     /// * `Result<ImportResult>` - 导入结果
-    pub async fn import_cache_directory(&self, root_path: PathBuf, options: ImportOptions) -> Result<ImportResult> {
+    pub async fn import_cache_directory(
+        &self,
+        root_path: PathBuf,
+        options: ImportOptions,
+    ) -> Result<ImportResult> {
         let import_id: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(16)
             .map(char::from)
             .collect();
-        
+
         // 初始化进度状态
         let progress = Arc::new(tokio::sync::RwLock::new(ImportProgress {
             import_id: import_id.clone(),
@@ -161,28 +167,24 @@ impl ImportService {
             status: ImportProgressStatus::Scanning,
             errors: Vec::new(),
         }));
-        
+
         // 注册进度状态到全局管理器
         {
             let mut states = IMPORT_STATES.write().await;
             states.insert(import_id.clone(), progress.clone());
         }
-        
 
-        
         // 扫描缓存目录
         let cache_dirs = self.scan_cache_directories(&root_path).await?;
         let total_found = cache_dirs.len() as i32;
-        
+
         // 更新进度状态
         {
             let mut prog = progress.write().await;
             prog.total_directories = total_found;
             prog.status = ImportProgressStatus::Parsing;
         }
-        
 
-        
         let mut details = Vec::new();
         let mut success_count = 0;
         let mut failure_count = 0;
@@ -190,7 +192,7 @@ impl ImportService {
 
         // 并发处理缓存目录
         let mut handles = Vec::new();
-        
+
         for (index, cache_dir) in cache_dirs.into_iter().enumerate() {
             let permit = self.semaphore.clone().acquire_owned().await?;
             let parser = self.parser.clone();
@@ -200,10 +202,9 @@ impl ImportService {
             let current_index = index as i32;
             let options_clone = options.clone();
 
-            
             let handle = tokio::spawn(async move {
                 let _permit = permit; // 持有许可证直到任务完成
-                
+
                 // 更新当前处理的目录
                 {
                     let mut prog = progress_clone.write().await;
@@ -211,11 +212,15 @@ impl ImportService {
                     prog.processed_directories = current_index;
                     prog.status = ImportProgressStatus::Validating;
                 }
-                
 
-                
-                let result = Self::process_single_directory(parser, validator, cache_dir_clone, options_clone).await;
-                
+                let result = Self::process_single_directory(
+                    parser,
+                    validator,
+                    cache_dir_clone,
+                    options_clone,
+                )
+                .await;
+
                 // 更新进度
                 {
                     let mut prog = progress_clone.write().await;
@@ -228,12 +233,10 @@ impl ImportService {
                         });
                     }
                 }
-                
 
-                
                 result
             });
-            
+
             handles.push(handle);
         }
 
@@ -266,8 +269,14 @@ impl ImportService {
             prog.status = ImportProgressStatus::Completed;
             prog.current_directory = "导入完成".to_string();
         }
-        
 
+        // 延迟清理进度状态，给前端足够时间获取最终状态
+        let import_id_clone = import_id.clone();
+        tokio::spawn(async move {
+            sleep(Duration::from_secs(5)).await;
+            let mut states = IMPORT_STATES.write().await;
+            states.remove(&import_id_clone);
+        });
 
         Ok(ImportResult {
             import_id,
@@ -280,32 +289,37 @@ impl ImportService {
     }
 
     /// 扫描缓存目录，识别包含videoInfo.json的目录
-    /// 
+    ///
     /// # 参数
     /// * `root_path` - 缓存根目录路径
-    /// 
+    ///
     /// # 返回
     /// * `Result<Vec<PathBuf>>` - 有效缓存目录列表
     pub async fn scan_cache_directories(&self, root_path: &PathBuf) -> Result<Vec<PathBuf>> {
         let mut cache_dirs = Vec::new();
-        
+
         if !root_path.exists() || !root_path.is_dir() {
             return Err(anyhow::anyhow!("目录不存在或不是有效目录: {:?}", root_path));
         }
 
         self.scan_recursive(root_path, &mut cache_dirs).await?;
-        
+
         Ok(cache_dirs)
     }
 
     /// 递归扫描目录
-    fn scan_recursive<'a>(&'a self, dir_path: &'a PathBuf, cache_dirs: &'a mut Vec<PathBuf>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
+    #[allow(clippy::only_used_in_recursion)]
+    fn scan_recursive<'a>(
+        &'a self,
+        dir_path: &'a PathBuf,
+        cache_dirs: &'a mut Vec<PathBuf>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let mut entries = tokio::fs::read_dir(dir_path).await?;
-            
+
             while let Some(entry) = entries.next_entry().await? {
                 let path = entry.path();
-                
+
                 if path.is_dir() {
                     // 检查是否包含videoInfo.json
                     let video_info_path = path.join("videoInfo.json");
@@ -317,7 +331,7 @@ impl ImportService {
                     }
                 }
             }
-            
+
             Ok(())
         })
     }
@@ -330,7 +344,7 @@ impl ImportService {
         options: ImportOptions,
     ) -> Result<ImportDetail> {
         let directory_path = cache_dir.to_string_lossy().to_string();
-        
+
         // 验证文件完整性
         let validation_result = match validator.validate_cache_directory(&cache_dir).await {
             Ok(result) => result,
@@ -368,7 +382,9 @@ impl ImportService {
         };
 
         // 检查是否已存在并根据策略处理
-        if let Ok(Some(existing)) = cache_records::get_by_bvid_cid(&video_info.bvid, video_info.cid).await {
+        if let Ok(Some(existing)) =
+            cache_records::get_by_bvid_cid(&video_info.bvid, video_info.cid).await
+        {
             match options.duplicate_handling {
                 DuplicateHandlingStrategy::Skip => {
                     return Ok(ImportDetail {
@@ -458,7 +474,7 @@ impl ImportService {
             None
         }
     }
-    
+
     /// 取消导入操作
     pub async fn cancel_import(import_id: &str) -> Result<()> {
         let mut states = IMPORT_STATES.write().await;
@@ -467,7 +483,7 @@ impl ImportService {
                 let mut progress = progress_state.write().await;
                 progress.status = ImportProgressStatus::Cancelled;
             }
-            
+
             // 移除已取消的导入任务
             states.remove(import_id);
             Ok(())

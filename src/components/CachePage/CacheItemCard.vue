@@ -52,8 +52,8 @@
     <!-- 操作按钮 -->
     <button 
       class="absolute right-3 bottom-3 flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
-      @click.stop="$emit('play', item)"
       :disabled="item.status === 'unavailable'"
+      @click.stop="$emit('play', item)"
     >
       <i class="fa-solid fa-play"></i>
       <span>{{ $t('cache.card.play') }}</span>
@@ -64,9 +64,9 @@
       <input
         type="checkbox"
         :checked="selected"
+        class="w-4 h-4"
         @click.stop
         @change="$emit('select')"
-        class="w-4 h-4"
       />
     </div>
 
@@ -86,16 +86,16 @@
     <div class="absolute top-2 right-8 z-20 opacity-0 hover:opacity-100 transition-opacity flex gap-1">
       <button
         class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs hover:bg-blue-600"
-        @click.stop="$emit('openFolder', item)"
         :title="$t('cache.card.openFolder')"
+        @click.stop="$emit('openFolder', item)"
       >
         <i class="fa-solid fa-folder-open"></i>
       </button>
       
       <button
         class="w-6 h-6 rounded-full bg-red-500 text-white text-xs hover:bg-red-600"
-        @click.stop="$emit('delete', item)"
         :title="$t('cache.card.delete')"
+        @click.stop="$emit('delete', item)"
       >
         <i class="fa-solid fa-trash"></i>
       </button>
@@ -105,7 +105,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatBytes, duration } from '@/services/utils';
+import { duration } from '@/services/utils';
 import { Image } from '@/components';
 import type * as Types from '@/types/cache.d';
 
@@ -132,7 +132,7 @@ defineEmits<Emits>();
 // 计算属性
 // ============================================================================
 
-const statusClass = computed(() => `status-${props.item.status}`);
+// const statusClass = computed(() => `status-${props.item.status}`);
 
 const statusIcon = computed(() => {
   const iconMap = {

@@ -236,7 +236,7 @@ const maxErrorsToShow = computed(() => showAllErrors.value ? Infinity : 5);
 // ============================================================================
 
 const isImporting = computed(() => {
-  return props.progress && ['scanning', 'parsing', 'validating', 'saving'].includes(props.progress.status);
+  return props.progress && ['Scanning', 'Parsing', 'Validating', 'Saving'].includes(props.progress.status);
 });
 
 const progressPercentage = computed(() => {
@@ -249,19 +249,19 @@ const statusIcon = computed(() => {
   if (!props.progress) return 'fa-solid fa-check';
   
   switch (props.progress.status) {
-    case 'scanning':
+    case 'Scanning':
       return 'fa-solid fa-magnifying-glass';
-    case 'parsing':
+    case 'Parsing':
       return 'fa-solid fa-file-code';
-    case 'validating':
+    case 'Validating':
       return 'fa-solid fa-shield-check';
-    case 'saving':
+    case 'Saving':
       return 'fa-solid fa-database';
-    case 'completed':
+    case 'Completed':
       return 'fa-solid fa-check';
-    case 'cancelled':
+    case 'Cancelled':
       return 'fa-solid fa-stop';
-    case 'error':
+    case 'Error':
       return 'fa-solid fa-exclamation-triangle';
     default:
       return 'fa-solid fa-spinner';

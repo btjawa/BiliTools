@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 验证结果
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -25,15 +25,15 @@ impl ValidatorService {
     }
 
     /// 验证缓存目录的完整性
-    /// 
+    ///
     /// # 参数
     /// * `dir_path` - 缓存目录路径
-    /// 
+    ///
     /// # 返回
     /// * `Result<ValidationResult>` - 验证结果
     pub async fn validate_cache_directory(&self, dir_path: &PathBuf) -> Result<ValidationResult> {
         let mut errors = Vec::new();
-        
+
         // 检查目录是否存在
         if !dir_path.exists() || !dir_path.is_dir() {
             return Ok(ValidationResult {
@@ -49,10 +49,11 @@ impl ValidatorService {
         // 检查必需文件
         let has_video_info = self.check_video_info_file(dir_path, &mut errors).await;
         let (has_media_files, media_files) = self.check_media_files(dir_path, &mut errors).await;
-        
+
         // 验证文件大小（如果videoInfo.json存在）
         let (file_size_match, size_difference) = if has_video_info {
-            self.verify_file_sizes(dir_path, &media_files, &mut errors).await
+            self.verify_file_sizes(dir_path, &media_files, &mut errors)
+                .await
         } else {
             (false, 0)
         };
@@ -70,9 +71,9 @@ impl ValidatorService {
     }
 
     /// 检查videoInfo.json文件是否存在
-    async fn check_video_info_file(&self, dir_path: &PathBuf, errors: &mut Vec<String>) -> bool {
+    async fn check_video_info_file(&self, dir_path: &Path, errors: &mut Vec<String>) -> bool {
         let video_info_path = dir_path.join("videoInfo.json");
-        
+
         if !video_info_path.exists() {
             errors.push("缺少videoInfo.json文件".to_string());
             return false;
@@ -101,9 +102,13 @@ impl ValidatorService {
     }
 
     /// 检查媒体文件是否存在
-    async fn check_media_files(&self, dir_path: &PathBuf, errors: &mut Vec<String>) -> (bool, Vec<PathBuf>) {
+    async fn check_media_files(
+        &self,
+        dir_path: &PathBuf,
+        errors: &mut Vec<String>,
+    ) -> (bool, Vec<PathBuf>) {
         let mut media_files = Vec::new();
-        
+
         match tokio::fs::read_dir(dir_path).await {
             Ok(mut entries) => {
                 while let Ok(Some(entry)) = entries.next_entry().await {
@@ -132,7 +137,7 @@ impl ValidatorService {
     /// 验证文件大小是否匹配
     async fn verify_file_sizes(
         &self,
-        dir_path: &PathBuf,
+        dir_path: &Path,
         media_files: &[PathBuf],
         errors: &mut Vec<String>,
     ) -> (bool, i64) {
@@ -161,10 +166,10 @@ impl ValidatorService {
 
         let size_difference = actual_size as i64 - expected_size as i64;
         let size_difference_abs = size_difference.abs();
-        
+
         // 允许1MB的差异
         const MAX_ALLOWED_DIFFERENCE: i64 = 1024 * 1024; // 1MB
-        
+
         if size_difference_abs > MAX_ALLOWED_DIFFERENCE {
             errors.push(format!(
                 "文件大小不匹配，期望: {} bytes, 实际: {} bytes, 差异: {} bytes",
@@ -180,18 +185,23 @@ impl ValidatorService {
     async fn get_expected_size(&self, video_info_path: &PathBuf) -> Result<u64> {
         let content = tokio::fs::read_to_string(video_info_path).await?;
         let json_value: serde_json::Value = serde_json::from_str(&content)?;
-        
-        let obj = json_value.as_object()
+
+        let obj = json_value
+            .as_object()
             .ok_or_else(|| anyhow::anyhow!("JSON根节点不是对象"))?;
 
         // 尝试多个可能的字段名
-        let size = obj.get("totalSize")
+        let size = obj
+            .get("totalSize")
             .or_else(|| obj.get("total_size"))
             .or_else(|| obj.get("size"))
             .and_then(|v| {
                 v.as_u64()
                     .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
-                    .or_else(|| v.as_i64().and_then(|i| if i >= 0 { Some(i as u64) } else { None }))
+                    .or_else(|| {
+                        v.as_i64()
+                            .and_then(|i| if i >= 0 { Some(i as u64) } else { None })
+                    })
             })
             .unwrap_or(0);
 
@@ -201,7 +211,7 @@ impl ValidatorService {
     /// 检查必需文件是否存在（简化版本）
     pub async fn check_required_files(&self, dir_path: &PathBuf) -> Result<bool> {
         let video_info_exists = dir_path.join("videoInfo.json").exists();
-        
+
         if !video_info_exists {
             return Ok(false);
         }
@@ -224,9 +234,13 @@ impl ValidatorService {
     }
 
     /// 验证文件大小是否匹配（简化版本）
-    pub async fn verify_file_sizes_simple(&self, dir_path: &PathBuf, expected_size: u64) -> Result<bool> {
+    pub async fn verify_file_sizes_simple(
+        &self,
+        dir_path: &PathBuf,
+        expected_size: u64,
+    ) -> Result<bool> {
         let mut actual_size = 0u64;
-        
+
         if let Ok(mut entries) = tokio::fs::read_dir(dir_path).await {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
@@ -242,7 +256,7 @@ impl ValidatorService {
 
         let difference = (actual_size as i64 - expected_size as i64).abs();
         const MAX_ALLOWED_DIFFERENCE: i64 = 1024 * 1024; // 1MB
-        
+
         Ok(difference <= MAX_ALLOWED_DIFFERENCE)
     }
 }

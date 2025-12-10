@@ -172,29 +172,92 @@ pub async fn init() -> TauriResult<()> {
 }
 // 缓存导入相关命令
 
-use crate::services::cache::{ImportService, import::{ImportResult, ImportProgress, ImportOptions}};
+use crate::services::cache::{
+    import::{ImportOptions, ImportProgress, ImportProgressStatus},
+    ImportService,
+};
 use crate::storage::cache_records::{self, CacheRecord};
+
+/// 扫描缓存目录（仅扫描，不导入）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn scan_cache_directory(path: String) -> TauriResult<ScanResult> {
+    let import_service = ImportService::new();
+    let root_path = PathBuf::from(&path);
+    let cache_dirs = import_service.scan_cache_directories(&root_path).await?;
+
+    Ok(ScanResult {
+        root_path: path,
+        total_directories: cache_dirs.len() as i32,
+        valid_directories: cache_dirs.len() as i32, // 扫描到的都是有效的
+        invalid_directories: 0,
+        estimated_total_size: 0, // 暂时不计算大小，避免扫描过慢
+        scan_duration: 0,
+        directories: cache_dirs
+            .into_iter()
+            .map(|dir| ScanDirectoryInfo {
+                path: dir.to_string_lossy().to_string(),
+                is_valid: true,
+                invalid_reason: None,
+                preview: None, // 暂时不提供预览信息
+            })
+            .collect(),
+    })
+}
 
 /// 导入缓存目录
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn import_cache_directory(path: String, options: ImportOptions) -> TauriResult<ImportResult> {
+pub async fn import_cache_directory(
+    path: String,
+    options: ImportOptions,
+) -> TauriResult<String> {
     let import_service = ImportService::new();
     let root_path = PathBuf::from(path);
+    
+    // 启动异步导入并返回导入ID
     let result = import_service.import_cache_directory(root_path, options).await?;
-    Ok(result)
+    let import_id = result.import_id;
+    Ok(import_id)
 }
 
 /// 获取导入进度（使用 Channel 事件流）
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn get_import_progress(import_id: String, event: tauri::ipc::Channel<ImportProgress>) -> TauriResult<()> {
-    if let Some(progress) = ImportService::get_import_progress(&import_id).await {
-        event.send(progress)?;
-        Ok(())
-    } else {
-        Err(anyhow::anyhow!("导入任务不存在: {}", import_id).into())
-    }
+pub async fn get_import_progress(
+    import_id: String,
+    event: tauri::ipc::Channel<ImportProgress>,
+) -> TauriResult<()> {
+    // 启动一个后台任务持续发送进度更新
+    tokio::spawn(async move {
+        loop {
+            if let Some(progress) = ImportService::get_import_progress(&import_id).await {
+                // 发送进度更新
+                if event.send(progress.clone()).is_err() {
+                    // Channel 已关闭，停止发送
+                    break;
+                }
+                
+                // 如果导入已完成或取消，停止监听
+                match progress.status {
+                    ImportProgressStatus::Completed 
+                    | ImportProgressStatus::Cancelled 
+                    | ImportProgressStatus::Error => {
+                        break;
+                    }
+                    _ => {
+                        // 等待一段时间后再次检查
+                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    }
+                }
+            } else {
+                // 导入任务不存在，停止监听
+                break;
+            }
+        }
+    });
+    
+    Ok(())
 }
 
 /// 取消导入操作
@@ -249,7 +312,7 @@ pub async fn get_cache_stats() -> TauriResult<CacheStats> {
     let total_count = cache_records::count().await?;
     let total_size = cache_records::total_size().await?;
     let available_count = cache_records::get_by_status("available").await?.len() as i64;
-    
+
     Ok(CacheStats {
         total_count,
         total_size,
@@ -263,4 +326,33 @@ pub struct CacheStats {
     pub total_count: i64,
     pub total_size: i64,
     pub available_count: i64,
+}
+
+/// 扫描结果
+#[derive(Serialize, Type)]
+pub struct ScanResult {
+    pub root_path: String,
+    pub total_directories: i32,
+    pub valid_directories: i32,
+    pub invalid_directories: i32,
+    pub estimated_total_size: i64,
+    pub scan_duration: i64,
+    pub directories: Vec<ScanDirectoryInfo>,
+}
+
+/// 扫描目录信息
+#[derive(Serialize, Type)]
+pub struct ScanDirectoryInfo {
+    pub path: String,
+    pub is_valid: bool,
+    pub invalid_reason: Option<String>,
+    pub preview: Option<ScanPreviewInfo>,
+}
+
+/// 扫描预览信息
+#[derive(Serialize, Type)]
+pub struct ScanPreviewInfo {
+    pub title: String,
+    pub file_size: i64,
+    pub duration: i32,
 }

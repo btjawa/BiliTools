@@ -4,10 +4,8 @@ use sea_query::{
 };
 use sea_query_binder::SqlxBinder;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use specta::Type;
-
-
+use sqlx::Row;
 
 use super::db::{get_db, TableSpec};
 
@@ -53,11 +51,16 @@ pub struct CacheRecordsTable;
 impl TableSpec for CacheRecordsTable {
     const NAME: &'static str = "cache_records";
     const LATEST: i32 = 1;
-    
+
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(CacheRecords::Table)
-            .col(ColumnDef::new(CacheRecords::Id).text().not_null().primary_key())
+            .col(
+                ColumnDef::new(CacheRecords::Id)
+                    .text()
+                    .not_null()
+                    .primary_key(),
+            )
             .col(ColumnDef::new(CacheRecords::Bvid).text().not_null())
             .col(ColumnDef::new(CacheRecords::Aid).integer().not_null())
             .col(ColumnDef::new(CacheRecords::Cid).integer().not_null())
@@ -67,8 +70,16 @@ impl TableSpec for CacheRecordsTable {
             .col(ColumnDef::new(CacheRecords::Duration).integer().not_null())
             .col(ColumnDef::new(CacheRecords::FileSize).integer().not_null())
             .col(ColumnDef::new(CacheRecords::CachePath).text().not_null())
-            .col(ColumnDef::new(CacheRecords::DownloadTime).integer().not_null())
-            .col(ColumnDef::new(CacheRecords::ImportTime).integer().not_null())
+            .col(
+                ColumnDef::new(CacheRecords::DownloadTime)
+                    .integer()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(CacheRecords::ImportTime)
+                    .integer()
+                    .not_null(),
+            )
             .col(ColumnDef::new(CacheRecords::Status).text().not_null())
             .col(ColumnDef::new(CacheRecords::Source).text().not_null())
             .to_owned()
@@ -204,7 +215,7 @@ pub async fn get_by_id(id: &str) -> Result<Option<CacheRecord>> {
 
     let pool = get_db().await?;
     let row = sqlx::query_with(&sql, values).fetch_optional(&pool).await?;
-    
+
     if let Some(r) = row {
         Ok(Some(CacheRecord {
             id: r.try_get("id")?,
@@ -253,7 +264,7 @@ pub async fn get_by_bvid_cid(bvid: &str, cid: i64) -> Result<Option<CacheRecord>
 
     let pool = get_db().await?;
     let row = sqlx::query_with(&sql, values).fetch_optional(&pool).await?;
-    
+
     if let Some(r) = row {
         Ok(Some(CacheRecord {
             id: r.try_get("id")?,

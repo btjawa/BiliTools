@@ -33,15 +33,16 @@ impl ParserService {
     }
 
     /// 解析videoInfo.json文件
-    /// 
+    ///
     /// # 参数
     /// * `json_path` - videoInfo.json文件路径
-    /// 
+    ///
     /// # 返回
     /// * `Result<VideoInfo>` - 解析后的视频信息
     pub async fn parse_video_info(&self, json_path: &PathBuf) -> Result<VideoInfo> {
         // 读取文件内容
-        let content = tokio::fs::read_to_string(json_path).await
+        let content = tokio::fs::read_to_string(json_path)
+            .await
             .map_err(|e| anyhow::anyhow!("无法读取文件 {:?}: {}", json_path, e))?;
 
         // 验证JSON格式
@@ -54,26 +55,26 @@ impl ParserService {
     }
 
     /// 验证JSON格式
-    /// 
+    ///
     /// # 参数
     /// * `content` - JSON字符串内容
-    /// 
+    ///
     /// # 返回
     /// * `Result<Value>` - 解析后的JSON值
     pub fn validate_json_format(&self, content: &str) -> Result<Value> {
-        serde_json::from_str(content)
-            .map_err(|e| anyhow::anyhow!("JSON格式无效: {}", e))
+        serde_json::from_str(content).map_err(|e| anyhow::anyhow!("JSON格式无效: {}", e))
     }
 
     /// 从JSON值中提取视频信息
-    /// 
+    ///
     /// # 参数
     /// * `json_value` - 解析后的JSON值
-    /// 
+    ///
     /// # 返回
     /// * `Result<VideoInfo>` - 提取的视频信息
     fn extract_video_info(&self, json_value: &Value) -> Result<VideoInfo> {
-        let obj = json_value.as_object()
+        let obj = json_value
+            .as_object()
             .ok_or_else(|| anyhow::anyhow!("JSON根节点不是对象"))?;
 
         // 提取必需字段
@@ -81,34 +82,39 @@ impl ParserService {
         let bvid = self.extract_string_field(obj, "bvid")?;
         let cid = self.extract_i64_field(obj, "cid")?;
         let title = self.extract_string_field(obj, "title")?;
-        
+
         // UP主名称可能在不同字段中
-        let uname = self.extract_string_field(obj, "uname")
+        let uname = self
+            .extract_string_field(obj, "uname")
             .or_else(|_| self.extract_string_field(obj, "owner_name"))
             .or_else(|_| self.extract_string_field(obj, "author"))
             .unwrap_or_else(|_| "未知UP主".to_string());
 
         // 封面URL
-        let cover = self.extract_string_field(obj, "cover")
+        let cover = self
+            .extract_string_field(obj, "cover")
             .or_else(|_| self.extract_string_field(obj, "pic"))
             .unwrap_or_else(|_| "".to_string());
 
         // 时长（秒）
-        let duration = self.extract_i64_field(obj, "duration")
+        let duration = self
+            .extract_i64_field(obj, "duration")
             .or_else(|_| self.extract_i64_field(obj, "length"))
             .unwrap_or(0);
 
         // 文件总大小
-        let total_size = self.extract_u64_field(obj, "totalSize")
+        let total_size = self
+            .extract_u64_field(obj, "totalSize")
             .or_else(|_| self.extract_u64_field(obj, "total_size"))
             .or_else(|_| self.extract_u64_field(obj, "size"))
             .unwrap_or(0);
 
         // 可选字段
         let quality = self.extract_i32_field(obj, "quality").ok();
-        
+
         // 下载时间（时间戳）
-        let download_time = self.extract_i64_field(obj, "downloadTime")
+        let download_time = self
+            .extract_i64_field(obj, "downloadTime")
             .or_else(|_| self.extract_i64_field(obj, "download_time"))
             .or_else(|_| self.extract_i64_field(obj, "ctime"))
             .ok();
@@ -116,10 +122,26 @@ impl ParserService {
         // 收集其他字段
         let mut extra_fields = std::collections::HashMap::new();
         for (key, value) in obj {
-            if !matches!(key.as_str(), 
-                "aid" | "bvid" | "cid" | "title" | "uname" | "owner_name" | "author" |
-                "cover" | "pic" | "duration" | "length" | "totalSize" | "total_size" | "size" |
-                "quality" | "downloadTime" | "download_time" | "ctime"
+            if !matches!(
+                key.as_str(),
+                "aid"
+                    | "bvid"
+                    | "cid"
+                    | "title"
+                    | "uname"
+                    | "owner_name"
+                    | "author"
+                    | "cover"
+                    | "pic"
+                    | "duration"
+                    | "length"
+                    | "totalSize"
+                    | "total_size"
+                    | "size"
+                    | "quality"
+                    | "downloadTime"
+                    | "download_time"
+                    | "ctime"
             ) {
                 extra_fields.insert(key.clone(), value.clone());
             }
@@ -141,7 +163,11 @@ impl ParserService {
     }
 
     /// 提取字符串字段
-    fn extract_string_field(&self, obj: &serde_json::Map<String, Value>, field: &str) -> Result<String> {
+    fn extract_string_field(
+        &self,
+        obj: &serde_json::Map<String, Value>,
+        field: &str,
+    ) -> Result<String> {
         obj.get(field)
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
@@ -169,7 +195,10 @@ impl ParserService {
                     // 或者尝试从字符串解析
                     .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
                     // 或者从i64转换
-                    .or_else(|| v.as_i64().and_then(|i| if i >= 0 { Some(i as u64) } else { None }))
+                    .or_else(|| {
+                        v.as_i64()
+                            .and_then(|i| if i >= 0 { Some(i as u64) } else { None })
+                    })
             })
             .ok_or_else(|| anyhow::anyhow!("缺少或无效的数字字段: {}", field))
     }
@@ -179,7 +208,8 @@ impl ParserService {
         obj.get(field)
             .and_then(|v| {
                 // 尝试直接获取数字
-                v.as_i64().and_then(|i| i.try_into().ok())
+                v.as_i64()
+                    .and_then(|i| i.try_into().ok())
                     // 或者尝试从字符串解析
                     .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
             })

@@ -177,9 +177,20 @@ async processScheduler(sid: string) : Promise<Result<null, TauriError>> {
 }
 },
 /**
+ * 扫描缓存目录（仅扫描，不导入）
+ */
+async scanCacheDirectory(path: string) : Promise<Result<ScanResult, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("scan_cache_directory", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 导入缓存目录
  */
-async importCacheDirectory(path: string, options: ImportOptions) : Promise<Result<ImportResult, TauriError>> {
+async importCacheDirectory(path: string, options: ImportOptions) : Promise<Result<string, TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("import_cache_directory", { path, options }) };
 } catch (e) {
@@ -311,10 +322,6 @@ export type DuplicateHandlingStrategy =
 "Ask"
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 /**
- * 导入详情
- */
-export type ImportDetail = { directory_path: string; status: ImportStatus; reason: string | null; cache_item: CacheRecord | null }
-/**
  * 导入错误
  */
 export type ImportError = { directory_path: string; error_message: string; error_type: string }
@@ -346,14 +353,6 @@ export type ImportProgress = { import_id: string; total_directories: number; pro
  * 导入进度状态
  */
 export type ImportProgressStatus = "Scanning" | "Parsing" | "Validating" | "Saving" | "Completed" | "Cancelled" | "Error"
-/**
- * 导入结果
- */
-export type ImportResult = { import_id: string; total_found: number; success_count: number; failure_count: number; skipped_count: number; details: ImportDetail[] }
-/**
- * 导入状态
- */
-export type ImportStatus = "Success" | "Failure" | "Skipped"
 export type InitData = { version: string; hash: string; config: Settings; tasks: Partial<{ [key in string]: TaskView }>; schedulers: Partial<{ [key in string]: SchedulerView }>; queue: Partial<{ [key in QueueType]: string[] }> }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; url?: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; opid?: string | null; rlid?: number | null; index: number }
@@ -371,6 +370,18 @@ export type ProcessError = { name: string; error: string }
 export type QueueEvent = { type: "taskUpdated"; id: string; state: TaskState | null; prepare: TaskPrepare | null; cancelled: boolean | null } | { type: "schedulerUpdated"; id: string; state: SchedulerState | null; queue: QueueType | null; list: string[] | null; cancelled: boolean | null } | { type: "progress"; task: string; subtask: string; content: number; chunk: number } | { type: "queue"; name: QueueType; value: string[] } | { type: "request"; task: string; subtask: string | null; action: RequestAction; endpoint: string } | { type: "error"; task: string; subtask: string | null; message: string; code: number | null }
 export type QueueType = "backlog" | "pending" | "doing" | "complete"
 export type RequestAction = "prepareTask" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent" | "getOpusImages"
+/**
+ * 扫描目录信息
+ */
+export type ScanDirectoryInfo = { path: string; is_valid: boolean; invalid_reason: string | null; preview: ScanPreviewInfo | null }
+/**
+ * 扫描预览信息
+ */
+export type ScanPreviewInfo = { title: string; file_size: number; duration: number }
+/**
+ * 扫描结果
+ */
+export type ScanResult = { root_path: string; total_directories: number; valid_directories: number; invalid_directories: number; estimated_total_size: number; scan_duration: number; directories: ScanDirectoryInfo[] }
 export type SchedulerState = "idle" | "running" | "paused" | "completed" | "failed" | "cancelled"
 export type SchedulerView = { sid: string; ts: number; list: string[]; queue: QueueType; state: SchedulerState }
 export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; drag_search: boolean; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy; sidecar: SettingsSidecar; speed_limit: number }

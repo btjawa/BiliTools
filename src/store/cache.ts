@@ -528,9 +528,21 @@ export const useCacheStore = defineStore('cache', () => {
       activeImportId.value = importId;
       
       // 开始监听进度
-      await cacheImportService.listenImportProgress(importId, (progress) => {
+      const cancelProgress = await cacheImportService.listenImportProgress(importId, (progress) => {
         importProgress.value = progress;
+        
+        // 检查是否完成
+        if (progress.status === 'Completed' || progress.status === 'Error' || progress.status === 'Cancelled') {
+          isImporting.value = false;
+          if (progress.status === 'Completed') {
+            // 刷新缓存列表
+            refreshCacheList();
+          }
+        }
       });
+      
+      // 保存取消函数以便后续使用
+      (window as any).__cacheImportCancelProgress = cancelProgress;
       
       return importId;
     } catch (error) {
@@ -548,6 +560,12 @@ export const useCacheStore = defineStore('cache', () => {
     
     try {
       await cacheImportService.cancelImport(activeImportId.value);
+      
+      // 取消进度监听
+      if ((window as any).__cacheImportCancelProgress) {
+        (window as any).__cacheImportCancelProgress();
+        (window as any).__cacheImportCancelProgress = null;
+      }
       
       // 清理状态
       isImporting.value = false;

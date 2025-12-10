@@ -27,8 +27,8 @@
               />
               <button
                 class="px-4 py-2 bg-(--primary-color) text-white rounded-md hover:opacity-80 transition-opacity"
-                @click="selectDirectory"
                 :disabled="isScanning || isImporting"
+                @click="selectDirectory"
               >
                 <i :class="[$fa.weight, 'fa-folder-open']"></i>
                 <span>{{ $t('cache.import.browse') }}</span>
@@ -212,17 +212,17 @@
       <div class="flex flex-col w-32 gap-1.5 ml-auto pb-6 h-fit max-h-full overflow-y-auto">
         <!-- 主要操作按钮 -->
         <button
-          @click="scanDirectory"
           :disabled="!selectedPath || isScanning || isImporting"
+          @click="scanDirectory"
         >
           <i :class="[$fa.weight, isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass']"></i>
           <span>{{ isScanning ? '扫描中' : '扫描' }}</span>
         </button>
 
         <button
-          @click="startImport"
           :disabled="!scanResult || scanResult.validDirectories === 0 || isImporting"
           class="bg-green-500 text-white hover:bg-green-600"
+          @click="startImport"
         >
           <i :class="[$fa.weight, isImporting ? 'fa-spinner fa-spin' : 'fa-download']"></i>
           <span>{{ isImporting ? '导入中' : '开始导入' }}</span>
@@ -230,16 +230,16 @@
 
         <button
           v-if="isImporting"
-          @click="cancelImport"
           class="bg-red-500 text-white hover:bg-red-600"
+          @click="cancelImport"
         >
           <i :class="[$fa.weight, 'fa-stop']"></i>
           <span>取消</span>
         </button>
 
         <button
-          @click="resetForm"
           :disabled="isScanning || isImporting"
+          @click="resetForm"
         >
           <i :class="[$fa.weight, 'fa-refresh']"></i>
           <span>重置</span>

@@ -228,7 +228,7 @@
         />
 
         <!-- 快速操作按钮 -->
-        <button @click="refreshList" :disabled="cacheStore.isLoading">
+        <button :disabled="cacheStore.isLoading" @click="refreshList">
           <i :class="[$fa.weight, cacheStore.isLoading ? 'fa-spinner fa-spin' : 'fa-rotate-right']"></i>
           <span>刷新</span>
         </button>
