@@ -27,3 +27,5 @@ dist-ssr
 *.sw?
 *.psd
 ._*
+# Kiro
+.kiro/
