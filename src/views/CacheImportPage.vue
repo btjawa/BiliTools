@@ -1,0 +1,423 @@
+<template>
+  <div class="cache-import-page">
+    <h1 class="w-full mt-1.5 mb-auto">
+      <i :class="[$fa.weight, 'fa-download']"></i>
+      <span>{{ $t('cache.import.title') }}</span>
+    </h1>
+    
+    <div class="flex w-full h-full mt-[22px] flex-1 gap-6 min-h-0">
+      <!-- 主要内容区域 -->
+      <div class="flex-1 flex flex-col gap-4">
+        <!-- 目录选择区域 -->
+        <div class="bg-(--block-color) rounded-lg p-6">
+          <h2 class="text-lg font-medium mb-4">
+            <i :class="[$fa.weight, 'fa-folder']"></i>
+            <span>{{ $t('cache.import.selectDirectory') }}</span>
+          </h2>
+          
+          <div class="flex flex-col gap-4">
+            <!-- 目录路径显示 -->
+            <div class="flex gap-3 items-center">
+              <input
+                v-model="selectedPath"
+                type="text"
+                :placeholder="$t('cache.import.directoryPlaceholder')"
+                class="flex-1 px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
+                readonly
+              />
+              <button
+                class="px-4 py-2 bg-(--primary-color) text-white rounded-md hover:opacity-80 transition-opacity"
+                @click="selectDirectory"
+                :disabled="isScanning || isImporting"
+              >
+                <i :class="[$fa.weight, 'fa-folder-open']"></i>
+                <span>{{ $t('cache.import.browse') }}</span>
+              </button>
+            </div>
+            
+            <!-- 路径验证提示 -->
+            <div v-if="selectedPath && !isValidPath" class="text-yellow-500 text-sm flex items-center gap-2">
+              <i :class="[$fa.weight, 'fa-triangle-exclamation']"></i>
+              <span>{{ $t('cache.import.pathWarning') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 导入选项配置 -->
+        <div class="bg-(--block-color) rounded-lg p-6">
+          <h2 class="text-lg font-medium mb-4">
+            <i :class="[$fa.weight, 'fa-gear']"></i>
+            <span>{{ $t('cache.import.options') }}</span>
+          </h2>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="importOptions.skipDuplicates"
+                type="checkbox"
+                class="w-4 h-4"
+              />
+              <span class="text-sm">{{ $t('cache.import.skipDuplicates') }}</span>
+            </label>
+            
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="importOptions.verifyIntegrity"
+                type="checkbox"
+                class="w-4 h-4"
+              />
+              <span class="text-sm">{{ $t('cache.import.verifyIntegrity') }}</span>
+            </label>
+            
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="importOptions.createPlaylist"
+                type="checkbox"
+                class="w-4 h-4"
+              />
+              <span class="text-sm">{{ $t('cache.import.createPlaylist') }}</span>
+            </label>
+            
+            <div class="flex items-center gap-2">
+              <span class="text-sm">{{ $t('cache.import.maxConcurrency') }}:</span>
+              <input
+                v-model.number="importOptions.maxConcurrency"
+                type="number"
+                min="1"
+                max="8"
+                class="w-16 px-2 py-1 bg-(--input-bg) border border-(--border-color) rounded text-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 扫描预览区域 -->
+        <div v-if="scanResult" class="bg-(--block-color) rounded-lg p-6">
+          <h2 class="text-lg font-medium mb-4">
+            <i :class="[$fa.weight, 'fa-magnifying-glass']"></i>
+            <span>{{ $t('cache.import.scanResult') }}</span>
+          </h2>
+          
+          <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-(--primary-color)">{{ scanResult.totalDirectories }}</div>
+              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.totalFound') }}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-green-500">{{ scanResult.validDirectories }}</div>
+              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.validFound') }}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-red-500">{{ scanResult.invalidDirectories }}</div>
+              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.invalidFound') }}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-(--text-color)">{{ formatBytes(scanResult.estimatedTotalSize) }}</div>
+              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.totalSize') }}</div>
+            </div>
+          </div>
+          
+          <!-- 预览列表 -->
+          <div v-if="scanResult.directories.length > 0" class="max-h-64 overflow-y-auto">
+            <div
+              v-for="(dir, index) in scanResult.directories.slice(0, 10)"
+              :key="index"
+              class="flex items-center gap-3 p-3 border-b border-(--border-color) last:border-b-0"
+            >
+              <i
+                :class="[
+                  $fa.weight,
+                  dir.isValid ? 'fa-check-circle text-green-500' : 'fa-times-circle text-red-500'
+                ]"
+              ></i>
+              <div class="flex-1 min-w-0">
+                <div v-if="dir.preview" class="font-medium truncate">{{ dir.preview.title }}</div>
+                <div class="text-sm text-(--desc-color) truncate">{{ dir.path }}</div>
+                <div v-if="!dir.isValid && dir.invalidReason" class="text-sm text-red-500">
+                  {{ dir.invalidReason }}
+                </div>
+              </div>
+              <div v-if="dir.preview" class="text-sm text-(--desc-color)">
+                {{ formatBytes(dir.preview.fileSize) }}
+              </div>
+            </div>
+            
+            <div v-if="scanResult.directories.length > 10" class="text-center py-2 text-sm text-(--desc-color)">
+              {{ $t('cache.import.andMore', [scanResult.directories.length - 10]) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 导入进度区域 -->
+        <div v-if="importProgress" class="bg-(--block-color) rounded-lg p-6">
+          <h2 class="text-lg font-medium mb-4">
+            <i :class="[$fa.weight, 'fa-spinner', { 'fa-spin': isImporting }]"></i>
+            <span>{{ $t('cache.import.progress') }}</span>
+          </h2>
+          
+          <div class="space-y-4">
+            <!-- 总体进度 -->
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>{{ $t('cache.import.overallProgress') }}</span>
+                <span>{{ importProgressPercentage }}%</span>
+              </div>
+              <ProgressBar :progress="importProgressPercentage" />
+            </div>
+            
+            <!-- 当前状态 -->
+            <div class="text-sm">
+              <div class="flex justify-between mb-1">
+                <span>{{ $t('cache.import.currentStatus') }}:</span>
+                <span>{{ $t('cache.import.status.' + importProgress.status) }}</span>
+              </div>
+              <div class="text-(--desc-color) truncate">{{ importProgress.currentDirectory }}</div>
+            </div>
+            
+            <!-- 统计信息 -->
+            <div class="grid grid-cols-3 gap-4 text-center text-sm">
+              <div>
+                <div class="font-medium text-green-500">{{ importProgress.successCount }}</div>
+                <div class="text-(--desc-color)">{{ $t('cache.import.success') }}</div>
+              </div>
+              <div>
+                <div class="font-medium text-red-500">{{ importProgress.failureCount }}</div>
+                <div class="text-(--desc-color)">{{ $t('cache.import.failure') }}</div>
+              </div>
+              <div>
+                <div class="font-medium text-yellow-500">{{ importProgress.skippedCount }}</div>
+                <div class="text-(--desc-color)">{{ $t('cache.import.skipped') }}</div>
+              </div>
+            </div>
+            
+            <!-- 错误列表 -->
+            <div v-if="importProgress.errors.length > 0" class="max-h-32 overflow-y-auto">
+              <div class="text-sm font-medium text-red-500 mb-2">{{ $t('cache.import.errors') }}:</div>
+              <div
+                v-for="(error, index) in importProgress.errors"
+                :key="index"
+                class="text-sm text-red-500 mb-1"
+              >
+                {{ error.message }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 侧边栏操作区域 -->
+      <div class="flex flex-col w-48 gap-4">
+        <!-- 扫描按钮 -->
+        <button
+          class="w-full px-4 py-3 bg-(--primary-color) text-white rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
+          @click="scanDirectory"
+          :disabled="!selectedPath || isScanning || isImporting"
+        >
+          <i :class="[$fa.weight, isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass']"></i>
+          <span>{{ isScanning ? $t('cache.import.scanning') : $t('cache.import.scan') }}</span>
+        </button>
+
+        <!-- 导入按钮 -->
+        <button
+          class="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
+          @click="startImport"
+          :disabled="!scanResult || scanResult.validDirectories === 0 || isImporting"
+        >
+          <i :class="[$fa.weight, isImporting ? 'fa-spinner fa-spin' : 'fa-download']"></i>
+          <span>{{ isImporting ? $t('cache.import.importing') : $t('cache.import.startImport') }}</span>
+        </button>
+
+        <!-- 取消按钮 -->
+        <button
+          v-if="isImporting"
+          class="w-full px-4 py-3 bg-red-500 text-white rounded-lg hover:opacity-80 transition-opacity"
+          @click="cancelImport"
+        >
+          <i :class="[$fa.weight, 'fa-stop']"></i>
+          <span>{{ $t('cache.import.cancel') }}</span>
+        </button>
+
+        <!-- 重置按钮 -->
+        <button
+          class="w-full px-4 py-3 bg-(--desc-color) text-white rounded-lg hover:opacity-80 transition-opacity"
+          @click="resetForm"
+          :disabled="isScanning || isImporting"
+        >
+          <i :class="[$fa.weight, 'fa-refresh']"></i>
+          <span>{{ $t('reset') }}</span>
+        </button>
+
+        <!-- 帮助信息 -->
+        <div class="bg-(--block-color) rounded-lg p-4 text-sm">
+          <h3 class="font-medium mb-2">
+            <i :class="[$fa.weight, 'fa-info-circle']"></i>
+            <span>{{ $t('cache.import.help.title') }}</span>
+          </h3>
+          <ul class="space-y-1 text-(--desc-color)">
+            <li>• {{ $t('cache.import.help.step1') }}</li>
+            <li>• {{ $t('cache.import.help.step2') }}</li>
+            <li>• {{ $t('cache.import.help.step3') }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useCacheStore } from '@/store/cache';
+import { cacheImportService, validateCachePath } from '@/services/cache';
+import { formatBytes } from '@/services/utils';
+import { AppError } from '@/services/error';
+import { ProgressBar } from '@/components';
+import type * as Types from '@/types/cache.d';
+
+// ============================================================================
+// 状态管理
+// ============================================================================
+
+const cacheStore = useCacheStore();
+
+// 表单状态
+const selectedPath = ref<string>('');
+const scanResult = ref<Types.ScanResult | null>(null);
+const isScanning = ref(false);
+
+// 导入选项
+const importOptions = ref<Types.ImportOptions>({
+  skipDuplicates: true,
+  verifyIntegrity: true,
+  deleteAfterImport: false,
+  createPlaylist: false,
+  maxConcurrency: 4,
+});
+
+// ============================================================================
+// 计算属性
+// ============================================================================
+
+const isValidPath = computed(() => {
+  return selectedPath.value ? validateCachePath(selectedPath.value) : true;
+});
+
+const isImporting = computed(() => cacheStore.isImporting);
+const importProgress = computed(() => cacheStore.importProgress);
+const importProgressPercentage = computed(() => cacheStore.importProgressPercentage);
+
+// ============================================================================
+// 方法
+// ============================================================================
+
+/**
+ * 选择缓存目录
+ */
+async function selectDirectory(): Promise<void> {
+  try {
+    const path = await cacheImportService.selectCacheDirectory();
+    if (path) {
+      selectedPath.value = path;
+      // 清除之前的扫描结果
+      scanResult.value = null;
+    }
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 扫描缓存目录
+ */
+async function scanDirectory(): Promise<void> {
+  if (!selectedPath.value) return;
+  
+  try {
+    isScanning.value = true;
+    scanResult.value = await cacheImportService.scanCacheDirectory(selectedPath.value);
+  } catch (error) {
+    new AppError(error).handle();
+    scanResult.value = null;
+  } finally {
+    isScanning.value = false;
+  }
+}
+
+/**
+ * 开始导入
+ */
+async function startImport(): Promise<void> {
+  if (!selectedPath.value || !scanResult.value) return;
+  
+  try {
+    await cacheStore.startImport(selectedPath.value, importOptions.value);
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 取消导入
+ */
+async function cancelImport(): Promise<void> {
+  try {
+    await cacheStore.cancelImport();
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 重置表单
+ */
+function resetForm(): void {
+  selectedPath.value = '';
+  scanResult.value = null;
+  Object.assign(importOptions.value, {
+    skipDuplicates: true,
+    verifyIntegrity: true,
+    deleteAfterImport: false,
+    createPlaylist: false,
+    maxConcurrency: 4,
+  });
+}
+
+// ============================================================================
+// 生命周期
+// ============================================================================
+
+onMounted(() => {
+  // 清除之前的错误状态
+  cacheStore.clearError();
+});
+
+onUnmounted(() => {
+  // 组件卸载时清理状态
+  if (isImporting.value) {
+    cacheStore.cancelImport().catch(console.error);
+  }
+});
+</script>
+
+<style scoped>
+@reference 'tailwindcss';
+
+.cache-import-page {
+  @apply flex flex-col h-full p-4;
+}
+
+/* 自定义滚动条样式 */
+.max-h-64::-webkit-scrollbar,
+.max-h-32::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.max-h-64::-webkit-scrollbar-track,
+.max-h-32::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+.max-h-64::-webkit-scrollbar-thumb,
+.max-h-32::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded hover:bg-gray-500;
+}
+</style>

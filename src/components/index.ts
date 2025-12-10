@@ -9,3 +9,6 @@ export { default as ProgressBar } from './ProgressBar.vue';
 export { default as Image } from './Image.vue';
 export { default as LinkDropper } from './LinkDropper.vue';
 export { default as ComponentsWrapper } from './ComponentsWrapper.vue';
+
+// CachePage components
+export * from './CachePage';

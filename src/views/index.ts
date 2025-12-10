@@ -4,3 +4,5 @@ export { default as HistoryPage } from './HistoryPage.vue';
 export { default as UserPage } from './UserPage.vue';
 export { default as SettingsPage } from './SettingsPage.vue';
 export { default as InfoPage } from './InfoPage.vue';
+export { default as CacheImportPage } from './CacheImportPage.vue';
+export { default as CacheListPage } from './CacheListPage.vue';

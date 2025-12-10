@@ -42,6 +42,7 @@ const list = computed(() => [
   { path: '/', icon: 'fa-magnifying-glass' },
   { path: '/history-page', icon: 'fa-clock' },
   { path: '/down-page', icon: 'fa-download' },
+  { path: '/cache-list', icon: 'fa-database' },
   { path: 'theme', icon: 'fa-solid fa-moon-over-sun' },
   { path: '/settings-page', icon: 'fa-gear' },
   { path: '/info-page', icon: 'fa-circle-info' },

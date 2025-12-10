@@ -388,5 +388,122 @@
     "star": "觉得好用的话，在 GitHub 给这个项目点个 Star 吧！",
     "data": "该应用用于持久化的所有数据均仅明文存储于用户本地",
     "others": "因使用本项目而产生的任何后果均由用户个人承担，与开发者无关，概不负责。\n“哔哩哔哩” 及 “Bilibili” 名称、LOGO及相关图形是上海幻电信息科技有限公司的注册商标或商标。\n本项目与哔哩哔哩及其关联公司无任何关联、合作、授权或背书等关系。"
+  },
+  "cache": {
+    "import": {
+      "title": "缓存导入",
+      "selectDirectory": "选择缓存目录",
+      "directoryPlaceholder": "请选择B站客户端缓存根目录",
+      "browse": "浏览",
+      "pathWarning": "所选路径可能不是有效的B站缓存目录",
+      "options": "导入选项",
+      "skipDuplicates": "跳过重复文件",
+      "verifyIntegrity": "验证文件完整性",
+      "createPlaylist": "自动创建播放列表",
+      "maxConcurrency": "最大并发数",
+      "scanResult": "扫描结果",
+      "totalFound": "发现总数",
+      "validFound": "有效数量",
+      "invalidFound": "无效数量",
+      "totalSize": "总大小",
+      "andMore": "还有 {0} 个...",
+      "progress": "导入进度",
+      "overallProgress": "总体进度",
+      "currentStatus": "当前状态",
+      "currentDirectory": "当前目录",
+      "success": "成功",
+      "failure": "失败",
+      "skipped": "跳过",
+      "errors": "错误",
+      "scanning": "扫描中",
+      "scan": "扫描",
+      "importing": "导入中",
+      "startImport": "开始导入",
+      "cancel": "取消",
+      "help": {
+        "title": "使用帮助",
+        "step1": "选择B站缓存根目录",
+        "step2": "扫描并预览缓存文件",
+        "step3": "配置选项并开始导入"
+      },
+      "status": {
+        "scanning": "扫描目录中",
+        "parsing": "解析文件中",
+        "validating": "验证完整性中",
+        "saving": "保存到数据库中",
+        "completed": "导入完成",
+        "cancelled": "已取消",
+        "error": "发生错误"
+      },
+      "errorType": {
+        "directory_not_found": "目录不存在",
+        "invalid_json_format": "JSON格式无效",
+        "missing_required_files": "缺少必需文件",
+        "file_size_mismatch": "文件大小不匹配",
+        "database_error": "数据库错误",
+        "permission_denied": "权限不足",
+        "unknown_error": "未知错误"
+      },
+      "progressDialog": {
+        "title": "导入进度"
+      },
+      "estimatedTime": "预计剩余时间",
+      "statistics": "统计信息",
+      "totalProcessed": "总处理数",
+      "successCount": "成功数量",
+      "failureCount": "失败数量",
+      "skippedCount": "跳过数量",
+      "totalTime": "总耗时",
+      "showMoreErrors": "显示更多错误 ({0})",
+      "showLessErrors": "收起错误",
+      "viewResults": "查看结果",
+      "close": "关闭"
+    },
+    "list": {
+      "title": "缓存管理",
+      "searchPlaceholder": "搜索标题或UP主...",
+      "allStatus": "全部状态",
+      "allUploaders": "全部UP主",
+      "clearFilters": "清除筛选",
+      "selectedCount": "已选择 {0} 项",
+      "clearSelection": "清除选择",
+      "batchDelete": "批量删除",
+      "noResults": "没有找到匹配的缓存",
+      "empty": "还没有导入任何缓存",
+      "startImport": "开始导入",
+      "loading": "加载中...",
+      "pagination": {
+        "info": "显示第 {0}-{1} 项，共 {2} 项"
+      },
+      "statistics": "统计信息",
+      "total": "总数",
+      "totalSize": "总大小",
+      "importMore": "导入更多",
+      "refresh": "刷新",
+      "export": "导出列表",
+      "selection": "选择操作",
+      "selectAll": "全选当前页",
+      "unselectAll": "取消全选",
+      "sort": {
+        "importTimeDesc": "导入时间 (新到旧)",
+        "importTimeAsc": "导入时间 (旧到新)",
+        "titleAsc": "标题 (A-Z)",
+        "titleDesc": "标题 (Z-A)",
+        "fileSizeDesc": "文件大小 (大到小)",
+        "fileSizeAsc": "文件大小 (小到大)",
+        "durationDesc": "时长 (长到短)",
+        "durationAsc": "时长 (短到长)"
+      }
+    },
+    "status": {
+      "available": "可用",
+      "unavailable": "不可用",
+      "incomplete": "不完整"
+    },
+    "card": {
+      "play": "播放",
+      "openFolder": "打开文件夹",
+      "delete": "删除"
+    }
   }
 }

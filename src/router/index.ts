@@ -6,6 +6,8 @@ import {
   DownPage,
   SettingsPage,
   InfoPage,
+  CacheImportPage,
+  CacheListPage,
 } from '@/views';
 
 export const routes = [
@@ -38,6 +40,16 @@ export const routes = [
     path: '/info-page',
     name: 'infoPage',
     component: InfoPage,
+  },
+  {
+    path: '/cache-import',
+    name: 'cacheImportPage',
+    component: CacheImportPage,
+  },
+  {
+    path: '/cache-list',
+    name: 'cacheListPage',
+    component: CacheListPage,
   },
 ] as const;
 
