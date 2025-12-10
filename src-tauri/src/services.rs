@@ -1,4 +1,5 @@
 pub mod aria2c;
+pub mod cache;
 pub mod ffmpeg;
 pub mod login;
 pub mod queue;
