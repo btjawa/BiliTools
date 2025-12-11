@@ -342,6 +342,17 @@ async getGroupStatistics() : Promise<Result<GroupStatistics, TauriError>> {
 }
 },
 /**
+ * 获取所有组的展开/折叠状态
+ */
+async getGroupStates() : Promise<Result<CacheGroupState[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_group_states") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 根据组ID获取组内视频
  */
 async getVideosByGroupId(groupId: string) : Promise<Result<CacheRecord[], TauriError>> {
@@ -426,6 +437,7 @@ export type BatchOperationResult = { success_count: number; deleted_videos: numb
  * 缓存视频组
  */
 export type CacheGroup = { group_id: string; title: string; cover_url: string; uname: string; video_count: number; total_duration: number; total_file_size: number; latest_download_time: number; videos: CacheRecord[]; is_expanded: boolean }
+export type CacheGroupState = { group_id: string; is_expanded: boolean; created_at: number; updated_at: number }
 export type CacheKey = "log" | "temp" | "webview" | "database"
 export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; title: string; uname: string; cover_url: string; duration: number; file_size: number; cache_path: string; download_time: number; import_time: number; status: string; source: string; group_id: string | null }
 /**

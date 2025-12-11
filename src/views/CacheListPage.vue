@@ -647,9 +647,9 @@ onMounted(async () => {
 // 监听路由变化，刷新数据
 watch(
   () => router.currentRoute.value.path,
-  (newPath) => {
+  async (newPath) => {
     if (newPath === '/cache-list') {
-      loadCacheList();
+      await loadCacheList();
     }
   },
 );

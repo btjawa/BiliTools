@@ -438,7 +438,14 @@
         "saving": "データベースに保存中",
         "completed": "インポート完了",
         "cancelled": "キャンセル済み",
-        "error": "エラーが発生しました"
+        "error": "エラーが発生しました",
+        "Scanning": "ディレクトリをスキャン中",
+        "Parsing": "ファイルを解析中",
+        "Validating": "整合性を検証中",
+        "Saving": "データベースに保存中",
+        "Completed": "インポート完了",
+        "Cancelled": "キャンセル済み",
+        "Error": "エラーが発生しました"
       },
       "errorType": {
         "directory_not_found": "ディレクトリが見つかりません",

@@ -63,6 +63,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             toggle_group_expansion,
             set_group_expansion,
             get_group_statistics,
+            get_group_states,
             get_videos_by_group_id,
             delete_group,
             cleanup_orphaned_group_states,

@@ -438,7 +438,14 @@
         "saving": "儲存至資料庫中",
         "completed": "匯入完成",
         "cancelled": "已取消",
-        "error": "發生錯誤"
+        "error": "發生錯誤",
+        "Scanning": "掃描目錄中",
+        "Parsing": "解析檔案中",
+        "Validating": "驗證完整性中",
+        "Saving": "儲存至資料庫中",
+        "Completed": "匯入完成",
+        "Cancelled": "已取消",
+        "Error": "發生錯誤"
       },
       "errorType": {
         "directory_not_found": "目錄不存在",

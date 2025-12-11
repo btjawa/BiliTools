@@ -636,8 +636,8 @@ export interface CacheGroupRaw {
 
 /** 后端显示项原始格式 */
 export type DisplayItemRaw =
-  | { SingleVideo: CacheRecordRaw }
-  | { VideoGroup: CacheGroupRaw };
+  | { type: 'single_video'; video: CacheRecordRaw }
+  | { type: 'video_group'; group: CacheGroupRaw };
 
 /** 后端组状态原始格式 */
 export interface GroupStateRaw {

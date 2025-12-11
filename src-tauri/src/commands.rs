@@ -33,6 +33,7 @@ pub use crate::{
         self,
         config::{self, CacheKey},
         cookies, db, queue as queues, schedulers, tasks,
+        cache_group_states,
     },
 };
 
@@ -508,6 +509,14 @@ pub async fn get_group_statistics() -> TauriResult<GroupStatistics> {
         .await?;
     let statistics = group_service.calculate_group_statistics(&display_items);
     Ok(statistics)
+}
+
+/// 获取所有组的展开/折叠状态
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_group_states() -> TauriResult<Vec<cache_group_states::CacheGroupState>> {
+    let states = cache_group_states::get_all_states().await?;
+    Ok(states)
 }
 
 /// 根据组ID获取组内视频

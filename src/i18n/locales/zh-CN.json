@@ -438,7 +438,14 @@
         "saving": "保存到数据库中",
         "completed": "导入完成",
         "cancelled": "已取消",
-        "error": "发生错误"
+        "error": "发生错误",
+        "Scanning": "扫描目录中",
+        "Parsing": "解析文件中",
+        "Validating": "验证完整性中",
+        "Saving": "保存到数据库中",
+        "Completed": "导入完成",
+        "Cancelled": "已取消",
+        "Error": "发生错误"
       },
       "errorType": {
         "directory_not_found": "目录不存在",

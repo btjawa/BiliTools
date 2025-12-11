@@ -438,7 +438,14 @@
         "saving": "Saving to database",
         "completed": "Import completed",
         "cancelled": "Cancelled",
-        "error": "Error occurred"
+        "error": "Error occurred",
+        "Scanning": "Scanning directories",
+        "Parsing": "Parsing files",
+        "Validating": "Validating integrity",
+        "Saving": "Saving to database",
+        "Completed": "Import completed",
+        "Cancelled": "Cancelled",
+        "Error": "Error occurred"
       },
       "errorType": {
         "directory_not_found": "Directory not found",

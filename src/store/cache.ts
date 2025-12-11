@@ -537,19 +537,24 @@ export const useCacheStore = defineStore('cache', () => {
       );
 
       // 转换后端数据格式
-      displayItems.value = items.map((item) => {
-        if ('SingleVideo' in item) {
-          return {
-            type: 'video' as const,
-            data: convertCacheRecordFromRaw(item.SingleVideo),
-          };
-        } else {
-          return {
-            type: 'group' as const,
-            data: convertCacheGroupFromRaw(item.VideoGroup),
-          };
-        }
-      });
+      displayItems.value = items
+        .map((item) => {
+          if (item.type === 'single_video' && item.video) {
+            return {
+              type: 'video' as const,
+              data: convertCacheRecordFromRaw(item.video),
+            };
+          } else if (item.type === 'video_group' && item.group) {
+            return {
+              type: 'group' as const,
+              data: convertCacheGroupFromRaw(item.group),
+            };
+          } else {
+            console.warn('无效的显示项数据:', item);
+            return null;
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
 
       // 更新缓存项列表（向后兼容）
       cacheItems.value = displayItems.value
@@ -589,6 +594,12 @@ export const useCacheStore = defineStore('cache', () => {
       });
     } catch (error) {
       console.error('加载组状态失败:', error);
+      // 如果加载失败，使用默认状态
+      displayItems.value.forEach((item) => {
+        if (item.type === 'group') {
+          item.data.isExpanded = groupManagerConfig.value.defaultExpanded;
+        }
+      });
     }
   }
 
@@ -614,9 +625,9 @@ export const useCacheStore = defineStore('cache', () => {
       }
 
       // 持久化到后端
-      await invoke('update_group_expansion_state', {
-        groupId,
-        isExpanded: newState,
+      await invoke('set_group_expansion', {
+        group_id: groupId,
+        is_expanded: newState,
       });
     } catch (error) {
       lastError.value =
@@ -1256,21 +1267,25 @@ export const useCacheStore = defineStore('cache', () => {
   function convertCacheRecordFromRaw(
     raw: Types.CacheRecordRaw,
   ): Types.CacheItem {
+    if (!raw) {
+      throw new Error('缓存记录数据为空');
+    }
+
     return {
-      id: raw.id,
-      bvid: raw.bvid,
-      aid: raw.aid,
-      cid: raw.cid,
-      title: raw.title,
-      uname: raw.uname,
-      coverUrl: raw.cover_url,
-      duration: raw.duration,
-      fileSize: raw.file_size,
-      cachePath: raw.cache_path,
-      downloadTime: new Date(raw.download_time * 1000),
-      importTime: new Date(raw.import_time * 1000),
-      status: raw.status as Types.CacheStatus,
-      groupId: raw.group_id,
+      id: raw.id || '',
+      bvid: raw.bvid || '',
+      aid: raw.aid || 0,
+      cid: raw.cid || 0,
+      title: raw.title || '未知标题',
+      uname: raw.uname || '未知用户',
+      coverUrl: raw.cover_url || '',
+      duration: raw.duration || 0,
+      fileSize: raw.file_size || 0,
+      cachePath: raw.cache_path || '',
+      downloadTime: new Date((raw.download_time || 0) * 1000),
+      importTime: new Date((raw.import_time || 0) * 1000),
+      status: (raw.status as Types.CacheStatus) || 'available',
+      groupId: raw.group_id || undefined,
     };
   }
 
@@ -1280,17 +1295,25 @@ export const useCacheStore = defineStore('cache', () => {
   function convertCacheGroupFromRaw(
     raw: Types.CacheGroupRaw,
   ): Types.CacheGroup {
+    if (!raw) {
+      throw new Error('缓存组数据为空');
+    }
+    
+    if (!raw.group_id) {
+      throw new Error('缓存组缺少 group_id 字段');
+    }
+
     return {
       groupId: raw.group_id,
-      title: raw.title,
-      coverUrl: raw.cover_url,
-      uname: raw.uname,
-      videoCount: raw.video_count,
-      totalDuration: raw.total_duration,
-      totalFileSize: raw.total_file_size,
-      latestDownloadTime: new Date(raw.latest_download_time * 1000),
-      videos: raw.videos.map(convertCacheRecordFromRaw),
-      isExpanded: raw.is_expanded,
+      title: raw.title || '未知标题',
+      coverUrl: raw.cover_url || '',
+      uname: raw.uname || '未知用户',
+      videoCount: raw.video_count || 0,
+      totalDuration: raw.total_duration || 0,
+      totalFileSize: raw.total_file_size || 0,
+      latestDownloadTime: new Date((raw.latest_download_time || 0) * 1000),
+      videos: (raw.videos || []).map(convertCacheRecordFromRaw),
+      isExpanded: raw.is_expanded || false,
     };
   }
 
