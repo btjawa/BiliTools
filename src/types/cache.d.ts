@@ -1,6 +1,6 @@
 /**
  * B站缓存导入功能相关类型定义
- * 
+ *
  * 该文件定义了缓存导入、管理和展示相关的所有TypeScript接口
  * 包括缓存项目、导入进度、导入结果等核心数据结构
  */
@@ -47,10 +47,10 @@ export interface CacheItem {
 /**
  * 缓存状态枚举
  */
-export type CacheStatus = 
-  | 'available'    // 可用 - 文件完整且可播放
-  | 'unavailable'  // 不可用 - 文件已被移动或删除
-  | 'incomplete';  // 不完整 - 文件损坏或缺失
+export type CacheStatus =
+  | 'available' // 可用 - 文件完整且可播放
+  | 'unavailable' // 不可用 - 文件已被移动或删除
+  | 'incomplete'; // 不完整 - 文件损坏或缺失
 
 /**
  * 缓存视频组信息
@@ -83,7 +83,7 @@ export interface CacheGroup {
  * 显示项联合类型
  * 表示缓存列表中可以显示的项目类型：单个视频或视频组
  */
-export type DisplayItem = 
+export type DisplayItem =
   | { type: 'video'; data: CacheItem }
   | { type: 'group'; data: CacheGroup };
 
@@ -136,14 +136,14 @@ export interface ImportProgress {
 /**
  * 导入状态枚举
  */
-export type ImportStatus = 
-  | 'Scanning'   // 扫描目录中
-  | 'Parsing'    // 解析JSON文件中
+export type ImportStatus =
+  | 'Scanning' // 扫描目录中
+  | 'Parsing' // 解析JSON文件中
   | 'Validating' // 验证文件完整性中
-  | 'Saving'     // 保存到数据库中
-  | 'Completed'  // 导入完成
-  | 'Cancelled'  // 用户取消
-  | 'Error';     // 发生错误
+  | 'Saving' // 保存到数据库中
+  | 'Completed' // 导入完成
+  | 'Cancelled' // 用户取消
+  | 'Error'; // 发生错误
 
 /**
  * 导入错误信息
@@ -162,14 +162,14 @@ export interface ImportError {
 /**
  * 导入错误类型枚举
  */
-export type ImportErrorType = 
-  | 'directory_not_found'    // 目录不存在
-  | 'invalid_json_format'    // JSON格式无效
+export type ImportErrorType =
+  | 'directory_not_found' // 目录不存在
+  | 'invalid_json_format' // JSON格式无效
   | 'missing_required_files' // 缺少必需文件
-  | 'file_size_mismatch'     // 文件大小不匹配
-  | 'database_error'         // 数据库操作失败
-  | 'permission_denied'      // 权限不足
-  | 'unknown_error';         // 未知错误
+  | 'file_size_mismatch' // 文件大小不匹配
+  | 'database_error' // 数据库操作失败
+  | 'permission_denied' // 权限不足
+  | 'unknown_error'; // 未知错误
 
 /**
  * 导入结果
@@ -213,9 +213,9 @@ export interface ImportDetail {
 /**
  * 导入详情状态枚举
  */
-export type ImportDetailStatus = 
-  | 'success'  // 成功导入
-  | 'failure'  // 导入失败
+export type ImportDetailStatus =
+  | 'success' // 成功导入
+  | 'failure' // 导入失败
   | 'skipped'; // 跳过处理
 
 // ============================================================================
@@ -225,10 +225,10 @@ export type ImportDetailStatus =
 /**
  * 重复处理策略
  */
-export type DuplicateHandlingStrategy = 
-  | 'skip'      // 跳过重复项
+export type DuplicateHandlingStrategy =
+  | 'skip' // 跳过重复项
   | 'overwrite' // 覆盖现有记录
-  | 'ask';      // 询问用户（暂不实现，预留）
+  | 'ask'; // 询问用户（暂不实现，预留）
 
 /**
  * 导入选项配置
@@ -383,11 +383,11 @@ export interface SortOption {
 /**
  * 可排序的字段
  */
-export type SortField = 
-  | 'title'        // 按标题排序
-  | 'uname'        // 按UP主排序
-  | 'duration'     // 按时长排序
-  | 'fileSize'     // 按文件大小排序
+export type SortField =
+  | 'title' // 按标题排序
+  | 'uname' // 按UP主排序
+  | 'duration' // 按时长排序
+  | 'fileSize' // 按文件大小排序
   | 'downloadTime' // 按下载时间排序
   | 'completionTime'; // 按下载完成时间排序
 
@@ -493,14 +493,14 @@ export interface CacheStatistics {
 /**
  * 缓存相关事件类型
  */
-export type CacheEventType = 
-  | 'import_started'    // 导入开始
-  | 'import_progress'   // 导入进度更新
-  | 'import_completed'  // 导入完成
-  | 'import_cancelled'  // 导入取消
-  | 'import_error'      // 导入错误
-  | 'cache_deleted'     // 缓存删除
-  | 'cache_updated';    // 缓存更新
+export type CacheEventType =
+  | 'import_started' // 导入开始
+  | 'import_progress' // 导入进度更新
+  | 'import_completed' // 导入完成
+  | 'import_cancelled' // 导入取消
+  | 'import_error' // 导入错误
+  | 'cache_deleted' // 缓存删除
+  | 'cache_updated'; // 缓存更新
 
 /**
  * 缓存事件数据
@@ -521,16 +521,16 @@ export interface CacheEvent {
 /**
  * 缓存操作类型
  */
-export type CacheAction = 
-  | 'play'         // 播放
-  | 'open_folder'  // 打开文件夹
-  | 'delete'       // 删除
-  | 'export'       // 导出
-  | 'refresh'      // 刷新状态
-  | 'expand'       // 展开组
-  | 'collapse'     // 折叠组
+export type CacheAction =
+  | 'play' // 播放
+  | 'open_folder' // 打开文件夹
+  | 'delete' // 删除
+  | 'export' // 导出
+  | 'refresh' // 刷新状态
+  | 'expand' // 展开组
+  | 'collapse' // 折叠组
   | 'select_group' // 选择整个组
-  | 'play_group';  // 播放组内所有视频
+  | 'play_group'; // 播放组内所有视频
 
 /**
  * 批量操作选项
@@ -635,7 +635,7 @@ export interface CacheGroupRaw {
 }
 
 /** 后端显示项原始格式 */
-export type DisplayItemRaw = 
+export type DisplayItemRaw =
   | { SingleVideo: CacheRecordRaw }
   | { VideoGroup: CacheGroupRaw };
 

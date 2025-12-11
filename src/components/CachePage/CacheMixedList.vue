@@ -3,7 +3,9 @@
     <!-- 空状态 -->
     <Empty
       v-if="displayItems.length === 0"
-      :text="hasActiveFilters ? $t('cache.list.noResults') : $t('cache.list.empty')"
+      :text="
+        hasActiveFilters ? $t('cache.list.noResults') : $t('cache.list.empty')
+      "
     >
       <template v-if="!hasActiveFilters" #action>
         <button
@@ -15,7 +17,7 @@
         </button>
       </template>
     </Empty>
-    
+
     <!-- 混合列表 -->
     <div v-else class="flex flex-col gap-1 h-full overflow-y-auto">
       <template v-for="item in displayItems" :key="getItemKey(item)">
@@ -29,7 +31,7 @@
           @open-folder="$emit('openVideoFolder', item.data)"
           @delete="$emit('deleteVideo', item.data)"
         />
-        
+
         <!-- 视频组项 -->
         <CacheGroupCard
           v-else-if="item.type === 'group'"
@@ -75,13 +77,13 @@ interface Props {
 interface Emits {
   // 导航事件
   (e: 'goToImport'): void;
-  
+
   // 视频相关事件
   (e: 'selectVideo', videoId: string): void;
   (e: 'playVideo', video: Types.CacheItem): void;
   (e: 'openVideoFolder', video: Types.CacheItem): void;
   (e: 'deleteVideo', video: Types.CacheItem): void;
-  
+
   // 组相关事件
   (e: 'selectGroup', groupId: string): void;
   (e: 'toggleExpand', groupId: string): void;
@@ -106,30 +108,35 @@ defineEmits<Emits>();
  */
 const displayItems = computed(() => {
   let items = [...props.items];
-  
+
   // 应用搜索筛选
   if (props.searchQuery && props.searchQuery.trim()) {
     const query = props.searchQuery.toLowerCase().trim();
-    items = items.filter(item => {
+    items = items.filter((item) => {
       if (item.type === 'video') {
         // 单个视频：搜索标题和UP主
         const video = item.data;
-        return video.title.toLowerCase().includes(query) ||
-               video.uname.toLowerCase().includes(query);
+        return (
+          video.title.toLowerCase().includes(query) ||
+          video.uname.toLowerCase().includes(query)
+        );
       } else if (item.type === 'group') {
         // 视频组：搜索组标题、UP主和组内视频标题
         const group = item.data;
-        return group.title.toLowerCase().includes(query) ||
-               group.uname.toLowerCase().includes(query) ||
-               group.videos.some(video => 
-                 video.title.toLowerCase().includes(query) ||
-                 video.uname.toLowerCase().includes(query)
-               );
+        return (
+          group.title.toLowerCase().includes(query) ||
+          group.uname.toLowerCase().includes(query) ||
+          group.videos.some(
+            (video) =>
+              video.title.toLowerCase().includes(query) ||
+              video.uname.toLowerCase().includes(query),
+          )
+        );
       }
       return false;
     });
   }
-  
+
   return items;
 });
 

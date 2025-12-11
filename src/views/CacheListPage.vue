@@ -4,7 +4,7 @@
       <i :class="[$fa.weight, 'fa-database']"></i>
       <span>{{ $t('cache.list.title') }}</span>
     </h1>
-    
+
     <div class="flex w-full h-full mt-[22px] flex-1 gap-3 min-h-0">
       <!-- 主要内容区域 -->
       <div class="flex-1 flex flex-col gap-4 min-w-0">
@@ -14,7 +14,10 @@
           <div class="flex gap-3 items-center">
             <!-- 搜索框 -->
             <div class="flex-1 relative">
-              <i :class="[$fa.weight, 'fa-magnifying-glass']" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-(--desc-color)"></i>
+              <i
+                :class="[$fa.weight, 'fa-magnifying-glass']"
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-(--desc-color)"
+              ></i>
               <input
                 v-model="searchKeyword"
                 type="text"
@@ -23,25 +26,40 @@
                 @input="onSearchInput"
               />
             </div>
-            
+
             <!-- 快速排序 -->
             <select
               v-model="selectedSort"
               class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
               @change="applySort"
             >
-              <option value="completionTime-desc">{{ $t('cache.list.sort.completionTimeDesc') }}</option>
-              <option value="completionTime-asc">{{ $t('cache.list.sort.completionTimeAsc') }}</option>
-              <option value="title-asc">{{ $t('cache.list.sort.titleAsc') }}</option>
-              <option value="title-desc">{{ $t('cache.list.sort.titleDesc') }}</option>
-              <option value="fileSize-desc">{{ $t('cache.list.sort.fileSizeDesc') }}</option>
-              <option value="fileSize-asc">{{ $t('cache.list.sort.fileSizeAsc') }}</option>
+              <option value="completionTime-desc">
+                {{ $t('cache.list.sort.completionTimeDesc') }}
+              </option>
+              <option value="completionTime-asc">
+                {{ $t('cache.list.sort.completionTimeAsc') }}
+              </option>
+              <option value="title-asc">
+                {{ $t('cache.list.sort.titleAsc') }}
+              </option>
+              <option value="title-desc">
+                {{ $t('cache.list.sort.titleDesc') }}
+              </option>
+              <option value="fileSize-desc">
+                {{ $t('cache.list.sort.fileSizeDesc') }}
+              </option>
+              <option value="fileSize-asc">
+                {{ $t('cache.list.sort.fileSizeAsc') }}
+              </option>
             </select>
           </div>
 
           <!-- 高级筛选（可折叠） -->
           <Transition name="slide-down">
-            <div v-if="showAdvancedFilters" class="mt-3 pt-3 border-t border-(--border-color)">
+            <div
+              v-if="showAdvancedFilters"
+              class="mt-3 pt-3 border-t border-(--border-color)"
+            >
               <div class="flex gap-3 items-center">
                 <!-- UP主筛选 -->
                 <select
@@ -59,7 +77,7 @@
                     {{ uploader }}
                   </option>
                 </select>
-                
+
                 <!-- 清除筛选 -->
                 <button
                   v-if="hasActiveFilters"
@@ -75,11 +93,18 @@
         </div>
 
         <!-- 批量操作栏 -->
-        <div v-if="cacheStore.hasSelectedItems" class="bg-(--block-color) rounded-lg p-4">
+        <div
+          v-if="cacheStore.hasSelectedItems"
+          class="bg-(--block-color) rounded-lg p-4"
+        >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <span class="text-sm">
-                {{ $t('cache.list.selectedCount', [cacheStore.selectedItemsCount]) }}
+                {{
+                  $t('cache.list.selectedCount', [
+                    cacheStore.selectedItemsCount,
+                  ])
+                }}
               </span>
               <button
                 class="text-sm text-(--primary-color) hover:underline"
@@ -88,7 +113,7 @@
                 {{ $t('cache.list.clearSelection') }}
               </button>
             </div>
-            
+
             <div class="flex gap-2">
               <button
                 class="px-3 py-1 text-sm bg-red-500 text-white rounded hover:opacity-80 transition-opacity"
@@ -108,7 +133,11 @@
               <!-- 空状态 -->
               <Empty
                 v-if="cacheStore.paginatedCacheItems.length === 0"
-                :text="hasActiveFilters ? $t('cache.list.noResults') : $t('cache.list.empty')"
+                :text="
+                  hasActiveFilters
+                    ? $t('cache.list.noResults')
+                    : $t('cache.list.empty')
+                "
               >
                 <template v-if="!hasActiveFilters" #action>
                   <button
@@ -120,7 +149,7 @@
                   </button>
                 </template>
               </Empty>
-              
+
               <!-- 缓存列表 -->
               <div v-else class="flex flex-col gap-1 h-full overflow-y-auto">
                 <CacheItemCard
@@ -136,27 +165,48 @@
               </div>
             </div>
           </Transition>
-          
+
           <!-- 加载状态 -->
-          <div v-if="cacheStore.isLoading" class="flex items-center justify-center h-full">
+          <div
+            v-if="cacheStore.isLoading"
+            class="flex items-center justify-center h-full"
+          >
             <div class="text-center">
-              <i :class="[$fa.weight, 'fa-spinner fa-spin text-2xl text-(--primary-color)']"></i>
-              <div class="mt-2 text-sm text-(--desc-color)">{{ $t('cache.list.loading') }}</div>
+              <i
+                :class="[
+                  $fa.weight,
+                  'fa-spinner fa-spin text-2xl text-(--primary-color)',
+                ]"
+              ></i>
+              <div class="mt-2 text-sm text-(--desc-color)">
+                {{ $t('cache.list.loading') }}
+              </div>
             </div>
           </div>
         </div>
 
         <!-- 分页 -->
-        <div v-if="cacheStore.pagination.totalPages > 1" class="bg-(--block-color) rounded-lg p-4">
+        <div
+          v-if="cacheStore.pagination.totalPages > 1"
+          class="bg-(--block-color) rounded-lg p-4"
+        >
           <div class="flex items-center justify-between">
             <div class="text-sm text-(--desc-color)">
-              {{ $t('cache.list.pagination.info', [
-                (cacheStore.pagination.currentPage - 1) * cacheStore.pagination.pageSize + 1,
-                Math.min(cacheStore.pagination.currentPage * cacheStore.pagination.pageSize, cacheStore.pagination.totalCount),
-                cacheStore.pagination.totalCount
-              ]) }}
+              {{
+                $t('cache.list.pagination.info', [
+                  (cacheStore.pagination.currentPage - 1) *
+                    cacheStore.pagination.pageSize +
+                    1,
+                  Math.min(
+                    cacheStore.pagination.currentPage *
+                      cacheStore.pagination.pageSize,
+                    cacheStore.pagination.totalCount,
+                  ),
+                  cacheStore.pagination.totalCount,
+                ])
+              }}
             </div>
-            
+
             <div class="flex items-center gap-2">
               <button
                 class="px-3 py-1 text-sm border border-(--border-color) rounded hover:bg-(--hover-color) transition-colors disabled:opacity-50"
@@ -165,14 +215,18 @@
               >
                 <i :class="[$fa.weight, 'fa-chevron-left']"></i>
               </button>
-              
+
               <span class="px-3 py-1 text-sm">
-                {{ cacheStore.pagination.currentPage }} / {{ cacheStore.pagination.totalPages }}
+                {{ cacheStore.pagination.currentPage }} /
+                {{ cacheStore.pagination.totalPages }}
               </span>
-              
+
               <button
                 class="px-3 py-1 text-sm border border-(--border-color) rounded hover:bg-(--hover-color) transition-colors disabled:opacity-50"
-                :disabled="cacheStore.pagination.currentPage === cacheStore.pagination.totalPages"
+                :disabled="
+                  cacheStore.pagination.currentPage ===
+                  cacheStore.pagination.totalPages
+                "
                 @click="changePage(cacheStore.pagination.currentPage + 1)"
               >
                 <i :class="[$fa.weight, 'fa-chevron-right']"></i>
@@ -183,7 +237,9 @@
       </div>
 
       <!-- 侧边栏 -->
-      <div class="flex flex-col w-32 gap-1.5 ml-auto pb-6 h-fit max-h-full overflow-y-auto">
+      <div
+        class="flex flex-col w-32 gap-1.5 ml-auto pb-6 h-fit max-h-full overflow-y-auto"
+      >
         <!-- 状态筛选标签 -->
         <div class="tab">
           <button
@@ -218,10 +274,10 @@
 
         <!-- 页数输入 -->
         <span class="text-sm">{{ $t('cache.list.page') }}</span>
-        <input 
-          v-model="pageInput" 
-          type="number" 
-          :min="1" 
+        <input
+          v-model="pageInput"
+          type="number"
+          :min="1"
           :max="cacheStore.pagination.totalPages"
           @input="handlePageInput"
           @keydown.enter="jumpToPage"
@@ -229,7 +285,12 @@
 
         <!-- 快速操作按钮 -->
         <button :disabled="cacheStore.isLoading" @click="refreshList">
-          <i :class="[$fa.weight, cacheStore.isLoading ? 'fa-spinner fa-spin' : 'fa-rotate-right']"></i>
+          <i
+            :class="[
+              $fa.weight,
+              cacheStore.isLoading ? 'fa-spinner fa-spin' : 'fa-rotate-right',
+            ]"
+          ></i>
           <span>刷新</span>
         </button>
 
@@ -256,34 +317,47 @@
           </div>
           <div class="flex justify-between">
             <span class="text-green-500">可用:</span>
-            <span class="font-medium text-green-500">{{ cacheStore.availableCacheCount }}</span>
+            <span class="font-medium text-green-500">{{
+              cacheStore.availableCacheCount
+            }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-red-500">不可用:</span>
-            <span class="font-medium text-red-500">{{ cacheStore.unavailableCacheCount }}</span>
+            <span class="font-medium text-red-500">{{
+              cacheStore.unavailableCacheCount
+            }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-yellow-500">不完整:</span>
-            <span class="font-medium text-yellow-500">{{ cacheStore.incompleteCacheCount }}</span>
+            <span class="font-medium text-yellow-500">{{
+              cacheStore.incompleteCacheCount
+            }}</span>
           </div>
-          <div class="flex justify-between pt-1 border-t border-(--border-color)">
+          <div
+            class="flex justify-between pt-1 border-t border-(--border-color)"
+          >
             <span>总大小:</span>
-            <span class="font-medium">{{ formatBytes(cacheStore.totalFileSize) }}</span>
+            <span class="font-medium">{{
+              formatBytes(cacheStore.totalFileSize)
+            }}</span>
           </div>
         </div>
 
         <!-- 选择操作（仅在有选中项时显示） -->
-        <div v-if="cacheStore.hasSelectedItems" class="mt-2 pt-2 border-t border-(--border-color)">
+        <div
+          v-if="cacheStore.hasSelectedItems"
+          class="mt-2 pt-2 border-t border-(--border-color)"
+        >
           <div class="text-xs text-(--desc-color) mb-1">
             已选择 {{ cacheStore.selectedItemsCount }} 项
           </div>
-          <button 
+          <button
             class="w-full text-xs text-(--primary-color) hover:underline mb-1 text-left"
             @click="cacheStore.clearSelection"
           >
             清除选择
           </button>
-          <button 
+          <button
             class="w-full text-xs text-red-500 hover:underline text-left"
             @click="batchDelete"
           >
@@ -351,7 +425,7 @@ function onSearchInput(): void {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
-  
+
   searchTimeout = setTimeout(() => {
     applyFilters();
   }, 300);
@@ -363,10 +437,12 @@ function onSearchInput(): void {
 function applyFilters(): void {
   const filter: Types.CacheFilter = {
     ...(searchKeyword.value && { keyword: searchKeyword.value }),
-    ...(selectedStatus.value && { status: [selectedStatus.value as Types.CacheStatus] }),
+    ...(selectedStatus.value && {
+      status: [selectedStatus.value as Types.CacheStatus],
+    }),
     ...(selectedUploader.value && { uploader: selectedUploader.value }),
   };
-  
+
   cacheStore.setFilter(filter);
   loadCacheList();
 }
@@ -375,7 +451,10 @@ function applyFilters(): void {
  * 应用排序
  */
 function applySort(): void {
-  const [field, direction] = selectedSort.value.split('-') as [Types.SortField, Types.SortDirection];
+  const [field, direction] = selectedSort.value.split('-') as [
+    Types.SortField,
+    Types.SortDirection,
+  ];
   cacheStore.setSort({ field, direction });
   loadCacheList();
 }
@@ -424,7 +503,10 @@ function handlePageInput(): void {
  * 跳转到指定页面
  */
 function jumpToPage(): void {
-  if (pageInput.value >= 1 && pageInput.value <= cacheStore.pagination.totalPages) {
+  if (
+    pageInput.value >= 1 &&
+    pageInput.value <= cacheStore.pagination.totalPages
+  ) {
     changePage(pageInput.value);
   }
 }
@@ -463,7 +545,9 @@ async function refreshList(): Promise<void> {
  */
 async function exportList(): Promise<void> {
   try {
-    const filePath = await cacheManagementService.exportCacheList(cacheStore.currentFilter);
+    const filePath = await cacheManagementService.exportCacheList(
+      cacheStore.currentFilter,
+    );
     // 显示成功消息
     new AppError(`列表已导出到: ${filePath}`, { name: 'success' }).handle();
   } catch (error) {
@@ -509,7 +593,7 @@ async function deleteItem(item: Types.CacheItem): Promise<void> {
     if (!confirm(`确定要删除 "${item.title}" 吗？`)) {
       return;
     }
-    
+
     await cacheStore.deleteCacheItem(item.id);
   } catch (error) {
     new AppError(error).handle();
@@ -525,17 +609,24 @@ async function batchDelete(): Promise<void> {
     if (!confirm(`确定要删除选中的 ${count} 个缓存项吗？`)) {
       return;
     }
-    
-    const results = await cacheStore.batchDeleteCacheItems([...cacheStore.selectedItems]);
-    
+
+    const results = await cacheStore.batchDeleteCacheItems([
+      ...cacheStore.selectedItems,
+    ]);
+
     // 显示结果
-    const successCount = results.filter(r => r.success).length;
+    const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
-    
+
     if (failureCount === 0) {
-      new AppError(`成功删除 ${successCount} 个缓存项`, { name: 'success' }).handle();
+      new AppError(`成功删除 ${successCount} 个缓存项`, {
+        name: 'success',
+      }).handle();
     } else {
-      new AppError(`删除完成：成功 ${successCount} 个，失败 ${failureCount} 个`, { name: 'warning' }).handle();
+      new AppError(
+        `删除完成：成功 ${successCount} 个，失败 ${failureCount} 个`,
+        { name: 'warning' },
+      ).handle();
     }
   } catch (error) {
     new AppError(error).handle();
@@ -554,16 +645,22 @@ onMounted(async () => {
 });
 
 // 监听路由变化，刷新数据
-watch(() => router.currentRoute.value.path, (newPath) => {
-  if (newPath === '/cache-list') {
-    loadCacheList();
-  }
-});
+watch(
+  () => router.currentRoute.value.path,
+  (newPath) => {
+    if (newPath === '/cache-list') {
+      loadCacheList();
+    }
+  },
+);
 
 // 监听分页变化，同步页面输入
-watch(() => cacheStore.pagination.currentPage, (newPage) => {
-  pageInput.value = newPage;
-});
+watch(
+  () => cacheStore.pagination.currentPage,
+  (newPage) => {
+    pageInput.value = newPage;
+  },
+);
 </script>
 
 <style scoped>

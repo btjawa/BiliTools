@@ -4,7 +4,7 @@
       <i :class="[$fa.weight, 'fa-download']"></i>
       <span>{{ $t('cache.import.title') }}</span>
     </h1>
-    
+
     <div class="flex w-full h-full mt-[22px] flex-1 gap-6 min-h-0">
       <!-- 主要内容区域 -->
       <div class="flex-1 flex flex-col gap-4">
@@ -14,7 +14,7 @@
             <i :class="[$fa.weight, 'fa-folder']"></i>
             <span>{{ $t('cache.import.selectDirectory') }}</span>
           </h2>
-          
+
           <div class="flex flex-col gap-4">
             <!-- 目录路径显示 -->
             <div class="flex gap-3 items-center">
@@ -34,9 +34,12 @@
                 <span>{{ $t('cache.import.browse') }}</span>
               </button>
             </div>
-            
+
             <!-- 路径验证提示 -->
-            <div v-if="selectedPath && !isValidPath" class="text-yellow-500 text-sm flex items-center gap-2">
+            <div
+              v-if="selectedPath && !isValidPath"
+              class="text-yellow-500 text-sm flex items-center gap-2"
+            >
               <i :class="[$fa.weight, 'fa-triangle-exclamation']"></i>
               <span>{{ $t('cache.import.pathWarning') }}</span>
             </div>
@@ -49,40 +52,52 @@
             <i :class="[$fa.weight, 'fa-gear']"></i>
             <span>{{ $t('cache.import.options') }}</span>
           </h2>
-          
+
           <div class="grid grid-cols-2 gap-4">
             <!-- 重复处理策略 -->
             <div class="flex flex-col gap-2">
-              <span class="text-sm font-medium">{{ $t('cache.import.duplicateHandling') }}</span>
+              <span class="text-sm font-medium">{{
+                $t('cache.import.duplicateHandling')
+              }}</span>
               <select
                 v-model="importOptions.duplicateHandling"
                 class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
               >
-                <option value="skip">{{ $t('cache.import.duplicateSkip') }}</option>
-                <option value="overwrite">{{ $t('cache.import.duplicateOverwrite') }}</option>
+                <option value="skip">
+                  {{ $t('cache.import.duplicateSkip') }}
+                </option>
+                <option value="overwrite">
+                  {{ $t('cache.import.duplicateOverwrite') }}
+                </option>
               </select>
             </div>
-            
+
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 v-model="importOptions.verifyIntegrity"
                 type="checkbox"
                 class="w-4 h-4"
               />
-              <span class="text-sm">{{ $t('cache.import.verifyIntegrity') }}</span>
+              <span class="text-sm">{{
+                $t('cache.import.verifyIntegrity')
+              }}</span>
             </label>
-            
+
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 v-model="importOptions.createPlaylist"
                 type="checkbox"
                 class="w-4 h-4"
               />
-              <span class="text-sm">{{ $t('cache.import.createPlaylist') }}</span>
+              <span class="text-sm">{{
+                $t('cache.import.createPlaylist')
+              }}</span>
             </label>
-            
+
             <div class="flex items-center gap-2">
-              <span class="text-sm">{{ $t('cache.import.maxConcurrency') }}:</span>
+              <span class="text-sm"
+                >{{ $t('cache.import.maxConcurrency') }}:</span
+              >
               <input
                 v-model.number="importOptions.maxConcurrency"
                 type="number"
@@ -100,28 +115,47 @@
             <i :class="[$fa.weight, 'fa-magnifying-glass']"></i>
             <span>{{ $t('cache.import.scanResult') }}</span>
           </h2>
-          
+
           <div class="grid grid-cols-4 gap-4 mb-4">
             <div class="text-center">
-              <div class="text-2xl font-bold text-(--primary-color)">{{ scanResult.totalDirectories }}</div>
-              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.totalFound') }}</div>
+              <div class="text-2xl font-bold text-(--primary-color)">
+                {{ scanResult.totalDirectories }}
+              </div>
+              <div class="text-sm text-(--desc-color)">
+                {{ $t('cache.import.totalFound') }}
+              </div>
             </div>
             <div class="text-center">
-              <div class="text-2xl font-bold text-green-500">{{ scanResult.validDirectories }}</div>
-              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.validFound') }}</div>
+              <div class="text-2xl font-bold text-green-500">
+                {{ scanResult.validDirectories }}
+              </div>
+              <div class="text-sm text-(--desc-color)">
+                {{ $t('cache.import.validFound') }}
+              </div>
             </div>
             <div class="text-center">
-              <div class="text-2xl font-bold text-red-500">{{ scanResult.invalidDirectories }}</div>
-              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.invalidFound') }}</div>
+              <div class="text-2xl font-bold text-red-500">
+                {{ scanResult.invalidDirectories }}
+              </div>
+              <div class="text-sm text-(--desc-color)">
+                {{ $t('cache.import.invalidFound') }}
+              </div>
             </div>
             <div class="text-center">
-              <div class="text-2xl font-bold text-(--text-color)">{{ formatBytes(scanResult.estimatedTotalSize) }}</div>
-              <div class="text-sm text-(--desc-color)">{{ $t('cache.import.totalSize') }}</div>
+              <div class="text-2xl font-bold text-(--text-color)">
+                {{ formatBytes(scanResult.estimatedTotalSize) }}
+              </div>
+              <div class="text-sm text-(--desc-color)">
+                {{ $t('cache.import.totalSize') }}
+              </div>
             </div>
           </div>
-          
+
           <!-- 预览列表 -->
-          <div v-if="scanResult.directories.length > 0" class="max-h-64 overflow-y-auto">
+          <div
+            v-if="scanResult.directories.length > 0"
+            class="max-h-64 overflow-y-auto"
+          >
             <div
               v-for="(dir, index) in scanResult.directories.slice(0, 10)"
               :key="index"
@@ -130,13 +164,22 @@
               <i
                 :class="[
                   $fa.weight,
-                  dir.isValid ? 'fa-check-circle text-green-500' : 'fa-times-circle text-red-500'
+                  dir.isValid
+                    ? 'fa-check-circle text-green-500'
+                    : 'fa-times-circle text-red-500',
                 ]"
               ></i>
               <div class="flex-1 min-w-0">
-                <div v-if="dir.preview" class="font-medium truncate">{{ dir.preview.title }}</div>
-                <div class="text-sm text-(--desc-color) truncate">{{ dir.path }}</div>
-                <div v-if="!dir.isValid && dir.invalidReason" class="text-sm text-red-500">
+                <div v-if="dir.preview" class="font-medium truncate">
+                  {{ dir.preview.title }}
+                </div>
+                <div class="text-sm text-(--desc-color) truncate">
+                  {{ dir.path }}
+                </div>
+                <div
+                  v-if="!dir.isValid && dir.invalidReason"
+                  class="text-sm text-red-500"
+                >
                   {{ dir.invalidReason }}
                 </div>
               </div>
@@ -144,9 +187,14 @@
                 {{ formatBytes(dir.preview.fileSize) }}
               </div>
             </div>
-            
-            <div v-if="scanResult.directories.length > 10" class="text-center py-2 text-sm text-(--desc-color)">
-              {{ $t('cache.import.andMore', [scanResult.directories.length - 10]) }}
+
+            <div
+              v-if="scanResult.directories.length > 10"
+              class="text-center py-2 text-sm text-(--desc-color)"
+            >
+              {{
+                $t('cache.import.andMore', [scanResult.directories.length - 10])
+              }}
             </div>
           </div>
         </div>
@@ -154,10 +202,12 @@
         <!-- 导入进度区域 -->
         <div v-if="importProgress" class="bg-(--block-color) rounded-lg p-6">
           <h2 class="text-lg font-medium mb-4">
-            <i :class="[$fa.weight, 'fa-spinner', { 'fa-spin': isImporting }]"></i>
+            <i
+              :class="[$fa.weight, 'fa-spinner', { 'fa-spin': isImporting }]"
+            ></i>
             <span>{{ $t('cache.import.progress') }}</span>
           </h2>
-          
+
           <div class="space-y-4">
             <!-- 总体进度 -->
             <div>
@@ -167,35 +217,56 @@
               </div>
               <ProgressBar :progress="importProgressPercentage" />
             </div>
-            
+
             <!-- 当前状态 -->
             <div class="text-sm">
               <div class="flex justify-between mb-1">
                 <span>{{ $t('cache.import.currentStatus') }}:</span>
-                <span>{{ $t('cache.import.status.' + importProgress.status) }}</span>
+                <span>{{
+                  $t('cache.import.status.' + importProgress.status)
+                }}</span>
               </div>
-              <div class="text-(--desc-color) truncate">{{ importProgress.currentDirectory }}</div>
+              <div class="text-(--desc-color) truncate">
+                {{ importProgress.currentDirectory }}
+              </div>
             </div>
-            
+
             <!-- 统计信息 -->
             <div class="grid grid-cols-3 gap-4 text-center text-sm">
               <div>
-                <div class="font-medium text-green-500">{{ importProgress.successCount }}</div>
-                <div class="text-(--desc-color)">{{ $t('cache.import.success') }}</div>
+                <div class="font-medium text-green-500">
+                  {{ importProgress.successCount }}
+                </div>
+                <div class="text-(--desc-color)">
+                  {{ $t('cache.import.success') }}
+                </div>
               </div>
               <div>
-                <div class="font-medium text-red-500">{{ importProgress.failureCount }}</div>
-                <div class="text-(--desc-color)">{{ $t('cache.import.failure') }}</div>
+                <div class="font-medium text-red-500">
+                  {{ importProgress.failureCount }}
+                </div>
+                <div class="text-(--desc-color)">
+                  {{ $t('cache.import.failure') }}
+                </div>
               </div>
               <div>
-                <div class="font-medium text-yellow-500">{{ importProgress.skippedCount }}</div>
-                <div class="text-(--desc-color)">{{ $t('cache.import.skipped') }}</div>
+                <div class="font-medium text-yellow-500">
+                  {{ importProgress.skippedCount }}
+                </div>
+                <div class="text-(--desc-color)">
+                  {{ $t('cache.import.skipped') }}
+                </div>
               </div>
             </div>
-            
+
             <!-- 错误列表 -->
-            <div v-if="importProgress.errors.length > 0" class="max-h-32 overflow-y-auto">
-              <div class="text-sm font-medium text-red-500 mb-2">{{ $t('cache.import.errors') }}:</div>
+            <div
+              v-if="importProgress.errors.length > 0"
+              class="max-h-32 overflow-y-auto"
+            >
+              <div class="text-sm font-medium text-red-500 mb-2">
+                {{ $t('cache.import.errors') }}:
+              </div>
               <div
                 v-for="(error, index) in importProgress.errors"
                 :key="index"
@@ -209,22 +280,36 @@
       </div>
 
       <!-- 侧边栏操作区域 -->
-      <div class="flex flex-col w-32 gap-1.5 ml-auto pb-6 h-fit max-h-full overflow-y-auto">
+      <div
+        class="flex flex-col w-32 gap-1.5 ml-auto pb-6 h-fit max-h-full overflow-y-auto"
+      >
         <!-- 主要操作按钮 -->
         <button
           :disabled="!selectedPath || isScanning || isImporting"
           @click="scanDirectory"
         >
-          <i :class="[$fa.weight, isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass']"></i>
+          <i
+            :class="[
+              $fa.weight,
+              isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass',
+            ]"
+          ></i>
           <span>{{ isScanning ? '扫描中' : '扫描' }}</span>
         </button>
 
         <button
-          :disabled="!scanResult || scanResult.validDirectories === 0 || isImporting"
+          :disabled="
+            !scanResult || scanResult.validDirectories === 0 || isImporting
+          "
           class="bg-green-500 text-white hover:bg-green-600"
           @click="startImport"
         >
-          <i :class="[$fa.weight, isImporting ? 'fa-spinner fa-spin' : 'fa-download']"></i>
+          <i
+            :class="[
+              $fa.weight,
+              isImporting ? 'fa-spinner fa-spin' : 'fa-download',
+            ]"
+          ></i>
           <span>{{ isImporting ? '导入中' : '开始导入' }}</span>
         </button>
 
@@ -237,56 +322,75 @@
           <span>取消</span>
         </button>
 
-        <button
-          :disabled="isScanning || isImporting"
-          @click="resetForm"
-        >
+        <button :disabled="isScanning || isImporting" @click="resetForm">
           <i :class="[$fa.weight, 'fa-refresh']"></i>
           <span>重置</span>
         </button>
 
         <!-- 扫描结果统计 -->
-        <div v-if="scanResult" class="text-xs text-(--desc-color) space-y-0.5 mt-2">
+        <div
+          v-if="scanResult"
+          class="text-xs text-(--desc-color) space-y-0.5 mt-2"
+        >
           <div class="flex justify-between">
             <span>发现:</span>
             <span class="font-medium">{{ scanResult.totalDirectories }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-green-500">有效:</span>
-            <span class="font-medium text-green-500">{{ scanResult.validDirectories }}</span>
+            <span class="font-medium text-green-500">{{
+              scanResult.validDirectories
+            }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-red-500">无效:</span>
-            <span class="font-medium text-red-500">{{ scanResult.invalidDirectories }}</span>
+            <span class="font-medium text-red-500">{{
+              scanResult.invalidDirectories
+            }}</span>
           </div>
-          <div class="flex justify-between pt-1 border-t border-(--border-color)">
+          <div
+            class="flex justify-between pt-1 border-t border-(--border-color)"
+          >
             <span>大小:</span>
-            <span class="font-medium">{{ formatBytes(scanResult.estimatedTotalSize) }}</span>
+            <span class="font-medium">{{
+              formatBytes(scanResult.estimatedTotalSize)
+            }}</span>
           </div>
         </div>
 
         <!-- 导入进度统计 -->
-        <div v-if="importProgress" class="text-xs text-(--desc-color) space-y-0.5 mt-2 pt-2 border-t border-(--border-color)">
+        <div
+          v-if="importProgress"
+          class="text-xs text-(--desc-color) space-y-0.5 mt-2 pt-2 border-t border-(--border-color)"
+        >
           <div class="flex justify-between">
             <span>进度:</span>
             <span class="font-medium">{{ importProgressPercentage }}%</span>
           </div>
           <div class="flex justify-between">
             <span class="text-green-500">成功:</span>
-            <span class="font-medium text-green-500">{{ importProgress.successCount }}</span>
+            <span class="font-medium text-green-500">{{
+              importProgress.successCount
+            }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-red-500">失败:</span>
-            <span class="font-medium text-red-500">{{ importProgress.failureCount }}</span>
+            <span class="font-medium text-red-500">{{
+              importProgress.failureCount
+            }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-yellow-500">跳过:</span>
-            <span class="font-medium text-yellow-500">{{ importProgress.skippedCount }}</span>
+            <span class="font-medium text-yellow-500">{{
+              importProgress.skippedCount
+            }}</span>
           </div>
         </div>
 
         <!-- 简化的帮助信息 -->
-        <div class="text-xs text-(--desc-color) mt-3 pt-2 border-t border-(--border-color)">
+        <div
+          class="text-xs text-(--desc-color) mt-3 pt-2 border-t border-(--border-color)"
+        >
           <div class="font-medium mb-1 text-(--text-color)">使用步骤:</div>
           <div class="space-y-1">
             <div>1. 选择B站缓存目录</div>
@@ -338,7 +442,9 @@ const isValidPath = computed(() => {
 
 const isImporting = computed(() => cacheStore.isImporting);
 const importProgress = computed(() => cacheStore.importProgress);
-const importProgressPercentage = computed(() => cacheStore.importProgressPercentage);
+const importProgressPercentage = computed(
+  () => cacheStore.importProgressPercentage,
+);
 
 // ============================================================================
 // 方法
@@ -365,10 +471,12 @@ async function selectDirectory(): Promise<void> {
  */
 async function scanDirectory(): Promise<void> {
   if (!selectedPath.value) return;
-  
+
   try {
     isScanning.value = true;
-    scanResult.value = await cacheImportService.scanCacheDirectory(selectedPath.value);
+    scanResult.value = await cacheImportService.scanCacheDirectory(
+      selectedPath.value,
+    );
   } catch (error) {
     new AppError(error).handle();
     scanResult.value = null;
@@ -382,7 +490,7 @@ async function scanDirectory(): Promise<void> {
  */
 async function startImport(): Promise<void> {
   if (!selectedPath.value || !scanResult.value) return;
-  
+
   try {
     await cacheStore.startImport(selectedPath.value, importOptions.value);
   } catch (error) {

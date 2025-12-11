@@ -8,12 +8,8 @@
             <i :class="[$fa.weight, 'fa-download']"></i>
             <span>{{ $t('cache.import.progressDialog.title') }}</span>
           </h2>
-          
-          <button
-            v-if="!isImporting"
-            class="close-btn"
-            @click="close"
-          >
+
+          <button v-if="!isImporting" class="close-btn" @click="close">
             <i :class="[$fa.weight, 'fa-times']"></i>
           </button>
         </div>
@@ -24,16 +20,26 @@
             <!-- 总体进度 -->
             <div class="progress-section">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-lg font-medium">{{ $t('cache.import.overallProgress') }}</span>
-                <span class="text-2xl font-bold text-(--primary-color)">{{ progressPercentage }}%</span>
+                <span class="text-lg font-medium">{{
+                  $t('cache.import.overallProgress')
+                }}</span>
+                <span class="text-2xl font-bold text-(--primary-color)"
+                  >{{ progressPercentage }}%</span
+                >
               </div>
-              
+
               <ProgressBar :progress="progressPercentage" class="h-3" />
-              
-              <div class="flex justify-between text-sm text-(--desc-color) mt-2">
-                <span>{{ progress.processedDirectories }} / {{ progress.totalDirectories }}</span>
+
+              <div
+                class="flex justify-between text-sm text-(--desc-color) mt-2"
+              >
+                <span
+                  >{{ progress.processedDirectories }} /
+                  {{ progress.totalDirectories }}</span
+                >
                 <span v-if="progress.estimatedTimeRemaining">
-                  {{ $t('cache.import.estimatedTime') }}: {{ formatTime(progress.estimatedTimeRemaining) }}
+                  {{ $t('cache.import.estimatedTime') }}:
+                  {{ formatTime(progress.estimatedTimeRemaining) }}
                 </span>
               </div>
             </div>
@@ -44,16 +50,22 @@
                 <i :class="[$fa.weight, 'fa-info-circle']"></i>
                 <span>{{ $t('cache.import.currentStatus') }}</span>
               </h3>
-              
+
               <div class="status-content">
                 <div class="flex items-center gap-2 mb-2">
                   <i :class="[statusIcon, { 'fa-spin': isImporting }]"></i>
-                  <span class="font-medium">{{ $t('cache.import.status.' + progress.status) }}</span>
+                  <span class="font-medium">{{
+                    $t('cache.import.status.' + progress.status)
+                  }}</span>
                 </div>
-                
+
                 <div class="current-directory">
-                  <span class="text-sm text-(--desc-color)">{{ $t('cache.import.currentDirectory') }}:</span>
-                  <div class="directory-path">{{ progress.currentDirectory }}</div>
+                  <span class="text-sm text-(--desc-color)"
+                    >{{ $t('cache.import.currentDirectory') }}:</span
+                  >
+                  <div class="directory-path">
+                    {{ progress.currentDirectory }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -64,18 +76,18 @@
                 <i :class="[$fa.weight, 'fa-chart-bar']"></i>
                 <span>{{ $t('cache.import.statistics') }}</span>
               </h3>
-              
+
               <div class="stats-grid">
                 <div class="stat-item success">
                   <div class="stat-number">{{ progress.successCount }}</div>
                   <div class="stat-label">{{ $t('cache.import.success') }}</div>
                 </div>
-                
+
                 <div class="stat-item failure">
                   <div class="stat-number">{{ progress.failureCount }}</div>
                   <div class="stat-label">{{ $t('cache.import.failure') }}</div>
                 </div>
-                
+
                 <div class="stat-item skipped">
                   <div class="stat-number">{{ progress.skippedCount }}</div>
                   <div class="stat-label">{{ $t('cache.import.skipped') }}</div>
@@ -87,34 +99,51 @@
             <div v-if="progress.errors.length > 0" class="errors-section">
               <h3 class="section-title">
                 <i :class="[$fa.weight, 'fa-exclamation-triangle']"></i>
-                <span>{{ $t('cache.import.errors') }} ({{ progress.errors.length }})</span>
+                <span
+                  >{{ $t('cache.import.errors') }} ({{
+                    progress.errors.length
+                  }})</span
+                >
               </h3>
-              
+
               <div class="errors-list">
                 <div
-                  v-for="(error, index) in progress.errors.slice(0, maxErrorsToShow)"
+                  v-for="(error, index) in progress.errors.slice(
+                    0,
+                    maxErrorsToShow,
+                  )"
                   :key="index"
                   class="error-item"
                 >
                   <div class="error-header">
                     <i :class="[$fa.weight, 'fa-times-circle']"></i>
-                    <span class="error-type">{{ $t('cache.import.errorType.' + error.errorType) }}</span>
-                    <span class="error-time">{{ formatErrorTime(error.timestamp) }}</span>
+                    <span class="error-type">{{
+                      $t('cache.import.errorType.' + error.errorType)
+                    }}</span>
+                    <span class="error-time">{{
+                      formatErrorTime(error.timestamp)
+                    }}</span>
                   </div>
-                  
+
                   <div class="error-message">{{ error.message }}</div>
-                  
+
                   <div class="error-path">{{ error.directoryPath }}</div>
                 </div>
-                
-                <div v-if="progress.errors.length > maxErrorsToShow" class="more-errors">
+
+                <div
+                  v-if="progress.errors.length > maxErrorsToShow"
+                  class="more-errors"
+                >
                   <button
                     class="text-sm text-(--primary-color) hover:underline"
                     @click="toggleShowAllErrors"
                   >
-                    {{ showAllErrors 
-                      ? $t('cache.import.showLessErrors') 
-                      : $t('cache.import.showMoreErrors', [progress.errors.length - maxErrorsToShow])
+                    {{
+                      showAllErrors
+                        ? $t('cache.import.showLessErrors')
+                        : $t('cache.import.showMoreErrors', [
+                            progress.errors.length - maxErrorsToShow,
+                          ])
                     }}
                   </button>
                 </div>
@@ -128,7 +157,7 @@
               <i :class="[$fa.weight, completionIcon]" class="text-4xl"></i>
               <h3 class="text-xl font-bold">{{ completionTitle }}</h3>
             </div>
-            
+
             <div class="completion-stats">
               <div class="stat-row">
                 <span>{{ $t('cache.import.totalProcessed') }}:</span>
@@ -147,9 +176,16 @@
                 <span class="font-medium">{{ result.skippedCount }}</span>
               </div>
             </div>
-            
+
             <div class="completion-time">
-              <span>{{ $t('cache.import.totalTime') }}: {{ formatDuration(result.endTime.getTime() - result.startTime.getTime()) }}</span>
+              <span
+                >{{ $t('cache.import.totalTime') }}:
+                {{
+                  formatDuration(
+                    result.endTime.getTime() - result.startTime.getTime(),
+                  )
+                }}</span
+              >
             </div>
           </div>
         </div>
@@ -167,7 +203,7 @@
                 <span>{{ $t('cache.import.cancel') }}</span>
               </button>
             </div>
-            
+
             <div class="flex gap-2">
               <button
                 v-if="result"
@@ -177,7 +213,7 @@
                 <i :class="[$fa.weight, 'fa-list']"></i>
                 <span>{{ $t('cache.import.viewResults') }}</span>
               </button>
-              
+
               <button
                 v-if="!isImporting"
                 class="btn btn-secondary"
@@ -229,25 +265,33 @@ const router = useRouter();
 // ============================================================================
 
 const showAllErrors = ref(false);
-const maxErrorsToShow = computed(() => showAllErrors.value ? Infinity : 5);
+const maxErrorsToShow = computed(() => (showAllErrors.value ? Infinity : 5));
 
 // ============================================================================
 // 计算属性
 // ============================================================================
 
 const isImporting = computed(() => {
-  return props.progress && ['Scanning', 'Parsing', 'Validating', 'Saving'].includes(props.progress.status);
+  return (
+    props.progress &&
+    ['Scanning', 'Parsing', 'Validating', 'Saving'].includes(
+      props.progress.status,
+    )
+  );
 });
 
 const progressPercentage = computed(() => {
   if (!props.progress) return 0;
   if (props.progress.totalDirectories === 0) return 0;
-  return Math.round((props.progress.processedDirectories / props.progress.totalDirectories) * 100);
+  return Math.round(
+    (props.progress.processedDirectories / props.progress.totalDirectories) *
+      100,
+  );
 });
 
 const statusIcon = computed(() => {
   if (!props.progress) return 'fa-solid fa-check';
-  
+
   switch (props.progress.status) {
     case 'Scanning':
       return 'fa-solid fa-magnifying-glass';
@@ -270,7 +314,7 @@ const statusIcon = computed(() => {
 
 const completionIcon = computed(() => {
   if (!props.result) return 'fa-check-circle text-green-500';
-  
+
   const { failureCount, successCount } = props.result;
   if (failureCount === 0) return 'fa-check-circle text-green-500';
   if (successCount > 0) return 'fa-exclamation-triangle text-yellow-500';
@@ -279,7 +323,7 @@ const completionIcon = computed(() => {
 
 const completionTitle = computed(() => {
   if (!props.result) return '';
-  
+
   const { failureCount, successCount } = props.result;
   if (failureCount === 0) return '导入完成';
   if (successCount > 0) return '导入部分完成';
@@ -364,11 +408,14 @@ function formatErrorTime(timestamp: Date): string {
 // ============================================================================
 
 // 重置错误显示状态
-watch(() => props.visible, (newVisible) => {
-  if (newVisible) {
-    showAllErrors.value = false;
-  }
-});
+watch(
+  () => props.visible,
+  (newVisible) => {
+    if (newVisible) {
+      showAllErrors.value = false;
+    }
+  },
+);
 </script>
 
 <style scoped>
@@ -587,11 +634,11 @@ watch(() => props.visible, (newVisible) => {
   .modal-content {
     @apply max-w-full m-2;
   }
-  
+
   .stats-grid {
     @apply grid-cols-1;
   }
-  
+
   .modal-footer .flex {
     @apply flex-col gap-2;
   }

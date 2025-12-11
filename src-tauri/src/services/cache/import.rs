@@ -400,7 +400,7 @@ impl ImportService {
                     }
                 } else {
                     CacheImportError::from_io_error(
-                        std::io::Error::new(std::io::ErrorKind::Other, e.to_string()),
+                        std::io::Error::other(e.to_string()),
                         Some(&root_path.to_string_lossy()),
                     )
                 };
@@ -519,7 +519,14 @@ impl ImportService {
                                 cache_error.user_friendly_message()
                             ));
                         }
-                        ImportAction::Skip | ImportAction::Continue | _ => {
+                        ImportAction::Retry => {
+                            // 已达到最大重试次数，返回错误
+                            return Err(anyhow::anyhow!(
+                                "导入失败，已达到最大重试次数: {}",
+                                cache_error.user_friendly_message()
+                            ));
+                        }
+                        ImportAction::Skip | ImportAction::Continue => {
                             // 返回跳过状态的结果
                             return Ok(ImportDetail {
                                 directory_path: cache_dir.to_string_lossy().to_string(),
@@ -648,7 +655,7 @@ impl ImportService {
             duration: video_info.duration,
             file_size: video_info.total_size as i64,
             cache_path: directory_path.clone(),
-            download_time: video_info.download_time.unwrap_or_else(|| get_millis()),
+            download_time: video_info.download_time.unwrap_or_else(get_millis),
             import_time: get_millis(),
             status: "available".to_string(),
             source: "local_cache_import".to_string(),
@@ -682,7 +689,7 @@ impl ImportService {
             }
             Err(e) => {
                 let cache_error = CacheImportError::from_anyhow_error(&e);
-                return Err(anyhow::anyhow!("{}", cache_error));
+                Err(anyhow::anyhow!("{}", cache_error))
             }
         }
     }

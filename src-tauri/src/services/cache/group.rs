@@ -401,7 +401,7 @@ impl GroupService {
         for ch in first.chars() {
             if strings
                 .iter()
-                .all(|s| s.chars().nth(char_index).map_or(false, |c| c == ch))
+                .all(|s| s.chars().nth(char_index) == Some(ch))
             {
                 prefix_len += ch.len_utf8();
                 char_index += 1;

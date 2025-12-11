@@ -9,9 +9,20 @@
   >
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
-      <div class="relative rounded-lg overflow-hidden cursor-pointer" style="min-width: 160px; width: fit-content; height: 96px; display: flex;">
+      <div
+        class="relative rounded-lg overflow-hidden cursor-pointer"
+        style="
+          min-width: 160px;
+          width: fit-content;
+          height: 96px;
+          display: flex;
+        "
+      >
         <!-- 优先使用组封面，回退到第一个视频封面，最后显示占位符 -->
-        <div v-if="!coverSrc" class="w-full h-full bg-(--block-color) flex items-center justify-center">
+        <div
+          v-if="!coverSrc"
+          class="w-full h-full bg-(--block-color) flex items-center justify-center"
+        >
           <i class="fa-solid fa-images text-2xl text-(--desc-color)"></i>
         </div>
         <Image
@@ -21,13 +32,17 @@
           :width="160"
           :prevent="true"
           class="object-cover z-10"
-          style="height: 96px; width: 160px; max-width: 100%;"
+          style="height: 96px; width: 160px; max-width: 100%"
         />
       </div>
       <!-- 渐变遮罩 -->
-      <div class="absolute w-full h-full z-10 bg-gradient-to-b from-transparent to-black/50"></div>
+      <div
+        class="absolute w-full h-full z-10 bg-gradient-to-b from-transparent to-black/50"
+      ></div>
       <!-- 组标识徽章 -->
-      <div class="absolute top-2 left-2 z-20 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+      <div
+        class="absolute top-2 left-2 z-20 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium"
+      >
         <i class="fa-solid fa-folder mr-1"></i>
         {{ $t('cache.group.collection') }}
       </div>
@@ -37,15 +52,18 @@
     <div class="w-full flex flex-col gap-1 min-w-0">
       <!-- 组标题 -->
       <h2 class="text-base truncate" :title="group.title">{{ group.title }}</h2>
-      
+
       <!-- 视频数量和总时长 -->
       <div class="desc">
         <i class="fa-solid fa-video"></i>
         <span>{{ $t('cache.group.videoCount', [group.videoCount]) }}</span>
         <span class="mx-1">·</span>
-        <span>{{ $t('cache.group.totalDuration') }} {{ duration(group.totalDuration) }}</span>
+        <span
+          >{{ $t('cache.group.totalDuration') }}
+          {{ duration(group.totalDuration) }}</span
+        >
       </div>
-      
+
       <!-- 最新下载时间 -->
       <div class="desc">
         <i class="fa-solid fa-clock"></i>
@@ -54,17 +72,29 @@
     </div>
 
     <!-- UP主名称 -->
-    <a class="text-xs text-nowrap mb-auto" :title="group.uname">{{ group.uname }}</a>
+    <a class="text-xs text-nowrap mb-auto" :title="group.uname">{{
+      group.uname
+    }}</a>
 
     <!-- 所有操作按钮 -->
     <div class="absolute bottom-3 right-3 z-20 flex gap-1">
       <!-- 展开/折叠按钮 -->
-      <button 
+      <button
         class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
         @click.stop="$emit('toggleExpand', group.groupId)"
       >
-        <i :class="group.isExpanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"></i>
-        <span>{{ group.isExpanded ? $t('cache.group.collapse') : $t('cache.group.expand') }}</span>
+        <i
+          :class="
+            group.isExpanded
+              ? 'fa-solid fa-chevron-up'
+              : 'fa-solid fa-chevron-down'
+          "
+        ></i>
+        <span>{{
+          group.isExpanded
+            ? $t('cache.group.collapse')
+            : $t('cache.group.expand')
+        }}</span>
       </button>
 
       <button
@@ -75,7 +105,7 @@
         <i class="fa-solid fa-folder-open"></i>
         <span>{{ $t('cache.card.openFolder') }}</span>
       </button>
-      
+
       <button
         class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-500 text-white hover:bg-red-600 transition-colors"
         :title="$t('cache.card.delete')"
@@ -87,7 +117,9 @@
     </div>
 
     <!-- 选择复选框 -->
-    <div class="absolute top-2 right-2 z-30 opacity-0 hover:opacity-100 transition-opacity">
+    <div
+      class="absolute top-2 right-2 z-30 opacity-0 hover:opacity-100 transition-opacity"
+    >
       <input
         type="checkbox"
         :checked="selected"
@@ -98,7 +130,7 @@
     </div>
 
     <!-- 状态标识（如果组内有不可用视频） -->
-    <div 
+    <div
       v-if="hasUnavailableVideos"
       class="absolute top-2 right-8 z-20 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs bg-yellow-500"
       :title="$t('cache.group.hasUnavailableVideos')"
@@ -116,13 +148,19 @@
       :class="{
         'border-2 border-(--primary-color)': selectedVideos.has(video.id),
         'opacity-60': video.status === 'unavailable',
-        'border border-yellow-500': video.status === 'incomplete'
+        'border border-yellow-500': video.status === 'incomplete',
       }"
       @click="$emit('selectVideo', video.id)"
     >
       <!-- 子视频封面 -->
-      <div class="relative flex rounded-lg overflow-hidden" style="min-width: 128px; width: 128px; height: 72px;">
-        <div v-if="!getVideoCoverSrc(video)" class="w-full h-full bg-(--block-color) flex items-center justify-center">
+      <div
+        class="relative flex rounded-lg overflow-hidden"
+        style="min-width: 128px; width: 128px; height: 72px"
+      >
+        <div
+          v-if="!getVideoCoverSrc(video)"
+          class="w-full h-full bg-(--block-color) flex items-center justify-center"
+        >
           <i class="fa-solid fa-image text-lg text-(--desc-color)"></i>
         </div>
         <Image
@@ -132,12 +170,12 @@
           :width="128"
           :prevent="true"
           class="object-cover"
-          style="height: 72px; width: 128px;"
+          style="height: 72px; width: 128px"
         />
         <!-- 进度条 -->
-        <div 
+        <div
           class="progress relative flex-1 rounded-full bg-(--button-color) h-1 w-full absolute bottom-0 z-10"
-          style="--progress: 54.7%;"
+          style="--progress: 54.7%"
         ></div>
       </div>
 
@@ -155,11 +193,13 @@
       </div>
 
       <!-- 子视频UP主 -->
-      <a class="text-xs text-nowrap mb-auto" :title="video.uname">{{ video.uname }}</a>
+      <a class="text-xs text-nowrap mb-auto" :title="video.uname">{{
+        video.uname
+      }}</a>
 
       <!-- 子视频操作按钮 -->
       <div class="absolute bottom-2 right-2 z-20 flex gap-1">
-        <button 
+        <button
           class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
           :disabled="video.status === 'unavailable'"
           @click.stop="$emit('playVideo', video)"
@@ -173,7 +213,7 @@
         >
           <i class="fa-solid fa-folder-open"></i>
         </button>
-        
+
         <button
           class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-red-500 text-white hover:bg-red-600 transition-colors"
           @click.stop="$emit('deleteVideo', video)"
@@ -183,7 +223,9 @@
       </div>
 
       <!-- 子视频选择复选框 -->
-      <div class="absolute top-1 left-1 z-30 opacity-0 hover:opacity-100 transition-opacity">
+      <div
+        class="absolute top-1 left-1 z-30 opacity-0 hover:opacity-100 transition-opacity"
+      >
         <input
           type="checkbox"
           :checked="selectedVideos.has(video.id)"
@@ -194,12 +236,12 @@
       </div>
 
       <!-- 子视频状态标识 -->
-      <div 
+      <div
         v-if="video.status !== 'available'"
         class="absolute top-1 right-1 z-20 w-4 h-4 rounded-full flex items-center justify-center text-white text-xs"
         :class="{
           'bg-red-500': video.status === 'unavailable',
-          'bg-yellow-500': video.status === 'incomplete'
+          'bg-yellow-500': video.status === 'incomplete',
         }"
       >
         <i :class="getVideoStatusIcon(video.status)" class="text-xs"></i>
@@ -247,7 +289,7 @@ defineEmits<Emits>();
  * 检查组内是否有不可用的视频
  */
 const hasUnavailableVideos = computed(() => {
-  return props.group.videos.some(video => video.status !== 'available');
+  return props.group.videos.some((video) => video.status !== 'available');
 });
 
 /**
@@ -269,19 +311,21 @@ const coverSrc = ref<string | null>(null);
 async function loadCoverSrc() {
   // 1. 优先尝试组封面文件 (group.jpg)
   if (props.group.videos.length > 0) {
-    const groupCoverPath = await getGroupCoverPath(props.group.videos[0].cachePath);
+    const groupCoverPath = await getGroupCoverPath(
+      props.group.videos[0].cachePath,
+    );
     if (groupCoverPath) {
       coverSrc.value = groupCoverPath;
       return;
     }
   }
-  
+
   // 2. 回退到组的封面URL（可能是第一个视频的封面）
   if (props.group.coverUrl && !props.group.coverUrl.startsWith('file://')) {
     coverSrc.value = props.group.coverUrl;
     return;
   }
-  
+
   // 3. 无可用封面
   coverSrc.value = null;
 }
@@ -306,21 +350,21 @@ function formatDownloadTime(date: Date): string {
   if (!date || isNaN(date.getTime())) {
     return '未知时间';
   }
-  
+
   const importDate = new Date(date);
-  
+
   // 检查年份是否合理（1970-2100）
   const year = importDate.getFullYear();
   if (year < 1970 || year > 2100) {
     return '时间格式错误';
   }
-  
+
   const month = String(importDate.getMonth() + 1).padStart(2, '0');
   const day = String(importDate.getDate()).padStart(2, '0');
   const hours = String(importDate.getHours()).padStart(2, '0');
   const minutes = String(importDate.getMinutes()).padStart(2, '0');
   const seconds = String(importDate.getSeconds()).padStart(2, '0');
-  
+
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
@@ -329,7 +373,7 @@ function formatDownloadTime(date: Date): string {
  */
 async function getGroupCoverPath(cachePath: string): Promise<string | null> {
   if (!cachePath) return null;
-  
+
   try {
     // 尝试查找group.jpg文件
     const groupCoverPath = cachePath.replace(/[^/\\]+$/, 'group.jpg');
@@ -337,7 +381,7 @@ async function getGroupCoverPath(cachePath: string): Promise<string | null> {
     if (localCover) {
       return localCover;
     }
-    
+
     // 回退到视频封面
     return await checkLocalCover(cachePath);
   } catch (error) {
@@ -356,9 +400,13 @@ onMounted(() => {
 });
 
 // 监听组数据变化
-watch(() => props.group, () => {
-  loadCoverSrc();
-}, { deep: true });
+watch(
+  () => props.group,
+  () => {
+    loadCoverSrc();
+  },
+  { deep: true },
+);
 </script>
 
 <style scoped>
@@ -419,15 +467,15 @@ button:disabled {
   .cache-group-card {
     @apply h-auto min-h-[100px] flex-col gap-2;
   }
-  
+
   .cache-group-card .relative:first-child {
     @apply w-full min-w-0;
   }
-  
+
   .cache-group-card .relative:first-child > div {
     @apply w-full h-24;
   }
-  
+
   .cache-group-card .relative:first-child img {
     @apply w-full h-24;
   }

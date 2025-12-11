@@ -230,29 +230,24 @@ pub async fn get_import_progress(
 ) -> TauriResult<()> {
     // 启动一个后台任务持续发送进度更新
     tokio::spawn(async move {
-        loop {
-            if let Some(progress) = ImportService::get_import_progress(&import_id).await {
-                // 发送进度更新
-                if event.send(progress.clone()).is_err() {
-                    // Channel 已关闭，停止发送
+        while let Some(progress) = ImportService::get_import_progress(&import_id).await {
+            // 发送进度更新
+            if event.send(progress.clone()).is_err() {
+                // Channel 已关闭，停止发送
+                break;
+            }
+
+            // 如果导入已完成或取消，停止监听
+            match progress.status {
+                ImportProgressStatus::Completed
+                | ImportProgressStatus::Cancelled
+                | ImportProgressStatus::Error => {
                     break;
                 }
-
-                // 如果导入已完成或取消，停止监听
-                match progress.status {
-                    ImportProgressStatus::Completed
-                    | ImportProgressStatus::Cancelled
-                    | ImportProgressStatus::Error => {
-                        break;
-                    }
-                    _ => {
-                        // 等待一段时间后再次检查
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    }
+                _ => {
+                    // 等待一段时间后再次检查
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 }
-            } else {
-                // 导入任务不存在，停止监听
-                break;
             }
         }
     });
