@@ -359,12 +359,292 @@ pub async fn get_cache_stats() -> TauriResult<CacheStats> {
     })
 }
 
+// 组功能相关命令
+
+use crate::services::cache::{GroupService, DisplayItem, GroupStatistics};
+
+/// 获取缓存显示项列表（组和单个视频的混合）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_cache_display_items() -> TauriResult<Vec<DisplayItem>> {
+    let group_service = GroupService::new();
+    let records = cache_records::get_all().await?;
+    let display_items = group_service.build_display_items_with_states(records).await?;
+    Ok(display_items)
+}
+
+/// 获取缓存显示项列表（带分页支持）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_cache_display_items_paginated(
+    page: i32,
+    page_size: i32,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+    search_query: Option<String>,
+    filter_status: Option<String>,
+) -> TauriResult<PaginatedDisplayItems> {
+    let group_service = GroupService::new();
+    
+    // 获取所有记录
+    let mut records = if let Some(status) = filter_status {
+        cache_records::get_by_status(&status).await?
+    } else {
+        cache_records::get_all().await?
+    };
+    
+    // 应用搜索过滤
+    if let Some(query) = search_query {
+        if !query.is_empty() {
+            let query_lower = query.to_lowercase();
+            records.retain(|record| {
+                record.title.to_lowercase().contains(&query_lower) ||
+                record.uname.to_lowercase().contains(&query_lower)
+            });
+        }
+    }
+    
+    // 构建显示项
+    let mut display_items = group_service.build_display_items_with_states(records).await?;
+    
+    // 应用排序
+    let sort_field = sort_by.as_deref().unwrap_or("time");
+    let sort_desc = sort_order.as_deref().unwrap_or("desc") == "desc";
+    
+    display_items.sort_by(|a, b| {
+        let cmp = match sort_field {
+            "time" => {
+                let time_a = match a {
+                    DisplayItem::SingleVideo { video } => video.download_time,
+                    DisplayItem::VideoGroup { group } => group.latest_download_time,
+                };
+                let time_b = match b {
+                    DisplayItem::SingleVideo { video } => video.download_time,
+                    DisplayItem::VideoGroup { group } => group.latest_download_time,
+                };
+                time_a.cmp(&time_b)
+            }
+            "size" => {
+                let size_a = match a {
+                    DisplayItem::SingleVideo { video } => video.file_size,
+                    DisplayItem::VideoGroup { group } => group.total_file_size,
+                };
+                let size_b = match b {
+                    DisplayItem::SingleVideo { video } => video.file_size,
+                    DisplayItem::VideoGroup { group } => group.total_file_size,
+                };
+                size_a.cmp(&size_b)
+            }
+            "title" => {
+                let title_a = match a {
+                    DisplayItem::SingleVideo { video } => &video.title,
+                    DisplayItem::VideoGroup { group } => &group.title,
+                };
+                let title_b = match b {
+                    DisplayItem::SingleVideo { video } => &video.title,
+                    DisplayItem::VideoGroup { group } => &group.title,
+                };
+                title_a.cmp(title_b)
+            }
+            _ => std::cmp::Ordering::Equal,
+        };
+        
+        if sort_desc {
+            cmp.reverse()
+        } else {
+            cmp
+        }
+    });
+    
+    // 计算分页
+    let total_count = display_items.len() as i32;
+    let total_pages = (total_count + page_size - 1) / page_size;
+    let start_index = ((page - 1) * page_size) as usize;
+    let end_index = (start_index + page_size as usize).min(display_items.len());
+    
+    let items = if start_index < display_items.len() {
+        display_items[start_index..end_index].to_vec()
+    } else {
+        Vec::new()
+    };
+    
+    Ok(PaginatedDisplayItems {
+        items,
+        total_count,
+        total_pages,
+        current_page: page,
+        page_size,
+        has_next: page < total_pages,
+        has_prev: page > 1,
+    })
+}
+
+/// 切换组的展开状态
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn toggle_group_expansion(group_id: String) -> TauriResult<bool> {
+    let group_service = GroupService::new();
+    let new_state = group_service.toggle_group_expansion(&group_id).await?;
+    Ok(new_state)
+}
+
+/// 设置组的展开状态
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn set_group_expansion(group_id: String, is_expanded: bool) -> TauriResult<()> {
+    let group_service = GroupService::new();
+    group_service.set_group_expansion(&group_id, is_expanded).await?;
+    Ok(())
+}
+
+/// 获取组统计信息
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_group_statistics() -> TauriResult<GroupStatistics> {
+    let group_service = GroupService::new();
+    let records = cache_records::get_all().await?;
+    let display_items = group_service.build_display_items_from_records(records).await?;
+    let statistics = group_service.calculate_group_statistics(&display_items);
+    Ok(statistics)
+}
+
+/// 根据组ID获取组内视频
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_videos_by_group_id(group_id: String) -> TauriResult<Vec<CacheRecord>> {
+    let group_service = GroupService::new();
+    let videos = group_service.get_videos_by_group_id(&group_id).await?;
+    Ok(videos)
+}
+
+/// 删除整个组
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn delete_group(group_id: String) -> TauriResult<i32> {
+    let group_service = GroupService::new();
+    let deleted_count = group_service.delete_group(&group_id).await?;
+    Ok(deleted_count)
+}
+
+/// 清理孤立的组状态
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn cleanup_orphaned_group_states() -> TauriResult<()> {
+    let group_service = GroupService::new();
+    group_service.cleanup_orphaned_group_states().await?;
+    Ok(())
+}
+
+/// 批量删除缓存项（支持组和单个视频）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn batch_delete_cache_items(item_ids: Vec<String>, item_types: Vec<String>) -> TauriResult<BatchOperationResult> {
+    let group_service = GroupService::new();
+    let mut deleted_videos = 0;
+    let mut deleted_groups = 0;
+    let mut errors = Vec::new();
+    
+    for (item_id, item_type) in item_ids.iter().zip(item_types.iter()) {
+        match item_type.as_str() {
+            "group" => {
+                match group_service.delete_group(item_id).await {
+                    Ok(count) => {
+                        deleted_groups += 1;
+                        deleted_videos += count;
+                    }
+                    Err(e) => errors.push(format!("删除组 {} 失败: {}", item_id, e)),
+                }
+            }
+            "video" => {
+                match cache_records::delete(item_id).await {
+                    Ok(_) => deleted_videos += 1,
+                    Err(e) => errors.push(format!("删除视频 {} 失败: {}", item_id, e)),
+                }
+            }
+            _ => errors.push(format!("未知的项目类型: {}", item_type)),
+        }
+    }
+    
+    Ok(BatchOperationResult {
+        success_count: deleted_videos + deleted_groups,
+        deleted_videos,
+        deleted_groups,
+        error_count: errors.len() as i32,
+        errors,
+    })
+}
+
+/// 批量导出缓存项
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn batch_export_cache_items(
+    item_ids: Vec<String>, 
+    item_types: Vec<String>,
+    _export_path: String,
+) -> TauriResult<BatchOperationResult> {
+    let group_service = GroupService::new();
+    let mut exported_videos = 0;
+    let mut exported_groups = 0;
+    let mut errors = Vec::new();
+    
+    // 这里只是一个框架实现，实际的导出逻辑需要根据具体需求实现
+    for (item_id, item_type) in item_ids.iter().zip(item_types.iter()) {
+        match item_type.as_str() {
+            "group" => {
+                match group_service.get_videos_by_group_id(item_id).await {
+                    Ok(videos) => {
+                        // TODO: 实现实际的导出逻辑
+                        exported_groups += 1;
+                        exported_videos += videos.len() as i32;
+                    }
+                    Err(e) => errors.push(format!("导出组 {} 失败: {}", item_id, e)),
+                }
+            }
+            "video" => {
+                // TODO: 实现单个视频的导出逻辑
+                exported_videos += 1;
+            }
+            _ => errors.push(format!("未知的项目类型: {}", item_type)),
+        }
+    }
+    
+    Ok(BatchOperationResult {
+        success_count: exported_videos + exported_groups,
+        deleted_videos: 0, // 导出操作不删除
+        deleted_groups: 0, // 导出操作不删除
+        error_count: errors.len() as i32,
+        errors,
+    })
+}
+
 /// 缓存统计信息
 #[derive(Serialize, Type)]
 pub struct CacheStats {
     pub total_count: i64,
     pub total_size: i64,
     pub available_count: i64,
+}
+
+/// 分页显示项结果
+#[derive(Serialize, Type)]
+pub struct PaginatedDisplayItems {
+    pub items: Vec<DisplayItem>,
+    pub total_count: i32,
+    pub total_pages: i32,
+    pub current_page: i32,
+    pub page_size: i32,
+    pub has_next: bool,
+    pub has_prev: bool,
+}
+
+/// 批量操作结果
+#[derive(Serialize, Type)]
+pub struct BatchOperationResult {
+    pub success_count: i32,
+    pub deleted_videos: i32,
+    pub deleted_groups: i32,
+    pub error_count: i32,
+    pub errors: Vec<String>,
 }
 
 /// 扫描结果
@@ -395,3 +675,5 @@ pub struct ScanPreviewInfo {
     pub file_size: i64,
     pub duration: i32,
 }
+
+

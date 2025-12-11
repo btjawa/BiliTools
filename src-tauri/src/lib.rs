@@ -57,6 +57,17 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             open_cache_folder,
             check_local_cover,
             get_cache_stats,
+            // Group Management
+            get_cache_display_items,
+            get_cache_display_items_paginated,
+            toggle_group_expansion,
+            set_group_expansion,
+            get_group_statistics,
+            get_videos_by_group_id,
+            delete_group,
+            cleanup_orphaned_group_states,
+            batch_delete_cache_items,
+            batch_export_cache_items,
         ])
         .events(collect_events![
             shared::HeadersData,

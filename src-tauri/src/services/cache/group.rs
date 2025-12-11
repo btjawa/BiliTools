@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use base64::prelude::*;
 
-use crate::storage::cache_records::CacheRecord;
+use crate::storage::{cache_records::CacheRecord, cache_group_states};
+use super::error::CacheImportError;
 
 /// 缓存视频组
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -39,6 +41,112 @@ impl GroupService {
     /// 创建新的组服务实例
     pub fn new() -> Self {
         Self
+    }
+
+    /// 从缓存记录构建显示项列表，包含展开状态
+    ///
+    /// # 参数
+    /// * `records` - 缓存记录列表
+    ///
+    /// # 返回
+    /// * `Result<Vec<DisplayItem>>` - 显示项列表
+    pub async fn build_display_items_with_states(
+        &self,
+        records: Vec<CacheRecord>,
+    ) -> Result<Vec<DisplayItem>> {
+        let mut display_items = self.build_display_items_from_records(records).await?;
+        
+        // 为每个组设置展开状态
+        for item in &mut display_items {
+            if let DisplayItem::VideoGroup { group } = item {
+                group.is_expanded = cache_group_states::get_expansion_state(&group.group_id).await?;
+            }
+        }
+        
+        Ok(display_items)
+    }
+
+    /// 切换组的展开状态
+    ///
+    /// # 参数
+    /// * `group_id` - 组ID
+    ///
+    /// # 返回
+    /// * `Result<bool>` - 新的展开状态
+    pub async fn toggle_group_expansion(&self, group_id: &str) -> Result<bool> {
+        let current_state = cache_group_states::get_expansion_state(group_id).await?;
+        let new_state = !current_state;
+        cache_group_states::set_expansion_state(group_id, new_state).await?;
+        Ok(new_state)
+    }
+
+    /// 设置组的展开状态
+    ///
+    /// # 参数
+    /// * `group_id` - 组ID
+    /// * `is_expanded` - 是否展开
+    ///
+    /// # 返回
+    /// * `Result<()>`
+    pub async fn set_group_expansion(&self, group_id: &str, is_expanded: bool) -> Result<()> {
+        cache_group_states::set_expansion_state(group_id, is_expanded).await?;
+        Ok(())
+    }
+
+    /// 获取组统计信息
+    ///
+    /// # 参数
+    /// * `display_items` - 显示项列表
+    ///
+    /// # 返回
+    /// * `GroupStatistics` - 组统计信息
+    pub fn calculate_group_statistics(&self, display_items: &[DisplayItem]) -> GroupStatistics {
+        GroupStatistics::from_display_items(display_items)
+    }
+
+    /// 根据组ID获取组内视频
+    ///
+    /// # 参数
+    /// * `group_id` - 组ID
+    ///
+    /// # 返回
+    /// * `Result<Vec<CacheRecord>>` - 组内视频列表
+    pub async fn get_videos_by_group_id(&self, group_id: &str) -> Result<Vec<CacheRecord>> {
+        use crate::storage::cache_records;
+        cache_records::get_by_group_id(group_id).await
+    }
+
+    /// 删除组（删除组内所有视频）
+    ///
+    /// # 参数
+    /// * `group_id` - 组ID
+    ///
+    /// # 返回
+    /// * `Result<i32>` - 删除的视频数量
+    pub async fn delete_group(&self, group_id: &str) -> Result<i32> {
+        use crate::storage::cache_records;
+        
+        let videos = self.get_videos_by_group_id(group_id).await?;
+        let count = videos.len() as i32;
+        
+        // 删除所有组内视频记录
+        for video in videos {
+            cache_records::delete(&video.id).await?;
+        }
+        
+        // 删除组状态记录
+        cache_group_states::delete_state(group_id).await?;
+        
+        Ok(count)
+    }
+
+    /// 清理孤立的组状态
+    ///
+    /// # 返回
+    /// * `Result<()>`
+    pub async fn cleanup_orphaned_group_states(&self) -> Result<()> {
+        cache_group_states::cleanup_orphaned_states().await?;
+        Ok(())
     }
 
     /// 从缓存记录构建显示项列表（组和单个视频的混合）
@@ -123,18 +231,79 @@ impl GroupService {
     ) -> Result<String> {
         // 1. 尝试从任一视频目录获取group.jpg
         for video in videos {
-            let group_cover_path = PathBuf::from(&video.cache_path).join("group.jpg");
-            if group_cover_path.exists() {
-                return Ok(format!("file://{}", group_cover_path.to_string_lossy()));
+            let cache_dir = PathBuf::from(&video.cache_path);
+            let group_cover_path = cache_dir.join("group.jpg");
+            
+            if group_cover_path.exists() && group_cover_path.is_file() {
+                // 读取文件并转换为 base64 data URL
+                match tokio::fs::read(&group_cover_path).await {
+                    Ok(file_data) => {
+                        let base64_data = BASE64_STANDARD.encode(&file_data);
+                        let mime_type = match group_cover_path.extension().and_then(|ext| ext.to_str()) {
+                            Some("jpg") | Some("jpeg") => "image/jpeg",
+                            Some("png") => "image/png",
+                            Some("webp") => "image/webp",
+                            _ => "image/jpeg", // 默认
+                        };
+                        return Ok(format!("data:{};base64,{}", mime_type, base64_data));
+                    }
+                    Err(e) => {
+                        eprintln!("读取组封面文件失败 {:?}: {}", group_cover_path, e);
+                        continue;
+                    }
+                }
             }
         }
 
         // 2. 回退到第一个视频的封面
         if let Some(first_video) = videos.first() {
+            // 尝试获取本地封面
+            if let Ok(Some(local_cover)) = self.get_local_cover(&first_video.cache_path).await {
+                return Ok(local_cover);
+            }
+            // 回退到原始封面URL
             Ok(first_video.cover_url.clone())
         } else {
-            Ok(String::new())
+            Err(CacheImportError::MissingRequiredFields {
+                fields: vec!["group videos".to_string()],
+            }.into())
         }
+    }
+
+    /// 获取本地封面文件（复用现有逻辑）
+    async fn get_local_cover(&self, cache_path: &str) -> Result<Option<String>> {
+        let cache_dir = PathBuf::from(cache_path);
+        if !cache_dir.exists() {
+            return Ok(None);
+        }
+
+        // B站缓存的封面文件名（按优先级排序）
+        let cover_files = ["image.jpg", "cover.jpg", "cover.png", "cover.webp", "face.jpg"];
+        
+        for file_name in &cover_files {
+            let cover_path = cache_dir.join(file_name);
+            if cover_path.exists() && cover_path.is_file() {
+                // 读取文件并转换为 base64 data URL
+                match tokio::fs::read(&cover_path).await {
+                    Ok(file_data) => {
+                        let base64_data = BASE64_STANDARD.encode(&file_data);
+                        let mime_type = match cover_path.extension().and_then(|ext| ext.to_str()) {
+                            Some("jpg") | Some("jpeg") => "image/jpeg",
+                            Some("png") => "image/png",
+                            Some("webp") => "image/webp",
+                            _ => "image/jpeg", // 默认
+                        };
+                        return Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)));
+                    }
+                    Err(e) => {
+                        eprintln!("读取封面文件失败 {:?}: {}", cover_path, e);
+                        continue;
+                    }
+                }
+            }
+        }
+        
+        Ok(None)
     }
 
     /// 生成组标题
@@ -247,6 +416,8 @@ impl Default for GroupService {
         Self::new()
     }
 }
+
+
 
 /// 组统计信息
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

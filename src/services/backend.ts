@@ -285,6 +285,116 @@ async getCacheStats() : Promise<Result<CacheStats, TauriError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * 获取缓存显示项列表（组和单个视频的混合）
+ */
+async getCacheDisplayItems() : Promise<Result<DisplayItem[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_display_items") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取缓存显示项列表（带分页支持）
+ */
+async getCacheDisplayItemsPaginated(page: number, pageSize: number, sortBy: string | null, sortOrder: string | null, searchQuery: string | null, filterStatus: string | null) : Promise<Result<PaginatedDisplayItems, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_display_items_paginated", { page, pageSize, sortBy, sortOrder, searchQuery, filterStatus }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 切换组的展开状态
+ */
+async toggleGroupExpansion(groupId: string) : Promise<Result<boolean, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_group_expansion", { groupId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 设置组的展开状态
+ */
+async setGroupExpansion(groupId: string, isExpanded: boolean) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_group_expansion", { groupId, isExpanded }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取组统计信息
+ */
+async getGroupStatistics() : Promise<Result<GroupStatistics, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_group_statistics") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 根据组ID获取组内视频
+ */
+async getVideosByGroupId(groupId: string) : Promise<Result<CacheRecord[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_videos_by_group_id", { groupId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 删除整个组
+ */
+async deleteGroup(groupId: string) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_group", { groupId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 清理孤立的组状态
+ */
+async cleanupOrphanedGroupStates() : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cleanup_orphaned_group_states") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 批量删除缓存项（支持组和单个视频）
+ */
+async batchDeleteCacheItems(itemIds: string[], itemTypes: string[]) : Promise<Result<BatchOperationResult, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_delete_cache_items", { itemIds, itemTypes }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 批量导出缓存项
+ */
+async batchExportCacheItems(itemIds: string[], itemTypes: string[], exportPath: string) : Promise<Result<BatchOperationResult, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_export_cache_items", { itemIds, itemTypes, exportPath }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -308,13 +418,25 @@ queueEvent: "queue-event"
 /** user-defined types **/
 
 export type AnyInt = number
+/**
+ * 批量操作结果
+ */
+export type BatchOperationResult = { success_count: number; deleted_videos: number; deleted_groups: number; error_count: number; errors: string[] }
+/**
+ * 缓存视频组
+ */
+export type CacheGroup = { group_id: string; title: string; cover_url: string; uname: string; video_count: number; total_duration: number; total_file_size: number; latest_download_time: number; videos: CacheRecord[]; is_expanded: boolean }
 export type CacheKey = "log" | "temp" | "webview" | "database"
-export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; title: string; uname: string; cover_url: string; duration: number; file_size: number; cache_path: string; download_time: number; import_time: number; status: string; source: string }
+export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; title: string; uname: string; cover_url: string; duration: number; file_size: number; cache_path: string; download_time: number; import_time: number; status: string; source: string; group_id: string | null }
 /**
  * 缓存统计信息
  */
 export type CacheStats = { total_count: number; total_size: number; available_count: number }
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
+/**
+ * 显示项枚举（组或单个视频）
+ */
+export type DisplayItem = { type: "single_video"; video: CacheRecord } | { type: "video_group"; group: CacheGroup }
 /**
  * 重复处理策略
  */
@@ -335,6 +457,10 @@ export type DuplicateHandlingStrategy =
  * 错误统计信息
  */
 export type ErrorStatistics = { total_errors: number; error_by_type: Partial<{ [key in string]: number }>; error_by_severity: Partial<{ [key in string]: number }>; retried_operations: number; skipped_operations: number; aborted_operations: number }
+/**
+ * 组统计信息
+ */
+export type GroupStatistics = { total_groups: number; total_videos_in_groups: number; total_single_videos: number; total_duration_in_groups: number; total_size_in_groups: number }
 export type HeadersData = { Cookie: string; "User-Agent": string; Referer: string; Origin: string }
 /**
  * 导入错误
@@ -376,6 +502,10 @@ export type MediaNfoCredit = { role: string | null; name: string | null }
 export type MediaNfoCredits = { actors: MediaNfoCredit[]; staff: MediaNfoCredit[] }
 export type MediaNfoThumb = { id: string; url: string }
 export type MediaNfoUpper = { name: string; mid: number; avatar: string }
+/**
+ * 分页显示项结果
+ */
+export type PaginatedDisplayItems = { items: DisplayItem[]; total_count: number; total_pages: number; current_page: number; page_size: number; has_next: boolean; has_prev: boolean }
 export type PopupSelect = { res?: number | null; abr?: number | null; enc?: number | null; fmt: StreamFormat; misc: PopupSelectMisc; nfo: PopupSelectNfo; danmaku: PopupSelectDanmaku; thumb: string[]; media: PopupSelectMedia }
 export type PopupSelectDanmaku = { live: boolean; history: StringOrFalse }
 export type PopupSelectMedia = { video: boolean; audio: boolean; audioVideo: boolean }
