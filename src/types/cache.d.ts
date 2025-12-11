@@ -40,6 +40,8 @@ export interface CacheItem {
   importTime: Date;
   /** 缓存状态 */
   status: CacheStatus;
+  /** 视频组标识符（可选，用于组织相关视频） */
+  groupId?: string;
 }
 
 /**
@@ -49,6 +51,56 @@ export type CacheStatus =
   | 'available'    // 可用 - 文件完整且可播放
   | 'unavailable'  // 不可用 - 文件已被移动或删除
   | 'incomplete';  // 不完整 - 文件损坏或缺失
+
+/**
+ * 缓存视频组信息
+ * 表示具有相同groupId的多个缓存视频的聚合显示
+ */
+export interface CacheGroup {
+  /** 组标识符 */
+  groupId: string;
+  /** 组标题（从组内视频标题生成或使用默认标题） */
+  title: string;
+  /** 组封面URL（优先使用group.jpg，回退到第一个视频封面） */
+  coverUrl: string;
+  /** UP主名称（组内视频的共同UP主或主要UP主） */
+  uname: string;
+  /** 组内视频数量 */
+  videoCount: number;
+  /** 组内所有视频的总时长（秒） */
+  totalDuration: number;
+  /** 组内所有视频的总文件大小（字节） */
+  totalFileSize: number;
+  /** 组内最新的下载时间（用于排序） */
+  latestDownloadTime: Date;
+  /** 组内的视频列表 */
+  videos: CacheItem[];
+  /** 组是否处于展开状态 */
+  isExpanded: boolean;
+}
+
+/**
+ * 显示项联合类型
+ * 表示缓存列表中可以显示的项目类型：单个视频或视频组
+ */
+export type DisplayItem = 
+  | { type: 'video'; data: CacheItem }
+  | { type: 'group'; data: CacheGroup };
+
+/**
+ * 组状态信息
+ * 用于持久化组的展开/折叠状态
+ */
+export interface GroupState {
+  /** 组标识符 */
+  groupId: string;
+  /** 是否展开 */
+  isExpanded: boolean;
+  /** 状态创建时间 */
+  createdAt: Date;
+  /** 状态更新时间 */
+  updatedAt: Date;
+}
 
 // ============================================================================
 // 导入相关类型
@@ -275,6 +327,8 @@ export interface VideoInfo {
   quality: number;
   /** 下载时间戳 */
   downloadTime?: number;
+  /** 视频组标识符（可选，用于组织相关视频） */
+  groupId?: string;
   /** 其他可选字段 */
   [key: string]: unknown;
 }
@@ -308,6 +362,10 @@ export interface CacheFilter {
     start?: Date;
     end?: Date;
   };
+  /** 按组筛选（仅显示组或仅显示单个视频） */
+  displayType?: 'all' | 'groups' | 'singles';
+  /** 按组ID筛选 */
+  groupId?: string;
 }
 
 /**
@@ -355,6 +413,52 @@ export interface CachePagination {
 }
 
 /**
+ * 组卡片组件属性
+ */
+export interface CacheGroupCardProps {
+  /** 组数据 */
+  group: CacheGroup;
+  /** 是否被选中 */
+  isSelected: boolean;
+  /** 展开/折叠切换回调 */
+  onToggleExpand: (groupId: string) => void;
+  /** 选择组回调 */
+  onSelectGroup: (groupId: string, selected: boolean) => void;
+  /** 删除组回调 */
+  onDeleteGroup: (groupId: string) => void;
+  /** 打开文件夹回调 */
+  onOpenFolder: (groupId: string) => void;
+}
+
+/**
+ * 混合列表组件属性
+ */
+export interface CacheMixedListProps {
+  /** 显示项列表（包含单个视频和组） */
+  items: DisplayItem[];
+  /** 排序方式 */
+  sortBy: 'time' | 'size' | 'title';
+  /** 搜索查询 */
+  searchQuery: string;
+  /** 已选择的项目ID集合 */
+  selectedItems: Set<string>;
+}
+
+/**
+ * 组管理器配置
+ */
+export interface GroupManagerConfig {
+  /** 默认展开状态 */
+  defaultExpanded: boolean;
+  /** 最小组大小（少于此数量的视频不会成组） */
+  minGroupSize: number;
+  /** 是否启用组功能 */
+  enableGrouping: boolean;
+  /** 组标题生成策略 */
+  titleGenerationStrategy: 'prefix' | 'series' | 'default';
+}
+
+/**
  * 缓存统计信息
  */
 export interface CacheStatistics {
@@ -372,6 +476,12 @@ export interface CacheStatistics {
   averageSize: number;
   /** 总时长（秒） */
   totalDuration: number;
+  /** 组数量 */
+  groupCount: number;
+  /** 单个视频数量（不属于任何组） */
+  singleVideoCount: number;
+  /** 平均每组视频数量 */
+  averageVideosPerGroup: number;
 }
 
 // ============================================================================
@@ -414,7 +524,11 @@ export type CacheAction =
   | 'open_folder'  // 打开文件夹
   | 'delete'       // 删除
   | 'export'       // 导出
-  | 'refresh';     // 刷新状态
+  | 'refresh'      // 刷新状态
+  | 'expand'       // 展开组
+  | 'collapse'     // 折叠组
+  | 'select_group' // 选择整个组
+  | 'play_group';  // 播放组内所有视频
 
 /**
  * 批量操作选项
@@ -489,6 +603,7 @@ export interface CacheRecordRaw {
   import_time: number;
   status: string;
   source: string;
+  group_id?: string;
 }
 
 /** 后端缓存统计原始格式 */
@@ -498,4 +613,34 @@ export interface CacheStatisticsRaw {
   total_size: number;
   average_file_size: number;
   total_duration: number;
+  group_count: number;
+  single_video_count: number;
+  average_videos_per_group: number;
+}
+
+/** 后端组数据原始格式 */
+export interface CacheGroupRaw {
+  group_id: string;
+  title: string;
+  cover_url: string;
+  uname: string;
+  video_count: number;
+  total_duration: number;
+  total_file_size: number;
+  latest_download_time: number;
+  videos: CacheRecordRaw[];
+  is_expanded: boolean;
+}
+
+/** 后端显示项原始格式 */
+export type DisplayItemRaw = 
+  | { SingleVideo: CacheRecordRaw }
+  | { VideoGroup: CacheGroupRaw };
+
+/** 后端组状态原始格式 */
+export interface GroupStateRaw {
+  group_id: string;
+  is_expanded: boolean;
+  created_at: number;
+  updated_at: number;
 }

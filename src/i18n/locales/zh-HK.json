@@ -509,6 +509,17 @@
       "play": "播放",
       "openFolder": "開啟資料夾",
       "delete": "刪除"
+    },
+    "group": {
+      "collection": "合集",
+      "videoCount": "共{0}個影片",
+      "totalDuration": "總時長",
+      "expand": "展開",
+      "collapse": "摺疊",
+      "multipleUploaders": "多個UP主",
+      "defaultTitle": "影片合集",
+      "hasUnavailableVideos": "組內包含不可用影片",
+      "confirmDeleteGroup": "確定要刪除整個影片組嗎？這將刪除組內所有{0}個影片。"
     }
   }
 }

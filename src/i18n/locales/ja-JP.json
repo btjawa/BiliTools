@@ -509,6 +509,17 @@
       "play": "再生",
       "openFolder": "フォルダーを開く",
       "delete": "削除"
+    },
+    "group": {
+      "collection": "コレクション",
+      "videoCount": "{0}個の動画",
+      "totalDuration": "総再生時間",
+      "expand": "展開",
+      "collapse": "折りたたみ",
+      "multipleUploaders": "複数のアップローダー",
+      "defaultTitle": "動画コレクション",
+      "hasUnavailableVideos": "利用不可な動画を含む",
+      "confirmDeleteGroup": "動画グループ全体を削除してもよろしいですか？グループ内の{0}個の動画がすべて削除されます。"
     }
   }
 }

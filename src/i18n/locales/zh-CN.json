@@ -511,6 +511,17 @@
       "play": "播放",
       "openFolder": "打开文件夹",
       "delete": "删除"
+    },
+    "group": {
+      "collection": "合集",
+      "videoCount": "共{0}个视频",
+      "totalDuration": "总时长",
+      "expand": "展开",
+      "collapse": "折叠",
+      "multipleUploaders": "多个UP主",
+      "defaultTitle": "视频合集",
+      "hasUnavailableVideos": "组内包含不可用视频",
+      "confirmDeleteGroup": "确定要删除整个视频组吗？这将删除组内所有{0}个视频。"
     }
   }
 }

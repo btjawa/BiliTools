@@ -248,7 +248,11 @@ export class CacheManagementService {
         incompleteCount: items.filter(item => item.status === 'incomplete').length,
         totalSize: items.reduce((sum, item) => sum + item.fileSize, 0),
         averageSize: items.length > 0 ? items.reduce((sum, item) => sum + item.fileSize, 0) / items.length : 0,
-        totalDuration: items.reduce((sum, item) => sum + item.duration, 0)
+        totalDuration: items.reduce((sum, item) => sum + item.duration, 0),
+        // 组相关统计（暂时使用默认值，后续任务会实现）
+        groupCount: 0,
+        singleVideoCount: items.length,
+        averageVideosPerGroup: 0
       };
 
       return {
@@ -391,7 +395,11 @@ export class CacheManagementService {
         incompleteCount: 0, // 后端暂未提供此数据
         totalSize: result.total_size,
         averageSize: result.total_count > 0 ? result.total_size / result.total_count : 0,
-        totalDuration: 0 // 后端暂未提供此数据
+        totalDuration: 0, // 后端暂未提供此数据
+        // 组相关统计（暂时使用默认值，后续任务会实现）
+        groupCount: result.group_count || 0,
+        singleVideoCount: result.single_video_count || result.total_count,
+        averageVideosPerGroup: result.average_videos_per_group || 0
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
