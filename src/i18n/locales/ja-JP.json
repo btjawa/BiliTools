@@ -490,8 +490,8 @@
       "selectAll": "現在のページをすべて選択",
       "unselectAll": "すべて選択解除",
       "sort": {
-        "importTimeDesc": "インポート時間 (新しい順)",
-        "importTimeAsc": "インポート時間 (古い順)",
+        "completionTimeDesc": "完了時間 (新しい順)",
+        "completionTimeAsc": "完了時間 (古い順)",
         "titleAsc": "タイトル (A-Z)",
         "titleDesc": "タイトル (Z-A)",
         "fileSizeDesc": "ファイルサイズ (大きい順)",

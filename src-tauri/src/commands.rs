@@ -1,11 +1,11 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
+use base64::prelude::*;
 use serde::Serialize;
 use specta::Type;
 use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
 use tauri::async_runtime;
 use tokio::fs;
-use base64::prelude::*;
 
 // Re-export for lib.rs to register commands
 pub use crate::{
@@ -209,15 +209,14 @@ pub async fn scan_cache_directory(path: String) -> TauriResult<ScanResult> {
 /// 导入缓存目录
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn import_cache_directory(
-    path: String,
-    options: ImportOptions,
-) -> TauriResult<String> {
+pub async fn import_cache_directory(path: String, options: ImportOptions) -> TauriResult<String> {
     let import_service = ImportService::new();
     let root_path = PathBuf::from(path);
-    
+
     // 启动异步导入并返回导入ID
-    let result = import_service.import_cache_directory(root_path, options).await?;
+    let result = import_service
+        .import_cache_directory(root_path, options)
+        .await?;
     let import_id = result.import_id;
     Ok(import_id)
 }
@@ -238,11 +237,11 @@ pub async fn get_import_progress(
                     // Channel 已关闭，停止发送
                     break;
                 }
-                
+
                 // 如果导入已完成或取消，停止监听
                 match progress.status {
-                    ImportProgressStatus::Completed 
-                    | ImportProgressStatus::Cancelled 
+                    ImportProgressStatus::Completed
+                    | ImportProgressStatus::Cancelled
                     | ImportProgressStatus::Error => {
                         break;
                     }
@@ -257,7 +256,7 @@ pub async fn get_import_progress(
             }
         }
     });
-    
+
     Ok(())
 }
 
@@ -317,7 +316,7 @@ pub async fn check_local_cover(cache_path: String) -> TauriResult<Option<String>
 
     // B站缓存的封面文件名（按优先级排序）
     let cover_files = ["image.jpg", "image.png"];
-    
+
     for file_name in &cover_files {
         let cover_path = cache_dir.join(file_name);
         if cover_path.exists() && cover_path.is_file() {
@@ -340,7 +339,7 @@ pub async fn check_local_cover(cache_path: String) -> TauriResult<Option<String>
             }
         }
     }
-    
+
     Ok(None)
 }
 
@@ -361,7 +360,7 @@ pub async fn get_cache_stats() -> TauriResult<CacheStats> {
 
 // 组功能相关命令
 
-use crate::services::cache::{GroupService, DisplayItem, GroupStatistics};
+use crate::services::cache::{DisplayItem, GroupService, GroupStatistics};
 
 /// 获取缓存显示项列表（组和单个视频的混合）
 #[tauri::command(async)]
@@ -369,7 +368,9 @@ use crate::services::cache::{GroupService, DisplayItem, GroupStatistics};
 pub async fn get_cache_display_items() -> TauriResult<Vec<DisplayItem>> {
     let group_service = GroupService::new();
     let records = cache_records::get_all().await?;
-    let display_items = group_service.build_display_items_with_states(records).await?;
+    let display_items = group_service
+        .build_display_items_with_states(records)
+        .await?;
     Ok(display_items)
 }
 
@@ -385,32 +386,34 @@ pub async fn get_cache_display_items_paginated(
     filter_status: Option<String>,
 ) -> TauriResult<PaginatedDisplayItems> {
     let group_service = GroupService::new();
-    
+
     // 获取所有记录
     let mut records = if let Some(status) = filter_status {
         cache_records::get_by_status(&status).await?
     } else {
         cache_records::get_all().await?
     };
-    
+
     // 应用搜索过滤
     if let Some(query) = search_query {
         if !query.is_empty() {
             let query_lower = query.to_lowercase();
             records.retain(|record| {
-                record.title.to_lowercase().contains(&query_lower) ||
-                record.uname.to_lowercase().contains(&query_lower)
+                record.title.to_lowercase().contains(&query_lower)
+                    || record.uname.to_lowercase().contains(&query_lower)
             });
         }
     }
-    
+
     // 构建显示项
-    let mut display_items = group_service.build_display_items_with_states(records).await?;
-    
+    let mut display_items = group_service
+        .build_display_items_with_states(records)
+        .await?;
+
     // 应用排序
     let sort_field = sort_by.as_deref().unwrap_or("time");
     let sort_desc = sort_order.as_deref().unwrap_or("desc") == "desc";
-    
+
     display_items.sort_by(|a, b| {
         let cmp = match sort_field {
             "time" => {
@@ -448,26 +451,26 @@ pub async fn get_cache_display_items_paginated(
             }
             _ => std::cmp::Ordering::Equal,
         };
-        
+
         if sort_desc {
             cmp.reverse()
         } else {
             cmp
         }
     });
-    
+
     // 计算分页
     let total_count = display_items.len() as i32;
     let total_pages = (total_count + page_size - 1) / page_size;
     let start_index = ((page - 1) * page_size) as usize;
     let end_index = (start_index + page_size as usize).min(display_items.len());
-    
+
     let items = if start_index < display_items.len() {
         display_items[start_index..end_index].to_vec()
     } else {
         Vec::new()
     };
-    
+
     Ok(PaginatedDisplayItems {
         items,
         total_count,
@@ -493,7 +496,9 @@ pub async fn toggle_group_expansion(group_id: String) -> TauriResult<bool> {
 #[specta::specta]
 pub async fn set_group_expansion(group_id: String, is_expanded: bool) -> TauriResult<()> {
     let group_service = GroupService::new();
-    group_service.set_group_expansion(&group_id, is_expanded).await?;
+    group_service
+        .set_group_expansion(&group_id, is_expanded)
+        .await?;
     Ok(())
 }
 
@@ -503,7 +508,9 @@ pub async fn set_group_expansion(group_id: String, is_expanded: bool) -> TauriRe
 pub async fn get_group_statistics() -> TauriResult<GroupStatistics> {
     let group_service = GroupService::new();
     let records = cache_records::get_all().await?;
-    let display_items = group_service.build_display_items_from_records(records).await?;
+    let display_items = group_service
+        .build_display_items_from_records(records)
+        .await?;
     let statistics = group_service.calculate_group_statistics(&display_items);
     Ok(statistics)
 }
@@ -538,33 +545,32 @@ pub async fn cleanup_orphaned_group_states() -> TauriResult<()> {
 /// 批量删除缓存项（支持组和单个视频）
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn batch_delete_cache_items(item_ids: Vec<String>, item_types: Vec<String>) -> TauriResult<BatchOperationResult> {
+pub async fn batch_delete_cache_items(
+    item_ids: Vec<String>,
+    item_types: Vec<String>,
+) -> TauriResult<BatchOperationResult> {
     let group_service = GroupService::new();
     let mut deleted_videos = 0;
     let mut deleted_groups = 0;
     let mut errors = Vec::new();
-    
+
     for (item_id, item_type) in item_ids.iter().zip(item_types.iter()) {
         match item_type.as_str() {
-            "group" => {
-                match group_service.delete_group(item_id).await {
-                    Ok(count) => {
-                        deleted_groups += 1;
-                        deleted_videos += count;
-                    }
-                    Err(e) => errors.push(format!("删除组 {} 失败: {}", item_id, e)),
+            "group" => match group_service.delete_group(item_id).await {
+                Ok(count) => {
+                    deleted_groups += 1;
+                    deleted_videos += count;
                 }
-            }
-            "video" => {
-                match cache_records::delete(item_id).await {
-                    Ok(_) => deleted_videos += 1,
-                    Err(e) => errors.push(format!("删除视频 {} 失败: {}", item_id, e)),
-                }
-            }
+                Err(e) => errors.push(format!("删除组 {} 失败: {}", item_id, e)),
+            },
+            "video" => match cache_records::delete(item_id).await {
+                Ok(_) => deleted_videos += 1,
+                Err(e) => errors.push(format!("删除视频 {} 失败: {}", item_id, e)),
+            },
             _ => errors.push(format!("未知的项目类型: {}", item_type)),
         }
     }
-    
+
     Ok(BatchOperationResult {
         success_count: deleted_videos + deleted_groups,
         deleted_videos,
@@ -578,7 +584,7 @@ pub async fn batch_delete_cache_items(item_ids: Vec<String>, item_types: Vec<Str
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn batch_export_cache_items(
-    item_ids: Vec<String>, 
+    item_ids: Vec<String>,
     item_types: Vec<String>,
     _export_path: String,
 ) -> TauriResult<BatchOperationResult> {
@@ -586,7 +592,7 @@ pub async fn batch_export_cache_items(
     let mut exported_videos = 0;
     let mut exported_groups = 0;
     let mut errors = Vec::new();
-    
+
     // 这里只是一个框架实现，实际的导出逻辑需要根据具体需求实现
     for (item_id, item_type) in item_ids.iter().zip(item_types.iter()) {
         match item_type.as_str() {
@@ -607,7 +613,7 @@ pub async fn batch_export_cache_items(
             _ => errors.push(format!("未知的项目类型: {}", item_type)),
         }
     }
-    
+
     Ok(BatchOperationResult {
         success_count: exported_videos + exported_groups,
         deleted_videos: 0, // 导出操作不删除
@@ -675,5 +681,3 @@ pub struct ScanPreviewInfo {
     pub file_size: i64,
     pub duration: i32,
 }
-
-

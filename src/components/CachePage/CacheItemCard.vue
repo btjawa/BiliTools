@@ -39,10 +39,10 @@
       <!-- 标题 -->
       <h2 class="text-base truncate" :title="item.title">{{ item.title }}</h2>
       
-      <!-- 导入时间 -->
+      <!-- 下载完成时间 -->
       <div class="desc">
         <i class="fa-solid fa-clock"></i>
-        <span>{{ formatImportTime(item.importTime) }}</span>
+        <span>{{ formatDownloadTime(item.downloadTime) }}</span>
       </div>
       
       <!-- 时长信息 -->
@@ -178,9 +178,9 @@ async function loadCoverSrc() {
 // ============================================================================
 
 /**
- * 格式化导入时间
+ * 格式化下载完成时间
  */
-function formatImportTime(date: Date): string {
+function formatDownloadTime(date: Date): string {
   // 处理异常时间戳
   if (!date || isNaN(date.getTime())) {
     return '未知时间';

@@ -30,8 +30,8 @@
               class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
               @change="applySort"
             >
-              <option value="importTime-desc">{{ $t('cache.list.sort.importTimeDesc') }}</option>
-              <option value="importTime-asc">{{ $t('cache.list.sort.importTimeAsc') }}</option>
+              <option value="completionTime-desc">{{ $t('cache.list.sort.completionTimeDesc') }}</option>
+              <option value="completionTime-asc">{{ $t('cache.list.sort.completionTimeAsc') }}</option>
               <option value="title-asc">{{ $t('cache.list.sort.titleAsc') }}</option>
               <option value="title-desc">{{ $t('cache.list.sort.titleDesc') }}</option>
               <option value="fileSize-desc">{{ $t('cache.list.sort.fileSizeDesc') }}</option>
@@ -321,7 +321,7 @@ const cacheStore = useCacheStore();
 const searchKeyword = ref<string>('');
 const selectedStatus = ref<string>('');
 const selectedUploader = ref<string>('');
-const selectedSort = ref<string>('importTime-desc');
+const selectedSort = ref<string>('completionTime-desc');
 
 // 页面输入状态
 const pageInput = ref<number>(1);

@@ -490,8 +490,8 @@
       "selectAll": "Select all on page",
       "unselectAll": "Unselect all",
       "sort": {
-        "importTimeDesc": "Import time (newest first)",
-        "importTimeAsc": "Import time (oldest first)",
+        "completionTimeDesc": "Completion time (newest first)",
+        "completionTimeAsc": "Completion time (oldest first)",
         "titleAsc": "Title (A-Z)",
         "titleDesc": "Title (Z-A)",
         "fileSizeDesc": "File size (largest first)",

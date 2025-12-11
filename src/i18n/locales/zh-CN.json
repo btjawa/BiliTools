@@ -490,8 +490,8 @@
       "selectAll": "全选当前页",
       "unselectAll": "取消全选",
       "sort": {
-        "importTimeDesc": "导入时间 (新到旧)",
-        "importTimeAsc": "导入时间 (旧到新)",
+        "completionTimeDesc": "完成时间 (新到旧)",
+        "completionTimeAsc": "完成时间 (旧到新)",
         "titleAsc": "标题 (A-Z)",
         "titleDesc": "标题 (Z-A)",
         "fileSizeDesc": "文件大小 (大到小)",

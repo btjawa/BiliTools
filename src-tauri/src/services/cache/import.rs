@@ -11,8 +11,10 @@ use tokio::time::{sleep, Duration};
 use crate::shared::get_millis;
 use crate::storage::cache_records::{self, CacheRecord};
 
+use super::error::{
+    CacheImportError, ErrorRecoveryStrategy, ErrorStatistics, ImportAction, ImportContext,
+};
 use super::{ParserService, ValidatorService};
-use super::error::{CacheImportError, ErrorRecoveryStrategy, ErrorStatistics, ImportAction, ImportContext};
 
 // 全局导入状态管理
 type ImportStatesMap = HashMap<String, Arc<RwLock<ImportProgress>>>;
@@ -93,7 +95,7 @@ pub struct ImportProgress {
     pub errors: Vec<ImportError>,
     pub error_statistics: ErrorStatistics,
     pub estimated_time_remaining: Option<u64>, // 预计剩余时间（秒）
-    pub processing_speed: f64, // 处理速度（目录/秒）
+    pub processing_speed: f64,                 // 处理速度（目录/秒）
 }
 
 /// 导入进度状态
@@ -143,7 +145,11 @@ impl ImportError {
         Self {
             directory_path,
             error_message: format!("{}", error),
-            error_type: format!("{:?}", error).split('(').next().unwrap_or("Unknown").to_string(),
+            error_type: format!("{:?}", error)
+                .split('(')
+                .next()
+                .unwrap_or("Unknown")
+                .to_string(),
             user_friendly_message: error.user_friendly_message(),
             suggested_solution: error.suggested_solution(),
             severity: format!("{:?}", error.severity()),
@@ -205,8 +211,11 @@ impl ImportService {
             Ok(dirs) => dirs,
             Err(e) => {
                 let cache_error = CacheImportError::from_anyhow_error(&e);
-                let import_error = ImportError::from_cache_error(&cache_error, root_path.to_string_lossy().to_string());
-                
+                let import_error = ImportError::from_cache_error(
+                    &cache_error,
+                    root_path.to_string_lossy().to_string(),
+                );
+
                 // 更新进度状态为错误
                 {
                     let mut prog = progress.write().await;
@@ -214,7 +223,7 @@ impl ImportService {
                     prog.errors.push(import_error);
                     prog.error_statistics.record_error(&cache_error);
                 }
-                
+
                 return Ok(ImportResult {
                     import_id,
                     total_found: 0,
@@ -280,20 +289,25 @@ impl ImportService {
                 {
                     let mut prog = progress_clone.write().await;
                     prog.processed_directories = current_index + 1;
-                    
+
                     // 计算处理速度和预计剩余时间
                     let elapsed_dirs = prog.processed_directories as f64;
                     if elapsed_dirs > 0.0 {
                         prog.processing_speed = elapsed_dirs / 60.0; // 假设已经过了1分钟，实际应该记录开始时间
-                        let remaining_dirs = (prog.total_directories - prog.processed_directories) as f64;
+                        let remaining_dirs =
+                            (prog.total_directories - prog.processed_directories) as f64;
                         if prog.processing_speed > 0.0 {
-                            prog.estimated_time_remaining = Some((remaining_dirs / prog.processing_speed * 60.0) as u64);
+                            prog.estimated_time_remaining =
+                                Some((remaining_dirs / prog.processing_speed * 60.0) as u64);
                         }
                     }
-                    
+
                     if let Err(ref e) = result {
                         let cache_error = CacheImportError::from_anyhow_error(e);
-                        let import_error = ImportError::from_cache_error(&cache_error, cache_dir_clone.to_string_lossy().to_string());
+                        let import_error = ImportError::from_cache_error(
+                            &cache_error,
+                            cache_dir_clone.to_string_lossy().to_string(),
+                        );
                         prog.errors.push(import_error);
                         prog.error_statistics.record_error(&cache_error);
                     }
@@ -465,7 +479,9 @@ impl ImportService {
                 validator.clone(),
                 cache_dir.clone(),
                 options.clone(),
-            ).await {
+            )
+            .await
+            {
                 Ok(result) => return Ok(result),
                 Err(e) => {
                     let cache_error = CacheImportError::from_anyhow_error(&e);
@@ -482,19 +498,26 @@ impl ImportService {
                         ImportAction::Retry if retry_count < max_retries => {
                             retry_count += 1;
                             let delay = ErrorRecoveryStrategy::get_retry_delay(retry_count);
-                            
+
                             // 更新进度状态
                             {
                                 let mut prog = progress.write().await;
-                                prog.current_directory = format!("重试中... ({}/{}): {}", 
-                                    retry_count, max_retries, cache_dir.to_string_lossy());
+                                prog.current_directory = format!(
+                                    "重试中... ({}/{}): {}",
+                                    retry_count,
+                                    max_retries,
+                                    cache_dir.to_string_lossy()
+                                );
                             }
-                            
+
                             sleep(Duration::from_millis(delay)).await;
                             continue;
                         }
                         ImportAction::Abort => {
-                            return Err(anyhow::anyhow!("导入操作被中止: {}", cache_error.user_friendly_message()));
+                            return Err(anyhow::anyhow!(
+                                "导入操作被中止: {}",
+                                cache_error.user_friendly_message()
+                            ));
                         }
                         ImportAction::Skip | ImportAction::Continue | _ => {
                             // 返回跳过状态的结果
@@ -554,7 +577,7 @@ impl ImportService {
                     path: directory_path.clone(),
                 }
             };
-            
+
             return Err(anyhow::anyhow!("{:?}", cache_error));
         }
 
@@ -563,7 +586,9 @@ impl ImportService {
         let video_info = match parser.parse_video_info(&video_info_path).await {
             Ok(info) => info,
             Err(e) => {
-                let cache_error = if e.to_string().contains("JSON") || e.to_string().contains("parse") {
+                let cache_error = if e.to_string().contains("JSON")
+                    || e.to_string().contains("parse")
+                {
                     CacheImportError::InvalidJsonFormat {
                         reason: e.to_string(),
                     }
@@ -623,7 +648,7 @@ impl ImportService {
             duration: video_info.duration,
             file_size: video_info.total_size as i64,
             cache_path: directory_path.clone(),
-            download_time: video_info.download_time.unwrap_or(0),
+            download_time: video_info.download_time.unwrap_or_else(|| get_millis()),
             import_time: get_millis(),
             status: "available".to_string(),
             source: "local_cache_import".to_string(),
@@ -680,7 +705,7 @@ impl ImportService {
                 let mut progress = progress_state.write().await;
                 progress.status = ImportProgressStatus::Cancelled;
                 progress.current_directory = "导入已取消".to_string();
-                
+
                 // 记录取消操作
                 let cancel_error = CacheImportError::ImportCancelled;
                 progress.error_statistics.record_error(&cancel_error);
@@ -693,7 +718,7 @@ impl ImportService {
                 let mut states = IMPORT_STATES.write().await;
                 states.remove(&import_id_clone);
             });
-            
+
             Ok(())
         } else {
             let cache_error = CacheImportError::Unknown {

@@ -44,7 +44,7 @@ pub struct CacheRecord {
     pub download_time: i64, // 视频原始下载时间（从videoInfo.json获取）
     pub import_time: i64,   // 导入到BiliTools的时间，使用get_millis()统一时间戳格式
     pub status: String,
-    pub source: String, // "local_cache_import"
+    pub source: String,           // "local_cache_import"
     pub group_id: Option<String>, // 视频组ID，从videoInfo.json中的groupId字段获取
 }
 
@@ -320,7 +320,7 @@ pub async fn get_all() -> Result<Vec<CacheRecord>> {
             CacheRecords::GroupId,
         ])
         .from(CacheRecords::Table)
-        .order_by(CacheRecords::ImportTime, sea_query::Order::Desc)
+        .order_by(CacheRecords::DownloadTime, sea_query::Order::Desc)
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;
@@ -371,7 +371,7 @@ pub async fn get_by_status(status: &str) -> Result<Vec<CacheRecord>> {
         ])
         .from(CacheRecords::Table)
         .and_where(Expr::col(CacheRecords::Status).eq(status))
-        .order_by(CacheRecords::ImportTime, sea_query::Order::Desc)
+        .order_by(CacheRecords::DownloadTime, sea_query::Order::Desc)
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;

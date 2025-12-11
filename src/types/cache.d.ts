@@ -34,7 +34,7 @@ export interface CacheItem {
   fileSize: number;
   /** 缓存文件在本地的路径 */
   cachePath: string;
-  /** 视频原始下载时间（从videoInfo.json获取） */
+  /** 视频原始下载时间（从videoInfo.json获取，优先使用completionTime） */
   downloadTime: Date;
   /** 导入到BiliTools的时间 */
   importTime: Date;
@@ -327,6 +327,8 @@ export interface VideoInfo {
   quality: number;
   /** 下载时间戳 */
   downloadTime?: number;
+  /** 完成时间（通常为 Unix 时间戳的毫秒表示） */
+  completionTime?: number;
   /** 视频组标识符（可选，用于组织相关视频） */
   groupId?: string;
   /** 其他可选字段 */
@@ -387,7 +389,7 @@ export type SortField =
   | 'duration'     // 按时长排序
   | 'fileSize'     // 按文件大小排序
   | 'downloadTime' // 按下载时间排序
-  | 'importTime';  // 按导入时间排序
+  | 'completionTime'; // 按下载完成时间排序
 
 /**
  * 排序方向

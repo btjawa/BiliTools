@@ -153,9 +153,7 @@ impl CacheImportError {
             Self::DirectoryNotFound { path } => {
                 format!("找不到目录：{}", path)
             }
-            Self::InvalidJsonFormat { .. } => {
-                "视频信息文件格式无效，可能已损坏".to_string()
-            }
+            Self::InvalidJsonFormat { .. } => "视频信息文件格式无效，可能已损坏".to_string(),
             Self::MissingRequiredFields { fields } => {
                 format!("视频信息缺少必要字段：{}", fields.join(", "))
             }
@@ -166,9 +164,7 @@ impl CacheImportError {
                     actual / 1024 / 1024
                 )
             }
-            Self::DatabaseError { .. } => {
-                "数据库操作失败，请检查磁盘空间和权限".to_string()
-            }
+            Self::DatabaseError { .. } => "数据库操作失败，请检查磁盘空间和权限".to_string(),
             Self::ImportCancelled => "导入操作已取消".to_string(),
             Self::IoError { .. } => "文件读取失败，请检查文件权限和磁盘状态".to_string(),
             Self::PermissionDenied { path } => {
@@ -210,15 +206,9 @@ impl CacheImportError {
             Self::PermissionDenied { .. } => {
                 Some("请以管理员身份运行程序，或更改文件权限".to_string())
             }
-            Self::CorruptedFile { .. } => {
-                Some("请重新下载该文件，或从备份中恢复".to_string())
-            }
-            Self::NetworkError { .. } => {
-                Some("请检查网络连接，或稍后重试".to_string())
-            }
-            Self::OutOfMemory => {
-                Some("请关闭其他程序释放内存，或重启计算机".to_string())
-            }
+            Self::CorruptedFile { .. } => Some("请重新下载该文件，或从备份中恢复".to_string()),
+            Self::NetworkError { .. } => Some("请检查网络连接，或稍后重试".to_string()),
+            Self::OutOfMemory => Some("请关闭其他程序释放内存，或重启计算机".to_string()),
             _ => None,
         }
     }
@@ -246,16 +236,18 @@ impl ErrorRecoveryStrategy {
         match error {
             CacheImportError::ImportCancelled => ImportAction::Abort,
             CacheImportError::OutOfMemory => ImportAction::Abort,
-            
+
             // 可重试的错误
             error if error.is_retryable() && context.retry_count < 3 => ImportAction::Retry,
-            
+
             // 严重错误但可以跳过
-            CacheImportError::DatabaseError { .. } if context.retry_count >= 3 => ImportAction::Skip,
+            CacheImportError::DatabaseError { .. } if context.retry_count >= 3 => {
+                ImportAction::Skip
+            }
             CacheImportError::NetworkError { .. } if context.retry_count >= 3 => ImportAction::Skip,
             CacheImportError::ParseTimeout { .. } if context.retry_count >= 3 => ImportAction::Skip,
             CacheImportError::IoError { .. } if context.retry_count >= 3 => ImportAction::Skip,
-            
+
             // 文件级别的错误，跳过当前文件
             CacheImportError::DirectoryNotFound { .. } => ImportAction::Skip,
             CacheImportError::InvalidJsonFormat { .. } => ImportAction::Skip,
@@ -263,10 +255,10 @@ impl ErrorRecoveryStrategy {
             CacheImportError::CorruptedFile { .. } => ImportAction::Skip,
             CacheImportError::UnsupportedFormat { .. } => ImportAction::Skip,
             CacheImportError::PermissionDenied { .. } => ImportAction::Skip,
-            
+
             // 警告级别的错误，继续处理
             CacheImportError::FileSizeMismatch { .. } => ImportAction::Continue,
-            
+
             // 其他未知错误，跳过
             _ => ImportAction::Skip,
         }
@@ -308,10 +300,14 @@ impl ErrorStatistics {
 
     pub fn record_error(&mut self, error: &CacheImportError) {
         self.total_errors += 1;
-        
-        let error_type = format!("{:?}", error).split('(').next().unwrap_or("Unknown").to_string();
+
+        let error_type = format!("{:?}", error)
+            .split('(')
+            .next()
+            .unwrap_or("Unknown")
+            .to_string();
         *self.error_by_type.entry(error_type).or_insert(0) += 1;
-        
+
         let severity = format!("{:?}", error.severity());
         *self.error_by_severity.entry(severity).or_insert(0) += 1;
     }
@@ -321,7 +317,7 @@ impl ErrorStatistics {
             ImportAction::Retry => self.retried_operations += 1,
             ImportAction::Skip => self.skipped_operations += 1,
             ImportAction::Abort => self.aborted_operations += 1,
-            ImportAction::Continue => {}, // 不需要特别记录
+            ImportAction::Continue => {} // 不需要特别记录
         }
     }
 }

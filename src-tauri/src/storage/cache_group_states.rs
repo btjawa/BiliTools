@@ -85,7 +85,7 @@ pub async fn get_expansion_state(group_id: &str) -> Result<bool> {
 pub async fn set_expansion_state(group_id: &str, is_expanded: bool) -> Result<()> {
     let now = get_millis();
     let pool = get_db().await?;
-    
+
     let (sql, values) = Query::insert()
         .into_table(CacheGroupStates::Table)
         .columns([
@@ -94,18 +94,10 @@ pub async fn set_expansion_state(group_id: &str, is_expanded: bool) -> Result<()
             CacheGroupStates::CreatedAt,
             CacheGroupStates::UpdatedAt,
         ])
-        .values([
-            group_id.into(),
-            is_expanded.into(),
-            now.into(),
-            now.into(),
-        ])?
+        .values([group_id.into(), is_expanded.into(), now.into(), now.into()])?
         .on_conflict(
             OnConflict::column(CacheGroupStates::GroupId)
-                .update_columns([
-                    CacheGroupStates::IsExpanded,
-                    CacheGroupStates::UpdatedAt,
-                ])
+                .update_columns([CacheGroupStates::IsExpanded, CacheGroupStates::UpdatedAt])
                 .to_owned(),
         )
         .build_sqlx(SqliteQueryBuilder);
@@ -161,11 +153,20 @@ pub async fn cleanup_orphaned_states() -> Result<()> {
             Expr::col(CacheGroupStates::GroupId).not_in_subquery(
                 Query::select()
                     .distinct()
-                    .column((super::cache_records::CacheRecords::Table, super::cache_records::CacheRecords::GroupId))
+                    .column((
+                        super::cache_records::CacheRecords::Table,
+                        super::cache_records::CacheRecords::GroupId,
+                    ))
                     .from(super::cache_records::CacheRecords::Table)
-                    .and_where(Expr::col((super::cache_records::CacheRecords::Table, super::cache_records::CacheRecords::GroupId)).is_not_null())
-                    .to_owned()
-            )
+                    .and_where(
+                        Expr::col((
+                            super::cache_records::CacheRecords::Table,
+                            super::cache_records::CacheRecords::GroupId,
+                        ))
+                        .is_not_null(),
+                    )
+                    .to_owned(),
+            ),
         )
         .build_sqlx(SqliteQueryBuilder);
 

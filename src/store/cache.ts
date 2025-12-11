@@ -33,7 +33,7 @@ export const useCacheStore = defineStore('cache', () => {
   // 筛选和排序状态
   const currentFilter = ref<Types.CacheFilter>({});
   const currentSort = ref<Types.SortOption>({
-    field: 'importTime',
+    field: 'completionTime',
     direction: 'desc',
   });
   
@@ -145,9 +145,9 @@ export const useCacheStore = defineStore('cache', () => {
           aValue = a.downloadTime.getTime();
           bValue = b.downloadTime.getTime();
           break;
-        case 'importTime':
-          aValue = a.importTime.getTime();
-          bValue = b.importTime.getTime();
+        case 'completionTime':
+          aValue = a.completionTime?.getTime() ?? 0;
+          bValue = b.completionTime?.getTime() ?? 0;
           break;
         default:
           return 0;
@@ -622,7 +622,7 @@ export const useCacheStore = defineStore('cache', () => {
     cacheItems.value = [];
     cacheStatistics.value = null;
     currentFilter.value = {};
-    currentSort.value = { field: 'importTime', direction: 'desc' };
+    currentSort.value = { field: 'completionTime', direction: 'desc' };
     importProgress.value = null;
     activeImportId.value = null;
     isLoading.value = false;

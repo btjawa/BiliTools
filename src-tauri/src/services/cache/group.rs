@@ -1,12 +1,12 @@
 use anyhow::Result;
+use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use base64::prelude::*;
 
-use crate::storage::{cache_records::CacheRecord, cache_group_states};
 use super::error::CacheImportError;
+use crate::storage::{cache_group_states, cache_records::CacheRecord};
 
 /// 缓存视频组
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -55,14 +55,15 @@ impl GroupService {
         records: Vec<CacheRecord>,
     ) -> Result<Vec<DisplayItem>> {
         let mut display_items = self.build_display_items_from_records(records).await?;
-        
+
         // 为每个组设置展开状态
         for item in &mut display_items {
             if let DisplayItem::VideoGroup { group } = item {
-                group.is_expanded = cache_group_states::get_expansion_state(&group.group_id).await?;
+                group.is_expanded =
+                    cache_group_states::get_expansion_state(&group.group_id).await?;
             }
         }
-        
+
         Ok(display_items)
     }
 
@@ -125,18 +126,18 @@ impl GroupService {
     /// * `Result<i32>` - 删除的视频数量
     pub async fn delete_group(&self, group_id: &str) -> Result<i32> {
         use crate::storage::cache_records;
-        
+
         let videos = self.get_videos_by_group_id(group_id).await?;
         let count = videos.len() as i32;
-        
+
         // 删除所有组内视频记录
         for video in videos {
             cache_records::delete(&video.id).await?;
         }
-        
+
         // 删除组状态记录
         cache_group_states::delete_state(group_id).await?;
-        
+
         Ok(count)
     }
 
@@ -163,15 +164,18 @@ impl GroupService {
         let mut groups: HashMap<String, Vec<CacheRecord>> = HashMap::new();
         let mut singles: Vec<CacheRecord> = Vec::new();
 
-        // 按group_id分组
+        // 按业务逻辑分类视频
         for record in records {
             if let Some(group_id) = &record.group_id {
-                if !group_id.is_empty() {
+                if !group_id.is_empty() && group_id != &record.bvid {
+                    // groupId 存在且与 bvid 不同 -> 集合视频
                     groups.entry(group_id.clone()).or_default().push(record);
                 } else {
+                    // groupId 与 bvid 相同或为空 -> 单独视频
                     singles.push(record);
                 }
             } else {
+                // 没有 groupId -> 单独视频
                 singles.push(record);
             }
         }
@@ -192,11 +196,7 @@ impl GroupService {
                     video_count: videos.len() as i32,
                     total_duration: videos.iter().map(|v| v.duration).sum(),
                     total_file_size: videos.iter().map(|v| v.file_size).sum(),
-                    latest_download_time: videos
-                        .iter()
-                        .map(|v| v.download_time)
-                        .max()
-                        .unwrap_or(0),
+                    latest_download_time: videos.iter().map(|v| v.download_time).max().unwrap_or(0),
                     videos,
                     is_expanded: false, // 默认折叠，实际状态将在前端设置
                 };
@@ -224,38 +224,35 @@ impl GroupService {
     ///
     /// # 返回
     /// * `Result<String>` - 封面URL
-    pub async fn get_group_cover(
-        &self,
-        _group_id: &str,
-        videos: &[CacheRecord],
-    ) -> Result<String> {
+    pub async fn get_group_cover(&self, _group_id: &str, videos: &[CacheRecord]) -> Result<String> {
         // 1. 尝试从任一视频目录获取组封面（支持多种格式）
         let group_cover_files = ["group.jpg", "group.png", "image.jpg", "image.png"];
-        
+
         for video in videos {
             let cache_dir = PathBuf::from(&video.cache_path);
-            
+
             for cover_file in &group_cover_files {
                 let group_cover_path = cache_dir.join(cover_file);
-                
+
                 if group_cover_path.exists() && group_cover_path.is_file() {
-                // 读取文件并转换为 base64 data URL
-                match tokio::fs::read(&group_cover_path).await {
-                    Ok(file_data) => {
-                        let base64_data = BASE64_STANDARD.encode(&file_data);
-                        let mime_type = match group_cover_path.extension().and_then(|ext| ext.to_str()) {
-                            Some("jpg") | Some("jpeg") => "image/jpeg",
-                            Some("png") => "image/png",
-                            Some("webp") => "image/webp",
-                            _ => "image/jpeg", // 默认
-                        };
-                        return Ok(format!("data:{};base64,{}", mime_type, base64_data));
+                    // 读取文件并转换为 base64 data URL
+                    match tokio::fs::read(&group_cover_path).await {
+                        Ok(file_data) => {
+                            let base64_data = BASE64_STANDARD.encode(&file_data);
+                            let mime_type =
+                                match group_cover_path.extension().and_then(|ext| ext.to_str()) {
+                                    Some("jpg") | Some("jpeg") => "image/jpeg",
+                                    Some("png") => "image/png",
+                                    Some("webp") => "image/webp",
+                                    _ => "image/jpeg", // 默认
+                                };
+                            return Ok(format!("data:{};base64,{}", mime_type, base64_data));
+                        }
+                        Err(e) => {
+                            eprintln!("读取组封面文件失败 {:?}: {}", group_cover_path, e);
+                            continue;
+                        }
                     }
-                    Err(e) => {
-                        eprintln!("读取组封面文件失败 {:?}: {}", group_cover_path, e);
-                        continue;
-                    }
-                }
                 }
             }
         }
@@ -271,7 +268,8 @@ impl GroupService {
         } else {
             Err(CacheImportError::MissingRequiredFields {
                 fields: vec!["group videos".to_string()],
-            }.into())
+            }
+            .into())
         }
     }
 
@@ -284,7 +282,7 @@ impl GroupService {
 
         // B站缓存的封面文件名（按优先级排序）
         let cover_files = ["image.jpg", "image.png"];
-        
+
         for file_name in &cover_files {
             let cover_path = cache_dir.join(file_name);
             if cover_path.exists() && cover_path.is_file() {
@@ -307,7 +305,7 @@ impl GroupService {
                 }
             }
         }
-        
+
         Ok(None)
     }
 
@@ -332,7 +330,7 @@ impl GroupService {
             let cleaned = common_prefix
                 .trim_end_matches(|c: char| c.is_ascii_digit() || "()[]{}【】-_·第 ".contains(c))
                 .trim();
-            
+
             if !cleaned.is_empty() {
                 return cleaned.to_string();
             }
@@ -366,9 +364,8 @@ impl GroupService {
         }
 
         // 如果有多个UP主，返回出现次数最多的，或者"多个UP主"
-        if let Some((most_common_uname, count)) = uname_counts
-            .iter()
-            .max_by_key(|(_, &count)| count)
+        if let Some((most_common_uname, count)) =
+            uname_counts.iter().max_by_key(|(_, &count)| count)
         {
             // 如果某个UP主占主导地位（超过70%），使用该UP主
             if *count as f64 / videos.len() as f64 > 0.7 {
@@ -402,9 +399,10 @@ impl GroupService {
         let mut char_index = 0;
 
         for ch in first.chars() {
-            if strings.iter().all(|s| {
-                s.chars().nth(char_index).map_or(false, |c| c == ch)
-            }) {
+            if strings
+                .iter()
+                .all(|s| s.chars().nth(char_index).map_or(false, |c| c == ch))
+            {
                 prefix_len += ch.len_utf8();
                 char_index += 1;
             } else {
@@ -421,8 +419,6 @@ impl Default for GroupService {
         Self::new()
     }
 }
-
-
 
 /// 组统计信息
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

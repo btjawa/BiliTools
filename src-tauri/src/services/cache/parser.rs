@@ -115,7 +115,8 @@ impl ParserService {
 
         // 下载时间（时间戳）
         let download_time = self
-            .extract_i64_field(obj, "downloadTime")
+            .extract_i64_field(obj, "completionTime")
+            .or_else(|_| self.extract_i64_field(obj, "downloadTime"))
             .or_else(|_| self.extract_i64_field(obj, "download_time"))
             .or_else(|_| self.extract_i64_field(obj, "ctime"))
             .ok();
@@ -147,6 +148,7 @@ impl ParserService {
                     | "total_size"
                     | "size"
                     | "quality"
+                    | "completionTime"
                     | "downloadTime"
                     | "download_time"
                     | "ctime"

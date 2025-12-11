@@ -454,6 +454,7 @@ export class CacheManagementService {
         cachePath: item.cachePath,
         downloadTime: item.downloadTime.toISOString(),
         importTime: item.importTime.toISOString(),
+        completionTime: item.completionTime?.toISOString(),
         status: item.status
       }))
     };
@@ -594,9 +595,10 @@ export function formatDuration(seconds: number): string {
  * @returns Date对象
  */
 function safeTimestampToDate(timestamp: number): Date {
-  // 处理无效值
+  // 处理无效值（包括 0 时间戳）
   if (!timestamp || timestamp <= 0) {
-    return new Date(0); // 返回 1970-01-01
+    console.warn(`无效时间戳: ${timestamp}, 使用当前时间`);
+    return new Date(); // 返回当前时间
   }
   
   // 判断是秒还是毫秒时间戳

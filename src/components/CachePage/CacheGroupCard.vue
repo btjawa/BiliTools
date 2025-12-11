@@ -49,7 +49,7 @@
       <!-- 最新下载时间 -->
       <div class="desc">
         <i class="fa-solid fa-clock"></i>
-        <span>{{ formatImportTime(group.latestDownloadTime) }}</span>
+        <span>{{ formatDownloadTime(group.latestDownloadTime) }}</span>
       </div>
     </div>
 
@@ -146,7 +146,7 @@
         <h3 class="text-sm truncate" :title="video.title">{{ video.title }}</h3>
         <div class="desc text-xs">
           <i class="fa-solid fa-clock"></i>
-          <span>{{ formatImportTime(video.downloadTime) }}</span>
+          <span>{{ formatDownloadTime(video.downloadTime) }}</span>
         </div>
         <div class="desc text-xs">
           <i class="fa-solid fa-marker"></i>
@@ -299,9 +299,9 @@ function getVideoCoverSrc(video: Types.CacheItem): string | null {
 // ============================================================================
 
 /**
- * 格式化导入时间
+ * 格式化下载完成时间
  */
-function formatImportTime(date: Date): string {
+function formatDownloadTime(date: Date): string {
   // 处理异常时间戳
   if (!date || isNaN(date.getTime())) {
     return '未知时间';
