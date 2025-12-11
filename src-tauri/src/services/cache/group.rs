@@ -229,12 +229,16 @@ impl GroupService {
         _group_id: &str,
         videos: &[CacheRecord],
     ) -> Result<String> {
-        // 1. 尝试从任一视频目录获取group.jpg
+        // 1. 尝试从任一视频目录获取组封面（支持多种格式）
+        let group_cover_files = ["group.jpg", "group.png", "image.jpg", "image.png"];
+        
         for video in videos {
             let cache_dir = PathBuf::from(&video.cache_path);
-            let group_cover_path = cache_dir.join("group.jpg");
             
-            if group_cover_path.exists() && group_cover_path.is_file() {
+            for cover_file in &group_cover_files {
+                let group_cover_path = cache_dir.join(cover_file);
+                
+                if group_cover_path.exists() && group_cover_path.is_file() {
                 // 读取文件并转换为 base64 data URL
                 match tokio::fs::read(&group_cover_path).await {
                     Ok(file_data) => {
@@ -251,6 +255,7 @@ impl GroupService {
                         eprintln!("读取组封面文件失败 {:?}: {}", group_cover_path, e);
                         continue;
                     }
+                }
                 }
             }
         }
@@ -278,7 +283,7 @@ impl GroupService {
         }
 
         // B站缓存的封面文件名（按优先级排序）
-        let cover_files = ["image.jpg", "cover.jpg", "cover.png", "cover.webp", "face.jpg"];
+        let cover_files = ["image.jpg", "image.png"];
         
         for file_name in &cover_files {
             let cover_path = cache_dir.join(file_name);

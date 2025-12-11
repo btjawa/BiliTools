@@ -316,7 +316,7 @@ pub async fn check_local_cover(cache_path: String) -> TauriResult<Option<String>
     }
 
     // B站缓存的封面文件名（按优先级排序）
-    let cover_files = ["image.jpg", "cover.jpg", "cover.png", "cover.webp", "face.jpg"];
+    let cover_files = ["image.jpg", "image.png"];
     
     for file_name in &cover_files {
         let cover_path = cache_dir.join(file_name);
