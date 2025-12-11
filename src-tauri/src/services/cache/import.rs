@@ -627,6 +627,7 @@ impl ImportService {
             import_time: get_millis(),
             status: "available".to_string(),
             source: "local_cache_import".to_string(),
+            group_id: video_info.group_id.clone(),
         };
 
         // 保存到数据库（使用事务确保一致性）

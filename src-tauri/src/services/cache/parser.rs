@@ -17,6 +17,7 @@ pub struct VideoInfo {
     pub total_size: u64,
     pub quality: Option<i32>,
     pub download_time: Option<i64>,
+    pub group_id: Option<String>, // 视频组ID
     // 其他可选字段
     #[serde(flatten)]
     pub extra_fields: std::collections::HashMap<String, Value>,
@@ -119,6 +120,13 @@ impl ParserService {
             .or_else(|_| self.extract_i64_field(obj, "ctime"))
             .ok();
 
+        // 组ID（可选）
+        let group_id = self
+            .extract_string_field(obj, "groupId")
+            .or_else(|_| self.extract_string_field(obj, "group_id"))
+            .ok()
+            .filter(|s| !s.is_empty());
+
         // 收集其他字段
         let mut extra_fields = std::collections::HashMap::new();
         for (key, value) in obj {
@@ -142,6 +150,8 @@ impl ParserService {
                     | "downloadTime"
                     | "download_time"
                     | "ctime"
+                    | "groupId"
+                    | "group_id"
             ) {
                 extra_fields.insert(key.clone(), value.clone());
             }
@@ -158,6 +168,7 @@ impl ParserService {
             total_size,
             quality,
             download_time,
+            group_id,
             extra_fields,
         })
     }

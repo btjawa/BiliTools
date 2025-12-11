@@ -5,6 +5,7 @@ pub mod config;
 pub mod cookies;
 
 pub mod cache_records;
+pub mod cache_group_states;
 pub mod queue;
 pub mod schedulers;
 pub mod tasks;
@@ -37,6 +38,9 @@ pub async fn init() -> anyhow::Result<()> {
     cache_records::CacheRecordsTable::check_latest()
         .await
         .map_err(|e| err(e, "cache_records"))?;
+    cache_group_states::CacheGroupStatesTable::check_latest()
+        .await
+        .map_err(|e| err(e, "cache_group_states"))?;
 
     config::load().await.map_err(|e| err(e, "config"))?;
     Ok(())
