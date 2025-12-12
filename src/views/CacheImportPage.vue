@@ -294,7 +294,7 @@
               isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass',
             ]"
           ></i>
-          <span>{{ isScanning ? '扫描中' : '扫描' }}</span>
+          <span>{{ isScanning ? $t('cache.import.sidebar.scanning') : $t('cache.import.sidebar.scan') }}</span>
         </button>
 
         <button
@@ -310,7 +310,7 @@
               isImporting ? 'fa-spinner fa-spin' : 'fa-download',
             ]"
           ></i>
-          <span>{{ isImporting ? '导入中' : '开始导入' }}</span>
+          <span>{{ isImporting ? $t('cache.import.sidebar.importing') : $t('cache.import.sidebar.startImport') }}</span>
         </button>
 
         <button
@@ -319,12 +319,12 @@
           @click="cancelImport"
         >
           <i :class="[$fa.weight, 'fa-stop']"></i>
-          <span>取消</span>
+          <span>{{ $t('cache.import.sidebar.cancel') }}</span>
         </button>
 
         <button :disabled="isScanning || isImporting" @click="resetForm">
           <i :class="[$fa.weight, 'fa-refresh']"></i>
-          <span>重置</span>
+          <span>{{ $t('cache.import.sidebar.reset') }}</span>
         </button>
 
         <!-- 扫描结果统计 -->
@@ -333,17 +333,17 @@
           class="text-xs text-(--desc-color) space-y-0.5 mt-2"
         >
           <div class="flex justify-between">
-            <span>发现:</span>
+            <span>{{ $t('cache.import.sidebar.found') }}:</span>
             <span class="font-medium">{{ scanResult.totalDirectories }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500">有效:</span>
+            <span class="text-green-500">{{ $t('cache.import.sidebar.valid') }}:</span>
             <span class="font-medium text-green-500">{{
               scanResult.validDirectories
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-red-500">无效:</span>
+            <span class="text-red-500">{{ $t('cache.import.sidebar.invalid') }}:</span>
             <span class="font-medium text-red-500">{{
               scanResult.invalidDirectories
             }}</span>
@@ -351,7 +351,7 @@
           <div
             class="flex justify-between pt-1 border-t border-(--border-color)"
           >
-            <span>大小:</span>
+            <span>{{ $t('cache.import.sidebar.size') }}:</span>
             <span class="font-medium">{{
               formatBytes(scanResult.estimatedTotalSize)
             }}</span>
@@ -364,25 +364,25 @@
           class="text-xs text-(--desc-color) space-y-0.5 mt-2 pt-2 border-t border-(--border-color)"
         >
           <div class="flex justify-between">
-            <span>进度:</span>
+            <span>{{ $t('cache.import.sidebar.progress') }}:</span>
             <span class="font-medium">{{ importProgressPercentage }}%</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500">成功:</span>
+            <span class="text-green-500">{{ $t('cache.import.sidebar.success') }}:</span>
             <span class="font-medium text-green-500">{{
-              importProgress.successCount
+              importProgress.successCount ?? 0
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-red-500">失败:</span>
+            <span class="text-red-500">{{ $t('cache.import.sidebar.failure') }}:</span>
             <span class="font-medium text-red-500">{{
-              importProgress.failureCount
+              importProgress.failureCount ?? 0
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-yellow-500">跳过:</span>
+            <span class="text-yellow-500">{{ $t('cache.import.sidebar.skipped') }}:</span>
             <span class="font-medium text-yellow-500">{{
-              importProgress.skippedCount
+              importProgress.skippedCount ?? 0
             }}</span>
           </div>
         </div>
@@ -391,11 +391,11 @@
         <div
           class="text-xs text-(--desc-color) mt-3 pt-2 border-t border-(--border-color)"
         >
-          <div class="font-medium mb-1 text-(--text-color)">使用步骤:</div>
+          <div class="font-medium mb-1 text-(--text-color)">{{ $t('cache.import.sidebar.help') }}:</div>
           <div class="space-y-1">
-            <div>1. 选择B站缓存目录</div>
-            <div>2. 扫描预览文件</div>
-            <div>3. 开始导入</div>
+            <div>{{ $t('cache.import.sidebar.step1') }}</div>
+            <div>{{ $t('cache.import.sidebar.step2') }}</div>
+            <div>{{ $t('cache.import.sidebar.step3') }}</div>
           </div>
         </div>
       </div>
@@ -405,12 +405,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useCacheStore } from '@/store/cache';
 import { cacheImportService, validateCachePath } from '@/services/cache';
 import { formatBytes } from '@/services/utils';
 import { AppError } from '@/services/error';
 import { ProgressBar } from '@/components';
 import type * as Types from '@/types/cache.d';
+
+const { t: $t } = useI18n();
 
 // ============================================================================
 // 状态管理

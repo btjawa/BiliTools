@@ -104,6 +104,7 @@ Your support will be a great motivation for [me](https://github.com/btjawa) to k
 - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 哔哩哔哩-API收集整理
 
 - [Vercel](https://github.com/vercel/vercel) Develop. Preview. Ship.
+- [m4s-converter](https://github.com/mzky/m4s-converter) Convert Bilibili m4s format to MP4 format
 
 <a href="https://www.star-history.com/#btjawa/BiliTools&Date" alt="Star History Chart">
 <picture>

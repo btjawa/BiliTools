@@ -66,151 +66,10 @@ export const useCacheStore = defineStore('cache', () => {
 
   /**
    * 筛选后的显示项列表（支持组和单个视频）
+   * 注意：现在由后端进行分页，前端直接使用displayItems
    */
   const filteredDisplayItems = computed(() => {
-    let items = [...displayItems.value];
-    const filter = currentFilter.value;
-
-    // 关键词筛选
-    if (filter.keyword) {
-      const keyword = filter.keyword.toLowerCase();
-      items = items.filter((item) => {
-        if (item.type === 'video') {
-          return (
-            item.data.title.toLowerCase().includes(keyword) ||
-            item.data.uname.toLowerCase().includes(keyword)
-          );
-        } else {
-          // 对于组，搜索组标题和组内视频标题
-          return (
-            item.data.title.toLowerCase().includes(keyword) ||
-            item.data.uname.toLowerCase().includes(keyword) ||
-            item.data.videos.some(
-              (video) =>
-                video.title.toLowerCase().includes(keyword) ||
-                video.uname.toLowerCase().includes(keyword),
-            )
-          );
-        }
-      });
-    }
-
-    // 状态筛选
-    if (filter.status && filter.status.length > 0) {
-      items = items.filter((item) => {
-        if (item.type === 'video') {
-          return filter.status!.includes(item.data.status);
-        } else {
-          // 对于组，检查组内是否有符合状态的视频
-          return item.data.videos.some((video) =>
-            filter.status!.includes(video.status),
-          );
-        }
-      });
-    }
-
-    // UP主筛选
-    if (filter.uploader) {
-      items = items.filter((item) => {
-        if (item.type === 'video') {
-          return item.data.uname === filter.uploader;
-        } else {
-          // 对于组，检查组内是否有该UP主的视频
-          return (
-            item.data.uname === filter.uploader ||
-            item.data.videos.some((video) => video.uname === filter.uploader)
-          );
-        }
-      });
-    }
-
-    // 显示类型筛选
-    if (filter.displayType) {
-      if (filter.displayType === 'groups') {
-        items = items.filter((item) => item.type === 'group');
-      } else if (filter.displayType === 'singles') {
-        items = items.filter((item) => item.type === 'video');
-      }
-      // 'all' 不需要筛选
-    }
-
-    // 按组ID筛选
-    if (filter.groupId) {
-      items = items.filter((item) => {
-        if (item.type === 'group') {
-          return item.data.groupId === filter.groupId;
-        } else {
-          return item.data.groupId === filter.groupId;
-        }
-      });
-    }
-
-    // 文件大小范围筛选
-    if (filter.sizeRange) {
-      items = items.filter((item) => {
-        const size =
-          item.type === 'video' ? item.data.fileSize : item.data.totalFileSize;
-        if (
-          filter.sizeRange!.min !== undefined &&
-          size < filter.sizeRange!.min!
-        ) {
-          return false;
-        }
-        if (
-          filter.sizeRange!.max !== undefined &&
-          size > filter.sizeRange!.max!
-        ) {
-          return false;
-        }
-        return true;
-      });
-    }
-
-    // 时长范围筛选
-    if (filter.durationRange) {
-      items = items.filter((item) => {
-        const duration =
-          item.type === 'video' ? item.data.duration : item.data.totalDuration;
-        if (
-          filter.durationRange!.min !== undefined &&
-          duration < filter.durationRange!.min!
-        ) {
-          return false;
-        }
-        if (
-          filter.durationRange!.max !== undefined &&
-          duration > filter.durationRange!.max!
-        ) {
-          return false;
-        }
-        return true;
-      });
-    }
-
-    // 导入时间范围筛选
-    if (filter.importTimeRange) {
-      items = items.filter((item) => {
-        const importTime =
-          item.type === 'video'
-            ? item.data.importTime
-            : item.data.latestDownloadTime;
-        if (
-          filter.importTimeRange!.start &&
-          importTime < filter.importTimeRange!.start!
-        ) {
-          return false;
-        }
-        if (
-          filter.importTimeRange!.end &&
-          importTime > filter.importTimeRange!.end!
-        ) {
-          return false;
-        }
-        return true;
-      });
-    }
-
-    return items;
+    return displayItems.value;
   });
 
   /**
@@ -224,70 +83,10 @@ export const useCacheStore = defineStore('cache', () => {
 
   /**
    * 排序后的显示项列表（支持组和单个视频）
+   * 注意：现在由后端进行排序，前端直接使用displayItems
    */
   const sortedDisplayItems = computed(() => {
-    const items = [...filteredDisplayItems.value];
-    const sort = currentSort.value;
-
-    items.sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-
-      switch (sort.field) {
-        case 'title':
-          aValue = a.type === 'video' ? a.data.title : a.data.title;
-          bValue = b.type === 'video' ? b.data.title : b.data.title;
-          break;
-        case 'uname':
-          aValue = a.type === 'video' ? a.data.uname : a.data.uname;
-          bValue = b.type === 'video' ? b.data.uname : b.data.uname;
-          break;
-        case 'duration':
-          aValue = a.type === 'video' ? a.data.duration : a.data.totalDuration;
-          bValue = b.type === 'video' ? b.data.duration : b.data.totalDuration;
-          break;
-        case 'fileSize':
-          aValue = a.type === 'video' ? a.data.fileSize : a.data.totalFileSize;
-          bValue = b.type === 'video' ? b.data.fileSize : b.data.totalFileSize;
-          break;
-        case 'downloadTime':
-          aValue =
-            a.type === 'video'
-              ? a.data.downloadTime.getTime()
-              : a.data.latestDownloadTime.getTime();
-          bValue =
-            b.type === 'video'
-              ? b.data.downloadTime.getTime()
-              : b.data.latestDownloadTime.getTime();
-          break;
-        case 'completionTime':
-          // 使用 downloadTime 作为完成时间
-          aValue =
-            a.type === 'video'
-              ? a.data.downloadTime.getTime()
-              : a.data.latestDownloadTime.getTime();
-          bValue =
-            b.type === 'video'
-              ? b.data.downloadTime.getTime()
-              : b.data.latestDownloadTime.getTime();
-          break;
-        default:
-          return 0;
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      let result = 0;
-      if (aValue < bValue) result = -1;
-      else if (aValue > bValue) result = 1;
-
-      return sort.direction === 'desc' ? -result : result;
-    });
-
-    return items;
+    return displayItems.value;
   });
 
   /**
@@ -301,14 +100,10 @@ export const useCacheStore = defineStore('cache', () => {
 
   /**
    * 分页后的显示项列表
+   * 注意：现在由后端进行分页，前端直接使用displayItems
    */
   const paginatedDisplayItems = computed(() => {
-    const items = sortedDisplayItems.value;
-    const startIndex =
-      (pagination.value.currentPage - 1) * pagination.value.pageSize;
-    const endIndex = startIndex + pagination.value.pageSize;
-
-    return items.slice(startIndex, endIndex);
+    return displayItems.value;
   });
 
   /**
@@ -349,25 +144,40 @@ export const useCacheStore = defineStore('cache', () => {
   );
 
   /**
-   * 总文件大小
+   * 总文件大小（使用全量统计数据）
    */
-  const totalFileSize = computed(() =>
-    cacheItems.value.reduce((sum, item) => sum + item.fileSize, 0),
-  );
+  const totalFileSize = computed(() => {
+    // 优先使用统计信息中的全量数据
+    if (cacheStatistics.value) {
+      return cacheStatistics.value.totalSize;
+    }
+    // 如果没有统计信息，回退到当前页计算
+    return cacheItems.value.reduce((sum, item) => sum + item.fileSize, 0);
+  });
 
   /**
-   * 平均文件大小
+   * 平均文件大小（使用全量统计数据）
    */
-  const averageFileSize = computed(() =>
-    totalCacheCount.value > 0 ? totalFileSize.value / totalCacheCount.value : 0,
-  );
+  const averageFileSize = computed(() => {
+    // 优先使用统计信息中的全量数据
+    if (cacheStatistics.value) {
+      return cacheStatistics.value.averageSize;
+    }
+    // 如果没有统计信息，回退到当前页计算
+    return totalCacheCount.value > 0 ? totalFileSize.value / totalCacheCount.value : 0;
+  });
 
   /**
-   * 总时长
+   * 总时长（使用全量统计数据）
    */
-  const totalDuration = computed(() =>
-    cacheItems.value.reduce((sum, item) => sum + item.duration, 0),
-  );
+  const totalDuration = computed(() => {
+    // 优先使用统计信息中的全量数据
+    if (cacheStatistics.value) {
+      return cacheStatistics.value.totalDuration;
+    }
+    // 如果没有统计信息，回退到当前页计算
+    return cacheItems.value.reduce((sum, item) => sum + item.duration, 0);
+  });
 
   /**
    * 所有UP主列表（用于筛选）
@@ -508,9 +318,10 @@ export const useCacheStore = defineStore('cache', () => {
     if (!importProgress.value) return 0;
     const progress = importProgress.value;
     if (progress.totalDirectories === 0) return 0;
-    return Math.round(
+    const percentage = Math.round(
       (progress.processedDirectories / progress.totalDirectories) * 100,
     );
+    return isNaN(percentage) ? 0 : percentage;
   });
 
   // ============================================================================
@@ -527,17 +338,40 @@ export const useCacheStore = defineStore('cache', () => {
       isLoading.value = true;
       lastError.value = null;
 
-      const items = await invoke<Types.DisplayItemRaw[]>(
-        'get_cache_display_items',
+      const keyword = currentFilter.value.keyword || '';
+
+      const filters: Types.CacheFilterOptionsRaw = {
+        search_query: keyword || null,
+        filter_status: currentFilter.value.status?.[0] ?? null,
+        filter_uploader: currentFilter.value.uploader ?? null,
+        min_size: currentFilter.value.sizeRange?.min ?? null,
+        max_size: currentFilter.value.sizeRange?.max ?? null,
+        min_duration: currentFilter.value.durationRange?.min ?? null,
+        max_duration: currentFilter.value.durationRange?.max ?? null,
+        display_type: currentFilter.value.displayType ?? null,
+        group_id: currentFilter.value.groupId ?? null,
+      };
+
+      const result = await invoke<Types.PaginatedDisplayItemsRaw>(
+        'get_cache_display_items_paginated',
         {
-          filter: currentFilter.value,
-          sort: currentSort.value,
-          pagination: pagination.value,
+          page: pagination.value.currentPage,
+          pageSize: pagination.value.pageSize,
+          sort_by: currentSort.value.field,
+          sort_order: currentSort.value.direction,
+          filters,
         },
       );
 
-      // 转换后端数据格式
-      displayItems.value = items
+      pagination.value = {
+        ...pagination.value,
+        totalCount: result.total_count,
+        totalPages: result.total_pages,
+        currentPage: result.current_page,
+        pageSize: result.page_size,
+      };
+
+      displayItems.value = result.items
         .map((item) => {
           if (item.type === 'single_video' && item.video) {
             return {
@@ -549,20 +383,17 @@ export const useCacheStore = defineStore('cache', () => {
               type: 'group' as const,
               data: convertCacheGroupFromRaw(item.group),
             };
-          } else {
-            console.warn('无效的显示项数据:', item);
-            return null;
           }
+          return null;
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
 
-      // 更新缓存项列表（向后兼容）
       cacheItems.value = displayItems.value
         .filter((item) => item.type === 'video')
         .map((item) => item.data as Types.CacheItem);
 
-      // 加载组状态
       await loadGroupStates();
+      await updateStatistics();
     } catch (error) {
       lastError.value =
         error instanceof Error ? error.message : '加载显示项列表失败';
@@ -626,8 +457,8 @@ export const useCacheStore = defineStore('cache', () => {
 
       // 持久化到后端
       await invoke('set_group_expansion', {
-        group_id: groupId,
-        is_expanded: newState,
+        groupId,
+        isExpanded: newState,
       });
     } catch (error) {
       lastError.value =
@@ -1184,7 +1015,15 @@ export const useCacheStore = defineStore('cache', () => {
       const cancelProgress = await cacheImportService.listenImportProgress(
         importId,
         (progress) => {
-          importProgress.value = progress;
+          // 确保统计数据有默认值
+          importProgress.value = {
+            ...progress,
+            successCount: progress.successCount ?? 0,
+            failureCount: progress.failureCount ?? 0,
+            skippedCount: progress.skippedCount ?? 0,
+            totalDirectories: progress.totalDirectories ?? 0,
+            processedDirectories: progress.processedDirectories ?? 0,
+          };
 
           // 检查是否完成
           if (
@@ -1253,6 +1092,9 @@ export const useCacheStore = defineStore('cache', () => {
     // 添加到导入历史
     importHistory.value.unshift(result);
 
+    // 重置分页到第一页（导入新数据后应在第一页查看）
+    pagination.value.currentPage = 1;
+
     // 刷新缓存列表
     loadCacheList();
   }
@@ -1290,6 +1132,8 @@ export const useCacheStore = defineStore('cache', () => {
       importTime,
       status: (raw.status as Types.CacheStatus) || 'available',
       groupId: raw.group_id || undefined,
+      groupTitle: raw.group_title || undefined,
+      p: raw.p || 1,
     };
   }
 
@@ -1333,7 +1177,21 @@ export const useCacheStore = defineStore('cache', () => {
    */
   async function updateStatistics(): Promise<void> {
     try {
-      cacheStatistics.value = await cacheManagementService.getCacheStatistics();
+      const rawStats = await invoke<Types.CacheStatisticsRaw>('get_cache_statistics');
+
+      // 转换后端数据格式
+      cacheStatistics.value = {
+        totalCount: rawStats.total_count,
+        availableCount: rawStats.available_count,
+        unavailableCount: rawStats.unavailable_count,
+        incompleteCount: rawStats.incomplete_count,
+        totalSize: rawStats.total_size,
+        averageSize: rawStats.average_size,
+        totalDuration: rawStats.total_duration,
+        groupCount: rawStats.group_count,
+        singleVideoCount: rawStats.single_video_count,
+        averageVideosPerGroup: rawStats.average_videos_per_group,
+      };
     } catch (error) {
       console.error('更新统计信息失败:', error);
     }

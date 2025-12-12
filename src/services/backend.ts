@@ -287,6 +287,17 @@ async getCacheStats() : Promise<Result<CacheStats, TauriError>> {
 }
 },
 /**
+ * 获取完整的缓存统计信息（包含组统计）
+ */
+async getCacheStatistics() : Promise<Result<CacheStatistics, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_statistics") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 获取缓存显示项列表（组和单个视频的混合）
  */
 async getCacheDisplayItems() : Promise<Result<DisplayItem[], TauriError>> {
@@ -300,9 +311,9 @@ async getCacheDisplayItems() : Promise<Result<DisplayItem[], TauriError>> {
 /**
  * 获取缓存显示项列表（带分页支持）
  */
-async getCacheDisplayItemsPaginated(page: number, pageSize: number, sortBy: string | null, sortOrder: string | null, searchQuery: string | null, filterStatus: string | null) : Promise<Result<PaginatedDisplayItems, TauriError>> {
+async getCacheDisplayItemsPaginated(page: number, pageSize: number, sortBy: string | null, sortOrder: string | null, filters: CacheFilterOptions | null) : Promise<Result<PaginatedDisplayItems, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_cache_display_items_paginated", { page, pageSize, sortBy, sortOrder, searchQuery, filterStatus }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_display_items_paginated", { page, pageSize, sortBy, sortOrder, filters }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -434,12 +445,20 @@ export type AnyInt = number
  */
 export type BatchOperationResult = { success_count: number; deleted_videos: number; deleted_groups: number; error_count: number; errors: string[] }
 /**
+ * 缓存筛选选项
+ */
+export type CacheFilterOptions = { search_query: string | null; filter_status: string | null; filter_uploader: string | null; min_size: number | null; max_size: number | null; min_duration: number | null; max_duration: number | null; display_type: string | null; group_id: string | null }
+/**
  * 缓存视频组
  */
 export type CacheGroup = { group_id: string; title: string; cover_url: string; uname: string; video_count: number; total_duration: number; total_file_size: number; latest_download_time: number; videos: CacheRecord[]; is_expanded: boolean }
 export type CacheGroupState = { group_id: string; is_expanded: boolean; created_at: number; updated_at: number }
 export type CacheKey = "log" | "temp" | "webview" | "database"
-export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; title: string; uname: string; cover_url: string; duration: number; file_size: number; cache_path: string; download_time: number; import_time: number; status: string; source: string; group_id: string | null }
+export type CacheRecord = { id: string; bvid: string; aid: number; cid: number; title: string; uname: string; cover_url: string; duration: number; file_size: number; cache_path: string; download_time: number; import_time: number; status: string; source: string; group_id: string | null; group_title: string | null; p: number }
+/**
+ * 完整的缓存统计信息
+ */
+export type CacheStatistics = { total_count: number; available_count: number; unavailable_count: number; incomplete_count: number; total_size: number; average_size: number; total_duration: number; group_count: number; single_video_count: number; average_videos_per_group: number }
 /**
  * 缓存统计信息
  */

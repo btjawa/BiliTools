@@ -469,7 +469,29 @@
       "showMoreErrors": "显示更多错误 ({0})",
       "showLessErrors": "收起错误",
       "viewResults": "查看结果",
-      "close": "关闭"
+      "close": "关闭",
+      "sidebar": {
+        "scan": "扫描",
+        "scanning": "扫描中",
+        "startImport": "开始导入",
+        "importing": "导入中",
+        "cancel": "取消",
+        "reset": "重置",
+        "statistics": "扫描结果统计",
+        "found": "发现",
+        "valid": "有效",
+        "invalid": "无效",
+        "size": "大小",
+        "importStatistics": "导入进度统计",
+        "progress": "进度",
+        "success": "成功",
+        "failure": "失败",
+        "skipped": "跳过",
+        "help": "使用步骤",
+        "step1": "1. 选择B站缓存目录",
+        "step2": "2. 扫描预览文件",
+        "step3": "3. 开始导入"
+      }
     },
     "list": {
       "title": "缓存管理",
@@ -512,7 +534,11 @@
     "status": {
       "available": "可用",
       "unavailable": "不可用",
-      "incomplete": "不完整"
+      "incomplete": "不完整",
+      "all": "全部",
+      "normal": "正常",
+      "invalid": "失效",
+      "incomplete_short": "残缺"
     },
     "card": {
       "play": "播放",
@@ -529,6 +555,28 @@
       "defaultTitle": "视频合集",
       "hasUnavailableVideos": "组内包含不可用视频",
       "confirmDeleteGroup": "确定要删除整个视频组吗？这将删除组内所有{0}个视频。"
+    },
+    "time": {
+      "unknown": "未知时间",
+      "formatError": "时间格式错误"
+    },
+    "sidebar": {
+      "refresh": "刷新",
+      "moreFilters": "更多筛选",
+      "importMore": "导入更多",
+      "exportList": "导出列表",
+      "statistics": "统计信息",
+      "total": "总数",
+      "available": "可用",
+      "unavailable": "不可用",
+      "incomplete": "不完整",
+      "groups": "组数",
+      "singleVideos": "单个视频",
+      "averagePerGroup": "平均每组",
+      "totalSize": "总大小",
+      "selectedItems": "已选择",
+      "clearSelection": "清除选择",
+      "batchDelete": "批量删除"
     }
   }
 }

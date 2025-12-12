@@ -1,7 +1,7 @@
 <template>
   <div class="cache-list-page">
     <h1 class="w-full mt-1.5 mb-auto">
-      <i :class="[$fa.weight, 'fa-database']"></i>
+      <i :class="[$fa.weight, 'fa-sd-card']"></i>
       <span>{{ $t('cache.list.title') }}</span>
     </h1>
 
@@ -85,9 +85,9 @@
                   class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm min-w-24"
                   @change="applyFilters"
                 >
-                  <option value="">全部类型</option>
-                  <option value="groups">仅显示组</option>
-                  <option value="singles">仅显示单个视频</option>
+                  <option value="">{{ $t('cache.list.allStatus') }}</option>
+                  <option value="groups">{{ $t('cache.list.sort.titleAsc') }}</option>
+                  <option value="singles">{{ $t('cache.list.sort.titleDesc') }}</option>
                 </select>
 
                 <!-- 组ID筛选（如果启用了组功能且有组） -->
@@ -97,7 +97,7 @@
                   class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm min-w-32"
                   @change="applyFilters"
                 >
-                  <option value="">全部组</option>
+                  <option value="">{{ $t('cache.list.allStatus') }}</option>
                   <option
                     v-for="groupId in cacheStore.allGroupIds"
                     :key="groupId"
@@ -138,13 +138,13 @@
               <!-- 显示选择详情（组和单个视频） -->
               <div v-if="cacheStore.groupManagerConfig.enableGrouping" class="text-xs text-(--desc-color)">
                 <span v-if="cacheStore.selectedGroupIds.length > 0">
-                  {{ cacheStore.selectedGroupIds.length }}个组
+                  {{ cacheStore.selectedGroupIds.length }}{{ $t('cache.sidebar.groups') }}
                 </span>
                 <span v-if="cacheStore.selectedGroupIds.length > 0 && cacheStore.selectedSingleVideos.length > 0">
                   ，
                 </span>
                 <span v-if="cacheStore.selectedSingleVideos.length > 0">
-                  {{ cacheStore.selectedSingleVideos.length }}个单独视频
+                  {{ cacheStore.selectedSingleVideos.length }}{{ $t('cache.sidebar.singleVideos') }}
                 </span>
               </div>
               <button
@@ -253,7 +253,7 @@
               }}
               <!-- 显示项类型统计（如果启用了组功能） -->
               <span v-if="cacheStore.groupManagerConfig.enableGrouping" class="ml-2 text-xs">
-                ({{ cacheStore.groupCount }}组 + {{ cacheStore.singleVideoCount }}单独视频)
+                ({{ cacheStore.groupCount }}{{ $t('cache.sidebar.groups') }} + {{ cacheStore.singleVideoCount }}{{ $t('cache.sidebar.singleVideos') }})
               </span>
             </div>
 
@@ -296,28 +296,28 @@
             :class="{ active: selectedStatus === '' }"
             @click="setStatusFilter('')"
           >
-            <span>全部</span>
+            <span>{{ $t('cache.status.all') }}</span>
             <label class="primary-color"></label>
           </button>
           <button
             :class="{ active: selectedStatus === 'available' }"
             @click="setStatusFilter('available')"
           >
-            <span>正常</span>
+            <span>{{ $t('cache.status.normal') }}</span>
             <label class="primary-color"></label>
           </button>
           <button
             :class="{ active: selectedStatus === 'unavailable' }"
             @click="setStatusFilter('unavailable')"
           >
-            <span>失效</span>
+            <span>{{ $t('cache.status.invalid') }}</span>
             <label class="primary-color"></label>
           </button>
           <button
             :class="{ active: selectedStatus === 'incomplete' }"
             @click="setStatusFilter('incomplete')"
           >
-            <span>残缺</span>
+            <span>{{ $t('cache.status.incomplete_short') }}</span>
             <label class="primary-color"></label>
           </button>
         </div>
@@ -341,45 +341,45 @@
               cacheStore.isLoading ? 'fa-spinner fa-spin' : 'fa-rotate-right',
             ]"
           ></i>
-          <span>刷新</span>
+          <span>{{ $t('cache.sidebar.refresh') }}</span>
         </button>
 
         <button @click="toggleAdvancedFilters">
           <i :class="[$fa.weight, 'fa-filter-list']"></i>
-          <span>更多筛选</span>
+          <span>{{ $t('cache.sidebar.moreFilters') }}</span>
         </button>
 
         <button @click="goToImport">
           <i :class="[$fa.weight, 'fa-download']"></i>
-          <span>导入更多</span>
+          <span>{{ $t('cache.sidebar.importMore') }}</span>
         </button>
 
         <button @click="exportList">
           <i :class="[$fa.weight, 'fa-file-export']"></i>
-          <span>导出列表</span>
+          <span>{{ $t('cache.sidebar.exportList') }}</span>
         </button>
 
         <!-- 统计信息（紧凑显示） -->
         <div class="text-xs text-(--desc-color) space-y-0.5 mt-1">
           <!-- 基础统计 -->
           <div class="flex justify-between">
-            <span>总数:</span>
+            <span>{{ $t('cache.sidebar.total') }}:</span>
             <span class="font-medium">{{ cacheStore.totalCacheCount }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500">可用:</span>
+            <span class="text-green-500">{{ $t('cache.sidebar.available') }}:</span>
             <span class="font-medium text-green-500">{{
               cacheStore.availableCacheCount
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-red-500">不可用:</span>
+            <span class="text-red-500">{{ $t('cache.sidebar.unavailable') }}:</span>
             <span class="font-medium text-red-500">{{
               cacheStore.unavailableCacheCount
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-yellow-500">不完整:</span>
+            <span class="text-yellow-500">{{ $t('cache.sidebar.incomplete') }}:</span>
             <span class="font-medium text-yellow-500">{{
               cacheStore.incompleteCacheCount
             }}</span>
@@ -388,23 +388,23 @@
           <!-- 组统计（如果启用了组功能） -->
           <template v-if="cacheStore.groupManagerConfig.enableGrouping">
             <div class="flex justify-between pt-1 border-t border-(--border-color)">
-              <span class="text-blue-500">组数:</span>
+              <span class="text-blue-500">{{ $t('cache.sidebar.groups') }}:</span>
               <span class="font-medium text-blue-500">{{ cacheStore.groupCount }}</span>
             </div>
             <div class="flex justify-between">
-              <span>单个视频:</span>
+              <span>{{ $t('cache.sidebar.singleVideos') }}:</span>
               <span class="font-medium">{{ cacheStore.singleVideoCount }}</span>
             </div>
             <div class="flex justify-between">
-              <span>平均每组:</span>
-              <span class="font-medium">{{ cacheStore.averageVideosPerGroup }}个</span>
+              <span>{{ $t('cache.sidebar.averagePerGroup') }}:</span>
+              <span class="font-medium">{{ cacheStore.averageVideosPerGroup }}</span>
             </div>
           </template>
           
           <div
             class="flex justify-between pt-1 border-t border-(--border-color)"
           >
-            <span>总大小:</span>
+            <span>{{ $t('cache.sidebar.totalSize') }}:</span>
             <span class="font-medium">{{
               formatBytes(cacheStore.totalFileSize)
             }}</span>
@@ -417,20 +417,20 @@
           class="mt-2 pt-2 border-t border-(--border-color)"
         >
           <div class="text-xs text-(--desc-color) mb-1">
-            已选择 {{ cacheStore.selectedItemsCount }} 项
+            {{ $t('cache.sidebar.selectedItems') }} {{ cacheStore.selectedItemsCount }} {{ $t('cache.list.page') }}
           </div>
           <button
             class="w-full text-xs text-(--primary-color) hover:underline mb-1 text-left"
             @click="cacheStore.clearSelection"
           >
-            清除选择
+            {{ $t('cache.sidebar.clearSelection') }}
           </button>
           <button
             class="w-full text-xs text-red-500 hover:underline text-left"
             @click="batchDelete"
           >
             <i :class="[$fa.weight, 'fa-trash']"></i>
-            <span>批量删除</span>
+            <span>{{ $t('cache.sidebar.batchDelete') }}</span>
           </button>
         </div>
       </div>

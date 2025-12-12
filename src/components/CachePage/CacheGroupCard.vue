@@ -10,29 +10,21 @@
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
       <div
-        class="relative rounded-lg overflow-hidden cursor-pointer"
-        style="
-          min-width: 160px;
-          width: fit-content;
-          height: 96px;
-          display: flex;
-        "
+        class="relative rounded-lg overflow-hidden cursor-pointer flex items-center justify-center"
+        style="width: 160px; height: 90px"
       >
         <!-- 优先使用组封面，回退到第一个视频封面，最后显示占位符 -->
         <div
-          v-if="!coverSrc"
+          v-if="!coverSrc || coverError"
           class="w-full h-full bg-(--block-color) flex items-center justify-center"
         >
           <i class="fa-solid fa-images text-2xl text-(--desc-color)"></i>
         </div>
-        <Image
+        <img
           v-else
           :src="coverSrc"
-          :height="96"
-          :width="160"
-          :prevent="true"
-          class="object-cover z-10"
-          style="height: 96px; width: 160px; max-width: 100%"
+          class="z-10 min-w-full min-h-full object-cover"
+          @error="handleCoverError"
         />
       </div>
       <!-- 渐变遮罩 -->
@@ -154,8 +146,7 @@
     >
       <!-- 子视频封面 -->
       <div
-        class="relative flex rounded-lg overflow-hidden"
-        style="min-width: 128px; width: 128px; height: 72px"
+        class="relative shrink-0 rounded-lg overflow-hidden flex items-center justify-center w-[128px] h-[72px]"
       >
         <div
           v-if="!getVideoCoverSrc(video)"
@@ -163,14 +154,10 @@
         >
           <i class="fa-solid fa-image text-lg text-(--desc-color)"></i>
         </div>
-        <Image
+        <img
           v-else
           :src="getVideoCoverSrc(video)"
-          :height="72"
-          :width="128"
-          :prevent="true"
-          class="object-cover"
-          style="height: 72px; width: 128px"
+          class="z-10 min-w-full min-h-full object-cover"
         />
         <!-- 进度条 -->
         <div
@@ -251,11 +238,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, reactive, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { duration } from '@/services/utils';
 import { checkLocalCover } from '@/services/cache';
-import { Image } from '@/components';
 import type * as Types from '@/types/cache.d';
+
+const { t } = useI18n();
 
 // ============================================================================
 // Props 和 Emits
@@ -306,36 +295,74 @@ function getVideoStatusIcon(status: Types.CacheStatus): string {
 
 // 封面路径状态
 const coverSrc = ref<string | null>(null);
+const coverError = ref(false);
 
-// 异步加载组封面路径
-async function loadCoverSrc() {
-  // 1. 优先尝试组封面文件 (group.jpg)
-  if (props.group.videos.length > 0) {
-    const groupCoverPath = await getGroupCoverPath(
-      props.group.videos[0].cachePath,
-    );
-    if (groupCoverPath) {
-      coverSrc.value = groupCoverPath;
-      return;
-    }
-  }
+// 子视频封面状态管理（使用 Map 存储每个视频的封面）
+const videoCoverMap = reactive<Map<string, string | null>>(new Map());
 
-  // 2. 回退到组的封面URL（可能是第一个视频的封面）
-  if (props.group.coverUrl && !props.group.coverUrl.startsWith('file://')) {
-    coverSrc.value = props.group.coverUrl;
-    return;
-  }
-
-  // 3. 无可用封面
-  coverSrc.value = null;
+// 加载组封面（后端已按优先级返回: group.jpg > group.png > image.jpg > image.png）
+function loadCoverSrc() {
+  coverError.value = false;
+  // 直接使用后端返回的封面URL（已是 base64 data URL）
+  coverSrc.value = props.group.coverUrl || null;
 }
 
 /**
- * 获取子视频的封面路径
+ * 处理封面加载错误
  */
-function getVideoCoverSrc(video: Types.CacheItem): string | null {
-  // 对于子视频，直接使用其封面URL
-  return video.coverUrl || null;
+function handleCoverError() {
+  coverError.value = true;
+}
+
+/**
+ * 异步加载子视频封面
+ */
+async function loadVideoCover(video: Types.CacheItem): Promise<void> {
+  // 如果已经加载过，跳过
+  if (videoCoverMap.has(video.id)) return;
+
+  // 先设置为 null 表示正在加载
+  videoCoverMap.set(video.id, null);
+
+  try {
+    // 1. 优先尝试本地封面文件
+    if (video.cachePath) {
+      const localCover = await checkLocalCover(video.cachePath);
+      if (localCover) {
+        videoCoverMap.set(video.id, localCover);
+        return;
+      }
+    }
+
+    // 2. 回退到网络封面URL
+    if (video.coverUrl && !video.coverUrl.startsWith('file://')) {
+      videoCoverMap.set(video.id, video.coverUrl);
+      return;
+    }
+
+    // 3. 无可用封面
+    videoCoverMap.set(video.id, null);
+  } catch (error) {
+    console.warn('加载子视频封面失败:', video.id, error);
+    videoCoverMap.set(video.id, null);
+  }
+}
+
+/**
+ * 加载所有子视频封面（展开时调用）
+ */
+async function loadAllVideoCovers(): Promise<void> {
+  if (!props.group.isExpanded) return;
+
+  // 并行加载所有子视频封面
+  await Promise.all(props.group.videos.map((video) => loadVideoCover(video)));
+}
+
+/**
+ * 获取子视频的封面路径（从缓存中获取）
+ */
+function getVideoCoverSrc(video: Types.CacheItem): string | undefined {
+  return videoCoverMap.get(video.id) ?? undefined;
 }
 
 // ============================================================================
@@ -348,20 +375,20 @@ function getVideoCoverSrc(video: Types.CacheItem): string | null {
 function formatDownloadTime(date: Date): string {
   // 处理异常时间戳
   if (!date) {
-    return '未知时间';
+    return t('cache.time.unknown');
   }
 
   const importDate = date instanceof Date ? date : new Date(date);
   
   // 检查转换后的 Date 对象是否有效
   if (isNaN(importDate.getTime())) {
-    return '未知时间';
+    return t('cache.time.unknown');
   }
 
   // 检查年份是否合理（1970-2100）
   const year = importDate.getFullYear();
   if (year < 1970 || year > 2100) {
-    return '时间格式错误';
+    return t('cache.time.formatError');
   }
 
   const month = String(importDate.getMonth() + 1).padStart(2, '0');
@@ -373,28 +400,6 @@ function formatDownloadTime(date: Date): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-/**
- * 获取组封面路径（优先查找group.jpg）
- */
-async function getGroupCoverPath(cachePath: string): Promise<string | null> {
-  if (!cachePath) return null;
-
-  try {
-    // 尝试查找group.jpg文件
-    const groupCoverPath = cachePath.replace(/[^/\\]+$/, 'group.jpg');
-    const localCover = await checkLocalCover(groupCoverPath);
-    if (localCover) {
-      return localCover;
-    }
-
-    // 回退到视频封面
-    return await checkLocalCover(cachePath);
-  } catch (error) {
-    console.warn('检查组封面失败:', error);
-    return null;
-  }
-}
-
 // ============================================================================
 // 生命周期
 // ============================================================================
@@ -402,6 +407,10 @@ async function getGroupCoverPath(cachePath: string): Promise<string | null> {
 // 组件挂载时加载封面
 onMounted(() => {
   loadCoverSrc();
+  // 如果组已展开，加载子视频封面
+  if (props.group.isExpanded) {
+    loadAllVideoCovers();
+  }
 });
 
 // 监听组数据变化
@@ -411,6 +420,16 @@ watch(
     loadCoverSrc();
   },
   { deep: true },
+);
+
+// 监听展开状态变化，展开时加载子视频封面
+watch(
+  () => props.group.isExpanded,
+  (isExpanded) => {
+    if (isExpanded) {
+      loadAllVideoCovers();
+    }
+  },
 );
 </script>
 

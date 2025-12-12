@@ -469,7 +469,29 @@
       "showMoreErrors": "Show more errors ({0})",
       "showLessErrors": "Hide errors",
       "viewResults": "View results",
-      "close": "Close"
+      "close": "Close",
+      "sidebar": {
+        "scan": "Scan",
+        "scanning": "Scanning",
+        "startImport": "Start import",
+        "importing": "Importing",
+        "cancel": "Cancel",
+        "reset": "Reset",
+        "statistics": "Scan results",
+        "found": "Found",
+        "valid": "Valid",
+        "invalid": "Invalid",
+        "size": "Size",
+        "importStatistics": "Import progress",
+        "progress": "Progress",
+        "success": "Success",
+        "failure": "Failure",
+        "skipped": "Skipped",
+        "help": "Usage steps",
+        "step1": "1. Select Bilibili cache directory",
+        "step2": "2. Scan and preview files",
+        "step3": "3. Start import"
+      }
     },
     "list": {
       "title": "Cache Management",
@@ -510,7 +532,11 @@
     "status": {
       "available": "Available",
       "unavailable": "Unavailable",
-      "incomplete": "Incomplete"
+      "incomplete": "Incomplete",
+      "all": "All",
+      "normal": "Normal",
+      "invalid": "Invalid",
+      "incomplete_short": "Incomplete"
     },
     "card": {
       "play": "Play",
@@ -527,6 +553,28 @@
       "defaultTitle": "Video collection",
       "hasUnavailableVideos": "Contains unavailable videos",
       "confirmDeleteGroup": "Are you sure you want to delete the entire video group? This will delete all {0} videos in the group."
+    },
+    "time": {
+      "unknown": "Unknown time",
+      "formatError": "Invalid time format"
+    },
+    "sidebar": {
+      "refresh": "Refresh",
+      "moreFilters": "More filters",
+      "importMore": "Import more",
+      "exportList": "Export list",
+      "statistics": "Statistics",
+      "total": "Total",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "incomplete": "Incomplete",
+      "groups": "Groups",
+      "singleVideos": "Single videos",
+      "averagePerGroup": "Average per group",
+      "totalSize": "Total size",
+      "selectedItems": "Selected",
+      "clearSelection": "Clear selection",
+      "batchDelete": "Batch delete"
     }
   }
 }

@@ -1,7 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 use base64::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
 use tauri::async_runtime;
@@ -305,32 +305,48 @@ pub async fn open_cache_folder(cache_path: String) -> TauriResult<()> {
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn check_local_cover(cache_path: String) -> TauriResult<Option<String>> {
-    let cache_dir = PathBuf::from(&cache_path);
-    if !cache_dir.exists() {
-        return Ok(None);
+    let path = PathBuf::from(&cache_path);
+
+    // 如果传入的是完整文件路径（如 group.jpg），直接检查该文件
+    if path.is_file() {
+        match tokio::fs::read(&path).await {
+            Ok(file_data) => {
+                let base64_data = base64::prelude::BASE64_STANDARD.encode(&file_data);
+                let mime_type = match path.extension().and_then(|ext| ext.to_str()) {
+                    Some("jpg") | Some("jpeg") => "image/jpeg",
+                    Some("png") => "image/png",
+                    Some("webp") => "image/webp",
+                    _ => "image/jpeg",
+                };
+                return Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)));
+            }
+            Err(e) => {
+                eprintln!("读取封面文件失败 {:?}: {}", path, e);
+            }
+        }
     }
 
-    // B站缓存的封面文件名（按优先级排序）
-    let cover_files = ["image.jpg", "image.png"];
-
-    for file_name in &cover_files {
-        let cover_path = cache_dir.join(file_name);
-        if cover_path.exists() && cover_path.is_file() {
-            // 读取文件并转换为 base64 data URL
-            match tokio::fs::read(&cover_path).await {
-                Ok(file_data) => {
-                    let base64_data = base64::prelude::BASE64_STANDARD.encode(&file_data);
-                    let mime_type = match cover_path.extension().and_then(|ext| ext.to_str()) {
-                        Some("jpg") | Some("jpeg") => "image/jpeg",
-                        Some("png") => "image/png",
-                        Some("webp") => "image/webp",
-                        _ => "image/jpeg", // 默认
-                    };
-                    return Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)));
-                }
-                Err(e) => {
-                    eprintln!("读取封面文件失败 {:?}: {}", cover_path, e);
-                    continue;
+    // 如果是目录，查找视频封面文件（不含 group.jpg，组封面由 get_group_cover 处理）
+    if path.is_dir() {
+        let cover_files = ["image.jpg", "image.png"];
+        for file_name in &cover_files {
+            let cover_path = path.join(file_name);
+            if cover_path.exists() && cover_path.is_file() {
+                match tokio::fs::read(&cover_path).await {
+                    Ok(file_data) => {
+                        let base64_data = base64::prelude::BASE64_STANDARD.encode(&file_data);
+                        let mime_type = match cover_path.extension().and_then(|ext| ext.to_str()) {
+                            Some("jpg") | Some("jpeg") => "image/jpeg",
+                            Some("png") => "image/png",
+                            Some("webp") => "image/webp",
+                            _ => "image/jpeg",
+                        };
+                        return Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)));
+                    }
+                    Err(e) => {
+                        eprintln!("读取封面文件失败 {:?}: {}", cover_path, e);
+                        continue;
+                    }
                 }
             }
         }
@@ -351,6 +367,71 @@ pub async fn get_cache_stats() -> TauriResult<CacheStats> {
         total_count,
         total_size,
         available_count,
+    })
+}
+
+/// 获取完整的缓存统计信息（包含组统计）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_cache_statistics() -> TauriResult<CacheStatistics> {
+    let group_service = GroupService::new();
+
+    // 获取所有记录
+    let all_records = cache_records::get_all().await?;
+
+    // 基础统计
+    let total_count = all_records.len() as i64;
+    let total_size: i64 = all_records.iter().map(|r| r.file_size).sum();
+    let total_duration: i64 = all_records.iter().map(|r| r.duration).sum();
+
+    // 状态统计
+    let available_count = all_records.iter().filter(|r| r.status == "available").count() as i64;
+    let unavailable_count = all_records.iter().filter(|r| r.status == "unavailable").count() as i64;
+    let incomplete_count = all_records.iter().filter(|r| r.status == "incomplete").count() as i64;
+
+    // 计算平均大小
+    let average_size = if total_count > 0 {
+        total_size / total_count
+    } else {
+        0
+    };
+
+    // 构建显示项来计算组统计
+    let display_items = group_service
+        .build_display_items_from_records(all_records)
+        .await?;
+
+    let group_count = display_items.iter().filter(|item| matches!(item, DisplayItem::VideoGroup { .. })).count() as i32;
+    let single_video_count = display_items.iter().filter(|item| matches!(item, DisplayItem::SingleVideo { .. })).count() as i32;
+
+    // 计算平均每组视频数量
+    let average_videos_per_group = if group_count > 0 {
+        let total_videos_in_groups: i32 = display_items
+            .iter()
+            .filter_map(|item| {
+                if let DisplayItem::VideoGroup { group } = item {
+                    Some(group.video_count)
+                } else {
+                    None
+                }
+            })
+            .sum();
+        total_videos_in_groups as f64 / group_count as f64
+    } else {
+        0.0
+    };
+
+    Ok(CacheStatistics {
+        total_count,
+        available_count,
+        unavailable_count,
+        incomplete_count,
+        total_size,
+        average_size,
+        total_duration,
+        group_count,
+        single_video_count,
+        average_videos_per_group,
     })
 }
 
@@ -375,23 +456,48 @@ pub async fn get_cache_display_items() -> TauriResult<Vec<DisplayItem>> {
 #[specta::specta]
 pub async fn get_cache_display_items_paginated(
     page: i32,
-    page_size: i32,
+    page_size: i32,  // 使用 snake_case 命名符合 Rust 约定
     sort_by: Option<String>,
     sort_order: Option<String>,
-    search_query: Option<String>,
-    filter_status: Option<String>,
+    filters: Option<CacheFilterOptions>,
 ) -> TauriResult<PaginatedDisplayItems> {
     let group_service = GroupService::new();
 
+    // 获取筛选选项
+    let filters = filters.unwrap_or_default();
+
     // 获取所有记录
-    let mut records = if let Some(status) = filter_status {
-        cache_records::get_by_status(&status).await?
+    let mut records = if let Some(status) = &filters.filter_status {
+        cache_records::get_by_status(status).await?
     } else {
         cache_records::get_all().await?
     };
 
+    // 应用基础过滤（UP主）
+    if let Some(uploader) = &filters.filter_uploader {
+        if !uploader.is_empty() {
+            records.retain(|record| record.uname == *uploader);
+        }
+    }
+
+    // 应用文件大小过滤
+    if let Some(min) = filters.min_size {
+        records.retain(|record| record.file_size >= min);
+    }
+    if let Some(max) = filters.max_size {
+        records.retain(|record| record.file_size <= max);
+    }
+
+    // 应用时长过滤
+    if let Some(min) = filters.min_duration {
+        records.retain(|record| record.duration >= min);
+    }
+    if let Some(max) = filters.max_duration {
+        records.retain(|record| record.duration <= max);
+    }
+
     // 应用搜索过滤
-    if let Some(query) = search_query {
+    if let Some(query) = &filters.search_query {
         if !query.is_empty() {
             let query_lower = query.to_lowercase();
             records.retain(|record| {
@@ -405,6 +511,34 @@ pub async fn get_cache_display_items_paginated(
     let mut display_items = group_service
         .build_display_items_with_states(records)
         .await?;
+
+    // 应用组ID过滤
+    if let Some(gid) = &filters.group_id {
+        if !gid.is_empty() {
+            display_items.retain(|item| {
+                if let DisplayItem::VideoGroup { group } = item {
+                    group.group_id == *gid
+                } else if let DisplayItem::SingleVideo { video } = item {
+                    video.group_id.as_ref() == Some(gid)
+                } else {
+                    false
+                }
+            });
+        }
+    }
+
+    // 应用显示类型过滤（组或单个视频）
+    if let Some(dtype) = &filters.display_type {
+        match dtype.as_str() {
+            "groups" => {
+                display_items.retain(|item| matches!(item, DisplayItem::VideoGroup { .. }));
+            }
+            "singles" => {
+                display_items.retain(|item| matches!(item, DisplayItem::SingleVideo { .. }));
+            }
+            _ => {} // "all" 或其他值不需要过滤
+        }
+    }
 
     // 应用排序
     let sort_field = sort_by.as_deref().unwrap_or("time");
@@ -472,7 +606,7 @@ pub async fn get_cache_display_items_paginated(
         total_count,
         total_pages,
         current_page: page,
-        page_size,
+        page_size: page_size,
         has_next: page < total_pages,
         has_prev: page > 1,
     })
@@ -584,6 +718,20 @@ pub async fn batch_delete_cache_items(
     })
 }
 
+/// 缓存筛选选项
+#[derive(Serialize, Deserialize, Type, Default)]
+pub struct CacheFilterOptions {
+    pub search_query: Option<String>,
+    pub filter_status: Option<String>,
+    pub filter_uploader: Option<String>,
+    pub min_size: Option<i64>,
+    pub max_size: Option<i64>,
+    pub min_duration: Option<i64>,
+    pub max_duration: Option<i64>,
+    pub display_type: Option<String>,
+    pub group_id: Option<String>,
+}
+
 /// 批量导出缓存项
 #[tauri::command(async)]
 #[specta::specta]
@@ -645,6 +793,21 @@ pub struct PaginatedDisplayItems {
     pub page_size: i32,
     pub has_next: bool,
     pub has_prev: bool,
+}
+
+/// 完整的缓存统计信息
+#[derive(Serialize, Type)]
+pub struct CacheStatistics {
+    pub total_count: i64,           // 总缓存数量
+    pub available_count: i64,       // 可用缓存数量
+    pub unavailable_count: i64,     // 不可用缓存数量
+    pub incomplete_count: i64,      // 不完整缓存数量
+    pub total_size: i64,            // 总文件大小
+    pub average_size: i64,          // 平均文件大小
+    pub total_duration: i64,        // 总时长（秒）
+    pub group_count: i32,           // 组数量
+    pub single_video_count: i32,    // 单个视频数量
+    pub average_videos_per_group: f64, // 平均每组视频数量
 }
 
 /// 批量操作结果

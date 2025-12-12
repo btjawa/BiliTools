@@ -660,6 +660,8 @@ impl ImportService {
             status: "available".to_string(),
             source: "local_cache_import".to_string(),
             group_id: video_info.group_id.clone(),
+            group_title: video_info.group_title.clone(),
+            p: video_info.p,
         };
 
         // 保存到数据库（使用事务确保一致性）

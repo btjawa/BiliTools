@@ -123,6 +123,7 @@
 - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) 哔哩哔哩-API收集整理
 
 - [Vercel](https://github.com/vercel/vercel) Develop. Preview. Ship.
+- [m4s-converter](https://github.com/mzky/m4s-converter) 将B站的m4s格式转换为MP4格式
 
 <a href="https://www.star-history.com/#btjawa/BiliTools&Date" alt="Star History Chart">
 <picture>

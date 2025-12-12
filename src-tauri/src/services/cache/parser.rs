@@ -17,7 +17,9 @@ pub struct VideoInfo {
     pub total_size: u64,
     pub quality: Option<i32>,
     pub download_time: Option<i64>,
-    pub group_id: Option<String>, // 视频组ID
+    pub group_id: Option<String>,    // 视频组ID
+    pub group_title: Option<String>, // 视频组标题
+    pub p: i32,                      // 分P序号，默认为1
     // 其他可选字段
     #[serde(flatten)]
     pub extra_fields: std::collections::HashMap<String, Value>,
@@ -131,10 +133,33 @@ impl ParserService {
                 }
             });
 
-        // 组ID（可选）
-        let group_id = self
-            .extract_string_field(obj, "groupId")
-            .or_else(|_| self.extract_string_field(obj, "group_id"))
+        // 组ID（可选）- 支持数字和字符串格式
+        let group_id = obj
+            .get("groupId")
+            .or_else(|| obj.get("group_id"))
+            .and_then(|v| {
+                // 如果是数字，转换为字符串
+                if let Some(n) = v.as_i64() {
+                    Some(n.to_string())
+                } else if let Some(n) = v.as_u64() {
+                    Some(n.to_string())
+                } else {
+                    // 如果是字符串，直接使用
+                    v.as_str().map(|s| s.to_string())
+                }
+            })
+            .filter(|s| !s.is_empty());
+
+        // 分P序号，默认为1
+        let p = self
+            .extract_i32_field(obj, "p")
+            .or_else(|_| self.extract_i32_field(obj, "page"))
+            .unwrap_or(1);
+
+        // 组标题（可选）
+        let group_title = self
+            .extract_string_field(obj, "groupTitle")
+            .or_else(|_| self.extract_string_field(obj, "group_title"))
             .ok()
             .filter(|s| !s.is_empty());
 
@@ -164,6 +189,10 @@ impl ParserService {
                     | "ctime"
                     | "groupId"
                     | "group_id"
+                    | "groupTitle"
+                    | "group_title"
+                    | "p"
+                    | "page"
             ) {
                 extra_fields.insert(key.clone(), value.clone());
             }
@@ -181,6 +210,8 @@ impl ParserService {
             quality,
             download_time,
             group_id,
+            group_title,
+            p,
             extra_fields,
         })
     }

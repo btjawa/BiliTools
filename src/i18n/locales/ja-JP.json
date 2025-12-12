@@ -469,7 +469,29 @@
       "showMoreErrors": "エラーをもっと表示 ({0})",
       "showLessErrors": "エラーを非表示",
       "viewResults": "結果を表示",
-      "close": "閉じる"
+      "close": "閉じる",
+      "sidebar": {
+        "scan": "スキャン",
+        "scanning": "スキャン中",
+        "startImport": "インポート開始",
+        "importing": "インポート中",
+        "cancel": "キャンセル",
+        "reset": "リセット",
+        "statistics": "スキャン結果",
+        "found": "発見",
+        "valid": "有効",
+        "invalid": "無効",
+        "size": "サイズ",
+        "importStatistics": "インポート進行状況",
+        "progress": "進度",
+        "success": "成功",
+        "failure": "失敗",
+        "skipped": "スキップ",
+        "help": "使用手順",
+        "step1": "1. Bilibili キャッシュディレクトリを選択",
+        "step2": "2. ファイルをスキャンしてプレビュー",
+        "step3": "3. インポート開始"
+      }
     },
     "list": {
       "title": "キャッシュ管理",
@@ -510,7 +532,11 @@
     "status": {
       "available": "利用可能",
       "unavailable": "利用不可",
-      "incomplete": "不完全"
+      "incomplete": "不完全",
+      "all": "すべて",
+      "normal": "正常",
+      "invalid": "無効",
+      "incomplete_short": "不完全"
     },
     "card": {
       "play": "再生",
@@ -527,6 +553,28 @@
       "defaultTitle": "動画コレクション",
       "hasUnavailableVideos": "利用不可な動画を含む",
       "confirmDeleteGroup": "動画グループ全体を削除してもよろしいですか？グループ内の{0}個の動画がすべて削除されます。"
+    },
+    "time": {
+      "unknown": "不明な時間",
+      "formatError": "無効な時間形式"
+    },
+    "sidebar": {
+      "refresh": "更新",
+      "moreFilters": "詳細フィルター",
+      "importMore": "さらにインポート",
+      "exportList": "リストをエクスポート",
+      "statistics": "統計情報",
+      "total": "総数",
+      "available": "利用可能",
+      "unavailable": "利用不可",
+      "incomplete": "不完全",
+      "groups": "グループ数",
+      "singleVideos": "単一動画",
+      "averagePerGroup": "グループあたりの平均",
+      "totalSize": "総サイズ",
+      "selectedItems": "選択済み",
+      "clearSelection": "選択をクリア",
+      "batchDelete": "一括削除"
     }
   }
 }

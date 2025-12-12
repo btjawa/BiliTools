@@ -57,6 +57,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             open_cache_folder,
             check_local_cover,
             get_cache_stats,
+            get_cache_statistics,
             // Group Management
             get_cache_display_items,
             get_cache_display_items_paginated,

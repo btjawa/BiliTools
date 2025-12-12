@@ -469,7 +469,29 @@
       "showMoreErrors": "顯示更多錯誤 ({0})",
       "showLessErrors": "收起錯誤",
       "viewResults": "檢視結果",
-      "close": "關閉"
+      "close": "關閉",
+      "sidebar": {
+        "scan": "掃描",
+        "scanning": "掃描中",
+        "startImport": "開始匯入",
+        "importing": "匯入中",
+        "cancel": "取消",
+        "reset": "重設",
+        "statistics": "掃描結果統計",
+        "found": "發現",
+        "valid": "有效",
+        "invalid": "無效",
+        "size": "大小",
+        "importStatistics": "匯入進度統計",
+        "progress": "進度",
+        "success": "成功",
+        "failure": "失敗",
+        "skipped": "略過",
+        "help": "使用步驟",
+        "step1": "1. 選擇 B 站快取目錄",
+        "step2": "2. 掃描並預覽檔案",
+        "step3": "3. 開始匯入"
+      }
     },
     "list": {
       "title": "快取管理",
@@ -510,7 +532,11 @@
     "status": {
       "available": "可用",
       "unavailable": "不可用",
-      "incomplete": "不完整"
+      "incomplete": "不完整",
+      "all": "全部",
+      "normal": "正常",
+      "invalid": "失效",
+      "incomplete_short": "殘缺"
     },
     "card": {
       "play": "播放",
@@ -527,6 +553,28 @@
       "defaultTitle": "影片合集",
       "hasUnavailableVideos": "組內包含不可用影片",
       "confirmDeleteGroup": "確定要刪除整個影片組嗎？這將刪除組內所有{0}個影片。"
+    },
+    "time": {
+      "unknown": "未知時間",
+      "formatError": "時間格式錯誤"
+    },
+    "sidebar": {
+      "refresh": "重新整理",
+      "moreFilters": "更多篩選",
+      "importMore": "匯入更多",
+      "exportList": "匯出清單",
+      "statistics": "統計資訊",
+      "total": "總數",
+      "available": "可用",
+      "unavailable": "不可用",
+      "incomplete": "不完整",
+      "groups": "組數",
+      "singleVideos": "單個影片",
+      "averagePerGroup": "平均每組",
+      "totalSize": "總大小",
+      "selectedItems": "已選擇",
+      "clearSelection": "清除選擇",
+      "batchDelete": "批次刪除"
     }
   }
 }

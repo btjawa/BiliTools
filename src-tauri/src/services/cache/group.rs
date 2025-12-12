@@ -150,13 +150,47 @@ impl GroupService {
         Ok(())
     }
 
+    /// 判断视频是否属于集合
+    /// 规则：
+    /// - p > 1 → 属于集合（多P视频）
+    /// - p = 1 + groupId ≠ bvid → 属于集合（官方合集首集）
+    /// - p = 1 + groupId = bvid → 不属于集合（纯独立视频）
+    fn is_collection_video(record: &CacheRecord) -> bool {
+        // p > 1 直接判定为集合
+        if record.p > 1 {
+            return true;
+        }
+
+        // p = 1 时，对比 groupId 和 bvid
+        if let Some(group_id) = &record.group_id {
+            // groupId 不为空且与 bvid 不同 → 集合
+            !group_id.is_empty() && group_id != &record.bvid
+        } else {
+            // 没有 groupId → 非集合
+            false
+        }
+    }
+
+    /// 获取视频的分组键
+    /// 优先使用 groupId（官方合集），其次使用 bvid（多P视频）
+    fn get_group_key(record: &CacheRecord) -> Option<String> {
+        // 优先检查 groupId：如果存在且与 bvid 不同，使用 groupId（官方合集）
+        if let Some(group_id) = &record.group_id {
+            if !group_id.is_empty() && group_id != &record.bvid {
+                return Some(group_id.clone());
+            }
+        }
+
+        // 其次检查 p：如果 p > 1，使用 bvid（多P视频）
+        if record.p > 1 {
+            return Some(record.bvid.clone());
+        }
+
+        // 否则不属于任何组
+        None
+    }
+
     /// 从缓存记录构建显示项列表（组和单个视频的混合）
-    ///
-    /// # 参数
-    /// * `records` - 缓存记录列表
-    ///
-    /// # 返回
-    /// * `Result<Vec<DisplayItem>>` - 显示项列表
     pub async fn build_display_items_from_records(
         &self,
         records: Vec<CacheRecord>,
@@ -164,33 +198,32 @@ impl GroupService {
         let mut groups: HashMap<String, Vec<CacheRecord>> = HashMap::new();
         let mut singles: Vec<CacheRecord> = Vec::new();
 
-        // 按业务逻辑分类视频
         for record in records {
-            if let Some(group_id) = &record.group_id {
-                if !group_id.is_empty() && group_id != &record.bvid {
-                    // groupId 存在且与 bvid 不同 -> 集合视频
-                    groups.entry(group_id.clone()).or_default().push(record);
+            if Self::is_collection_video(&record) {
+                if let Some(group_key) = Self::get_group_key(&record) {
+                    groups.entry(group_key).or_default().push(record);
                 } else {
-                    // groupId 与 bvid 相同或为空 -> 单独视频
                     singles.push(record);
                 }
             } else {
-                // 没有 groupId -> 单独视频
                 singles.push(record);
             }
         }
 
         let mut display_items = Vec::new();
 
-        // 处理组（2个或以上视频才成组）
         for (group_id, mut videos) in groups {
             if videos.len() >= 2 {
-                // 按下载时间排序
-                videos.sort_by_key(|v| v.download_time);
+                videos.sort_by_key(|v| v.p);
+
+                let title = videos
+                    .iter()
+                    .find_map(|v| v.group_title.clone())
+                    .unwrap_or_else(|| self.generate_group_title_sync(&videos));
 
                 let group = CacheGroup {
                     group_id: group_id.clone(),
-                    title: self.generate_group_title(&videos).await,
+                    title,
                     cover_url: self.get_group_cover(&group_id, &videos).await?,
                     uname: self.determine_group_uname(&videos).await,
                     video_count: videos.len() as i32,
@@ -198,17 +231,15 @@ impl GroupService {
                     total_file_size: videos.iter().map(|v| v.file_size).sum(),
                     latest_download_time: videos.iter().map(|v| v.download_time).max().unwrap_or(0),
                     videos,
-                    is_expanded: false, // 默认折叠，实际状态将在前端设置
+                    is_expanded: false,
                 };
 
                 display_items.push(DisplayItem::VideoGroup { group });
             } else {
-                // 单个视频直接加入singles
                 singles.extend(videos);
             }
         }
 
-        // 添加单个视频
         for record in singles {
             display_items.push(DisplayItem::SingleVideo { video: record });
         }
@@ -309,14 +340,8 @@ impl GroupService {
         Ok(None)
     }
 
-    /// 生成组标题
-    ///
-    /// # 参数
-    /// * `videos` - 组内视频列表
-    ///
-    /// # 返回
-    /// * `String` - 组标题
-    pub async fn generate_group_title(&self, videos: &[CacheRecord]) -> String {
+    /// 生成组标题（同步版本）
+    fn generate_group_title_sync(&self, videos: &[CacheRecord]) -> String {
         if videos.is_empty() {
             return "视频合集".to_string();
         }
@@ -338,6 +363,11 @@ impl GroupService {
 
         // 如果无法确定公共标题，使用默认标题
         "视频合集".to_string()
+    }
+
+    /// 生成组标题（异步版本，向后兼容）
+    pub async fn generate_group_title(&self, videos: &[CacheRecord]) -> String {
+        self.generate_group_title_sync(videos)
     }
 
     /// 确定组的UP主名称

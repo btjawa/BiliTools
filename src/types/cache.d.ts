@@ -42,6 +42,10 @@ export interface CacheItem {
   status: CacheStatus;
   /** 视频组标识符（可选，用于组织相关视频） */
   groupId?: string;
+  /** 视频组标题（可选，来自 videoInfo.json 的 groupTitle 字段） */
+  groupTitle?: string;
+  /** 分P序号，默认为1 */
+  p: number;
 }
 
 /**
@@ -611,6 +615,8 @@ export interface CacheRecordRaw {
   status: string;
   source: string;
   group_id?: string;
+  group_title?: string;
+  p: number;
 }
 
 /** 后端缓存统计原始格式 */
@@ -650,4 +656,42 @@ export interface GroupStateRaw {
   is_expanded: boolean;
   created_at: number;
   updated_at: number;
+}
+
+/** 后端分页显示项结果原始格式 */
+export interface PaginatedDisplayItemsRaw {
+  items: DisplayItemRaw[];
+  total_count: number;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+/** 后端完整统计信息原始格式 */
+export interface CacheStatisticsRaw {
+  total_count: number;
+  available_count: number;
+  unavailable_count: number;
+  incomplete_count: number;
+  total_size: number;
+  average_size: number;
+  total_duration: number;
+  group_count: number;
+  single_video_count: number;
+  average_videos_per_group: number;
+}
+
+/** 后端筛选选项原始格式 */
+export interface CacheFilterOptionsRaw {
+  search_query: string | null;
+  filter_status: string | null;
+  filter_uploader: string | null;
+  min_size: number | null;
+  max_size: number | null;
+  min_duration: number | null;
+  max_duration: number | null;
+  display_type: string | null;
+  group_id: string | null;
 }

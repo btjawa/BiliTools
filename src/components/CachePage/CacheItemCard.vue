@@ -11,29 +11,21 @@
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
       <div
-        class="relative rounded-lg overflow-hidden cursor-pointer"
-        style="
-          min-width: 160px;
-          width: fit-content;
-          height: 96px;
-          display: flex;
-        "
+        class="relative rounded-lg overflow-hidden cursor-pointer flex items-center justify-center"
+        style="width: 160px; height: 90px"
       >
         <!-- 优先使用本地封面，回退到网络封面，最后显示占位符 -->
         <div
-          v-if="!coverSrc"
+          v-if="!coverSrc || coverError"
           class="w-full h-full bg-(--block-color) flex items-center justify-center"
         >
           <i class="fa-solid fa-image text-2xl text-(--desc-color)"></i>
         </div>
-        <Image
+        <img
           v-else
           :src="coverSrc"
-          :height="96"
-          :width="160"
-          :prevent="true"
-          class="object-cover z-10"
-          style="height: 96px; width: 160px; max-width: 100%"
+          class="z-10 min-w-full min-h-full object-cover"
+          @error="handleCoverError"
         />
       </div>
       <!-- 渐变遮罩 -->
@@ -129,10 +121,12 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { duration } from '@/services/utils';
 import { checkLocalCover } from '@/services/cache';
-import { Image } from '@/components';
 import type * as Types from '@/types/cache.d';
+
+const { t } = useI18n();
 
 // ============================================================================
 // Props 和 Emits
@@ -168,9 +162,18 @@ const statusIcon = computed(() => {
 
 // 封面路径状态
 const coverSrc = ref<string | null>(null);
+const coverError = ref(false);
+
+/**
+ * 处理封面加载错误
+ */
+function handleCoverError() {
+  coverError.value = true;
+}
 
 // 异步加载封面路径
 async function loadCoverSrc() {
+  coverError.value = false;
   // 1. 优先尝试本地封面文件
   const localCoverPath = await getLocalCoverPath(props.item.cachePath);
   if (localCoverPath) {
@@ -198,20 +201,20 @@ async function loadCoverSrc() {
 function formatDownloadTime(date: Date): string {
   // 处理异常时间戳
   if (!date) {
-    return '未知时间';
+    return t('cache.time.unknown');
   }
 
   const importDate = date instanceof Date ? date : new Date(date);
   
   // 检查转换后的 Date 对象是否有效
   if (isNaN(importDate.getTime())) {
-    return '未知时间';
+    return t('cache.time.unknown');
   }
 
   // 检查年份是否合理（1970-2100）
   const year = importDate.getFullYear();
   if (year < 1970 || year > 2100) {
-    return '时间格式错误';
+    return t('cache.time.formatError');
   }
 
   const month = String(importDate.getMonth() + 1).padStart(2, '0');

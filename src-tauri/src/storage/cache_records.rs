@@ -27,6 +27,8 @@ pub enum CacheRecords {
     Status,
     Source,
     GroupId,
+    GroupTitle,
+    P,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, Type)]
@@ -41,18 +43,20 @@ pub struct CacheRecord {
     pub duration: i64,
     pub file_size: i64,
     pub cache_path: String,
-    pub download_time: i64, // 视频原始下载时间（从videoInfo.json获取）
-    pub import_time: i64,   // 导入到BiliTools的时间，使用get_millis()统一时间戳格式
+    pub download_time: i64,
+    pub import_time: i64,
     pub status: String,
-    pub source: String,           // "local_cache_import"
-    pub group_id: Option<String>, // 视频组ID，从videoInfo.json中的groupId字段获取
+    pub source: String,
+    pub group_id: Option<String>,
+    pub group_title: Option<String>,
+    pub p: i32, // 分P序号，默认为1
 }
 
 pub struct CacheRecordsTable;
 
 impl TableSpec for CacheRecordsTable {
     const NAME: &'static str = "cache_records";
-    const LATEST: i32 = 2;
+    const LATEST: i32 = 4; // 升级版本号：添加 group_title 字段
 
     fn create_stmt() -> TableCreateStatement {
         Table::create()
@@ -85,6 +89,13 @@ impl TableSpec for CacheRecordsTable {
             .col(ColumnDef::new(CacheRecords::Status).text().not_null())
             .col(ColumnDef::new(CacheRecords::Source).text().not_null())
             .col(ColumnDef::new(CacheRecords::GroupId).text())
+            .col(ColumnDef::new(CacheRecords::GroupTitle).text())
+            .col(
+                ColumnDef::new(CacheRecords::P)
+                    .integer()
+                    .not_null()
+                    .default(1),
+            )
             .to_owned()
     }
 }
@@ -112,6 +123,8 @@ pub async fn insert(record: &CacheRecord) -> Result<()> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
         ])
         .values([
             record.id.clone().into(),
@@ -129,6 +142,8 @@ pub async fn insert(record: &CacheRecord) -> Result<()> {
             record.status.clone().into(),
             record.source.clone().into(),
             record.group_id.clone().into(),
+            record.group_title.clone().into(),
+            record.p.into(),
         ])?
         .build_sqlx(SqliteQueryBuilder);
 
@@ -157,6 +172,8 @@ pub async fn upsert(record: &CacheRecord) -> Result<()> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
         ])
         .values([
             record.id.clone().into(),
@@ -174,6 +191,8 @@ pub async fn upsert(record: &CacheRecord) -> Result<()> {
             record.status.clone().into(),
             record.source.clone().into(),
             record.group_id.clone().into(),
+            record.group_title.clone().into(),
+            record.p.into(),
         ])?
         .on_conflict(
             OnConflict::column(CacheRecords::Id)
@@ -189,6 +208,8 @@ pub async fn upsert(record: &CacheRecord) -> Result<()> {
                     CacheRecords::Status,
                     CacheRecords::Source,
                     CacheRecords::GroupId,
+                    CacheRecords::GroupTitle,
+                    CacheRecords::P,
                 ])
                 .to_owned(),
         )
@@ -217,6 +238,7 @@ pub async fn get_by_id(id: &str) -> Result<Option<CacheRecord>> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::P,
         ])
         .from(CacheRecords::Table)
         .and_where(Expr::col(CacheRecords::Id).eq(id))
@@ -242,6 +264,8 @@ pub async fn get_by_id(id: &str) -> Result<Option<CacheRecord>> {
             status: r.try_get("status")?,
             source: r.try_get("source")?,
             group_id: r.try_get("group_id")?,
+            group_title: r.try_get("group_title")?,
+            p: r.try_get::<i32, _>("p").unwrap_or(1),
         }))
     } else {
         Ok(None)
@@ -267,6 +291,8 @@ pub async fn get_by_bvid_cid(bvid: &str, cid: i64) -> Result<Option<CacheRecord>
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
         ])
         .from(CacheRecords::Table)
         .and_where(Expr::col(CacheRecords::Bvid).eq(bvid))
@@ -293,6 +319,8 @@ pub async fn get_by_bvid_cid(bvid: &str, cid: i64) -> Result<Option<CacheRecord>
             status: r.try_get("status")?,
             source: r.try_get("source")?,
             group_id: r.try_get("group_id")?,
+            group_title: r.try_get("group_title")?,
+            p: r.try_get::<i32, _>("p").unwrap_or(1),
         }))
     } else {
         Ok(None)
@@ -318,6 +346,8 @@ pub async fn get_all() -> Result<Vec<CacheRecord>> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
         ])
         .from(CacheRecords::Table)
         .order_by(CacheRecords::DownloadTime, sea_query::Order::Desc)
@@ -344,6 +374,8 @@ pub async fn get_all() -> Result<Vec<CacheRecord>> {
             status: r.try_get("status")?,
             source: r.try_get("source")?,
             group_id: r.try_get("group_id")?,
+            group_title: r.try_get("group_title")?,
+            p: r.try_get::<i32, _>("p").unwrap_or(1),
         });
     }
     Ok(records)
@@ -368,6 +400,8 @@ pub async fn get_by_status(status: &str) -> Result<Vec<CacheRecord>> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
         ])
         .from(CacheRecords::Table)
         .and_where(Expr::col(CacheRecords::Status).eq(status))
@@ -395,6 +429,8 @@ pub async fn get_by_status(status: &str) -> Result<Vec<CacheRecord>> {
             status: r.try_get("status")?,
             source: r.try_get("source")?,
             group_id: r.try_get("group_id")?,
+            group_title: r.try_get("group_title")?,
+            p: r.try_get::<i32, _>("p").unwrap_or(1),
         });
     }
     Ok(records)
@@ -481,10 +517,12 @@ pub async fn get_by_group_id(group_id: &str) -> Result<Vec<CacheRecord>> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
         ])
         .from(CacheRecords::Table)
         .and_where(Expr::col(CacheRecords::GroupId).eq(group_id))
-        .order_by(CacheRecords::DownloadTime, sea_query::Order::Asc)
+        .order_by(CacheRecords::P, sea_query::Order::Asc) // 按分P序号排序
         .build_sqlx(SqliteQueryBuilder);
 
     let pool = get_db().await?;
@@ -508,6 +546,8 @@ pub async fn get_by_group_id(group_id: &str) -> Result<Vec<CacheRecord>> {
             status: r.try_get("status")?,
             source: r.try_get("source")?,
             group_id: r.try_get("group_id")?,
+            group_title: r.try_get("group_title")?,
+            p: r.try_get::<i32, _>("p").unwrap_or(1),
         });
     }
     Ok(records)
