@@ -119,7 +119,17 @@ impl ParserService {
             .or_else(|_| self.extract_i64_field(obj, "downloadTime"))
             .or_else(|_| self.extract_i64_field(obj, "download_time"))
             .or_else(|_| self.extract_i64_field(obj, "ctime"))
-            .ok();
+            .ok()
+            .map(|timestamp| {
+                // 处理时间戳格式：如果是秒级时间戳，转换为毫秒级
+                if timestamp > 0 && timestamp < 10_000_000_000 {
+                    // 秒级时间戳（小于10位数），转换为毫秒级
+                    timestamp * 1000
+                } else {
+                    // 已经是毫秒级时间戳或无效时间戳
+                    timestamp
+                }
+            });
 
         // 组ID（可选）
         let group_id = self

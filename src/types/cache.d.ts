@@ -365,7 +365,7 @@ export interface CacheFilter {
     end?: Date;
   };
   /** 按组筛选（仅显示组或仅显示单个视频） */
-  displayType?: 'all' | 'groups' | 'singles';
+  displayType?: DisplayTypeFilter;
   /** 按组ID筛选 */
   groupId?: string;
 }
@@ -395,6 +395,11 @@ export type SortField =
  * 排序方向
  */
 export type SortDirection = 'asc' | 'desc';
+
+/**
+ * 显示类型筛选
+ */
+export type DisplayTypeFilter = 'all' | 'groups' | 'singles';
 
 // ============================================================================
 // UI组件相关类型

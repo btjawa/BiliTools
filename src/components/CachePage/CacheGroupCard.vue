@@ -347,11 +347,16 @@ function getVideoCoverSrc(video: Types.CacheItem): string | null {
  */
 function formatDownloadTime(date: Date): string {
   // 处理异常时间戳
-  if (!date || isNaN(date.getTime())) {
+  if (!date) {
     return '未知时间';
   }
 
-  const importDate = new Date(date);
+  const importDate = date instanceof Date ? date : new Date(date);
+  
+  // 检查转换后的 Date 对象是否有效
+  if (isNaN(importDate.getTime())) {
+    return '未知时间';
+  }
 
   // 检查年份是否合理（1970-2100）
   const year = importDate.getFullYear();

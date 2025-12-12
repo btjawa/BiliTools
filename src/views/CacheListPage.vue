@@ -60,12 +60,12 @@
               v-if="showAdvancedFilters"
               class="mt-3 pt-3 border-t border-(--border-color)"
             >
-              <div class="flex gap-3 items-center">
+              <div class="flex gap-3 items-center flex-wrap">
                 <!-- UP主筛选 -->
                 <select
                   v-if="cacheStore.allUploaders.length > 0"
                   v-model="selectedUploader"
-                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm flex-1"
+                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm flex-1 min-w-32"
                   @change="applyFilters"
                 >
                   <option value="">{{ $t('cache.list.allUploaders') }}</option>
@@ -75,6 +75,35 @@
                     :value="uploader"
                   >
                     {{ uploader }}
+                  </option>
+                </select>
+
+                <!-- 显示类型筛选（如果启用了组功能） -->
+                <select
+                  v-if="cacheStore.groupManagerConfig.enableGrouping"
+                  v-model="selectedDisplayType"
+                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm min-w-24"
+                  @change="applyFilters"
+                >
+                  <option value="">全部类型</option>
+                  <option value="groups">仅显示组</option>
+                  <option value="singles">仅显示单个视频</option>
+                </select>
+
+                <!-- 组ID筛选（如果启用了组功能且有组） -->
+                <select
+                  v-if="cacheStore.groupManagerConfig.enableGrouping && cacheStore.allGroupIds.length > 0"
+                  v-model="selectedGroupId"
+                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm min-w-32"
+                  @change="applyFilters"
+                >
+                  <option value="">全部组</option>
+                  <option
+                    v-for="groupId in cacheStore.allGroupIds"
+                    :key="groupId"
+                    :value="groupId"
+                  >
+                    {{ groupId }}
                   </option>
                 </select>
 
@@ -106,6 +135,18 @@
                   ])
                 }}
               </span>
+              <!-- 显示选择详情（组和单个视频） -->
+              <div v-if="cacheStore.groupManagerConfig.enableGrouping" class="text-xs text-(--desc-color)">
+                <span v-if="cacheStore.selectedGroupIds.length > 0">
+                  {{ cacheStore.selectedGroupIds.length }}个组
+                </span>
+                <span v-if="cacheStore.selectedGroupIds.length > 0 && cacheStore.selectedSingleVideos.length > 0">
+                  ，
+                </span>
+                <span v-if="cacheStore.selectedSingleVideos.length > 0">
+                  {{ cacheStore.selectedSingleVideos.length }}个单独视频
+                </span>
+              </div>
               <button
                 class="text-sm text-(--primary-color) hover:underline"
                 @click="cacheStore.clearSelection"
@@ -150,19 +191,24 @@
                 </template>
               </Empty>
 
-              <!-- 缓存列表 -->
-              <div v-else class="flex flex-col gap-1 h-full overflow-y-auto">
-                <CacheItemCard
-                  v-for="item in cacheStore.paginatedCacheItems"
-                  :key="item.id"
-                  :item="item"
-                  :selected="cacheStore.selectedItems.includes(item.id)"
-                  @select="cacheStore.toggleCacheItemSelection(item.id)"
-                  @play="playItem"
-                  @open-folder="openFolder"
-                  @delete="deleteItem"
-                />
-              </div>
+              <!-- 混合列表（组和单个视频） -->
+              <CacheMixedList
+                v-else
+                :items="cacheStore.paginatedDisplayItems"
+                :search-query="searchKeyword"
+                :selected-items="new Set(cacheStore.selectedItems)"
+                :selected-videos="new Set(cacheStore.selectedItems)"
+                :has-active-filters="hasActiveFilters"
+                @go-to-import="goToImport"
+                @select-video="cacheStore.toggleCacheItemSelection"
+                @play-video="playItem"
+                @open-video-folder="openFolder"
+                @delete-video="deleteItem"
+                @select-group="toggleGroupSelection"
+                @toggle-expand="cacheStore.toggleGroupExpansion"
+                @open-group-folder="openGroupFolder"
+                @delete-group="deleteGroup"
+              />
             </div>
           </Transition>
 
@@ -205,6 +251,10 @@
                   cacheStore.pagination.totalCount,
                 ])
               }}
+              <!-- 显示项类型统计（如果启用了组功能） -->
+              <span v-if="cacheStore.groupManagerConfig.enableGrouping" class="ml-2 text-xs">
+                ({{ cacheStore.groupCount }}组 + {{ cacheStore.singleVideoCount }}单独视频)
+              </span>
             </div>
 
             <div class="flex items-center gap-2">
@@ -311,6 +361,7 @@
 
         <!-- 统计信息（紧凑显示） -->
         <div class="text-xs text-(--desc-color) space-y-0.5 mt-1">
+          <!-- 基础统计 -->
           <div class="flex justify-between">
             <span>总数:</span>
             <span class="font-medium">{{ cacheStore.totalCacheCount }}</span>
@@ -333,6 +384,23 @@
               cacheStore.incompleteCacheCount
             }}</span>
           </div>
+          
+          <!-- 组统计（如果启用了组功能） -->
+          <template v-if="cacheStore.groupManagerConfig.enableGrouping">
+            <div class="flex justify-between pt-1 border-t border-(--border-color)">
+              <span class="text-blue-500">组数:</span>
+              <span class="font-medium text-blue-500">{{ cacheStore.groupCount }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>单个视频:</span>
+              <span class="font-medium">{{ cacheStore.singleVideoCount }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>平均每组:</span>
+              <span class="font-medium">{{ cacheStore.averageVideosPerGroup }}个</span>
+            </div>
+          </template>
+          
           <div
             class="flex justify-between pt-1 border-t border-(--border-color)"
           >
@@ -373,11 +441,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useCacheStore } from '@/store/cache';
 import { cacheManagementService } from '@/services/cache';
 import { formatBytes } from '@/services/utils';
 import { AppError } from '@/services/error';
-import { Empty, CacheItemCard } from '@/components';
+import { Empty, CacheMixedList } from '@/components';
 import type * as Types from '@/types/cache.d';
 
 // ============================================================================
@@ -385,6 +454,7 @@ import type * as Types from '@/types/cache.d';
 // ============================================================================
 
 const router = useRouter();
+const { t: $t } = useI18n();
 const cacheStore = useCacheStore();
 
 // ============================================================================
@@ -396,6 +466,8 @@ const searchKeyword = ref<string>('');
 const selectedStatus = ref<string>('');
 const selectedUploader = ref<string>('');
 const selectedSort = ref<string>('completionTime-desc');
+const selectedDisplayType = ref<string>(''); // 显示类型筛选（组功能）
+const selectedGroupId = ref<string>(''); // 组ID筛选（组功能）
 
 // 页面输入状态
 const pageInput = ref<number>(1);
@@ -411,7 +483,13 @@ let searchTimeout: number | null = null;
 // ============================================================================
 
 const hasActiveFilters = computed(() => {
-  return searchKeyword.value || selectedStatus.value || selectedUploader.value;
+  return !!(
+    searchKeyword.value ||
+    selectedStatus.value ||
+    selectedUploader.value ||
+    selectedDisplayType.value ||
+    selectedGroupId.value
+  );
 });
 
 // ============================================================================
@@ -441,6 +519,8 @@ function applyFilters(): void {
       status: [selectedStatus.value as Types.CacheStatus],
     }),
     ...(selectedUploader.value && { uploader: selectedUploader.value }),
+    ...(selectedDisplayType.value && { displayType: selectedDisplayType.value as 'all' | 'groups' | 'singles' }),
+    ...(selectedGroupId.value && { groupId: selectedGroupId.value }),
   };
 
   cacheStore.setFilter(filter);
@@ -466,6 +546,8 @@ function clearFilters(): void {
   searchKeyword.value = '';
   selectedStatus.value = '';
   selectedUploader.value = '';
+  selectedDisplayType.value = '';
+  selectedGroupId.value = '';
   cacheStore.clearFilter();
   loadCacheList();
 }
@@ -523,7 +605,13 @@ function toggleAdvancedFilters(): void {
  */
 async function loadCacheList(): Promise<void> {
   try {
-    await cacheStore.loadCacheList();
+    // 如果启用了组功能，使用新的显示项加载方法
+    if (cacheStore.groupManagerConfig.enableGrouping) {
+      await cacheStore.loadDisplayItems();
+    } else {
+      // 否则使用原有的加载方法（向后兼容）
+      await cacheStore.loadCacheList();
+    }
   } catch (error) {
     new AppError(error).handle();
   }
@@ -606,7 +694,18 @@ async function deleteItem(item: Types.CacheItem): Promise<void> {
 async function batchDelete(): Promise<void> {
   try {
     const count = cacheStore.selectedItemsCount;
-    if (!confirm(`确定要删除选中的 ${count} 个缓存项吗？`)) {
+    const groupCount = cacheStore.selectedGroupIds.length;
+    const singleCount = cacheStore.selectedSingleVideos.length;
+    
+    let confirmMessage = `确定要删除选中的 ${count} 个缓存项吗？`;
+    if (cacheStore.groupManagerConfig.enableGrouping && (groupCount > 0 || singleCount > 0)) {
+      const parts = [];
+      if (groupCount > 0) parts.push(`${groupCount}个组`);
+      if (singleCount > 0) parts.push(`${singleCount}个单独视频`);
+      confirmMessage = `确定要删除选中的 ${parts.join('和')} 吗？`;
+    }
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -625,6 +724,55 @@ async function batchDelete(): Promise<void> {
     } else {
       new AppError(
         `删除完成：成功 ${successCount} 个，失败 ${failureCount} 个`,
+        { name: 'warning' },
+      ).handle();
+    }
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 切换组选择状态
+ */
+function toggleGroupSelection(groupId: string): void {
+  cacheStore.toggleGroupSelection(groupId);
+}
+
+/**
+ * 打开组文件夹
+ */
+async function openGroupFolder(group: Types.CacheGroup): Promise<void> {
+  try {
+    await cacheStore.openGroupFolder(group.groupId);
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 删除整个组
+ */
+async function deleteGroup(group: Types.CacheGroup): Promise<void> {
+  try {
+    // 确认删除
+    if (!confirm($t('cache.group.confirmDeleteGroup', [group.videoCount]))) {
+      return;
+    }
+
+    const results = await cacheStore.deleteGroup(group.groupId);
+    
+    // 显示结果
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.length - successCount;
+
+    if (failureCount === 0) {
+      new AppError(`成功删除组 "${group.title}" 及其 ${successCount} 个视频`, {
+        name: 'success',
+      }).handle();
+    } else {
+      new AppError(
+        `删除组完成：成功 ${successCount} 个，失败 ${failureCount} 个`,
         { name: 'warning' },
       ).handle();
     }

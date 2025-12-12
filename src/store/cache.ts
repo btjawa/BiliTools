@@ -1271,6 +1271,10 @@ export const useCacheStore = defineStore('cache', () => {
       throw new Error('缓存记录数据为空');
     }
 
+    // 处理时间戳：后端存储的已经是毫秒级时间戳，直接使用
+    const downloadTime = new Date(raw.download_time || 0);
+    const importTime = new Date(raw.import_time || 0);
+
     return {
       id: raw.id || '',
       bvid: raw.bvid || '',
@@ -1282,8 +1286,8 @@ export const useCacheStore = defineStore('cache', () => {
       duration: raw.duration || 0,
       fileSize: raw.file_size || 0,
       cachePath: raw.cache_path || '',
-      downloadTime: new Date((raw.download_time || 0) * 1000),
-      importTime: new Date((raw.import_time || 0) * 1000),
+      downloadTime,
+      importTime,
       status: (raw.status as Types.CacheStatus) || 'available',
       groupId: raw.group_id || undefined,
     };
@@ -1303,6 +1307,9 @@ export const useCacheStore = defineStore('cache', () => {
       throw new Error('缓存组缺少 group_id 字段');
     }
 
+    // 处理时间戳：后端存储的已经是毫秒级时间戳，直接使用
+    const latestDownloadTime = new Date(raw.latest_download_time || 0);
+
     return {
       groupId: raw.group_id,
       title: raw.title || '未知标题',
@@ -1311,7 +1318,7 @@ export const useCacheStore = defineStore('cache', () => {
       videoCount: raw.video_count || 0,
       totalDuration: raw.total_duration || 0,
       totalFileSize: raw.total_file_size || 0,
-      latestDownloadTime: new Date((raw.latest_download_time || 0) * 1000),
+      latestDownloadTime,
       videos: (raw.videos || []).map(convertCacheRecordFromRaw),
       isExpanded: raw.is_expanded || false,
     };
