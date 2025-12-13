@@ -151,33 +151,49 @@ impl GroupService {
     }
 
     /// 判断视频是否属于集合
-    /// 规则：
-    /// - p > 1 → 属于集合（多P视频）
-    /// - p = 1 + groupId ≠ bvid → 属于集合（官方合集首集）
-    /// - p = 1 + groupId = bvid → 不属于集合（纯独立视频）
-    fn is_collection_video(record: &CacheRecord) -> bool {
-        // p > 1 直接判定为集合
-        if record.p > 1 {
-            return true;
+    /// 核心规则：以 groupID 为主要判断依据
+    /// - 有其他视频共享相同的 group_id → 属于集合（最根本的判断）
+    /// - p > 1 → 属于集合（多P视频，辅助判断）
+    /// - 没有其他视频共享 group_id 且 p = 1 → 不属于集合（独立视频）
+    fn is_collection_video(record: &CacheRecord, all_records: &[CacheRecord]) -> bool {
+        // 首先检查 group_id
+        if let Some(group_id) = &record.group_id {
+            if !group_id.is_empty() {
+                // 核心判断：检查是否有其他视频共享相同的 group_id
+                let has_other_videos_with_same_group = all_records
+                    .iter()
+                    .any(|other| {
+                        other.id != record.id && // 不是同一个视频
+                        other.group_id.as_ref().map_or(false, |other_group_id| other_group_id == group_id)
+                    });
+
+                if has_other_videos_with_same_group {
+                    return true; // 有其他视频共享相同 group_id，属于集合
+                }
+            }
         }
 
-        // p = 1 时，对比 groupId 和 bvid
-        if let Some(group_id) = &record.group_id {
-            // groupId 不为空且与 bvid 不同 → 集合
-            !group_id.is_empty() && group_id != &record.bvid
-        } else {
-            // 没有 groupId → 非集合
-            false
-        }
+        // 辅助判断：p > 1 的多P视频也属于集合
+        record.p > 1
     }
 
     /// 获取视频的分组键
-    /// 优先使用 groupId（官方合集），其次使用 bvid（多P视频）
-    fn get_group_key(record: &CacheRecord) -> Option<String> {
-        // 优先检查 groupId：如果存在且与 bvid 不同，使用 groupId（官方合集）
+    /// 核心规则：以 groupID 为主要判断依据
+    fn get_group_key(record: &CacheRecord, all_records: &[CacheRecord]) -> Option<String> {
+        // 首先检查 groupId：如果有其他视频共享相同的 group_id，使用 group_id 作为分组键
         if let Some(group_id) = &record.group_id {
-            if !group_id.is_empty() && group_id != &record.bvid {
-                return Some(group_id.clone());
+            if !group_id.is_empty() {
+                // 检查是否有其他视频共享相同的 group_id
+                let has_other_videos_with_same_group = all_records
+                    .iter()
+                    .any(|other| {
+                        other.id != record.id && // 不是同一个视频
+                        other.group_id.as_ref().map_or(false, |other_group_id| other_group_id == group_id)
+                    });
+
+                if has_other_videos_with_same_group {
+                    return Some(group_id.clone()); // 使用 group_id 作为分组键
+                }
             }
         }
 
@@ -198,15 +214,15 @@ impl GroupService {
         let mut groups: HashMap<String, Vec<CacheRecord>> = HashMap::new();
         let mut singles: Vec<CacheRecord> = Vec::new();
 
-        for record in records {
-            if Self::is_collection_video(&record) {
-                if let Some(group_key) = Self::get_group_key(&record) {
-                    groups.entry(group_key).or_default().push(record);
+        for record in &records {
+            if Self::is_collection_video(record, &records) {
+                if let Some(group_key) = Self::get_group_key(record, &records) {
+                    groups.entry(group_key).or_default().push(record.clone());
                 } else {
-                    singles.push(record);
+                    singles.push(record.clone());
                 }
             } else {
-                singles.push(record);
+                singles.push(record.clone());
             }
         }
 
