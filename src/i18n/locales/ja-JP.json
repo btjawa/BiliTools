@@ -552,7 +552,10 @@
       "multipleUploaders": "複数のアップローダー",
       "defaultTitle": "動画コレクション",
       "hasUnavailableVideos": "利用不可な動画を含む",
-      "confirmDeleteGroup": "動画グループ全体を削除してもよろしいですか？グループ内の{0}個の動画がすべて削除されます。"
+      "confirmDeleteGroup": "動画グループ全体を削除してもよろしいですか？グループ内の{0}個の動画がすべて削除されます。",
+      "allSelected": "すべて選択済み",
+      "partiallySelected": "部分的に選択済み",
+      "notSelected": "未選択"
     },
     "time": {
       "unknown": "不明な時間",
@@ -572,9 +575,73 @@
       "singleVideos": "単一動画",
       "averagePerGroup": "グループあたりの平均",
       "totalSize": "総サイズ",
-      "selectedItems": "選択済み",
+      "selectedItems": "{0} 件選択中",
       "clearSelection": "選択をクリア",
       "batchDelete": "一括削除"
+    },
+    "batchDelete": {
+      "title": "一括削除の確認",
+      "progressTitle": "削除中...",
+      "resultTitle": "削除完了",
+      "itemsToDelete": "以下の {0} 個のアイテムを削除しようとしています：",
+      "groupVideos": "{0}個の動画",
+      "totalItems": "総アイテム数",
+      "estimatedSpaceFreed": "推定解放容量",
+      "totalSize": "合計サイズ",
+      "deleteInfo": "削除情報",
+      "deleteAll": "完全削除",
+      "deleteAllDesc": "データベースレコードとローカルキャッシュフォルダの両方を削除してディスク容量を解放",
+      "warning": "⚠️ 警告：この操作は取り消せません。選択を確認してください。ソースファイルの削除を選択した場合、ディスク容量が解放されます。",
+      "cancel": "キャンセル",
+      "confirm": "削除を確認",
+      "overallProgress": "全体的な進捗",
+      "currentOperation": "現在の操作",
+      "deleting": "削除中",
+      "currentItem": "現在のアイテム",
+      "completed": "完了",
+      "inProgress": "進行中",
+      "failed": "失敗",
+      "statistics": "統計情報",
+      "spaceFreed": "解放容量",
+      "successCount": "成功数",
+      "failureCount": "失敗数",
+      "estimatedTime": "推定残り時間",
+      "cancelOperation": "操作をキャンセル",
+      "completionTitle": "一括削除操作が完了しました",
+      "completionDesc": "選択されたすべてのキャッシュレコードが処理されました",
+      "duration": "合計所要時間",
+      "failureDetails": "失敗の詳細",
+      "errorMessage": "エラー",
+      "suggestion": "提案",
+      "suggestionDesc": "関連プログラムを閉じて残りのファイルを手動で削除するか、ファイルのアクセス許可設定を確認してください",
+      "copyErrorLog": "エラーログをコピー",
+      "errorLogTitle": "一括削除操作エラーログ",
+      "operationId": "操作ID",
+      "time": "時間",
+      "failedItems": "失敗したアイテム"
+    },
+    "time": {
+      "seconds": "{0}秒",
+      "minutesSeconds": "{0}分{1}秒",
+      "hoursMinutes": "{0}時間{1}分"
+    },
+    "keyboard": {
+      "title": "キーボードショートカット",
+      "selectAll": "現在のページのすべてのアイテムを選択",
+      "rangeSelect": "範囲選択（最後のクリック位置から現在位置まで）",
+      "toggleSelection": "フォーカスされたアイテムの選択状態を切り替え",
+      "cancelSelection": "すべての選択をキャンセル",
+      "delete": "選択されたアイテムを削除",
+      "navigateUp": "アイテム間でフォーカスを上に移動",
+      "navigateDown": "アイテム間でフォーカスを下に移動",
+      "expandCollapse": "グループを展開/折りたたむか動画を再生",
+      "hint": "ヒント：Shift キーを押しながらクリックして範囲選択を完了するか、Escape キーを押してキャンセルしてください"
+    },
+    "rangeSelection": {
+      "mode": "範囲選択モード",
+      "preview": "選択をプレビュー",
+      "hint": "ヒント：Shift キーを押しながらクリックして範囲選択を完了するか、Escape キーを押してキャンセルしてください",
+      "items": "個"
     }
   }
 }

@@ -554,7 +554,10 @@
       "multipleUploaders": "多个UP主",
       "defaultTitle": "视频合集",
       "hasUnavailableVideos": "组内包含不可用视频",
-      "confirmDeleteGroup": "确定要删除整个视频组吗？这将删除组内所有{0}个视频。"
+      "confirmDeleteGroup": "确定要删除整个视频组吗？这将删除组内所有{0}个视频。",
+      "allSelected": "全部已选中",
+      "partiallySelected": "部分已选中",
+      "notSelected": "未选中"
     },
     "time": {
       "unknown": "未知时间",
@@ -574,9 +577,73 @@
       "singleVideos": "单个视频",
       "averagePerGroup": "平均每组",
       "totalSize": "总大小",
-      "selectedItems": "已选择",
+      "selectedItems": "已选择 {0} 项",
       "clearSelection": "清除选择",
       "batchDelete": "批量删除"
+    },
+    "batchDelete": {
+      "title": "批量删除确认",
+      "progressTitle": "正在删除...",
+      "resultTitle": "删除完成",
+      "itemsToDelete": "您即将删除以下 {0} 个项目：",
+      "groupVideos": "{0}个视频",
+      "totalItems": "总项目数",
+      "estimatedSpaceFreed": "预计释放空间",
+      "totalSize": "总计大小",
+      "deleteInfo": "删除说明",
+      "deleteAll": "彻底删除",
+      "deleteAllDesc": "将同时删除数据库记录和本地缓存文件夹，释放磁盘空间",
+      "warning": "⚠️ 警告：删除操作无法撤销，请确认您的选择。如果选择删除源文件，磁盘空间将被释放。",
+      "cancel": "取消",
+      "confirm": "确认删除",
+      "overallProgress": "总进度",
+      "currentOperation": "当前操作",
+      "deleting": "正在删除",
+      "currentItem": "当前项目",
+      "completed": "已完成",
+      "inProgress": "进行中",
+      "failed": "失败",
+      "statistics": "统计信息",
+      "spaceFreed": "已释放空间",
+      "successCount": "成功数量",
+      "failureCount": "失败数量",
+      "estimatedTime": "预计剩余时间",
+      "cancelOperation": "取消操作",
+      "completionTitle": "批量删除操作已完成",
+      "completionDesc": "所有选中的缓存记录已处理",
+      "duration": "总耗时",
+      "failureDetails": "失败详情",
+      "errorMessage": "错误",
+      "suggestion": "建议",
+      "suggestionDesc": "请关闭相关程序后手动删除剩余文件，或检查文件权限设置",
+      "copyErrorLog": "复制错误日志",
+      "errorLogTitle": "批量删除操作错误日志",
+      "operationId": "操作ID",
+      "time": "时间",
+      "failedItems": "失败项目"
+    },
+    "time": {
+      "seconds": "{0}秒",
+      "minutesSeconds": "{0}分{1}秒",
+      "hoursMinutes": "{0}小时{1}分"
+    },
+    "keyboard": {
+      "title": "键盘快捷键",
+      "selectAll": "全选当前页所有项目",
+      "rangeSelect": "范围选择（从上次点击到当前位置）",
+      "toggleSelection": "切换当前焦点项目的选择状态",
+      "cancelSelection": "取消所有选择",
+      "delete": "删除选中的项目",
+      "navigateUp": "在项目间向上移动焦点",
+      "navigateDown": "在项目间向下移动焦点",
+      "expandCollapse": "展开/折叠组或播放视频",
+      "hint": "提示：按住 Shift 键点击以完成范围选择，或按 Escape 取消"
+    },
+    "rangeSelection": {
+      "mode": "范围选择模式",
+      "preview": "预览选择",
+      "hint": "提示：按住 Shift 键点击以完成范围选择，或按 Escape 取消",
+      "items": "项"
     }
   }
 }

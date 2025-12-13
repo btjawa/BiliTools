@@ -141,6 +141,42 @@ impl GroupService {
         Ok(count)
     }
 
+    /// 删除组及其文件
+    ///
+    /// # 参数
+    /// * `group_id` - 组ID
+    ///
+    /// # 返回
+    /// * `Result<i32>` - 删除的视频数量
+    pub async fn delete_group_with_files(&self, group_id: &str) -> Result<i32> {
+        use crate::storage::cache_records;
+        use std::path::PathBuf;
+        use tokio::fs;
+
+        let videos = self.get_videos_by_group_id(group_id).await?;
+        let count = videos.len() as i32;
+
+        // 先删除所有组内视频的文件夹
+        for video in &videos {
+            let cache_path = PathBuf::from(&video.cache_path);
+            if cache_path.exists() {
+                fs::remove_dir_all(&cache_path).await.map_err(|e| {
+                    anyhow::anyhow!("删除视频文件夹失败: {} - {}", cache_path.display(), e)
+                })?;
+            }
+        }
+
+        // 再删除所有组内视频记录
+        for video in videos {
+            cache_records::delete(&video.id).await?;
+        }
+
+        // 删除组状态记录
+        cache_group_states::delete_state(group_id).await?;
+
+        Ok(count)
+    }
+
     /// 清理孤立的组状态
     ///
     /// # 返回
@@ -164,7 +200,7 @@ impl GroupService {
                     .iter()
                     .any(|other| {
                         other.id != record.id && // 不是同一个视频
-                        other.group_id.as_ref().map_or(false, |other_group_id| other_group_id == group_id)
+                        (other.group_id.as_ref() == Some(group_id))
                     });
 
                 if has_other_videos_with_same_group {
@@ -188,7 +224,7 @@ impl GroupService {
                     .iter()
                     .any(|other| {
                         other.id != record.id && // 不是同一个视频
-                        other.group_id.as_ref().map_or(false, |other_group_id| other_group_id == group_id)
+                        (other.group_id.as_ref() == Some(group_id))
                     });
 
                 if has_other_videos_with_same_group {

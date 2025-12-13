@@ -122,50 +122,17 @@
         </div>
 
         <!-- 批量操作栏 -->
-        <div
-          v-if="cacheStore.hasSelectedItems"
-          class="bg-(--block-color) rounded-lg p-4"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="text-sm">
-                {{
-                  $t('cache.list.selectedCount', [
-                    cacheStore.selectedItemsCount,
-                  ])
-                }}
-              </span>
-              <!-- 显示选择详情（组和单个视频） -->
-              <div v-if="cacheStore.groupManagerConfig.enableGrouping" class="text-xs text-(--desc-color)">
-                <span v-if="cacheStore.selectedGroupIds.length > 0">
-                  {{ cacheStore.selectedGroupIds.length }}{{ $t('cache.sidebar.groups') }}
-                </span>
-                <span v-if="cacheStore.selectedGroupIds.length > 0 && cacheStore.selectedSingleVideos.length > 0">
-                  ，
-                </span>
-                <span v-if="cacheStore.selectedSingleVideos.length > 0">
-                  {{ cacheStore.selectedSingleVideos.length }}{{ $t('cache.sidebar.singleVideos') }}
-                </span>
-              </div>
-              <button
-                class="text-sm text-(--primary-color) hover:underline"
-                @click="cacheStore.clearSelection"
-              >
-                {{ $t('cache.list.clearSelection') }}
-              </button>
-            </div>
-
-            <div class="flex gap-2">
-              <button
-                class="px-3 py-1 text-sm bg-red-500 text-white rounded hover:opacity-80 transition-opacity"
-                @click="batchDelete"
-              >
-                <i :class="[$fa.weight, 'fa-trash']"></i>
-                <span>{{ $t('cache.list.batchDelete') }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <Transition name="batch-action-bar">
+          <BatchActionBar
+            v-if="cacheStore.hasSelectedItems"
+            :visible="true"
+            :show-group-details="cacheStore.groupManagerConfig.enableGrouping"
+            @select-all="cacheStore.selectAllCurrentPage"
+            @unselect-all="cacheStore.unselectAllCurrentPage"
+            @clear-selection="cacheStore.clearSelection"
+            @batch-delete="batchDelete"
+          />
+        </Transition>
 
         <!-- 缓存列表 -->
         <div class="flex-1 min-h-0">
@@ -198,13 +165,19 @@
                 :search-query="searchKeyword"
                 :selected-items="new Set(cacheStore.selectedItems)"
                 :selected-videos="new Set(cacheStore.selectedItems)"
+                :selected-groups="new Set(cacheStore.selectedGroupIds)"
+                :range-preview="cacheStore.rangePreview"
+                :range-preview-groups="cacheStore.rangePreviewGroups"
+                :partially-selected-groups="cacheStore.partiallySelectedGroupIds"
                 :has-active-filters="hasActiveFilters"
                 @go-to-import="goToImport"
                 @select-video="cacheStore.toggleCacheItemSelection"
+                @select-video-range="handleVideoRangeSelect"
                 @play-video="playItem"
                 @open-video-folder="openFolder"
                 @delete-video="deleteItem"
                 @select-group="toggleGroupSelection"
+                @select-group-range="handleGroupRangeSelect"
                 @toggle-expand="cacheStore.toggleGroupExpansion"
                 @open-group-folder="openGroupFolder"
                 @delete-group="deleteGroup"
@@ -417,7 +390,7 @@
           class="mt-2 pt-2 border-t border-(--border-color)"
         >
           <div class="text-xs text-(--desc-color) mb-1">
-            {{ $t('cache.sidebar.selectedItems') }} {{ cacheStore.selectedItemsCount }} {{ $t('cache.list.page') }}
+            {{ $t('cache.sidebar.selectedItems', [cacheStore.selectedItemsCount]) }}
           </div>
           <button
             class="w-full text-xs text-(--primary-color) hover:underline mb-1 text-left"
@@ -435,18 +408,42 @@
         </div>
       </div>
     </div>
+
+    <!-- 批量删除确认对话框 -->
+    <BatchDeleteDialog
+      :visible="showDeleteConfirmDialog"
+      :items-to-delete="itemsToDelete"
+      @confirm="handleDeleteConfirm"
+      @cancel="handleDeleteCancel"
+    />
+
+    <!-- 批量删除进度对话框 -->
+    <BatchDeleteProgressDialog
+      :visible="showDeleteProgressDialog"
+      :progress="deleteProgress"
+      @cancel="handleDeleteProgressCancel"
+    />
+
+    <!-- 批量删除结果对话框 -->
+    <BatchDeleteResultDialog
+      :visible="showDeleteResultDialog"
+      :result="deleteResult"
+      @confirm="handleDeleteResultConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import * as dialog from '@tauri-apps/plugin-dialog';
 import { useCacheStore } from '@/store/cache';
 import { cacheManagementService } from '@/services/cache';
 import { formatBytes } from '@/services/utils';
 import { AppError } from '@/services/error';
-import { Empty, CacheMixedList } from '@/components';
+import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar } from '@/components';
+import { initializeCacheKeyboardShortcuts, cleanupCacheKeyboardShortcuts } from '@/services/keyboard';
 import type * as Types from '@/types/cache.d';
 
 // ============================================================================
@@ -477,6 +474,66 @@ const showAdvancedFilters = ref<boolean>(false);
 
 // 防抖搜索定时器
 let searchTimeout: number | null = null;
+
+// 批量删除对话框状态
+const showDeleteConfirmDialog = ref(false);
+const showDeleteProgressDialog = ref(false);
+const showDeleteResultDialog = ref(false);
+
+// 批量删除相关状态
+const itemsToDelete = ref<Array<{
+  type: 'video' | 'group';
+  data: Types.CacheItem | Types.CacheGroup;
+}>>([]);
+
+const deleteProgress = ref<{
+  total: number;
+  processed: number;
+  success: number;
+  failed: number;
+  currentItem: string;
+  estimatedTimeRemaining: number;
+  spaceFreed: number;
+  totalSize: number;
+  completedItems: string[];
+  failedItems: string[];
+}>({
+  total: 0,
+  processed: 0,
+  success: 0,
+  failed: 0,
+  currentItem: '',
+  estimatedTimeRemaining: 0,
+  spaceFreed: 0,
+  totalSize: 0,
+  completedItems: [],
+  failedItems: [],
+});
+
+const deleteResult = ref<{
+  operationId: string;
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  failures: Array<{
+    itemId: string;
+    itemTitle: string;
+    error: string;
+  }>;
+  spaceFreed: number;
+  duration: number;
+}>({
+  operationId: '',
+  totalCount: 0,
+  successCount: 0,
+  failedCount: 0,
+  failures: [],
+  spaceFreed: 0,
+  duration: 0,
+});
+
+let deleteStartTime = 0;
+let deleteAbortController: AbortController | null = null;
 
 // ============================================================================
 // 计算属性
@@ -511,8 +568,12 @@ function onSearchInput(): void {
 
 /**
  * 应用筛选条件
+ * 需求 7.1: 搜索过滤时保持已选中项目的选择状态
  */
 function applyFilters(): void {
+  // 保存当前选择状态（需求 7.1）
+  const previousSelection = [...cacheStore.selectedItems];
+
   const filter: Types.CacheFilter = {
     ...(searchKeyword.value && { keyword: searchKeyword.value }),
     ...(selectedStatus.value && {
@@ -525,24 +586,54 @@ function applyFilters(): void {
 
   cacheStore.setFilter(filter);
   loadCacheList();
+
+  // 在加载完成后恢复选择状态（需求 7.1）
+  // 注意：这里使用 setTimeout 确保在列表加载完成后恢复
+  setTimeout(() => {
+    // 恢复之前的选择状态
+    previousSelection.forEach((itemId) => {
+      if (!cacheStore.selectedItems.includes(itemId)) {
+        cacheStore.selectedItems.push(itemId);
+      }
+    });
+  }, 0);
 }
 
 /**
  * 应用排序
+ * 需求 7.1: 排序时保持已选中项目的选择状态
  */
 function applySort(): void {
+  // 保存当前选择状态（需求 7.1）
+  const previousSelection = [...cacheStore.selectedItems];
+
   const [field, direction] = selectedSort.value.split('-') as [
     Types.SortField,
     Types.SortDirection,
   ];
   cacheStore.setSort({ field, direction });
   loadCacheList();
+
+  // 在加载完成后恢复选择状态（需求 7.1）
+  // 注意：这里使用 setTimeout 确保在列表加载完成后恢复
+  setTimeout(() => {
+    // 恢复之前的选择状态
+    previousSelection.forEach((itemId) => {
+      if (!cacheStore.selectedItems.includes(itemId)) {
+        cacheStore.selectedItems.push(itemId);
+      }
+    });
+  }, 0);
 }
 
 /**
  * 清除筛选条件
+ * 需求 7.1: 清除筛选时保持已选中项目的选择状态
  */
 function clearFilters(): void {
+  // 保存当前选择状态（需求 7.1）
+  const previousSelection = [...cacheStore.selectedItems];
+
   searchKeyword.value = '';
   selectedStatus.value = '';
   selectedUploader.value = '';
@@ -550,6 +641,17 @@ function clearFilters(): void {
   selectedGroupId.value = '';
   cacheStore.clearFilter();
   loadCacheList();
+
+  // 在加载完成后恢复选择状态（需求 7.1）
+  // 注意：这里使用 setTimeout 确保在列表加载完成后恢复
+  setTimeout(() => {
+    // 恢复之前的选择状态
+    previousSelection.forEach((itemId) => {
+      if (!cacheStore.selectedItems.includes(itemId)) {
+        cacheStore.selectedItems.push(itemId);
+      }
+    });
+  }, 0);
 }
 
 /**
@@ -619,9 +721,12 @@ async function loadCacheList(): Promise<void> {
 
 /**
  * 刷新列表
+ * 需求 7.2: 刷新缓存列表时清除所有选择状态
  */
 async function refreshList(): Promise<void> {
   try {
+    // 清除选择状态（需求 7.2）
+    cacheStore.clearSelection();
     await cacheStore.refreshCacheList();
   } catch (error) {
     new AppError(error).handle();
@@ -678,7 +783,12 @@ async function openFolder(item: Types.CacheItem): Promise<void> {
 async function deleteItem(item: Types.CacheItem): Promise<void> {
   try {
     // 确认删除
-    if (!confirm(`确定要删除 "${item.title}" 吗？`)) {
+    const confirmed = await dialog.ask(`确定要删除 "${item.title}" 吗？`, {
+      title: '删除确认',
+      kind: 'warning',
+    });
+    
+    if (!confirmed) {
       return;
     }
 
@@ -689,47 +799,236 @@ async function deleteItem(item: Types.CacheItem): Promise<void> {
 }
 
 /**
- * 批量删除
+ * 批量删除 - 显示确认对话框
  */
 async function batchDelete(): Promise<void> {
   try {
-    const count = cacheStore.selectedItemsCount;
-    const groupCount = cacheStore.selectedGroupIds.length;
-    const singleCount = cacheStore.selectedSingleVideos.length;
-    
-    let confirmMessage = `确定要删除选中的 ${count} 个缓存项吗？`;
-    if (cacheStore.groupManagerConfig.enableGrouping && (groupCount > 0 || singleCount > 0)) {
-      const parts = [];
-      if (groupCount > 0) parts.push(`${groupCount}个组`);
-      if (singleCount > 0) parts.push(`${singleCount}个单独视频`);
-      confirmMessage = `确定要删除选中的 ${parts.join('和')} 吗？`;
-    }
-    
-    if (!confirm(confirmMessage)) {
+    // 检查是否有选中的项目
+    if (cacheStore.selectedItems.length === 0) {
+      new AppError('没有选中任何项目', { name: 'warning' }).handle();
       return;
     }
 
-    const results = await cacheStore.batchDeleteCacheItems([
-      ...cacheStore.selectedItems,
-    ]);
+    // 从后端获取所有缓存项（支持跨页选择）
+    const { items: allCacheItems } =
+      await cacheManagementService.getCacheList();
 
-    // 显示结果
-    const successCount = results.filter((r) => r.success).length;
-    const failureCount = results.length - successCount;
-
-    if (failureCount === 0) {
-      new AppError(`成功删除 ${successCount} 个缓存项`, {
-        name: 'success',
-      }).handle();
-    } else {
-      new AppError(
-        `删除完成：成功 ${successCount} 个，失败 ${failureCount} 个`,
-        { name: 'warning' },
-      ).handle();
+    // 创建 ID 到缓存项的映射，方便快速查找
+    const cacheItemMap = new Map<string, Types.CacheItem>();
+    for (const item of allCacheItems) {
+      cacheItemMap.set(item.id, item);
     }
+
+    // 构建要删除的项目列表
+    const itemsToDeleteList: Array<{
+      type: 'video' | 'group';
+      data: Types.CacheItem | Types.CacheGroup;
+    }> = [];
+
+    // 从选中的项目中构建删除列表
+    for (const selectedId of cacheStore.selectedItems) {
+      const cacheItem = cacheItemMap.get(selectedId);
+      if (cacheItem) {
+        itemsToDeleteList.push({
+          type: 'video',
+          data: cacheItem,
+        });
+      }
+    }
+
+    if (itemsToDeleteList.length === 0) {
+      new AppError('没有选中任何项目', { name: 'warning' }).handle();
+      return;
+    }
+
+    // 显示确认对话框
+    itemsToDelete.value = itemsToDeleteList;
+    showDeleteConfirmDialog.value = true;
   } catch (error) {
     new AppError(error).handle();
   }
+}
+
+/**
+ * 处理删除确认
+ */
+async function handleDeleteConfirm(): Promise<void> {
+  try {
+    showDeleteConfirmDialog.value = false;
+
+    // 初始化进度信息
+    deleteStartTime = Date.now();
+    deleteAbortController = new AbortController();
+
+    const totalItems = itemsToDelete.value.length;
+    let totalSize = 0;
+
+    // 计算总大小
+    for (const item of itemsToDelete.value) {
+      if (item.type === 'group') {
+        totalSize += (item.data as Types.CacheGroup).totalFileSize;
+      } else {
+        totalSize += (item.data as Types.CacheItem).fileSize;
+      }
+    }
+
+    deleteProgress.value = {
+      total: totalItems,
+      processed: 0,
+      success: 0,
+      failed: 0,
+      currentItem: '',
+      estimatedTimeRemaining: 0,
+      spaceFreed: 0,
+      totalSize,
+      completedItems: [],
+      failedItems: [],
+    };
+
+    // 显示进度对话框
+    showDeleteProgressDialog.value = true;
+
+    // 执行删除操作
+    const failures: Array<{
+      itemId: string;
+      itemTitle: string;
+      error: string;
+    }> = [];
+
+    for (let i = 0; i < itemsToDelete.value.length; i++) {
+      if (deleteAbortController.signal.aborted) {
+        break;
+      }
+
+      const item = itemsToDelete.value[i];
+      const itemTitle = item.type === 'group' 
+        ? (item.data as Types.CacheGroup).title 
+        : (item.data as Types.CacheItem).title;
+
+      deleteProgress.value.currentItem = itemTitle;
+
+      try {
+        if (item.type === 'group') {
+          const group = item.data as Types.CacheGroup;
+          const videoIds = group.videos.map((v) => v.id);
+          const results = await cacheStore.batchDeleteCacheItems(videoIds);
+
+          const successCount = results.filter((r) => r.success).length;
+          deleteProgress.value.success += successCount;
+          deleteProgress.value.failed += results.length - successCount;
+
+          // 收集失败信息
+          results.forEach((result, index) => {
+            if (!result.success) {
+              failures.push({
+                itemId: videoIds[index],
+                itemTitle: group.videos[index].title,
+                error: result.error || '未知错误',
+              });
+            }
+          });
+
+          deleteProgress.value.completedItems.push(itemTitle);
+        } else {
+          const video = item.data as Types.CacheItem;
+          const results = await cacheStore.batchDeleteCacheItems([video.id]);
+
+          if (results[0].success) {
+            deleteProgress.value.success++;
+            deleteProgress.value.completedItems.push(itemTitle);
+          } else {
+            deleteProgress.value.failed++;
+            deleteProgress.value.failedItems.push(itemTitle);
+            failures.push({
+              itemId: video.id,
+              itemTitle,
+              error: results[0].error || '未知错误',
+            });
+          }
+        }
+      } catch (error) {
+        deleteProgress.value.failed++;
+        deleteProgress.value.failedItems.push(itemTitle);
+        failures.push({
+          itemId: item.type === 'group' 
+            ? (item.data as Types.CacheGroup).groupId 
+            : (item.data as Types.CacheItem).id,
+          itemTitle,
+          error: error instanceof Error ? error.message : '未知错误',
+        });
+      }
+
+      deleteProgress.value.processed = i + 1;
+
+      // 计算预计剩余时间
+      const elapsedTime = (Date.now() - deleteStartTime) / 1000;
+      const avgTimePerItem = elapsedTime / deleteProgress.value.processed;
+      const remainingItems =
+        deleteProgress.value.total - deleteProgress.value.processed;
+      deleteProgress.value.estimatedTimeRemaining =
+        avgTimePerItem * remainingItems;
+
+      // 计算已释放空间
+      const processedItems = itemsToDelete.value.slice(0, i + 1);
+      deleteProgress.value.spaceFreed = processedItems.reduce((sum, item) => {
+        if (item.type === 'group') {
+          return sum + (item.data as Types.CacheGroup).totalFileSize;
+        } else {
+          return sum + (item.data as Types.CacheItem).fileSize;
+        }
+      }, 0);
+    }
+
+    // 隐藏进度对话框，显示结果对话框
+    showDeleteProgressDialog.value = false;
+
+    const duration = Date.now() - deleteStartTime;
+
+    deleteResult.value = {
+      operationId: `delete-${Date.now()}`,
+      totalCount: itemsToDelete.value.length,
+      successCount: deleteProgress.value.success,
+      failedCount: deleteProgress.value.failed,
+      failures,
+      spaceFreed: deleteProgress.value.spaceFreed,
+      duration,
+    };
+
+    showDeleteResultDialog.value = true;
+
+    // 清除选择状态（需求 7.4: 批量删除完成后自动清除选择状态）
+    cacheStore.clearSelection();
+
+    // 刷新列表
+    await loadCacheList();
+  } catch (error) {
+    showDeleteProgressDialog.value = false;
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理删除取消
+ */
+function handleDeleteCancel(): void {
+  showDeleteConfirmDialog.value = false;
+}
+
+/**
+ * 处理删除进度取消
+ */
+function handleDeleteProgressCancel(): void {
+  if (deleteAbortController) {
+    deleteAbortController.abort();
+  }
+  showDeleteProgressDialog.value = false;
+}
+
+/**
+ * 处理删除结果确认
+ */
+function handleDeleteResultConfirm(): void {
+  showDeleteResultDialog.value = false;
 }
 
 /**
@@ -737,6 +1036,20 @@ async function batchDelete(): Promise<void> {
  */
 function toggleGroupSelection(groupId: string): void {
   cacheStore.toggleGroupSelection(groupId);
+}
+
+/**
+ * 处理视频范围选择
+ */
+function handleVideoRangeSelect(videoId: string): void {
+  cacheStore.selectRange(videoId, 'video');
+}
+
+/**
+ * 处理组范围选择
+ */
+function handleGroupRangeSelect(groupId: string): void {
+  cacheStore.selectRange(groupId, 'group');
 }
 
 /**
@@ -756,7 +1069,12 @@ async function openGroupFolder(group: Types.CacheGroup): Promise<void> {
 async function deleteGroup(group: Types.CacheGroup): Promise<void> {
   try {
     // 确认删除
-    if (!confirm($t('cache.group.confirmDeleteGroup', [group.videoCount]))) {
+    const confirmed = await dialog.ask($t('cache.group.confirmDeleteGroup', [group.videoCount]), {
+      title: '删除确认',
+      kind: 'warning',
+    });
+    
+    if (!confirmed) {
       return;
     }
 
@@ -790,14 +1108,37 @@ onMounted(async () => {
   await loadCacheList();
   // 初始化页面输入
   pageInput.value = cacheStore.pagination.currentPage;
+
+  // 初始化键盘快捷键
+  initializeCacheKeyboardShortcuts();
+
+  // 监听自定义事件
+  window.addEventListener('cache:batchDelete', handleBatchDeleteEvent);
+  window.addEventListener('cache:navigateUp', handleNavigateUpEvent);
+  window.addEventListener('cache:navigateDown', handleNavigateDownEvent);
 });
 
-// 监听路由变化，刷新数据
+onUnmounted(() => {
+  // 清理键盘快捷键
+  cleanupCacheKeyboardShortcuts();
+
+  // 移除事件监听
+  window.removeEventListener('cache:batchDelete', handleBatchDeleteEvent);
+  window.removeEventListener('cache:navigateUp', handleNavigateUpEvent);
+  window.removeEventListener('cache:navigateDown', handleNavigateDownEvent);
+});
+
+// 监听路由变化，清除选择状态（需求 7.3）
 watch(
   () => router.currentRoute.value.path,
   async (newPath) => {
     if (newPath === '/cache-list') {
+      // 页面返回时，清除选择状态
+      cacheStore.clearSelection();
       await loadCacheList();
+    } else {
+      // 离开缓存列表页面时，清除选择状态
+      cacheStore.clearSelection();
     }
   },
 );
@@ -809,6 +1150,31 @@ watch(
     pageInput.value = newPage;
   },
 );
+
+// ============================================================================
+// 键盘事件处理
+// ============================================================================
+
+/**
+ * 处理批量删除事件
+ */
+function handleBatchDeleteEvent(): void {
+  batchDelete();
+}
+
+/**
+ * 处理向上导航事件
+ */
+function handleNavigateUpEvent(): void {
+  cacheStore.navigateFocusUp();
+}
+
+/**
+ * 处理向下导航事件
+ */
+function handleNavigateDownEvent(): void {
+  cacheStore.navigateFocusDown();
+}
 </script>
 
 <style scoped>
@@ -863,6 +1229,21 @@ watch(
 .slide-down-leave-from {
   opacity: 1;
   max-height: 200px;
+}
+
+/* 批量操作栏动画 */
+.batch-action-bar-enter-active {
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.batch-action-bar-leave-active {
+  transition: opacity 0.15s ease-in, transform 0.15s ease-in;
+}
+
+.batch-action-bar-enter-from,
+.batch-action-bar-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 /* 侧边栏滚动条样式 */

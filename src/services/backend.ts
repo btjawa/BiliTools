@@ -243,7 +243,7 @@ async getCacheListByStatus(status: string) : Promise<Result<CacheRecord[], Tauri
 }
 },
 /**
- * 删除缓存项
+ * 删除缓存项（同时删除文件和数据库记录）
  */
 async deleteCacheItem(id: string) : Promise<Result<null, TauriError>> {
     try {

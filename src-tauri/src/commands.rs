@@ -280,11 +280,30 @@ pub async fn get_cache_list_by_status(status: String) -> TauriResult<Vec<CacheRe
     Ok(records)
 }
 
-/// 删除缓存项
+/// 删除缓存项（同时删除文件和数据库记录）
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn delete_cache_item(id: String) -> TauriResult<()> {
-    cache_records::delete(&id).await?;
+    use std::path::PathBuf;
+    use tokio::fs;
+    
+    // 先获取缓存记录以获得文件路径
+    if let Some(record) = cache_records::get_by_id(&id).await? {
+        let cache_path = PathBuf::from(&record.cache_path);
+        
+        // 先删除实际文件夹
+        if cache_path.exists() {
+            fs::remove_dir_all(&cache_path).await.map_err(|e| {
+                anyhow::anyhow!("删除缓存文件夹失败: {} - {}", cache_path.display(), e)
+            })?;
+        }
+        
+        // 再删除数据库记录
+        cache_records::delete(&id).await?;
+    } else {
+        return Err(anyhow::anyhow!("缓存记录不存在: {}", id).into());
+    }
+    
     Ok(())
 }
 
@@ -606,7 +625,7 @@ pub async fn get_cache_display_items_paginated(
         total_count,
         total_pages,
         current_page: page,
-        page_size: page_size,
+        page_size,
         has_next: page < total_pages,
         has_prev: page > 1,
     })
@@ -694,16 +713,37 @@ pub async fn batch_delete_cache_items(
 
     for (item_id, item_type) in item_ids.iter().zip(item_types.iter()) {
         match item_type.as_str() {
-            "group" => match group_service.delete_group(item_id).await {
+            "group" => match group_service.delete_group_with_files(item_id).await {
                 Ok(count) => {
                     deleted_groups += 1;
                     deleted_videos += count;
                 }
                 Err(e) => errors.push(format!("删除组 {} 失败: {}", item_id, e)),
             },
-            "video" => match cache_records::delete(item_id).await {
-                Ok(_) => deleted_videos += 1,
-                Err(e) => errors.push(format!("删除视频 {} 失败: {}", item_id, e)),
+            "video" => {
+                // 使用统一的删除逻辑（删除文件+数据库记录）
+                if let Some(record) = cache_records::get_by_id(item_id).await.unwrap_or(None) {
+                    let cache_path = std::path::PathBuf::from(&record.cache_path);
+                    
+                    // 先删除实际文件夹
+                    if cache_path.exists() {
+                        match tokio::fs::remove_dir_all(&cache_path).await {
+                            Ok(_) => {},
+                            Err(e) => {
+                                errors.push(format!("删除视频文件 {} 失败: {}", item_id, e));
+                                continue;
+                            }
+                        }
+                    }
+                    
+                    // 再删除数据库记录
+                    match cache_records::delete(item_id).await {
+                        Ok(_) => deleted_videos += 1,
+                        Err(e) => errors.push(format!("删除视频记录 {} 失败: {}", item_id, e)),
+                    }
+                } else {
+                    errors.push(format!("视频记录不存在: {}", item_id));
+                }
             },
             _ => errors.push(format!("未知的项目类型: {}", item_type)),
         }

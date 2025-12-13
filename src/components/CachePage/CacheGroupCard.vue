@@ -2,10 +2,11 @@
   <div
     class="flex gap-4 p-3 rounded-lg my-px bg-(--block-color) text-sm h-[120px] relative cursor-pointer"
     :class="{
-      'border-2 border-(--primary-color)': selected,
+      'selected-border': selected || partiallySelected,
+      'border-2 border-blue-400 bg-blue-50 opacity-80': inRangePreview,
       'opacity-60': hasUnavailableVideos,
     }"
-    @click="$emit('select')"
+    @click="handleGroupClick"
   >
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
@@ -61,6 +62,15 @@
         <i class="fa-solid fa-clock"></i>
         <span>{{ formatDownloadTime(group.latestDownloadTime) }}</span>
       </div>
+
+      <!-- 选中数量显示（有选中时） -->
+      <div 
+        v-if="selectedVideoCount > 0" 
+        class="selection-count"
+      >
+        <i class="fa-solid fa-check-circle"></i>
+        <span>{{ selectedVideoCount }}/{{ group.videoCount }}</span>
+      </div>
     </div>
 
     <!-- UP主名称 -->
@@ -108,17 +118,27 @@
       </button>
     </div>
 
-    <!-- 选择复选框 -->
+    <!-- 选择复选框（三态显示） -->
     <div
-      class="absolute top-2 right-2 z-30 opacity-0 hover:opacity-100 transition-opacity"
+      class="absolute top-2 right-2 z-30 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+      :title="getCheckboxTitle()"
+      @click.stop="$emit('select')"
     >
-      <input
-        type="checkbox"
-        :checked="selected"
-        class="w-4 h-4"
-        @click.stop
-        @change="$emit('select')"
-      />
+      <div
+        class="w-4 h-4 rounded border-2 flex items-center justify-center transition-colors"
+        :class="getCheckboxClasses()"
+      >
+        <!-- 完全选中状态：显示勾号 -->
+        <i
+          v-if="selected && !partiallySelected"
+          class="fa-solid fa-check text-xs text-white"
+        ></i>
+        <!-- 部分选中状态：显示减号 -->
+        <i
+          v-else-if="partiallySelected"
+          class="fa-solid fa-minus text-xs text-white"
+        ></i>
+      </div>
     </div>
 
     <!-- 状态标识（如果组内有不可用视频） -->
@@ -139,10 +159,11 @@
       class="flex gap-3 p-2 rounded-lg bg-(--block-color) text-sm h-[96px] relative cursor-pointer border-l-4 border-(--primary-color)"
       :class="{
         'border-2 border-(--primary-color)': selectedVideos.has(video.id),
+        'border-2 border-blue-400 bg-blue-50 opacity-80': false,
         'opacity-60': video.status === 'unavailable',
         'border border-yellow-500': video.status === 'incomplete',
       }"
-      @click="$emit('selectVideo', video.id)"
+      @click="handleVideoClick($event, video.id)"
     >
       <!-- 子视频封面 -->
       <div
@@ -253,22 +274,52 @@ const { t } = useI18n();
 interface Props {
   group: Types.CacheGroup;
   selected: boolean;
+  partiallySelected?: boolean;
   selectedVideos: Set<string>;
+  inRangePreview?: boolean;
 }
 
 interface Emits {
   (e: 'select'): void;
+  (e: 'selectRange', groupId: string): void;
   (e: 'toggleExpand', groupId: string): void;
   (e: 'openFolder', group: Types.CacheGroup): void;
   (e: 'delete', group: Types.CacheGroup): void;
   (e: 'selectVideo', videoId: string): void;
+  (e: 'selectVideoRange', videoId: string): void;
   (e: 'playVideo', video: Types.CacheItem): void;
   (e: 'openVideoFolder', video: Types.CacheItem): void;
   (e: 'deleteVideo', video: Types.CacheItem): void;
 }
 
 const props = defineProps<Props>();
-defineEmits<Emits>();
+const emit = defineEmits<Emits>();
+
+/**
+ * 处理组点击事件（支持Shift+点击范围选择）
+ */
+function handleGroupClick(event: MouseEvent) {
+  if (event.shiftKey) {
+    // Shift+点击：范围选择
+    emit('selectRange', props.group.groupId);
+  } else {
+    // 普通点击：切换选择
+    emit('select');
+  }
+}
+
+/**
+ * 处理子视频点击事件（支持Shift+点击范围选择）
+ */
+function handleVideoClick(event: MouseEvent, videoId: string) {
+  if (event.shiftKey) {
+    // Shift+点击：范围选择
+    emit('selectVideoRange', videoId);
+  } else {
+    // 普通点击：切换选择
+    emit('selectVideo', videoId);
+  }
+}
 
 // ============================================================================
 // 计算属性
@@ -282,6 +333,13 @@ const hasUnavailableVideos = computed(() => {
 });
 
 /**
+ * 计算组内选中的视频数量
+ */
+const selectedVideoCount = computed(() => {
+  return props.group.videos.filter((video) => props.selectedVideos.has(video.id)).length;
+});
+
+/**
  * 获取视频状态图标
  */
 function getVideoStatusIcon(status: Types.CacheStatus): string {
@@ -291,6 +349,36 @@ function getVideoStatusIcon(status: Types.CacheStatus): string {
     incomplete: 'fa-solid fa-exclamation-triangle',
   };
   return iconMap[status] ?? 'fa-solid fa-question-circle';
+}
+
+/**
+ * 获取复选框的CSS类
+ * 根据选择状态返回相应的样式类
+ */
+function getCheckboxClasses(): string {
+  if (props.selected && !props.partiallySelected) {
+    // 完全选中：蓝色背景
+    return 'bg-(--primary-color) border-(--primary-color)';
+  } else if (props.partiallySelected) {
+    // 部分选中：黄色背景
+    return 'bg-yellow-500 border-yellow-500';
+  } else {
+    // 未选中：灰色边框
+    return 'bg-white border-gray-400';
+  }
+}
+
+/**
+ * 获取复选框的提示文本
+ */
+function getCheckboxTitle(): string {
+  if (props.selected && !props.partiallySelected) {
+    return t('cache.group.allSelected');
+  } else if (props.partiallySelected) {
+    return t('cache.group.partiallySelected');
+  } else {
+    return t('cache.group.notSelected');
+  }
 }
 
 // 封面路径状态
@@ -470,6 +558,17 @@ button:disabled {
 /* 描述文本样式 */
 .desc {
   @apply flex items-center gap-1 text-(--desc-color);
+}
+
+/* 选中数量显示样式 */
+.selection-count {
+  @apply flex items-center gap-1 text-xs font-medium;
+  color: var(--primary-color);
+}
+
+/* 选中边框样式 */
+.selected-border {
+  border: 2px solid var(--primary-color);
 }
 
 .desc i {

@@ -18,7 +18,10 @@
       </template>
     </Empty>
 
-    <!-- 混合列表 -->
+    <!-- 混合列表
+         需求 7.5: 滚动页面时保持当前的选择状态
+         选择状态由 selectedItems prop 管理，不会因为滚动而改变
+    -->
     <div v-else class="flex flex-col gap-1 h-full overflow-y-auto">
       <template v-for="item in displayItems" :key="getItemKey(item)">
         <!-- 单个视频项 -->
@@ -26,7 +29,9 @@
           v-if="item.type === 'video'"
           :item="item.data"
           :selected="selectedItems.has(item.data.id)"
+          :in-range-preview="props.rangePreview.includes(item.data.id)"
           @select="$emit('selectVideo', item.data.id)"
+          @select-range="$emit('selectVideoRange', $event)"
           @play="$emit('playVideo', item.data)"
           @open-folder="$emit('openVideoFolder', item.data)"
           @delete="$emit('deleteVideo', item.data)"
@@ -36,13 +41,17 @@
         <CacheGroupCard
           v-else-if="item.type === 'group'"
           :group="item.data"
-          :selected="selectedItems.has(item.data.groupId)"
+          :selected="props.selectedGroups.has(item.data.groupId)"
+          :partially-selected="props.partiallySelectedGroups.has(item.data.groupId)"
           :selected-videos="selectedVideos"
+          :in-range-preview="props.rangePreviewGroups.includes(item.data.groupId)"
           @select="$emit('selectGroup', item.data.groupId)"
+          @select-range="$emit('selectGroupRange', $event)"
           @toggle-expand="$emit('toggleExpand', item.data.groupId)"
           @open-folder="$emit('openGroupFolder', item.data)"
           @delete="$emit('deleteGroup', item.data)"
           @select-video="$emit('selectVideo', $event)"
+          @select-video-range="$emit('selectVideoRange', $event)"
           @play-video="$emit('playVideo', $event)"
           @open-video-folder="$emit('openVideoFolder', $event)"
           @delete-video="$emit('deleteVideo', $event)"
@@ -70,6 +79,14 @@ interface Props {
   selectedItems: Set<string>;
   /** 已选择的子视频ID集合 */
   selectedVideos: Set<string>;
+  /** 完全选中的组ID集合 */
+  selectedGroups?: Set<string>;
+  /** 范围选择预览的视频ID列表 */
+  rangePreview?: string[];
+  /** 范围选择预览的组ID列表 */
+  rangePreviewGroups?: string[];
+  /** 部分选中的组ID集合 */
+  partiallySelectedGroups?: Set<string>;
   /** 是否有活跃的筛选条件 */
   hasActiveFilters?: boolean;
 }
@@ -80,12 +97,14 @@ interface Emits {
 
   // 视频相关事件
   (e: 'selectVideo', videoId: string): void;
+  (e: 'selectVideoRange', videoId: string): void;
   (e: 'playVideo', video: Types.CacheItem): void;
   (e: 'openVideoFolder', video: Types.CacheItem): void;
   (e: 'deleteVideo', video: Types.CacheItem): void;
 
   // 组相关事件
   (e: 'selectGroup', groupId: string): void;
+  (e: 'selectGroupRange', groupId: string): void;
   (e: 'toggleExpand', groupId: string): void;
   (e: 'openGroupFolder', group: Types.CacheGroup): void;
   (e: 'deleteGroup', group: Types.CacheGroup): void;
@@ -93,6 +112,10 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   searchQuery: '',
+  selectedGroups: () => new Set(),
+  rangePreview: () => [],
+  rangePreviewGroups: () => [],
+  partiallySelectedGroups: () => new Set(),
   hasActiveFilters: false,
 });
 

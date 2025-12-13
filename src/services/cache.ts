@@ -249,6 +249,7 @@ export class CacheManagementService {
           duration: record.duration,
           fileSize: record.file_size,
           cachePath: record.cache_path,
+          p: record.p || 1, // 添加 p 字段，默认为 1
           // 安全的时间戳转换，处理异常值
           downloadTime: safeTimestampToDate(record.download_time),
           importTime: safeTimestampToDate(record.import_time),
@@ -298,41 +299,36 @@ export class CacheManagementService {
 
   /**
    * 删除缓存项
-   * 从数据库中删除指定的缓存记录
+   * 同时删除数据库记录和本地文件
    *
    * @param id 缓存项ID
-   * @param deleteFiles 是否同时删除本地文件（当前后端未使用此参数）
    */
-  async deleteCacheItem(
-    id: string,
-    deleteFiles: boolean = false,
-  ): Promise<void> {
+  async deleteCacheItem(id: string): Promise<void> {
     try {
-      await invoke('delete_cache_item', { id, deleteFiles });
+      await invoke('delete_cache_item', { id });
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError('删除缓存项失败');
+      console.error('删除缓存项详细错误:', error);
+      throw new AppError(`删除缓存项失败: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
    * 批量删除缓存项
-   * 批量删除多个缓存记录
+   * 批量删除多个缓存记录和本地文件
    *
    * @param ids 缓存项ID列表
-   * @param deleteFiles 是否同时删除本地文件
    * @returns 批量操作结果
    */
   async batchDeleteCacheItems(
     ids: string[],
-    deleteFiles: boolean = false,
   ): Promise<Types.BatchOperationResult[]> {
     // 当前后端未实现批量删除，使用单个删除的方式实现
     const results: Types.BatchOperationResult[] = [];
 
     for (const id of ids) {
       try {
-        await this.deleteCacheItem(id, deleteFiles);
+        await this.deleteCacheItem(id);
         results.push({
           cacheId: id,
           success: true,

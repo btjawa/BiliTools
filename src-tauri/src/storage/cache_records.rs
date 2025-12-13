@@ -98,6 +98,42 @@ impl TableSpec for CacheRecordsTable {
             )
             .to_owned()
     }
+
+    // 自定义升级逻辑，保留现有数据
+    async fn check_latest() -> Result<()> {
+        use super::db::{init_meta, get_db, get_version, set_version};
+        use sea_query::SqliteQueryBuilder;
+        
+        init_meta().await?;
+        let pool = get_db().await?;
+        let cur = get_version(Self::NAME).await?;
+        
+        if cur == 0 {
+            // 首次创建表
+            let create_sql = Self::create_stmt().to_string(SqliteQueryBuilder);
+            sqlx::query(&create_sql).execute(&pool).await?;
+            set_version(Self::NAME, Self::LATEST).await?;
+        } else if cur < Self::LATEST {
+            // 需要升级表结构
+            let mut tx = pool.begin().await?;
+            
+            // 检查是否缺少 group_title 字段
+            if cur < 4 {
+                // 添加 group_title 字段
+                let add_column_sql = format!(
+                    "ALTER TABLE {} ADD COLUMN {} TEXT",
+                    Self::NAME,
+                    "group_title"
+                );
+                sqlx::query(&add_column_sql).execute(&mut *tx).await.ok();
+            }
+            
+            tx.commit().await?;
+            set_version(Self::NAME, Self::LATEST).await?;
+        }
+        
+        Ok(())
+    }
 }
 
 // CRUD 操作方法
@@ -238,6 +274,7 @@ pub async fn get_by_id(id: &str) -> Result<Option<CacheRecord>> {
             CacheRecords::Status,
             CacheRecords::Source,
             CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
             CacheRecords::P,
         ])
         .from(CacheRecords::Table)

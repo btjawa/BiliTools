@@ -3,10 +3,11 @@
     class="flex gap-4 p-3 rounded-lg my-px bg-(--block-color) text-sm h-[120px] relative cursor-pointer"
     :class="{
       'border-2 border-(--primary-color)': selected,
+      'border-2 border-blue-400 bg-blue-50 opacity-80': inRangePreview,
       'opacity-60': item.status === 'unavailable',
       'border border-yellow-500': item.status === 'incomplete',
     }"
-    @click="$emit('select')"
+    @click="handleClick"
   >
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
@@ -135,17 +136,32 @@ const { t } = useI18n();
 interface Props {
   item: Types.CacheItem;
   selected: boolean;
+  inRangePreview?: boolean;
 }
 
 interface Emits {
   (e: 'select'): void;
+  (e: 'selectRange', itemId: string): void;
   (e: 'play', item: Types.CacheItem): void;
   (e: 'openFolder', item: Types.CacheItem): void;
   (e: 'delete', item: Types.CacheItem): void;
 }
 
 const props = defineProps<Props>();
-defineEmits<Emits>();
+const emit = defineEmits<Emits>();
+
+/**
+ * 处理点击事件（支持Shift+点击范围选择）
+ */
+function handleClick(event: MouseEvent) {
+  if (event.shiftKey) {
+    // Shift+点击：范围选择
+    emit('selectRange', props.item.id);
+  } else {
+    // 普通点击：切换选择
+    emit('select');
+  }
+}
 
 // ============================================================================
 // 计算属性

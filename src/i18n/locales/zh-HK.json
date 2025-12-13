@@ -552,7 +552,10 @@
       "multipleUploaders": "多個UP主",
       "defaultTitle": "影片合集",
       "hasUnavailableVideos": "組內包含不可用影片",
-      "confirmDeleteGroup": "確定要刪除整個影片組嗎？這將刪除組內所有{0}個影片。"
+      "confirmDeleteGroup": "確定要刪除整個影片組嗎？這將刪除組內所有{0}個影片。",
+      "allSelected": "全部已選中",
+      "partiallySelected": "部分已選中",
+      "notSelected": "未選中"
     },
     "time": {
       "unknown": "未知時間",
@@ -572,9 +575,73 @@
       "singleVideos": "單個影片",
       "averagePerGroup": "平均每組",
       "totalSize": "總大小",
-      "selectedItems": "已選擇",
+      "selectedItems": "已選擇 {0} 項",
       "clearSelection": "清除選擇",
       "batchDelete": "批次刪除"
+    },
+    "batchDelete": {
+      "title": "批次刪除確認",
+      "progressTitle": "正在刪除...",
+      "resultTitle": "刪除完成",
+      "itemsToDelete": "您即將刪除以下 {0} 個項目：",
+      "groupVideos": "{0}個影片",
+      "totalItems": "總項目數",
+      "estimatedSpaceFreed": "預計釋放空間",
+      "totalSize": "總計大小",
+      "deleteInfo": "刪除說明",
+      "deleteAll": "徹底刪除",
+      "deleteAllDesc": "將同時刪除資料庫記錄和本地快取資料夾，釋放磁碟空間",
+      "warning": "⚠️ 警告：刪除操作無法撤銷，請確認您的選擇。如果選擇刪除原始檔案，磁碟空間將被釋放。",
+      "cancel": "取消",
+      "confirm": "確認刪除",
+      "overallProgress": "總進度",
+      "currentOperation": "當前操作",
+      "deleting": "正在刪除",
+      "currentItem": "當前項目",
+      "completed": "已完成",
+      "inProgress": "進行中",
+      "failed": "失敗",
+      "statistics": "統計資訊",
+      "spaceFreed": "已釋放空間",
+      "successCount": "成功數量",
+      "failureCount": "失敗數量",
+      "estimatedTime": "預計剩餘時間",
+      "cancelOperation": "取消操作",
+      "completionTitle": "批次刪除操作已完成",
+      "completionDesc": "所有選中的快取記錄已處理",
+      "duration": "總耗時",
+      "failureDetails": "失敗詳情",
+      "errorMessage": "錯誤",
+      "suggestion": "建議",
+      "suggestionDesc": "請關閉相關程式後手動刪除剩餘檔案，或檢查檔案權限設定",
+      "copyErrorLog": "複製錯誤日誌",
+      "errorLogTitle": "批次刪除操作錯誤日誌",
+      "operationId": "操作ID",
+      "time": "時間",
+      "failedItems": "失敗項目"
+    },
+    "time": {
+      "seconds": "{0}秒",
+      "minutesSeconds": "{0}分{1}秒",
+      "hoursMinutes": "{0}小時{1}分"
+    },
+    "keyboard": {
+      "title": "鍵盤快捷鍵",
+      "selectAll": "全選目前頁所有項目",
+      "rangeSelect": "範圍選擇（從上次點擊到目前位置）",
+      "toggleSelection": "切換目前焦點項目的選擇狀態",
+      "cancelSelection": "取消所有選擇",
+      "delete": "刪除選中的項目",
+      "navigateUp": "在項目間向上移動焦點",
+      "navigateDown": "在項目間向下移動焦點",
+      "expandCollapse": "展開/摺疊組或播放影片",
+      "hint": "提示：按住 Shift 鍵點擊以完成範圍選擇，或按 Escape 取消"
+    },
+    "rangeSelection": {
+      "mode": "範圍選擇模式",
+      "preview": "預覽選擇",
+      "hint": "提示：按住 Shift 鍵點擊以完成範圍選擇，或按 Escape 取消",
+      "items": "項"
     }
   }
 }

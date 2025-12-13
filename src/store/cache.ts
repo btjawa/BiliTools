@@ -57,6 +57,17 @@ export const useCacheStore = defineStore('cache', () => {
   const isImporting = ref(false);
   const selectedItems = ref<string[]>([]);
 
+  // 范围选择相关状态
+  const lastClickedItem = ref<string | null>(null);
+  const lastClickedItemType = ref<'video' | 'group' | null>(null);
+  const isRangeSelecting = ref(false);
+  const rangePreview = ref<string[]>([]);
+  const rangePreviewGroups = ref<string[]>([]);
+
+  // 键盘导航相关状态
+  const focusedItem = ref<string | null>(null);
+  const focusedItemType = ref<'video' | 'group' | null>(null);
+
   // 错误状态
   const lastError = ref<string | null>(null);
 
@@ -309,6 +320,23 @@ export const useCacheStore = defineStore('cache', () => {
 
       return true;
     });
+  });
+
+  /**
+   * 获取部分选中的组ID集合
+   */
+  const partiallySelectedGroupIds = computed(() => {
+    const groupIds = new Set<string>();
+
+    displayItems.value.forEach((item) => {
+      if (item.type === 'group') {
+        if (isGroupPartiallySelected(item.data.groupId)) {
+          groupIds.add(item.data.groupId);
+        }
+      }
+    });
+
+    return groupIds;
   });
 
   /**
@@ -600,18 +628,58 @@ export const useCacheStore = defineStore('cache', () => {
   /**
    * 删除缓存项
    */
-  async function deleteCacheItem(
-    id: string,
-    deleteFiles: boolean = false,
-  ): Promise<void> {
+  async function deleteCacheItem(id: string): Promise<void> {
     try {
-      await cacheManagementService.deleteCacheItem(id, deleteFiles);
+      await cacheManagementService.deleteCacheItem(id);
 
       // 从本地状态中移除
       const index = cacheItems.value.findIndex((item) => item.id === id);
       if (index !== -1) {
         cacheItems.value.splice(index, 1);
       }
+
+      // 从显示项列表中移除
+      displayItems.value = displayItems.value.filter((item) => {
+        if (item.type === 'video') {
+          return item.data.id !== id;
+        } else {
+          // 对于组，移除被删除的视频
+          item.data.videos = item.data.videos.filter(
+            (video) => video.id !== id,
+          );
+
+          // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
+          if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
+            item.data.videos.forEach((video) => {
+              displayItems.value.push({
+                type: 'video',
+                data: video,
+              });
+            });
+            return false; // 移除组
+          }
+
+          // 更新组统计信息
+          if (item.data.videos.length > 0) {
+            item.data.videoCount = item.data.videos.length;
+            item.data.totalDuration = item.data.videos.reduce(
+              (sum, video) => sum + video.duration,
+              0,
+            );
+            item.data.totalFileSize = item.data.videos.reduce(
+              (sum, video) => sum + video.fileSize,
+              0,
+            );
+            item.data.latestDownloadTime = new Date(
+              Math.max(
+                ...item.data.videos.map((video) => video.downloadTime.getTime()),
+              ),
+            );
+          }
+
+          return true; // 保留组
+        }
+      });
 
       // 从选中列表中移除
       const selectedIndex = selectedItems.value.indexOf(id);
@@ -633,13 +701,9 @@ export const useCacheStore = defineStore('cache', () => {
    */
   async function batchDeleteCacheItems(
     ids: string[],
-    deleteFiles: boolean = false,
   ): Promise<Types.BatchOperationResult[]> {
     try {
-      const results = await cacheManagementService.batchDeleteCacheItems(
-        ids,
-        deleteFiles,
-      );
+      const results = await cacheManagementService.batchDeleteCacheItems(ids);
 
       // 移除成功删除的项目
       const successIds = results.filter((r) => r.success).map((r) => r.cacheId);
@@ -708,7 +772,6 @@ export const useCacheStore = defineStore('cache', () => {
    */
   async function deleteGroup(
     groupId: string,
-    deleteFiles: boolean = false,
   ): Promise<Types.BatchOperationResult[]> {
     const groupItem = displayItems.value.find(
       (item) => item.type === 'group' && item.data.groupId === groupId,
@@ -719,7 +782,7 @@ export const useCacheStore = defineStore('cache', () => {
     }
 
     const videoIds = groupItem.data.videos.map((video) => video.id);
-    return await batchDeleteCacheItems(videoIds, deleteFiles);
+    return await batchDeleteCacheItems(videoIds);
   }
 
   /**
@@ -824,6 +887,12 @@ export const useCacheStore = defineStore('cache', () => {
     if (!selectedItems.value.includes(id)) {
       selectedItems.value.push(id);
     }
+    // 记录最后点击的项目
+    lastClickedItem.value = id;
+    lastClickedItemType.value = 'video';
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
   }
 
   /**
@@ -845,6 +914,12 @@ export const useCacheStore = defineStore('cache', () => {
     } else {
       selectCacheItem(id);
     }
+    // 记录最后点击的项目
+    lastClickedItem.value = id;
+    lastClickedItemType.value = 'video';
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
   }
 
   /**
@@ -862,6 +937,12 @@ export const useCacheStore = defineStore('cache', () => {
         }
       });
     }
+    // 记录最后点击的项目
+    lastClickedItem.value = groupId;
+    lastClickedItemType.value = 'group';
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
   }
 
   /**
@@ -901,6 +982,12 @@ export const useCacheStore = defineStore('cache', () => {
         selectGroup(groupId);
       }
     }
+    // 记录最后点击的项目
+    lastClickedItem.value = groupId;
+    lastClickedItemType.value = 'group';
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
   }
 
   /**
@@ -991,6 +1078,257 @@ export const useCacheStore = defineStore('cache', () => {
    */
   function clearSelection(): void {
     selectedItems.value = [];
+    lastClickedItem.value = null;
+    lastClickedItemType.value = null;
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
+  }
+
+  /**
+   * 计算范围选择预览
+   * 返回从lastClickedItem到targetId之间的所有项目
+   */
+  function calculateRangePreview(
+    targetId: string,
+    targetType: 'video' | 'group',
+  ): { videos: string[]; groups: string[] } {
+    if (!lastClickedItem.value || !lastClickedItemType.value) {
+      return { videos: [], groups: [] };
+    }
+
+    const videos: string[] = [];
+    const groups: string[] = [];
+
+    // 构建平铺的项目列表（包含组和单个视频）
+    const flatItems: Array<{
+      id: string;
+      type: 'video' | 'group';
+      index: number;
+    }> = [];
+
+    displayItems.value.forEach((item, index) => {
+      if (item.type === 'video') {
+        flatItems.push({ id: item.data.id, type: 'video', index });
+      } else if (item.type === 'group') {
+        flatItems.push({ id: item.data.groupId, type: 'group', index });
+      }
+    });
+
+    // 找到起始和结束位置
+    const startIndex = flatItems.findIndex(
+      (item) => item.id === lastClickedItem.value && item.type === lastClickedItemType.value,
+    );
+    const endIndex = flatItems.findIndex(
+      (item) => item.id === targetId && item.type === targetType,
+    );
+
+    if (startIndex === -1 || endIndex === -1) {
+      return { videos: [], groups: [] };
+    }
+
+    // 确定范围的起始和结束
+    const rangeStart = Math.min(startIndex, endIndex);
+    const rangeEnd = Math.max(startIndex, endIndex);
+
+    // 收集范围内的所有项目
+    for (let i = rangeStart; i <= rangeEnd; i++) {
+      const item = flatItems[i];
+      if (item.type === 'video') {
+        videos.push(item.id);
+      } else if (item.type === 'group') {
+        groups.push(item.id);
+        // 同时添加组内的所有视频
+        const groupItem = displayItems.value.find(
+          (displayItem) =>
+            displayItem.type === 'group' && displayItem.data.groupId === item.id,
+        );
+        if (groupItem && groupItem.type === 'group') {
+          groupItem.data.videos.forEach((video) => {
+            if (!videos.includes(video.id)) {
+              videos.push(video.id);
+            }
+          });
+        }
+      }
+    }
+
+    return { videos, groups };
+  }
+
+  /**
+   * 范围选择（从lastClickedItem到targetId）
+   */
+  function selectRange(targetId: string, targetType: 'video' | 'group'): void {
+    if (!lastClickedItem.value || !lastClickedItemType.value) {
+      // 如果没有起始位置，直接选择目标项目
+      if (targetType === 'video') {
+        selectCacheItem(targetId);
+      } else {
+        selectGroup(targetId);
+      }
+      return;
+    }
+
+    // 计算范围预览
+    const preview = calculateRangePreview(targetId, targetType);
+
+    // 添加范围内的所有视频到选择列表
+    preview.videos.forEach((videoId) => {
+      if (!selectedItems.value.includes(videoId)) {
+        selectedItems.value.push(videoId);
+      }
+    });
+
+    // 更新最后点击的项目为目标项目
+    lastClickedItem.value = targetId;
+    lastClickedItemType.value = targetType;
+
+    // 清除范围选择预览
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
+  }
+
+  /**
+   * 更新范围选择预览（用于Shift+点击时显示预览）
+   */
+  function updateRangePreview(
+    targetId: string,
+    targetType: 'video' | 'group',
+  ): void {
+    if (!lastClickedItem.value || !lastClickedItemType.value) {
+      isRangeSelecting.value = false;
+      rangePreview.value = [];
+      rangePreviewGroups.value = [];
+      return;
+    }
+
+    const preview = calculateRangePreview(targetId, targetType);
+    isRangeSelecting.value = true;
+    rangePreview.value = preview.videos;
+    rangePreviewGroups.value = preview.groups;
+  }
+
+  /**
+   * 清除范围选择预览
+   */
+  function clearRangePreview(): void {
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
+  }
+
+  // ============================================================================
+  // Actions - 键盘导航管理
+  // ============================================================================
+
+  /**
+   * 设置焦点项目
+   */
+  function setFocusedItem(itemId: string | null, itemType: 'video' | 'group' | null): void {
+    focusedItem.value = itemId;
+    focusedItemType.value = itemType;
+  }
+
+  /**
+   * 获取焦点项目
+   */
+  function getFocusedItem(): { itemId: string | null; itemType: 'video' | 'group' | null } {
+    return {
+      itemId: focusedItem.value,
+      itemType: focusedItemType.value,
+    };
+  }
+
+  /**
+   * 向上导航焦点
+   */
+  function navigateFocusUp(): void {
+    if (!focusedItem.value) {
+      // 如果没有焦点，设置焦点到第一个项目
+      if (paginatedDisplayItems.value.length > 0) {
+        const firstItem = paginatedDisplayItems.value[0];
+        if (firstItem.type === 'video') {
+          setFocusedItem(firstItem.data.id, 'video');
+        } else {
+          setFocusedItem(firstItem.data.groupId, 'group');
+        }
+      }
+      return;
+    }
+
+    // 找到当前焦点项目的索引
+    let currentIndex = -1;
+    for (let i = 0; i < paginatedDisplayItems.value.length; i++) {
+      const item = paginatedDisplayItems.value[i];
+      if (
+        (focusedItemType.value === 'video' && item.type === 'video' && item.data.id === focusedItem.value) ||
+        (focusedItemType.value === 'group' && item.type === 'group' && item.data.groupId === focusedItem.value)
+      ) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    // 移动到上一个项目
+    if (currentIndex > 0) {
+      const prevItem = paginatedDisplayItems.value[currentIndex - 1];
+      if (prevItem.type === 'video') {
+        setFocusedItem(prevItem.data.id, 'video');
+      } else {
+        setFocusedItem(prevItem.data.groupId, 'group');
+      }
+    }
+  }
+
+  /**
+   * 向下导航焦点
+   */
+  function navigateFocusDown(): void {
+    if (!focusedItem.value) {
+      // 如果没有焦点，设置焦点到第一个项目
+      if (paginatedDisplayItems.value.length > 0) {
+        const firstItem = paginatedDisplayItems.value[0];
+        if (firstItem.type === 'video') {
+          setFocusedItem(firstItem.data.id, 'video');
+        } else {
+          setFocusedItem(firstItem.data.groupId, 'group');
+        }
+      }
+      return;
+    }
+
+    // 找到当前焦点项目的索引
+    let currentIndex = -1;
+    for (let i = 0; i < paginatedDisplayItems.value.length; i++) {
+      const item = paginatedDisplayItems.value[i];
+      if (
+        (focusedItemType.value === 'video' && item.type === 'video' && item.data.id === focusedItem.value) ||
+        (focusedItemType.value === 'group' && item.type === 'group' && item.data.groupId === focusedItem.value)
+      ) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    // 移动到下一个项目
+    if (currentIndex >= 0 && currentIndex < paginatedDisplayItems.value.length - 1) {
+      const nextItem = paginatedDisplayItems.value[currentIndex + 1];
+      if (nextItem.type === 'video') {
+        setFocusedItem(nextItem.data.id, 'video');
+      } else {
+        setFocusedItem(nextItem.data.groupId, 'group');
+      }
+    }
+  }
+
+  /**
+   * 清除焦点
+   */
+  function clearFocus(): void {
+    focusedItem.value = null;
+    focusedItemType.value = null;
   }
 
   // ============================================================================
@@ -1225,6 +1563,17 @@ export const useCacheStore = defineStore('cache', () => {
       totalPages: 0,
     };
 
+    // 重置范围选择相关状态
+    lastClickedItem.value = null;
+    lastClickedItemType.value = null;
+    isRangeSelecting.value = false;
+    rangePreview.value = [];
+    rangePreviewGroups.value = [];
+
+    // 重置键盘导航相关状态
+    focusedItem.value = null;
+    focusedItemType.value = null;
+
     // 重置组相关状态
     displayItems.value = [];
     groupStates.value.clear();
@@ -1256,6 +1605,17 @@ export const useCacheStore = defineStore('cache', () => {
     selectedItems,
     lastError,
 
+    // 范围选择相关状态
+    lastClickedItem,
+    lastClickedItemType,
+    isRangeSelecting,
+    rangePreview,
+    rangePreviewGroups,
+
+    // 键盘导航相关状态
+    focusedItem,
+    focusedItemType,
+
     // 组相关状态
     displayItems,
     groupStates,
@@ -1286,6 +1646,7 @@ export const useCacheStore = defineStore('cache', () => {
     isAllSelected,
     selectedGroupIds,
     selectedSingleVideos,
+    partiallySelectedGroupIds,
     importProgressPercentage,
 
     // 组状态管理
@@ -1328,6 +1689,19 @@ export const useCacheStore = defineStore('cache', () => {
     unselectAllCurrentPage,
     toggleSelectAll,
     clearSelection,
+
+    // 范围选择
+    calculateRangePreview,
+    selectRange,
+    updateRangePreview,
+    clearRangePreview,
+
+    // 键盘导航
+    setFocusedItem,
+    getFocusedItem,
+    navigateFocusUp,
+    navigateFocusDown,
+    clearFocus,
 
     // 导入管理
     startImport,
