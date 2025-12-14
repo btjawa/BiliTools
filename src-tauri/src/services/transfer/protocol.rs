@@ -1,8 +1,14 @@
 use super::error::TransferError;
 use super::types::{TransferProgress, TransferTarget};
+use std::any::Any;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::mpsc;
+
+/// 用于向下转型的 trait
+pub trait AsAny {
+    fn as_any(&self) -> &dyn Any;
+}
 
 /// 进度回调类型
 pub type ProgressCallback = Arc<dyn Fn(TransferProgress) + Send + Sync>;
@@ -15,7 +21,7 @@ pub type ProgressSender = mpsc::Sender<TransferProgress>;
 /// 定义了传输协议的标准接口，支持插件式扩展不同的传输协议实现。
 /// 所有传输协议实现都必须实现此 trait。
 #[async_trait::async_trait]
-pub trait TransferProtocol: Send + Sync {
+pub trait TransferProtocol: Send + Sync + AsAny {
     /// 获取协议名称
     fn name(&self) -> &str;
 
@@ -49,6 +55,7 @@ pub trait TransferProtocol: Send + Sync {
         source: &Path,
         target: &TransferTarget,
         target_filename: &str,
+        task_id: &str,
         progress_sender: Option<ProgressSender>,
     ) -> Result<(), TransferError>;
 
@@ -60,6 +67,7 @@ pub trait TransferProtocol: Send + Sync {
         source: &Path,
         target: &TransferTarget,
         target_dirname: &str,
+        task_id: &str,
         progress_sender: Option<ProgressSender>,
     ) -> Result<(), TransferError>;
 

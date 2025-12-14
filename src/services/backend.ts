@@ -221,7 +221,7 @@ async cancelImport(importId: string) : Promise<Result<null, TauriError>> {
 }
 },
 /**
- * 获取缓存列表
+ * 获取缓存列表（自动清理不存在的文件）
  */
 async getCacheList() : Promise<Result<CacheRecord[], TauriError>> {
     try {
@@ -232,11 +232,22 @@ async getCacheList() : Promise<Result<CacheRecord[], TauriError>> {
 }
 },
 /**
- * 根据状态获取缓存列表
+ * 根据状态获取缓存列表（自动清理不存在的文件）
  */
 async getCacheListByStatus(status: string) : Promise<Result<CacheRecord[], TauriError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_cache_list_by_status", { status }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 清理无效的缓存记录（文件不存在的记录）
+ */
+async cleanupInvalidCacheRecords() : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cleanup_invalid_cache_records") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

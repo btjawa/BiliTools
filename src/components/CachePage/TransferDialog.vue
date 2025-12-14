@@ -28,21 +28,7 @@
 
           <!-- 对话框内容 -->
           <div class="modal-body space-y-6">
-            <!-- 加载状态 -->
-            <div
-              v-if="isDiscoveringDevices"
-              class="flex items-center justify-center py-8"
-            >
-              <div class="text-center">
-                <div class="inline-block mb-3">
-                  <i :class="[$fa.weight, 'fa-spinner fa-spin text-blue-500 text-2xl']"></i>
-                </div>
-                <p class="text-(--desc-color)">{{ $t('transfer.discoveringDevices') }}</p>
-              </div>
-            </div>
-
-            <!-- 设备列表 -->
-            <div v-else>
+            <!-- 文件夹选择 -->
               <!-- 本地文件夹部分 -->
               <div class="space-y-3">
                 <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
@@ -72,72 +58,6 @@
                 </div>
               </div>
 
-              <!-- 移动设备部分 -->
-              <div
-                v-if="removableDevices.length > 0"
-                class="space-y-3"
-              >
-                <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
-                  <i :class="[$fa.weight, 'fa-usb']"></i>
-                  {{ $t('transfer.removableDevice') }}
-                </h3>
-
-                <!-- 设备列表 -->
-                <div class="bg-(--solid-button-color) rounded-lg p-3 space-y-2">
-                  <div
-                    v-for="device in removableDevices"
-                    :key="device.id"
-                    class="device-item"
-                    :class="{ 'selected': selectedTarget?.id === device.id }"
-                    @click="selectDevice(device)"
-                  >
-                    <div
-                      class="flex items-start gap-3 p-3 rounded-lg cursor-pointer hover:bg-(--hover-color) transition-colors"
-                      :class="{ 'bg-(--hover-color)': selectedTarget?.id === device.id }"
-                    >
-                      <!-- 设备图标 -->
-                      <div class="flex-shrink-0 mt-1">
-                        <i
-                          :class="[$fa.weight, device.connection_status === 'Connected' ? 'fa-check-circle text-green-500' : 'fa-exclamation-circle text-red-500']"
-                        ></i>
-                      </div>
-
-                      <!-- 设备信息 -->
-                      <div class="flex-1 min-w-0">
-                        <div class="font-medium text-(--content-color)">{{ device.name }}</div>
-                        <div class="text-xs text-(--desc-color) mt-1">
-                          {{ device.path }}
-                        </div>
-                        <div
-                          v-if="device.available_space"
-                          class="text-xs text-(--desc-color) mt-1"
-                        >
-                          {{ $t('transfer.availableSpace') }}: {{ formatFileSize(device.available_space) }}
-                        </div>
-                      </div>
-
-                      <!-- 选择指示器 -->
-                      <div
-                        v-if="selectedTarget?.id === device.id"
-                        class="flex-shrink-0 text-blue-500"
-                      >
-                        <i :class="[$fa.weight, 'fa-check']"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 无设备提示 -->
-              <div
-                v-if="removableDevices.length === 0 && !isDiscoveringDevices"
-                class="text-center py-4 text-(--desc-color)"
-              >
-                <i :class="[$fa.weight, 'fa-info-circle']"></i>
-                {{ $t('transfer.noDevicesFound') }}
-              </div>
-            </div>
-
             <!-- 错误信息 -->
             <div
               v-if="lastError"
@@ -159,7 +79,7 @@
             </button>
             <button
               class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="!selectedTarget || isDiscoveringDevices"
+              :disabled="!selectedTarget"
               @click="handleConfirm"
             >
               <i :class="[$fa.weight, 'fa-check']"></i>
@@ -173,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTransferStore } from '@/store/transfer';
 import type * as Types from '@/types/transfer.d';
@@ -209,7 +129,7 @@ const transferStore = useTransferStore();
 // 状态
 // ============================================================================
 
-const isDiscoveringDevices = ref(false);
+
 const selectedTarget = ref<Types.TransferTarget | null>(null);
 const lastError = ref<string | null>(null);
 
@@ -237,12 +157,7 @@ const operationIcon = computed(() => {
   return props.operation === 'Copy' ? 'fa-copy' : 'fa-scissors';
 });
 
-/**
- * 可移动设备列表
- */
-const removableDevices = computed(() => {
-  return transferStore.availableTargets.filter((target) => target.device_type === 'RemovableStorage');
-});
+
 
 /**
  * Font Awesome 权重
@@ -255,43 +170,15 @@ const $fa = computed(() => ({
 // 生命周期
 // ============================================================================
 
-onMounted(async () => {
-  if (props.visible) {
-    await discoverDevices();
-  }
-});
+
 
 // ============================================================================
 // 方法
 // ============================================================================
 
-/**
- * 发现可用设备
- */
-async function discoverDevices() {
-  try {
-    isDiscoveringDevices.value = true;
-    lastError.value = null;
-    await transferStore.discoverTargets();
-  } catch (error) {
-    lastError.value = error instanceof Error ? error.message : t('transfer.error');
-    console.error('发现设备失败:', error);
-  } finally {
-    isDiscoveringDevices.value = false;
-  }
-}
 
-/**
- * 选择设备
- */
-function selectDevice(device: Types.TransferTarget) {
-  if (device.connection_status === 'Connected') {
-    selectedTarget.value = device;
-    lastError.value = null;
-  } else {
-    lastError.value = t('transfer.deviceDisconnected');
-  }
-}
+
+
 
 /**
  * 浏览本地文件夹
@@ -310,7 +197,7 @@ async function handleBrowseFolder() {
         name: folderPath.split(/[/\\]/).pop() || folderPath,
         device_type: 'LocalDrive',
         path: folderPath,
-        available_space: null,
+        available_space: undefined,
         connection_status: 'Connected',
       };
       
@@ -322,18 +209,7 @@ async function handleBrowseFolder() {
   }
 }
 
-/**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
 
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
 
 /**
  * 处理确认按钮

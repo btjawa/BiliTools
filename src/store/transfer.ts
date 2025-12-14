@@ -12,6 +12,7 @@ import * as backend from '@/services/backend';
 import { Channel } from '@tauri-apps/api/core';
 import { useCacheStore } from '@/store/cache';
 import type * as Types from '@/types/transfer.d';
+import type * as CacheTypes from '@/types/cache.d';
 
 /**
  * 传输 Store
@@ -23,6 +24,7 @@ export const useTransferStore = defineStore('transfer', () => {
 
   // 传输任务相关状态
   const activeTasks = ref<Map<string, Types.TransferTask>>(new Map());
+  const completedTasks = ref<Map<string, Types.TransferTask>>(new Map());
   const taskQueue = ref<string[]>([]);
   const maxConcurrentTasks = ref(3);
 
@@ -69,11 +71,14 @@ export const useTransferStore = defineStore('transfer', () => {
   const queuedTaskCount = computed(() => taskQueue.value.length);
 
   /**
-   * 所有任务（活跃 + 队列中）
+   * 所有任务（活跃 + 已完成）
    */
   const allTasks = computed(() => {
     const tasks: Types.TransferTask[] = [];
     activeTasks.value.forEach((task) => {
+      tasks.push(task);
+    });
+    completedTasks.value.forEach((task) => {
       tasks.push(task);
     });
     return tasks;
@@ -149,7 +154,23 @@ export const useTransferStore = defineStore('transfer', () => {
       isDiscoveringTargets.value = true;
       lastError.value = null;
 
+      console.log('开始发现传输目标设备...');
       const targets = await transferService.discoverTransferTargets();
+      console.log('发现的设备列表:', targets);
+      console.log('设备数量:', targets.length);
+      
+      // 详细输出每个设备的信息
+      targets.forEach((target, index) => {
+        console.log(`设备 ${index + 1}:`, {
+          id: target.id,
+          name: target.name,
+          device_type: target.device_type,
+          path: target.path,
+          available_space: target.available_space,
+          connection_status: target.connection_status,
+        });
+      });
+      
       availableTargets.value = targets;
     } catch (error) {
       lastError.value = error instanceof Error ? error.message : '发现传输目标失败';
@@ -213,6 +234,9 @@ export const useTransferStore = defineStore('transfer', () => {
   async function startTransfer(request: Types.TransferRequest): Promise<string | null> {
     try {
       lastError.value = null;
+      
+      // 清理已完成的任务
+      completedTasks.value.clear();
 
       if (!selectedTarget.value) {
         lastError.value = '请先选择传输目标';
@@ -333,21 +357,37 @@ export const useTransferStore = defineStore('transfer', () => {
     try {
       lastError.value = null;
 
+      // 检查任务是否仍然存在
+      const task = activeTasks.value.get(taskId);
+      if (!task) {
+        // 任务可能已经完成，不需要暂停
+        return;
+      }
+
+      // 检查任务状态
+      if (task.status !== 'running') {
+        // 任务不在运行状态，不需要暂停
+        return;
+      }
+
       await transferService.pauseTransfer(taskId);
 
-      const task = activeTasks.value.get(taskId);
-      if (task) {
-        task.status = 'paused';
-        task.updated_at = Date.now();
-      }
+      task.status = 'paused';
+      task.updated_at = Date.now();
 
       const progress = progressMap.value.get(taskId);
       if (progress) {
         progress.status = 'paused';
       }
     } catch (error) {
+      // 如果是任务不存在错误，静默处理
+      if (error instanceof Error && error.message.includes('传输任务不存在')) {
+        return;
+      }
+      
       lastError.value = error instanceof Error ? error.message : '暂停传输失败';
       console.error('暂停传输失败:', error);
+      throw error;
     }
   }
 
@@ -357,6 +397,17 @@ export const useTransferStore = defineStore('transfer', () => {
   async function cancelTransfer(taskId: string): Promise<void> {
     try {
       lastError.value = null;
+
+      // 检查任务是否仍然存在
+      const task = activeTasks.value.get(taskId);
+      if (!task) {
+        // 任务可能已经完成，从队列中移除（如果存在）
+        const queueIndex = taskQueue.value.indexOf(taskId);
+        if (queueIndex !== -1) {
+          taskQueue.value.splice(queueIndex, 1);
+        }
+        return;
+      }
 
       await transferService.cancelTransfer(taskId);
 
@@ -373,16 +424,29 @@ export const useTransferStore = defineStore('transfer', () => {
       if (canStartNewTask.value && taskQueue.value.length > 0) {
         const nextTaskId = taskQueue.value.shift();
         if (nextTaskId) {
-          const task = activeTasks.value.get(nextTaskId);
-          if (task) {
-            task.status = 'running';
-            task.updated_at = Date.now();
+          const nextTask = activeTasks.value.get(nextTaskId);
+          if (nextTask) {
+            nextTask.status = 'running';
+            nextTask.updated_at = Date.now();
           }
         }
       }
     } catch (error) {
+      // 如果是任务不存在错误，静默处理
+      if (error instanceof Error && error.message.includes('传输任务不存在')) {
+        // 清理本地状态
+        activeTasks.value.delete(taskId);
+        progressMap.value.delete(taskId);
+        const queueIndex = taskQueue.value.indexOf(taskId);
+        if (queueIndex !== -1) {
+          taskQueue.value.splice(queueIndex, 1);
+        }
+        return;
+      }
+      
       lastError.value = error instanceof Error ? error.message : '取消传输失败';
       console.error('取消传输失败:', error);
+      throw error;
     }
   }
 
@@ -393,21 +457,37 @@ export const useTransferStore = defineStore('transfer', () => {
     try {
       lastError.value = null;
 
+      // 检查任务是否仍然存在
+      const task = activeTasks.value.get(taskId);
+      if (!task) {
+        // 任务可能已经完成，不需要恢复
+        return;
+      }
+
+      // 检查任务状态
+      if (task.status !== 'paused') {
+        // 任务不在暂停状态，不需要恢复
+        return;
+      }
+
       await transferService.resumeTransfer(taskId);
 
-      const task = activeTasks.value.get(taskId);
-      if (task) {
-        task.status = 'running';
-        task.updated_at = Date.now();
-      }
+      task.status = 'running';
+      task.updated_at = Date.now();
 
       const progress = progressMap.value.get(taskId);
       if (progress) {
         progress.status = 'running';
       }
     } catch (error) {
+      // 如果是任务不存在错误，静默处理
+      if (error instanceof Error && error.message.includes('传输任务不存在')) {
+        return;
+      }
+      
       lastError.value = error instanceof Error ? error.message : '恢复传输失败';
       console.error('恢复传输失败:', error);
+      throw error;
     }
   }
 
@@ -423,13 +503,15 @@ export const useTransferStore = defineStore('transfer', () => {
       task.status = progress.status;
       task.updated_at = Date.now();
 
-      // 如果任务完成，从活跃任务中移除
+      // 如果任务完成，从活跃任务中移除并添加到已完成任务
       if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') {
         // 如果是剪切操作且成功完成，更新缓存列表
         if (progress.status === 'completed' && task.operation === 'Cut') {
           handleCutOperationCompleted(task);
         }
         
+        // 移动到已完成任务
+        completedTasks.value.set(progress.taskId, task);
         activeTasks.value.delete(progress.taskId);
 
         // 尝试启动队列中的下一个任务
@@ -508,7 +590,7 @@ export const useTransferStore = defineStore('transfer', () => {
       // source_files 包含的是缓存路径，我们需要根据路径找到对应的缓存项ID
       for (const sourcePath of task.source_files) {
         // 从缓存项中找到匹配的项目并移除
-        const itemToRemove = cacheStore.cacheItems.find((item: any) => item.cachePath === sourcePath);
+        const itemToRemove = cacheStore.cacheItems.find((item: CacheTypes.CacheItem) => item.cachePath === sourcePath);
         
         if (itemToRemove) {
           // 从选中项目中移除
@@ -524,7 +606,7 @@ export const useTransferStore = defineStore('transfer', () => {
           }
           
           // 从显示项列表中移除
-          cacheStore.displayItems = cacheStore.displayItems.filter((displayItem: any) => {
+          cacheStore.displayItems = cacheStore.displayItems.filter((displayItem: CacheTypes.DisplayItem) => {
             if (displayItem.type === 'video') {
               return displayItem.data.id !== itemToRemove.id;
             }
@@ -573,10 +655,18 @@ export const useTransferStore = defineStore('transfer', () => {
   }
 
   /**
+   * 清理已完成的任务
+   */
+  function clearCompletedTasks(): void {
+    completedTasks.value.clear();
+  }
+
+  /**
    * 重置状态
    */
   function reset(): void {
     activeTasks.value.clear();
+    completedTasks.value.clear();
     taskQueue.value = [];
     progressMap.value.clear();
     availableTargets.value = [];
@@ -629,6 +719,7 @@ export const useTransferStore = defineStore('transfer', () => {
     loadCurrentCacheRoot,
     refreshCacheRoot,
     clearError,
+    clearCompletedTasks,
     reset,
   };
 });

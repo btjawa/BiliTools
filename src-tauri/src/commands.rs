@@ -263,20 +263,101 @@ pub async fn cancel_import(import_id: String) -> TauriResult<()> {
     Ok(())
 }
 
-/// 获取缓存列表
+/// 获取缓存列表（自动清理不存在的文件）
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn get_cache_list() -> TauriResult<Vec<CacheRecord>> {
     let records = cache_records::get_all().await?;
-    Ok(records)
+    let mut valid_records = Vec::new();
+    let mut invalid_ids = Vec::new();
+
+    // 验证每个缓存记录对应的文件是否存在
+    for record in records {
+        let cache_path = PathBuf::from(&record.cache_path);
+        if cache_path.exists() && cache_path.is_dir() {
+            // 进一步验证是否包含必要的文件（如 videoInfo.json）
+            let video_info_path = cache_path.join("videoInfo.json");
+            if video_info_path.exists() {
+                valid_records.push(record);
+            } else {
+                invalid_ids.push(record.id);
+            }
+        } else {
+            invalid_ids.push(record.id);
+        }
+    }
+
+    // 批量删除无效的缓存记录
+    for id in invalid_ids {
+        if let Err(e) = cache_records::delete(&id).await {
+            eprintln!("删除无效缓存记录失败 {}: {}", id, e);
+        }
+    }
+
+    Ok(valid_records)
 }
 
-/// 根据状态获取缓存列表
+/// 根据状态获取缓存列表（自动清理不存在的文件）
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn get_cache_list_by_status(status: String) -> TauriResult<Vec<CacheRecord>> {
     let records = cache_records::get_by_status(&status).await?;
-    Ok(records)
+    let mut valid_records = Vec::new();
+    let mut invalid_ids = Vec::new();
+
+    // 验证每个缓存记录对应的文件是否存在
+    for record in records {
+        let cache_path = PathBuf::from(&record.cache_path);
+        if cache_path.exists() && cache_path.is_dir() {
+            // 进一步验证是否包含必要的文件（如 videoInfo.json）
+            let video_info_path = cache_path.join("videoInfo.json");
+            if video_info_path.exists() {
+                valid_records.push(record);
+            } else {
+                invalid_ids.push(record.id);
+            }
+        } else {
+            invalid_ids.push(record.id);
+        }
+    }
+
+    // 批量删除无效的缓存记录
+    for id in invalid_ids {
+        if let Err(e) = cache_records::delete(&id).await {
+            eprintln!("删除无效缓存记录失败 {}: {}", id, e);
+        }
+    }
+
+    Ok(valid_records)
+}
+
+/// 清理无效的缓存记录（文件不存在的记录）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn cleanup_invalid_cache_records() -> TauriResult<i32> {
+    let records = cache_records::get_all().await?;
+    let mut invalid_count = 0;
+
+    for record in records {
+        let cache_path = PathBuf::from(&record.cache_path);
+        let should_remove = if cache_path.exists() && cache_path.is_dir() {
+            // 进一步验证是否包含必要的文件（如 videoInfo.json）
+            let video_info_path = cache_path.join("videoInfo.json");
+            !video_info_path.exists()
+        } else {
+            true
+        };
+
+        if should_remove {
+            if let Err(e) = cache_records::delete(&record.id).await {
+                eprintln!("删除无效缓存记录失败 {}: {}", record.id, e);
+            } else {
+                invalid_count += 1;
+            }
+        }
+    }
+
+    Ok(invalid_count)
 }
 
 /// 删除缓存项（同时删除文件和数据库记录）

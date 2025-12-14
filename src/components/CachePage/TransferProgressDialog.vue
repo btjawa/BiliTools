@@ -171,7 +171,9 @@ const allTasks = computed(() => transferStore.allTasks);
  * 是否有运行中的任务
  */
 const hasRunningTasks = computed(() => {
-  return allTasks.value.some((task) => task.status === 'running');
+  return allTasks.value.some((task) => 
+    task.status === 'running' || task.status === 'pending'
+  );
 });
 
 /**
@@ -197,22 +199,29 @@ const transferTitle = computed(() => {
   }
 });
 
-/**
- * 是否有暂停的任务
- */
-const hasRunningOrPausedTasks = computed(() => {
-  return allTasks.value.some((task) => task.status === 'running' || task.status === 'paused');
-});
+
 
 /**
  * 是否可以暂停
  */
-const canPause = computed(() => hasRunningOrPausedTasks.value);
+const canPause = computed(() => {
+  const activeTasksCount = allTasks.value.filter(task => 
+    task.status === 'running' || task.status === 'paused'
+  ).length;
+  return activeTasksCount > 0;
+});
 
 /**
  * 是否可以取消
  */
-const canCancel = computed(() => hasRunningOrPausedTasks.value);
+const canCancel = computed(() => {
+  const activeTasksCount = allTasks.value.filter(task => 
+    task.status === 'running' || 
+    task.status === 'paused' || 
+    task.status === 'pending'
+  ).length;
+  return activeTasksCount > 0;
+});
 
 /**
  * 是否可以关闭
@@ -308,17 +317,38 @@ async function handlePauseResume() {
   try {
     if (isPaused.value) {
       // 继续所有暂停的任务
-      for (const task of allTasks.value) {
-        if (task.status === 'paused') {
+      const pausedTasks = allTasks.value.filter(task => task.status === 'paused');
+      
+      for (const task of pausedTasks) {
+        try {
           await transferStore.resumeTransfer(task.id);
+        } catch (error) {
+          // 忽略任务不存在的错误（可能已经完成）
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes('传输任务不存在')) {
+            console.error(`恢复任务 ${task.id} 失败:`, error);
+          }
         }
       }
       isPaused.value = false;
     } else {
       // 暂停所有运行中的任务
-      for (const task of allTasks.value) {
-        if (task.status === 'running') {
+      const runningTasks = allTasks.value.filter(task => task.status === 'running');
+      
+      if (runningTasks.length === 0) {
+        // 没有运行中的任务，可能都已经完成了
+        return;
+      }
+      
+      for (const task of runningTasks) {
+        try {
           await transferStore.pauseTransfer(task.id);
+        } catch (error) {
+          // 忽略任务不存在的错误（可能已经完成）
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes('传输任务不存在')) {
+            console.error(`暂停任务 ${task.id} 失败:`, error);
+          }
         }
       }
       isPaused.value = true;
@@ -332,14 +362,39 @@ async function handlePauseResume() {
  * 处理取消
  */
 async function handleCancel() {
-  if (!confirm(t('transfer.confirmCancel'))) {
-    return;
-  }
-
   try {
-    for (const task of allTasks.value) {
-      if (task.status === 'running' || task.status === 'paused') {
+    // 使用 Tauri 的 dialog API
+    const { confirm } = await import('@tauri-apps/plugin-dialog');
+    const shouldCancel = await confirm(t('transfer.confirmCancel'), {
+      title: t('transfer.confirmTitle'),
+      kind: 'warning',
+    });
+    
+    if (!shouldCancel) {
+      return;
+    }
+
+    // 只取消仍然活跃的任务
+    const activeTasks = allTasks.value.filter(task => 
+      task.status === 'running' || 
+      task.status === 'paused' || 
+      task.status === 'pending'
+    );
+
+    if (activeTasks.length === 0) {
+      // 没有活跃任务，可能都已经完成了
+      return;
+    }
+
+    for (const task of activeTasks) {
+      try {
         await transferStore.cancelTransfer(task.id);
+      } catch (error) {
+        // 忽略任务不存在的错误（可能已经完成）
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('传输任务不存在')) {
+          console.error(`取消任务 ${task.id} 失败:`, error);
+        }
       }
     }
   } catch (error) {

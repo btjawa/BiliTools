@@ -406,6 +406,7 @@ async fn execute_transfer_task(
     manager: Arc<TransferManager>,
     task: TransferTask,
 ) -> Result<(), TransferError> {
+    use super::local::LocalFileProtocol;
     use super::types::TransferOperation;
 
     // 克隆所需的数据
@@ -447,23 +448,35 @@ async fn execute_transfer_task(
     });
 
     // 执行传输
-    for (index, source) in source_files.iter().enumerate() {
-        let source_path = Path::new(source);
-        let filename = source_path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| format!("file_{}", index));
+    let transfer_result: Result<(), TransferError> = async {
+        for (index, source) in source_files.iter().enumerate() {
+            let source_path = Path::new(source);
+            let filename = source_path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| format!("file_{}", index));
 
-        if source_path.is_file() {
-            protocol
-                .transfer_file(source_path, &target, &filename, Some(tx.clone()))
-                .await?;
-        } else if source_path.is_dir() {
-            protocol
-                .transfer_directory(source_path, &target, &filename, Some(tx.clone()))
-                .await?;
+            if source_path.is_file() {
+                protocol
+                    .transfer_file(source_path, &target, &filename, &task_id, Some(tx.clone()))
+                    .await?;
+            } else if source_path.is_dir() {
+                protocol
+                    .transfer_directory(source_path, &target, &filename, &task_id, Some(tx.clone()))
+                    .await?;
+            }
         }
+        Ok(())
     }
+    .await;
+
+    // 清理协议层的任务状态（无论成功还是失败）
+    if let Some(local_protocol) = protocol.as_any().downcast_ref::<LocalFileProtocol>() {
+        local_protocol.unregister_task(&task_id).await;
+    }
+
+    // 检查传输结果
+    transfer_result?;
 
     // 如果是剪切操作，删除源文件
     if operation == TransferOperation::Cut {

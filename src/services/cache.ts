@@ -400,9 +400,13 @@ export class CacheManagementService {
    * @returns 清理的缓存数量
    */
   async cleanInvalidCache(): Promise<number> {
-    // TODO: 等待后端实现 clean_invalid_cache 命令
-    // 目前返回0作为占位
-    return 0;
+    try {
+      const result = await invoke('cleanup_invalid_cache_records');
+      return result as number;
+    } catch (error) {
+      console.error('清理无效缓存记录失败:', error);
+      throw error;
+    }
   }
 
   /**

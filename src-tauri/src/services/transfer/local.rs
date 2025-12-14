@@ -45,8 +45,16 @@ impl LocalFileProtocol {
         tasks.insert(task_id.to_string(), TaskState::default());
     }
 
+    /// 确保任务已注册（如果尚未注册则注册）
+    async fn ensure_task_registered(&self, task_id: &str) {
+        let mut tasks = self.active_tasks.write().await;
+        tasks
+            .entry(task_id.to_string())
+            .or_insert_with(TaskState::default);
+    }
+
     /// 移除任务
-    async fn unregister_task(&self, task_id: &str) {
+    pub async fn unregister_task(&self, task_id: &str) {
         let mut tasks = self.active_tasks.write().await;
         tasks.remove(task_id);
     }
@@ -263,6 +271,12 @@ impl Default for LocalFileProtocol {
     }
 }
 
+impl super::protocol::AsAny for LocalFileProtocol {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 #[async_trait::async_trait]
 impl TransferProtocol for LocalFileProtocol {
     fn name(&self) -> &str {
@@ -346,6 +360,7 @@ impl TransferProtocol for LocalFileProtocol {
         source: &Path,
         target: &TransferTarget,
         target_filename: &str,
+        task_id: &str,
         progress_sender: Option<ProgressSender>,
     ) -> Result<(), TransferError> {
         let target_path = target
@@ -355,15 +370,15 @@ impl TransferProtocol for LocalFileProtocol {
                 path: "路径为空".to_string(),
             })?;
 
-        let task_id = uuid::Uuid::new_v4().to_string();
-        self.register_task(&task_id).await;
+        // 确保任务已注册（如果尚未注册）
+        self.ensure_task_registered(task_id).await;
 
         // 获取文件大小
         let metadata = fs::metadata(source)
             .await
             .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
 
-        let mut progress = TransferProgress::new(task_id.clone(), 1, metadata.len());
+        let mut progress = TransferProgress::new(task_id.to_string(), 1, metadata.len());
         progress.status = TaskStatus::Running;
 
         let mut target_file_path = PathBuf::from(target_path).join(target_filename);
@@ -373,19 +388,14 @@ impl TransferProtocol for LocalFileProtocol {
             .resolve_target_path(&target_file_path, &ConflictStrategy::Rename)
             .await?;
 
-        let result = self
-            .copy_file_with_progress(
-                source,
-                &target_file_path,
-                &task_id,
-                progress_sender.as_ref(),
-                &mut progress,
-            )
-            .await;
-
-        self.unregister_task(&task_id).await;
-
-        result
+        self.copy_file_with_progress(
+            source,
+            &target_file_path,
+            task_id,
+            progress_sender.as_ref(),
+            &mut progress,
+        )
+        .await
     }
 
     async fn transfer_directory(
@@ -393,6 +403,7 @@ impl TransferProtocol for LocalFileProtocol {
         source: &Path,
         target: &TransferTarget,
         target_dirname: &str,
+        task_id: &str,
         progress_sender: Option<ProgressSender>,
     ) -> Result<(), TransferError> {
         let target_path = target
@@ -402,13 +413,13 @@ impl TransferProtocol for LocalFileProtocol {
                 path: "路径为空".to_string(),
             })?;
 
-        let task_id = uuid::Uuid::new_v4().to_string();
-        self.register_task(&task_id).await;
+        // 确保任务已注册（如果尚未注册）
+        self.ensure_task_registered(task_id).await;
 
         // 计算目录总大小和文件数
         let (total_size, total_files) = calculate_directory_size(source).await?;
 
-        let mut progress = TransferProgress::new(task_id.clone(), total_files, total_size);
+        let mut progress = TransferProgress::new(task_id.to_string(), total_files, total_size);
         progress.status = TaskStatus::Running;
 
         let mut target_dir_path = PathBuf::from(target_path).join(target_dirname);
@@ -418,19 +429,14 @@ impl TransferProtocol for LocalFileProtocol {
             .resolve_target_path(&target_dir_path, &ConflictStrategy::Rename)
             .await?;
 
-        let result = self
-            .copy_directory_recursive(
-                source,
-                &target_dir_path,
-                &task_id,
-                progress_sender.as_ref(),
-                &mut progress,
-            )
-            .await;
-
-        self.unregister_task(&task_id).await;
-
-        result
+        self.copy_directory_recursive(
+            source,
+            &target_dir_path,
+            task_id,
+            progress_sender.as_ref(),
+            &mut progress,
+        )
+        .await
     }
 
     async fn cancel_transfer(&self, task_id: &str) -> Result<(), TransferError> {
@@ -611,11 +617,20 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
     };
 
     // Windows drive type constants
-    const DRIVE_FIXED: u32 = 3;
+    const DRIVE_UNKNOWN: u32 = 0;
+    const DRIVE_NO_ROOT_DIR: u32 = 1;
     const DRIVE_REMOVABLE: u32 = 2;
+    const DRIVE_FIXED: u32 = 3;
+    const DRIVE_REMOTE: u32 = 4;
+    const DRIVE_CDROM: u32 = 5;
+    const DRIVE_RAMDISK: u32 = 6;
 
     let mut targets = Vec::new();
     let drives_bitmask = unsafe { GetLogicalDrives() };
+    
+    println!("=== Windows 设备发现开始 ===");
+    println!("发现驱动器位掩码: {:b} (十进制: {})", drives_bitmask, drives_bitmask);
+    println!("检查 26 个可能的驱动器字母 (A-Z)...");
 
     for i in 0..26 {
         if drives_bitmask & (1 << i) != 0 {
@@ -627,9 +642,20 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
                 .collect();
 
             let drive_type = unsafe { GetDriveTypeW(wide_path.as_ptr()) };
-
-            // 只处理固定驱动器和可移动设备
-            if drive_type != DRIVE_FIXED && drive_type != DRIVE_REMOVABLE {
+            
+            let _drive_type_name = match drive_type {
+                DRIVE_UNKNOWN => "UNKNOWN",
+                DRIVE_NO_ROOT_DIR => "NO_ROOT_DIR", 
+                DRIVE_REMOVABLE => "REMOVABLE",
+                DRIVE_FIXED => "FIXED",
+                DRIVE_REMOTE => "REMOTE",
+                DRIVE_CDROM => "CDROM",
+                DRIVE_RAMDISK => "RAMDISK",
+                _ => "OTHER",
+            };
+            
+            // 处理固定驱动器、可移动设备和CD-ROM
+            if drive_type != DRIVE_FIXED && drive_type != DRIVE_REMOVABLE && drive_type != DRIVE_CDROM {
                 continue;
             }
 
@@ -673,22 +699,24 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
                 None
             };
 
-            let device_type = if drive_type == DRIVE_REMOVABLE {
+            let device_type = if drive_type == DRIVE_REMOVABLE || drive_type == DRIVE_CDROM {
                 DeviceType::RemovableStorage
             } else {
                 DeviceType::LocalDrive
             };
 
             let name = if volume_label.is_empty() {
-                if device_type == DeviceType::RemovableStorage {
-                    format!("可移动磁盘 ({}:)", drive_letter)
-                } else {
-                    format!("本地磁盘 ({}:)", drive_letter)
+                match drive_type {
+                    DRIVE_REMOVABLE => format!("可移动磁盘 ({}:)", drive_letter),
+                    DRIVE_CDROM => format!("CD/DVD 驱动器 ({}:)", drive_letter),
+                    _ => format!("本地磁盘 ({}:)", drive_letter),
                 }
             } else {
                 format!("{} ({}:)", volume_label, drive_letter)
             };
 
+
+            
             targets.push(TransferTarget {
                 id: drive_path.clone(),
                 name,
@@ -699,6 +727,8 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
             });
         }
     }
+
+    println!("发现 {} 个可用驱动器", targets.len());
 
     Ok(targets)
 }

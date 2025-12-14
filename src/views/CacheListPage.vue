@@ -767,6 +767,7 @@ async function loadCacheList(): Promise<void> {
 /**
  * 刷新列表
  * 需求 7.2: 刷新缓存列表时清除所有选择状态
+ * 自动清理无效的缓存记录
  */
 async function refreshList(): Promise<void> {
   try {
@@ -1245,10 +1246,22 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
     if (taskId) {
       showTransferProgressDialog.value = true;
     } else {
-      new AppError(transferStore.lastError || '开始传输失败', { name: 'error' }).handle();
+      const errorMsg = transferStore.lastError || $t('transfer.startFailed');
+      // 检测源文件不存在的错误
+      if (errorMsg.includes('源文件不存在') || errorMsg.includes('SourceNotFound')) {
+        new AppError($t('transfer.sourceNotFound'), { name: 'error' }).handle();
+      } else {
+        new AppError(errorMsg, { name: 'error' }).handle();
+      }
     }
   } catch (error) {
-    new AppError(error).handle();
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    // 检测源文件不存在的错误
+    if (errorMsg.includes('源文件不存在') || errorMsg.includes('SourceNotFound')) {
+      new AppError($t('transfer.sourceNotFound'), { name: 'error' }).handle();
+    } else {
+      new AppError(error).handle();
+    }
   }
 }
 

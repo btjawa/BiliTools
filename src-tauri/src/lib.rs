@@ -53,6 +53,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             cancel_import,
             get_cache_list,
             get_cache_list_by_status,
+            cleanup_invalid_cache_records,
             delete_cache_item,
             open_cache_folder,
             check_local_cover,

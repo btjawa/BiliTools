@@ -64,124 +64,40 @@
               </div>
             </div>
 
-            <!-- 加载状态 -->
-            <div
-              v-if="isDiscoveringDevices"
-              class="flex items-center justify-center py-8"
-            >
-              <div class="text-center">
-                <div class="inline-block mb-3">
-                  <i :class="[$fa.weight, 'fa-spinner fa-spin text-blue-500 text-2xl']"></i>
-                </div>
-                <p class="text-(--desc-color)">{{ $t('transfer.discoveringDevices') }}</p>
-              </div>
-            </div>
+
 
             <!-- 新位置选择 -->
-            <div v-else>
-              <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2 mb-3">
+            <div class="space-y-3">
+              <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
                 <i :class="[$fa.weight, 'fa-arrow-right']"></i>
                 {{ $t('transfer.selectNewLocation') }}
               </h3>
 
-              <!-- 本地文件夹部分 -->
-              <div class="space-y-3">
-                <h4 class="text-xs font-medium text-(--desc-color) flex items-center gap-2">
-                  <i :class="[$fa.weight, 'fa-folder']"></i>
-                  {{ $t('transfer.localFolder') }}
-                </h4>
-
-                <!-- 本地文件夹选择 -->
-                <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-3">
-                  <!-- 当前选择的路径 -->
+              <!-- 本地文件夹选择 -->
+              <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-3">
+                <!-- 当前选择的路径 -->
+                <div
+                  v-if="selectedTarget"
+                  class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)"
+                >
+                  <div class="text-sm text-(--desc-color) mb-1">{{ $t('transfer.selectedTarget') }}</div>
+                  <div class="text-(--content-color) font-medium truncate">{{ selectedTarget.path }}</div>
                   <div
-                    v-if="selectedTarget"
-                    class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)"
+                    v-if="selectedTarget.available_space"
+                    class="text-xs text-(--desc-color) mt-2"
                   >
-                    <div class="text-sm text-(--desc-color) mb-1">{{ $t('transfer.selectedTarget') }}</div>
-                    <div class="text-(--content-color) font-medium truncate">{{ selectedTarget.path }}</div>
-                    <div
-                      v-if="selectedTarget.availableSpace"
-                      class="text-xs text-(--desc-color) mt-2"
-                    >
-                      {{ $t('transfer.availableSpace') }}: {{ formatFileSize(selectedTarget.availableSpace) }}
-                    </div>
-                  </div>
-
-                  <!-- 浏览按钮 -->
-                  <button
-                    class="w-full px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center justify-center gap-2"
-                    @click="handleBrowseFolder"
-                  >
-                    <i :class="[$fa.weight, 'fa-folder-open']"></i>
-                    {{ $t('transfer.selectFolder') }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- 移动设备部分 -->
-              <div
-                v-if="removableDevices.length > 0"
-                class="space-y-3 mt-4"
-              >
-                <h4 class="text-xs font-medium text-(--desc-color) flex items-center gap-2">
-                  <i :class="[$fa.weight, 'fa-usb']"></i>
-                  {{ $t('transfer.removableDevice') }}
-                </h4>
-
-                <!-- 设备列表 -->
-                <div class="bg-(--solid-button-color) rounded-lg p-3 space-y-2">
-                  <div
-                    v-for="device in removableDevices"
-                    :key="device.id"
-                    class="device-item"
-                    :class="{ 'selected': selectedTarget?.id === device.id }"
-                    @click="selectDevice(device)"
-                  >
-                    <div
-                      class="flex items-start gap-3 p-3 rounded-lg cursor-pointer hover:bg-(--hover-color) transition-colors"
-                      :class="{ 'bg-(--hover-color)': selectedTarget?.id === device.id }"
-                    >
-                      <!-- 设备图标 -->
-                      <div class="flex-shrink-0 mt-1">
-                        <i
-                          :class="[$fa.weight, device.connectionStatus === 'connected' ? 'fa-check-circle text-green-500' : 'fa-exclamation-circle text-red-500']"
-                        ></i>
-                      </div>
-
-                      <!-- 设备信息 -->
-                      <div class="flex-1 min-w-0">
-                        <div class="font-medium text-(--content-color)">{{ device.name }}</div>
-                        <div class="text-xs text-(--desc-color) mt-1">
-                          {{ device.path }}
-                        </div>
-                        <div
-                          v-if="device.availableSpace"
-                          class="text-xs text-(--desc-color) mt-1"
-                        >
-                          {{ $t('transfer.availableSpace') }}: {{ formatFileSize(device.availableSpace) }}
-                        </div>
-                      </div>
-
-                      <!-- 选择指示器 -->
-                      <div
-                        v-if="selectedTarget?.id === device.id"
-                        class="flex-shrink-0 text-blue-500"
-                      >
-                        <i :class="[$fa.weight, 'fa-check']"></i>
-                      </div>
-                    </div>
+                    {{ $t('transfer.availableSpace') }}: {{ formatFileSize(selectedTarget.available_space) }}
                   </div>
                 </div>
-              </div>
 
-              <!-- 无设备提示 -->
-              <div
-                v-if="removableDevices.length === 0 && !isDiscoveringDevices"
-                class="text-center py-4 text-(--desc-color)"
-              >
-                <i :class="[$fa.weight, 'fa-info-circle']"></i>
-                {{ $t('transfer.noDevicesFound') }}
+                <!-- 浏览按钮 -->
+                <button
+                  class="w-full px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center justify-center gap-2"
+                  @click="handleBrowseFolder"
+                >
+                  <i :class="[$fa.weight, 'fa-folder-open']"></i>
+                  {{ $t('transfer.selectFolder') }}
+                </button>
               </div>
             </div>
 
@@ -215,7 +131,7 @@
             </button>
             <button
               class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="!selectedTarget || isDiscoveringDevices || isValidating"
+              :disabled="!selectedTarget || isValidating"
               @click="handleConfirm"
             >
               <i :class="[$fa.weight, 'fa-check']"></i>
@@ -266,7 +182,7 @@ const transferStore = useTransferStore();
 // 状态
 // ============================================================================
 
-const isDiscoveringDevices = ref(false);
+
 const isValidating = ref(false);
 const selectedTarget = ref<Types.TransferTarget | null>(null);
 const lastError = ref<string | null>(null);
@@ -287,9 +203,7 @@ const currentCacheRoot = computed(() => {
 /**
  * 可移动设备列表
  */
-const removableDevices = computed(() => {
-  return transferStore.availableTargets.filter((target) => target.type === 'removable');
-});
+
 
 /**
  * Font Awesome 权重
@@ -334,8 +248,7 @@ async function initialize() {
     // 加载当前缓存根目录
     await transferStore.loadCurrentCacheRoot();
 
-    // 发现可用设备
-    await discoverDevices();
+
 
     // 计算缓存根目录信息（这里暂时使用占位符）
     // 实际实现需要后端支持
@@ -349,37 +262,9 @@ async function initialize() {
   }
 }
 
-/**
- * 发现可用设备
- */
-async function discoverDevices() {
-  try {
-    isDiscoveringDevices.value = true;
-    lastError.value = null;
-    await transferStore.discoverTargets();
-  } catch (error) {
-    lastError.value = error instanceof Error ? error.message : t('transfer.error');
-    console.error('发现设备失败:', error);
-  } finally {
-    isDiscoveringDevices.value = false;
-  }
-}
 
-/**
- * 选择设备
- */
-function selectDevice(device: Types.TransferTarget) {
-  if (device.connectionStatus === 'connected') {
-    selectedTarget.value = device;
-    lastError.value = null;
-    spaceWarning.value = null;
 
-    // 检查空间
-    checkSpace();
-  } else {
-    lastError.value = t('transfer.deviceDisconnected');
-  }
-}
+
 
 /**
  * 检查目标空间
@@ -387,7 +272,7 @@ function selectDevice(device: Types.TransferTarget) {
 function checkSpace() {
   if (!selectedTarget.value || !cacheRootInfo.value) return;
 
-  const availableSpace = selectedTarget.value.availableSpace || 0;
+  const availableSpace = selectedTarget.value.available_space || 0;
   const requiredSpace = cacheRootInfo.value.totalSize;
 
   if (availableSpace < requiredSpace) {
@@ -406,11 +291,29 @@ function checkSpace() {
 async function handleBrowseFolder() {
   try {
     lastError.value = null;
-    // 这里会在后续的 Tauri 命令中实现
-    // 暂时使用占位符
-    console.log('打开文件夹浏览器');
+    
+    // 调用文件夹选择对话框
+    const folderPath = await transferStore.selectFolder();
+    
+    if (folderPath) {
+      // 创建本地文件夹目标
+      const localTarget: Types.TransferTarget = {
+        id: `local_${Date.now()}`,
+        name: folderPath.split(/[/\\]/).pop() || folderPath,
+        device_type: 'LocalDrive',
+        path: folderPath,
+        available_space: undefined,
+        connection_status: 'Connected',
+      };
+      
+      selectedTarget.value = localTarget;
+      
+      // 检查空间
+      checkSpace();
+    }
   } catch (error) {
     lastError.value = error instanceof Error ? error.message : t('transfer.error');
+    console.error('选择文件夹失败:', error);
   }
 }
 
@@ -468,7 +371,7 @@ function reset() {
   selectedTarget.value = null;
   lastError.value = null;
   spaceWarning.value = null;
-  isDiscoveringDevices.value = false;
+
   isValidating.value = false;
 }
 </script>
