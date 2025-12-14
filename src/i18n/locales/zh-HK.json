@@ -670,6 +670,8 @@
     "failed": "失敗",
     "cancelled": "已取消",
     "paused": "已暫停",
+    "pending": "等待中",
+    "running": "傳輸中",
     "error": "錯誤",
     "insufficientSpace": "目標位置空間不足",
     "invalidTarget": "無效的目標位置",

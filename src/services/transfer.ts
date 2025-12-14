@@ -44,8 +44,8 @@ export async function checkAvailableSpace(
 ): Promise<boolean> {
   try {
     const hasSpace = await invoke<boolean>('check_available_space', {
-      target_path: targetPath,
-      required_size: requiredSize,
+      targetPath,
+      requiredSize,
     });
     return hasSpace;
   } catch (error) {
@@ -89,7 +89,7 @@ export async function startRootMigration(request: Types.RootMigrationRequest): P
  */
 export async function pauseTransfer(taskId: string): Promise<void> {
   try {
-    await invoke('pause_transfer', { task_id: taskId });
+    await invoke('pause_transfer', { taskId });
   } catch (error) {
     console.error('暂停传输失败:', error);
     throw error;
@@ -101,7 +101,7 @@ export async function pauseTransfer(taskId: string): Promise<void> {
  */
 export async function cancelTransfer(taskId: string): Promise<void> {
   try {
-    await invoke('cancel_transfer', { task_id: taskId });
+    await invoke('cancel_transfer', { taskId });
   } catch (error) {
     console.error('取消传输失败:', error);
     throw error;
@@ -113,7 +113,7 @@ export async function cancelTransfer(taskId: string): Promise<void> {
  */
 export async function resumeTransfer(taskId: string): Promise<void> {
   try {
-    await invoke('resume_transfer', { task_id: taskId });
+    await invoke('resume_transfer', { taskId });
   } catch (error) {
     console.error('恢复传输失败:', error);
     throw error;
@@ -126,7 +126,7 @@ export async function resumeTransfer(taskId: string): Promise<void> {
 export async function getTransferProgress(taskId: string): Promise<Types.TransferProgress | null> {
   try {
     const progress = await invoke<Types.TransferProgress | null>('get_transfer_progress', {
-      task_id: taskId,
+      taskId,
     });
     return progress;
   } catch (error) {

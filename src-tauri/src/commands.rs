@@ -948,7 +948,7 @@ pub async fn validate_transfer_target(target: TransferTarget) -> TauriResult<boo
 }
 
 /// 检查目标位置的可用空间
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "camelCase")]
 #[specta::specta]
 pub async fn check_available_space(target_path: String, required_size: u64) -> TauriResult<bool> {
     let protocol = LocalFileProtocol::new();
@@ -986,7 +986,7 @@ pub async fn start_root_migration(_request: RootMigrationRequest) -> TauriResult
 }
 
 /// 暂停传输任务
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "camelCase")]
 #[specta::specta]
 pub async fn pause_transfer(task_id: String) -> TauriResult<()> {
     let manager = get_transfer_manager();
@@ -995,7 +995,7 @@ pub async fn pause_transfer(task_id: String) -> TauriResult<()> {
 }
 
 /// 恢复传输任务
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "camelCase")]
 #[specta::specta]
 pub async fn resume_transfer(task_id: String) -> TauriResult<()> {
     let manager = get_transfer_manager();
@@ -1004,7 +1004,7 @@ pub async fn resume_transfer(task_id: String) -> TauriResult<()> {
 }
 
 /// 取消传输任务
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "camelCase")]
 #[specta::specta]
 pub async fn cancel_transfer(task_id: String) -> TauriResult<()> {
     let manager = get_transfer_manager();
@@ -1013,7 +1013,7 @@ pub async fn cancel_transfer(task_id: String) -> TauriResult<()> {
 }
 
 /// 获取传输进度
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "camelCase")]
 #[specta::specta]
 pub async fn get_transfer_progress(task_id: String) -> TauriResult<Option<TransferProgress>> {
     let manager = get_transfer_manager();
@@ -1144,7 +1144,7 @@ pub async fn listen_device_changes(event: tauri::ipc::Channel<Vec<DeviceInfo>>) 
 }
 
 /// 监听传输进度更新（使用 Channel 事件流）
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "camelCase")]
 #[specta::specta]
 pub async fn listen_transfer_progress(
     task_id: String,
@@ -1154,10 +1154,11 @@ pub async fn listen_transfer_progress(
 
     // 启动一个后台任务持续发送进度更新
     tokio::spawn(async move {
+        // 最多等待 10 秒让任务出现
+        let mut retry_count = 0;
+        let max_retries = 20;
+        
         loop {
-            // 每500ms检查一次进度
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
             match manager.get_progress(&task_id).await {
                 Some(progress) => {
                     // 发送进度更新
@@ -1175,12 +1176,22 @@ pub async fn listen_transfer_progress(
                         }
                         _ => {}
                     }
+                    
+                    // 重置重试计数
+                    retry_count = 0;
                 }
                 None => {
-                    // 任务不存在，停止监听
-                    break;
+                    // 任务不存在，可能还没开始或已完成
+                    retry_count += 1;
+                    if retry_count >= max_retries {
+                        // 超过最大重试次数，停止监听
+                        break;
+                    }
                 }
             }
+            
+            // 每200ms检查一次进度
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
     });
 

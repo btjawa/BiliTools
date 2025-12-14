@@ -8,6 +8,9 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import * as transferService from '@/services/transfer';
+import * as backend from '@/services/backend';
+import { Channel } from '@tauri-apps/api/core';
+import { useCacheStore } from '@/store/cache';
 import type * as Types from '@/types/transfer.d';
 
 /**
@@ -254,6 +257,9 @@ export const useTransferStore = defineStore('transfer', () => {
       // 添加到活跃任务或队列
       if (canStartNewTask.value) {
         activeTasks.value.set(taskId, task);
+        
+        // 开始监听进度
+        startProgressListener(taskId);
       } else {
         taskQueue.value.push(taskId);
       }
@@ -305,6 +311,9 @@ export const useTransferStore = defineStore('transfer', () => {
       // 添加到活跃任务或队列
       if (canStartNewTask.value) {
         activeTasks.value.set(taskId, task);
+        
+        // 开始监听进度
+        startProgressListener(taskId);
       } else {
         taskQueue.value.push(taskId);
       }
@@ -416,6 +425,11 @@ export const useTransferStore = defineStore('transfer', () => {
 
       // 如果任务完成，从活跃任务中移除
       if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') {
+        // 如果是剪切操作且成功完成，更新缓存列表
+        if (progress.status === 'completed' && task.operation === 'Cut') {
+          handleCutOperationCompleted(task);
+        }
+        
         activeTasks.value.delete(progress.taskId);
 
         // 尝试启动队列中的下一个任务
@@ -481,6 +495,81 @@ export const useTransferStore = defineStore('transfer', () => {
    */
   function clearError(): void {
     lastError.value = null;
+  }
+
+  /**
+   * 处理剪切操作完成
+   */
+  function handleCutOperationCompleted(task: Types.TransferTask): void {
+    try {
+      const cacheStore = useCacheStore();
+      
+      // 从缓存列表中移除已剪切的项目
+      // source_files 包含的是缓存路径，我们需要根据路径找到对应的缓存项ID
+      for (const sourcePath of task.source_files) {
+        // 从缓存项中找到匹配的项目并移除
+        const itemToRemove = cacheStore.cacheItems.find((item: any) => item.cachePath === sourcePath);
+        
+        if (itemToRemove) {
+          // 从选中项目中移除
+          const selectedIndex = cacheStore.selectedItems.indexOf(itemToRemove.id);
+          if (selectedIndex !== -1) {
+            cacheStore.selectedItems.splice(selectedIndex, 1);
+          }
+          
+          // 从缓存项列表中移除
+          const itemIndex = cacheStore.cacheItems.indexOf(itemToRemove);
+          if (itemIndex !== -1) {
+            cacheStore.cacheItems.splice(itemIndex, 1);
+          }
+          
+          // 从显示项列表中移除
+          cacheStore.displayItems = cacheStore.displayItems.filter((displayItem: any) => {
+            if (displayItem.type === 'video') {
+              return displayItem.data.id !== itemToRemove.id;
+            }
+            return true;
+          });
+        }
+      }
+      
+      // 重新加载缓存列表以确保数据一致性
+      cacheStore.loadCacheList();
+    } catch (error) {
+      console.error('处理剪切操作完成失败:', error);
+    }
+  }
+
+  /**
+   * 开始监听传输进度
+   */
+  async function startProgressListener(taskId: string): Promise<void> {
+    try {
+      const channel = new Channel<backend.TransferProgress>();
+      
+      // 监听进度更新
+      channel.onmessage = (backendProgress) => {
+        // 将后端的 snake_case 字段转换为前端的 camelCase 字段
+        const progress: Types.TransferProgress = {
+          taskId: backendProgress.task_id,
+          totalFiles: backendProgress.total_files,
+          completedFiles: backendProgress.completed_files,
+          totalSize: backendProgress.total_size,
+          transferredSize: backendProgress.transferred_size,
+          speed: backendProgress.speed,
+          remainingTime: backendProgress.remaining_time,
+          currentFile: backendProgress.current_file,
+          status: backendProgress.status.toLowerCase() as Types.TransferTaskStatus,
+        };
+        
+        updateTransferProgress(progress);
+      };
+      
+      // 开始监听
+      await backend.commands.listenTransferProgress(taskId, channel);
+    } catch (error) {
+      console.error('开始监听传输进度失败:', error);
+    }
   }
 
   /**

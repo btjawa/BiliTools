@@ -12,7 +12,7 @@
           <div class="modal-header">
             <h2 class="modal-title">
               <i :class="[$fa.weight, 'fa-exchange']"></i>
-              <span class="text-(--content-color)">{{ $t('transfer.transferring') }}</span>
+              <span class="text-(--content-color)">{{ transferTitle }}</span>
             </h2>
             <button
               v-if="canClose"
@@ -172,6 +172,29 @@ const allTasks = computed(() => transferStore.allTasks);
  */
 const hasRunningTasks = computed(() => {
   return allTasks.value.some((task) => task.status === 'running');
+});
+
+/**
+ * 传输状态标题
+ */
+const transferTitle = computed(() => {
+  if (allTasks.value.length === 0) {
+    return t('transfer.transferring');
+  }
+  
+  const allCompleted = allTasks.value.every(task => task.status === 'completed');
+  const anyFailed = allTasks.value.some(task => task.status === 'failed');
+  const anyCancelled = allTasks.value.some(task => task.status === 'cancelled');
+  
+  if (anyFailed) {
+    return t('transfer.transferFailed');
+  } else if (anyCancelled) {
+    return t('transfer.transferCancelled');
+  } else if (allCompleted) {
+    return t('transfer.transferCompleted');
+  } else {
+    return t('transfer.transferring');
+  }
 });
 
 /**

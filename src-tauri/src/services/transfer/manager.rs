@@ -364,22 +364,32 @@ async fn handle_transfer_result(
     task_id: String,
     result: Result<(), TransferError>,
 ) {
+    // 先更新任务状态（在移除之前）
+    {
+        let mut active_tasks = manager.active_tasks.write().await;
+        if let Some(task) = active_tasks.get_mut(&task_id) {
+            match &result {
+                Ok(_) => {
+                    task.status = TaskStatus::Completed;
+                    task.progress.status = TaskStatus::Completed;
+                }
+                Err(e) => {
+                    task.status = TaskStatus::Failed;
+                    task.progress.status = TaskStatus::Failed;
+                    task.error_message = Some(e.user_friendly_message());
+                }
+            }
+        }
+    }
+    
+    // 等待一小段时间让前端有机会获取最终状态
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    
     // 从活跃任务中移除
-    let mut task = match manager.active_tasks.write().await.remove(&task_id) {
+    let task = match manager.active_tasks.write().await.remove(&task_id) {
         Some(t) => t,
         None => return,
     };
-
-    // 更新任务状态
-    match result {
-        Ok(_) => {
-            task.status = TaskStatus::Completed;
-        }
-        Err(e) => {
-            task.status = TaskStatus::Failed;
-            task.error_message = Some(e.user_friendly_message());
-        }
-    }
 
     // 添加到已完成任务
     manager.completed_tasks.write().await.push(task);
@@ -427,7 +437,9 @@ async fn execute_transfer_task(
     let manager_clone = manager.clone();
     let task_id_clone = task_id.clone();
     tokio::spawn(async move {
-        while let Some(progress) = rx.recv().await {
+        while let Some(mut progress) = rx.recv().await {
+            // 使用正确的任务 ID
+            progress.task_id = task_id_clone.clone();
             manager_clone
                 .update_task_progress(&task_id_clone, progress)
                 .await;

@@ -672,6 +672,8 @@
     "failed": "失败",
     "cancelled": "已取消",
     "paused": "已暂停",
+    "pending": "等待中",
+    "running": "传输中",
     "error": "错误",
     "insufficientSpace": "目标位置空间不足",
     "invalidTarget": "无效的目标位置",

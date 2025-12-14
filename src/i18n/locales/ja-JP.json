@@ -670,6 +670,8 @@
     "failed": "失敗",
     "cancelled": "キャンセル済み",
     "paused": "一時停止中",
+    "pending": "待機中",
+    "running": "転送中",
     "error": "エラー",
     "insufficientSpace": "ターゲット位置の容量が不足しています",
     "invalidTarget": "無効なターゲット位置",

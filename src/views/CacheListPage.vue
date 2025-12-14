@@ -1244,7 +1244,6 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
 
     if (taskId) {
       showTransferProgressDialog.value = true;
-      new AppError(`传输已开始 (ID: ${taskId})`, { name: 'success' }).handle();
     } else {
       new AppError(transferStore.lastError || '开始传输失败', { name: 'error' }).handle();
     }

@@ -670,6 +670,8 @@
     "failed": "Failed",
     "cancelled": "Cancelled",
     "paused": "Paused",
+    "pending": "Pending",
+    "running": "Transferring",
     "error": "Error",
     "insufficientSpace": "Insufficient space at target location",
     "invalidTarget": "Invalid target location",
