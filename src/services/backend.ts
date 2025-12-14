@@ -452,6 +452,17 @@ async checkAvailableSpace(targetPath: string, requiredSize: number) : Promise<Re
 }
 },
 /**
+ * 打开文件夹选择对话框
+ */
+async selectFolder() : Promise<Result<string | null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("select_folder") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 开始文件传输
  */
 async startTransfer(request: TransferRequest) : Promise<Result<string, TauriError>> {

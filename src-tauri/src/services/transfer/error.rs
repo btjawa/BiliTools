@@ -51,7 +51,6 @@ pub enum TransferError {
     Unknown { message: String },
 }
 
-
 impl TransferError {
     /// 从标准IO错误转换
     pub fn from_io_error(err: std::io::Error, path: Option<&str>) -> Self {
@@ -109,7 +108,10 @@ impl TransferError {
     pub fn user_friendly_message(&self) -> String {
         match self {
             TransferError::InvalidTargetPath { path } => format!("目标路径无效：{}", path),
-            TransferError::InsufficientSpace { required, available } => {
+            TransferError::InsufficientSpace {
+                required,
+                available,
+            } => {
                 format!(
                     "空间不足（需要：{}MB，可用：{}MB）",
                     required / 1024 / 1024,

@@ -6,7 +6,7 @@ use super::error::TransferError;
 use super::filename::FilenameHandler;
 use super::protocol::{ProgressSender, TransferProtocol};
 use super::types::{
-    ConnectionStatus, ConflictStrategy, DeviceInfo, DeviceType, TaskStatus, TransferProgress,
+    ConflictStrategy, ConnectionStatus, DeviceInfo, DeviceType, TaskStatus, TransferProgress,
     TransferTarget,
 };
 use std::collections::HashMap;
@@ -23,21 +23,12 @@ pub struct LocalFileProtocol {
 }
 
 /// 任务状态
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct TaskState {
     /// 是否已取消
     cancelled: bool,
     /// 是否已暂停
     paused: bool,
-}
-
-impl Default for TaskState {
-    fn default() -> Self {
-        Self {
-            cancelled: false,
-            paused: false,
-        }
-    }
 }
 
 impl LocalFileProtocol {
@@ -59,7 +50,6 @@ impl LocalFileProtocol {
         let mut tasks = self.active_tasks.write().await;
         tasks.remove(task_id);
     }
-
 
     /// 检查任务是否已取消
     async fn is_cancelled(&self, task_id: &str) -> bool {
@@ -117,9 +107,9 @@ impl LocalFileProtocol {
         }
 
         // 验证源文件可读
-        let metadata = fs::metadata(source).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&source.to_string_lossy()))
-        })?;
+        let metadata = fs::metadata(source)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
 
         // 如果源文件是只读的，尝试修改权限
         if metadata.permissions().readonly() {
@@ -129,18 +119,18 @@ impl LocalFileProtocol {
 
         // 创建目标目录
         if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent).await.map_err(|e| {
-                TransferError::from_io_error(e, Some(&parent.to_string_lossy()))
-            })?;
+            fs::create_dir_all(parent)
+                .await
+                .map_err(|e| TransferError::from_io_error(e, Some(&parent.to_string_lossy())))?;
         }
 
         // 打开源文件和目标文件
-        let mut source_file = fs::File::open(source).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&source.to_string_lossy()))
-        })?;
-        let mut target_file = fs::File::create(target).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&target.to_string_lossy()))
-        })?;
+        let mut source_file = fs::File::open(source)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
+        let mut target_file = fs::File::create(target)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
 
         // 使用缓冲区复制
         let mut buffer = vec![0u8; 1024 * 1024]; // 1MB 缓冲区
@@ -158,17 +148,19 @@ impl LocalFileProtocol {
             // 等待恢复（如果暂停）
             self.wait_if_paused(task_id).await;
 
-            let n = source_file.read(&mut buffer).await.map_err(|e| {
-                TransferError::from_io_error(e, Some(&source.to_string_lossy()))
-            })?;
+            let n = source_file
+                .read(&mut buffer)
+                .await
+                .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
 
             if n == 0 {
                 break;
             }
 
-            target_file.write_all(&buffer[..n]).await.map_err(|e| {
-                TransferError::from_io_error(e, Some(&target.to_string_lossy()))
-            })?;
+            target_file
+                .write_all(&buffer[..n])
+                .await
+                .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
 
             bytes_copied += n as u64;
 
@@ -176,13 +168,15 @@ impl LocalFileProtocol {
             if let Some(sender) = progress_sender {
                 current_progress.transferred_size += n as u64;
                 current_progress.current_file = source.to_string_lossy().to_string();
-                
+
                 // 计算速度和剩余时间
                 let elapsed = start_time.elapsed().as_secs_f64();
                 if elapsed > 0.0 {
                     current_progress.speed = bytes_copied as f64 / elapsed;
-                    let remaining_bytes = current_progress.total_size - current_progress.transferred_size;
-                    current_progress.remaining_time = remaining_bytes as f64 / current_progress.speed;
+                    let remaining_bytes =
+                        current_progress.total_size - current_progress.transferred_size;
+                    current_progress.remaining_time =
+                        remaining_bytes as f64 / current_progress.speed;
                 }
 
                 let _ = sender.send(current_progress.clone()).await;
@@ -190,13 +184,13 @@ impl LocalFileProtocol {
         }
 
         // 确保数据写入磁盘
-        target_file.flush().await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&target.to_string_lossy()))
-        })?;
+        target_file
+            .flush()
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
 
         Ok(())
     }
-
 
     /// 递归复制目录
     async fn copy_directory_recursive(
@@ -208,18 +202,20 @@ impl LocalFileProtocol {
         current_progress: &mut TransferProgress,
     ) -> Result<(), TransferError> {
         // 创建目标目录
-        fs::create_dir_all(target).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&target.to_string_lossy()))
-        })?;
+        fs::create_dir_all(target)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
 
         // 读取源目录内容
-        let mut entries = fs::read_dir(source).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&source.to_string_lossy()))
-        })?;
+        let mut entries = fs::read_dir(source)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
 
-        while let Some(entry) = entries.next_entry().await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&source.to_string_lossy()))
-        })? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?
+        {
             // 检查是否取消
             if self.is_cancelled(task_id).await {
                 return Err(TransferError::UserCancelled);
@@ -267,7 +263,6 @@ impl Default for LocalFileProtocol {
     }
 }
 
-
 #[async_trait::async_trait]
 impl TransferProtocol for LocalFileProtocol {
     fn name(&self) -> &str {
@@ -300,9 +295,12 @@ impl TransferProtocol for LocalFileProtocol {
     }
 
     async fn validate_target(&self, target: &TransferTarget) -> Result<bool, TransferError> {
-        let path = target.path.as_ref().ok_or_else(|| TransferError::InvalidTargetPath {
-            path: "路径为空".to_string(),
-        })?;
+        let path = target
+            .path
+            .as_ref()
+            .ok_or_else(|| TransferError::InvalidTargetPath {
+                path: "路径为空".to_string(),
+            })?;
 
         let path = Path::new(path);
 
@@ -332,9 +330,12 @@ impl TransferProtocol for LocalFileProtocol {
         target: &TransferTarget,
         required_size: u64,
     ) -> Result<bool, TransferError> {
-        let path = target.path.as_ref().ok_or_else(|| TransferError::InvalidTargetPath {
-            path: "路径为空".to_string(),
-        })?;
+        let path = target
+            .path
+            .as_ref()
+            .ok_or_else(|| TransferError::InvalidTargetPath {
+                path: "路径为空".to_string(),
+            })?;
 
         let available = get_available_space(Path::new(path))?;
         Ok(available >= required_size)
@@ -347,17 +348,20 @@ impl TransferProtocol for LocalFileProtocol {
         target_filename: &str,
         progress_sender: Option<ProgressSender>,
     ) -> Result<(), TransferError> {
-        let target_path = target.path.as_ref().ok_or_else(|| TransferError::InvalidTargetPath {
-            path: "路径为空".to_string(),
-        })?;
+        let target_path = target
+            .path
+            .as_ref()
+            .ok_or_else(|| TransferError::InvalidTargetPath {
+                path: "路径为空".to_string(),
+            })?;
 
         let task_id = uuid::Uuid::new_v4().to_string();
         self.register_task(&task_id).await;
 
         // 获取文件大小
-        let metadata = fs::metadata(source).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&source.to_string_lossy()))
-        })?;
+        let metadata = fs::metadata(source)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
 
         let mut progress = TransferProgress::new(task_id.clone(), 1, metadata.len());
         progress.status = TaskStatus::Running;
@@ -391,9 +395,12 @@ impl TransferProtocol for LocalFileProtocol {
         target_dirname: &str,
         progress_sender: Option<ProgressSender>,
     ) -> Result<(), TransferError> {
-        let target_path = target.path.as_ref().ok_or_else(|| TransferError::InvalidTargetPath {
-            path: "路径为空".to_string(),
-        })?;
+        let target_path = target
+            .path
+            .as_ref()
+            .ok_or_else(|| TransferError::InvalidTargetPath {
+                path: "路径为空".to_string(),
+            })?;
 
         let task_id = uuid::Uuid::new_v4().to_string();
         self.register_task(&task_id).await;
@@ -475,7 +482,6 @@ impl TransferProtocol for LocalFileProtocol {
     }
 }
 
-
 // ============================================================================
 // 辅助函数
 // ============================================================================
@@ -488,13 +494,15 @@ pub async fn calculate_directory_size(path: &Path) -> Result<(u64, usize), Trans
     let mut stack = vec![path.to_path_buf()];
 
     while let Some(current) = stack.pop() {
-        let mut entries = fs::read_dir(&current).await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&current.to_string_lossy()))
-        })?;
+        let mut entries = fs::read_dir(&current)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&current.to_string_lossy())))?;
 
-        while let Some(entry) = entries.next_entry().await.map_err(|e| {
-            TransferError::from_io_error(e, Some(&current.to_string_lossy()))
-        })? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some(&current.to_string_lossy())))?
+        {
             let entry_path = entry.path();
             let file_type = entry.file_type().await.map_err(|e| {
                 TransferError::from_io_error(e, Some(&entry_path.to_string_lossy()))
@@ -589,7 +597,6 @@ fn get_available_space_unix(path: &Path) -> Result<u64, TransferError> {
         })
     }
 }
-
 
 // ============================================================================
 // Windows 设备发现
@@ -696,7 +703,6 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
     Ok(targets)
 }
 
-
 // ============================================================================
 // macOS 设备发现
 // ============================================================================
@@ -708,13 +714,15 @@ async fn discover_macos_volumes() -> Result<Vec<TransferTarget>, TransferError> 
     // 扫描 /Volumes 目录
     let volumes_path = Path::new("/Volumes");
     if volumes_path.exists() {
-        let mut entries = fs::read_dir(volumes_path).await.map_err(|e| {
-            TransferError::from_io_error(e, Some("/Volumes"))
-        })?;
+        let mut entries = fs::read_dir(volumes_path)
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some("/Volumes")))?;
 
-        while let Some(entry) = entries.next_entry().await.map_err(|e| {
-            TransferError::from_io_error(e, Some("/Volumes"))
-        })? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| TransferError::from_io_error(e, Some("/Volumes")))?
+        {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
 
@@ -801,7 +809,6 @@ fn get_total_space_unix(path: &Path) -> Result<u64, TransferError> {
     }
 }
 
-
 // ============================================================================
 // Linux 设备发现
 // ============================================================================
@@ -811,9 +818,9 @@ async fn discover_linux_mounts() -> Result<Vec<TransferTarget>, TransferError> {
     let mut targets = Vec::new();
 
     // 读取 /proc/mounts 获取挂载点
-    let mounts_content = fs::read_to_string("/proc/mounts").await.map_err(|e| {
-        TransferError::from_io_error(e, Some("/proc/mounts"))
-    })?;
+    let mounts_content = fs::read_to_string("/proc/mounts")
+        .await
+        .map_err(|e| TransferError::from_io_error(e, Some("/proc/mounts")))?;
 
     for line in mounts_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -907,13 +914,11 @@ async fn discover_linux_mounts() -> Result<Vec<TransferTarget>, TransferError> {
 #[cfg(target_os = "linux")]
 async fn is_removable_device_linux(device: &str) -> bool {
     // 从设备路径提取设备名（如 /dev/sdb1 -> sdb）
-    let device_name = device
-        .strip_prefix("/dev/")
-        .and_then(|s| {
-            // 移除分区号
-            let base = s.trim_end_matches(|c: char| c.is_ascii_digit());
-            Some(base)
-        });
+    let device_name = device.strip_prefix("/dev/").and_then(|s| {
+        // 移除分区号
+        let base = s.trim_end_matches(|c: char| c.is_ascii_digit());
+        Some(base)
+    });
 
     if let Some(name) = device_name {
         // 检查 /sys/block/{device}/removable
@@ -925,7 +930,6 @@ async fn is_removable_device_linux(device: &str) -> bool {
 
     false
 }
-
 
 // ============================================================================
 // 设备信息辅助函数
@@ -1095,5 +1099,3 @@ impl LocalFileProtocol {
         Ok(devices)
     }
 }
-
-

@@ -168,7 +168,7 @@ function handleClick(event: MouseEvent) {
 
 /**
  * 处理右键菜单
- * 需求 1.1, 2.1: 在右键菜单中添加复制/剪切选项
+ * 需求 1.1, 2.1: 在右键菜单中显示复制/剪切选项
  */
 function handleContextMenu(event: MouseEvent) {
   // 确保项目被选中
@@ -176,8 +176,27 @@ function handleContextMenu(event: MouseEvent) {
     emit('select');
   }
 
-  // 触发复制事件
-  emit('copy', props.item);
+  // 通过自定义事件传递菜单选项
+  const customEvent = new CustomEvent('cache-context-menu', {
+    detail: {
+      event,
+      item: props.item,
+      options: [
+        {
+          icon: 'fa-copy',
+          text: 'transfer.copy',
+          action: () => emit('copy', props.item),
+        },
+        {
+          icon: 'fa-scissors',
+          text: 'transfer.cut',
+          action: () => emit('cut', props.item),
+        },
+      ],
+    },
+  });
+  
+  document.dispatchEvent(customEvent);
 }
 
 // ============================================================================

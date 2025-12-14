@@ -62,8 +62,8 @@ const props = defineProps<Props>();
  * 任务名称
  */
 const taskName = computed(() => {
-  const operation = props.task.operation === 'copy' ? '复制' : '剪切';
-  return `${operation} - ${props.task.sourceFiles.length} 项`;
+  const operation = props.task.operation === 'Copy' ? '复制' : '剪切';
+  return `${operation} - ${props.task.source_files.length} 项`;
 });
 
 /**

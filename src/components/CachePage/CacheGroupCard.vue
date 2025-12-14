@@ -7,6 +7,7 @@
       'opacity-60': hasUnavailableVideos,
     }"
     @click="handleGroupClick"
+    @contextmenu.prevent="handleGroupContextMenu"
   >
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
@@ -285,6 +286,8 @@ interface Emits {
   (e: 'toggleExpand', groupId: string): void;
   (e: 'openFolder', group: Types.CacheGroup): void;
   (e: 'delete', group: Types.CacheGroup): void;
+  (e: 'copyGroup', group: Types.CacheGroup): void;
+  (e: 'cutGroup', group: Types.CacheGroup): void;
   (e: 'selectVideo', videoId: string): void;
   (e: 'selectVideoRange', videoId: string): void;
   (e: 'playVideo', video: Types.CacheItem): void;
@@ -306,6 +309,38 @@ function handleGroupClick(event: MouseEvent) {
     // 普通点击：切换选择
     emit('select');
   }
+}
+
+/**
+ * 处理组右键菜单
+ */
+function handleGroupContextMenu(event: MouseEvent) {
+  // 确保组被选中
+  if (!props.selected) {
+    emit('select');
+  }
+
+  // 通过自定义事件传递菜单选项
+  const customEvent = new CustomEvent('cache-context-menu', {
+    detail: {
+      event,
+      item: props.group,
+      options: [
+        {
+          icon: 'fa-copy',
+          text: 'transfer.copy',
+          action: () => emit('copyGroup', props.group),
+        },
+        {
+          icon: 'fa-scissors',
+          text: 'transfer.cut',
+          action: () => emit('cutGroup', props.group),
+        },
+      ],
+    },
+  });
+  
+  document.dispatchEvent(customEvent);
 }
 
 /**

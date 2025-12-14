@@ -62,6 +62,31 @@
 
       <!-- 右侧：批量操作按钮 -->
       <div class="flex gap-2">
+        <!-- 复制按钮 -->
+        <button
+          class="px-4 py-2 text-sm bg-(--primary-color) text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          :disabled="selectedCount === 0"
+          :title="selectedCount === 0 ? $t('transfer.copy') + ' (无选中项)' : $t('transfer.copy')"
+          @click="handleBatchCopy"
+        >
+          <i :class="[$fa.weight, 'fa-copy']"></i>
+          <span>{{ $t('transfer.copy') }}</span>
+          <span v-if="selectedCount > 0" class="text-xs opacity-75">({{ selectedCount }})</span>
+        </button>
+
+        <!-- 剪切按钮 -->
+        <button
+          class="px-4 py-2 text-sm bg-orange-500 text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          :disabled="selectedCount === 0"
+          :title="selectedCount === 0 ? $t('transfer.cut') + ' (无选中项)' : $t('transfer.cut')"
+          @click="handleBatchCut"
+        >
+          <i :class="[$fa.weight, 'fa-scissors']"></i>
+          <span>{{ $t('transfer.cut') }}</span>
+          <span v-if="selectedCount > 0" class="text-xs opacity-75">({{ selectedCount }})</span>
+        </button>
+
+        <!-- 删除按钮 -->
         <button
           class="px-4 py-2 text-sm bg-red-500 text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           :disabled="selectedCount === 0"
@@ -100,6 +125,10 @@ interface Emits {
   unselectAll: [];
   /** 清除选择事件 */
   clearSelection: [];
+  /** 批量复制事件 */
+  batchCopy: [];
+  /** 批量剪切事件 */
+  batchCut: [];
   /** 批量删除事件 */
   batchDelete: [];
 }
@@ -176,6 +205,24 @@ function handleSelectAllClick(): void {
 function handleClearSelection(): void {
   emit('clearSelection');
   cacheStore.clearSelection();
+}
+
+/**
+ * 处理批量复制
+ */
+function handleBatchCopy(): void {
+  if (selectedCount.value > 0) {
+    emit('batchCopy');
+  }
+}
+
+/**
+ * 处理批量剪切
+ */
+function handleBatchCut(): void {
+  if (selectedCount.value > 0) {
+    emit('batchCut');
+  }
 }
 
 /**

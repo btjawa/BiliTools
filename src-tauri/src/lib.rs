@@ -74,6 +74,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             discover_transfer_targets,
             validate_transfer_target,
             check_available_space,
+            select_folder,
             start_transfer,
             start_root_migration,
             pause_transfer,

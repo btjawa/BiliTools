@@ -8,9 +8,9 @@ use super::protocol::ProgressSender;
 use super::types::{CheckpointStatus, TransferCheckpoint, TransferProgress};
 use super::validator::FileValidator;
 use std::path::Path;
+use time::OffsetDateTime;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
-use time::OffsetDateTime;
 
 /// 可恢复的文件传输
 pub struct ResumableTransfer;
@@ -39,9 +39,9 @@ impl ResumableTransfer {
             Some(cp) => cp,
             None => {
                 // 创建新的检查点
-                let source_metadata = tokio::fs::metadata(source)
-                    .await
-                    .map_err(|e| TransferError::from_io_error(e, Some(&source.to_string_lossy())))?;
+                let source_metadata = tokio::fs::metadata(source).await.map_err(|e| {
+                    TransferError::from_io_error(e, Some(&source.to_string_lossy()))
+                })?;
 
                 TransferCheckpoint::new(
                     task_id.to_string(),
@@ -62,9 +62,9 @@ impl ResumableTransfer {
             checkpoint.transferred_size = 0;
             checkpoint.status = CheckpointStatus::InProgress;
             if target.exists() {
-                tokio::fs::remove_file(target)
-                    .await
-                    .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
+                tokio::fs::remove_file(target).await.map_err(|e| {
+                    TransferError::from_io_error(e, Some(&target.to_string_lossy()))
+                })?;
             }
         }
 
@@ -80,17 +80,17 @@ impl ResumableTransfer {
                 // 目标文件已超过检查点，可能是其他进程修改，重新开始
                 checkpoint.transferred_size = 0;
                 checkpoint.status = CheckpointStatus::InProgress;
-                tokio::fs::remove_file(target)
-                    .await
-                    .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
+                tokio::fs::remove_file(target).await.map_err(|e| {
+                    TransferError::from_io_error(e, Some(&target.to_string_lossy()))
+                })?;
             } else if target_size < checkpoint.transferred_size {
                 // 目标文件被截断，需要验证已传输部分的完整性
                 // 这里简单起见，重新开始传输
                 checkpoint.transferred_size = 0;
                 checkpoint.status = CheckpointStatus::InProgress;
-                tokio::fs::remove_file(target)
-                    .await
-                    .map_err(|e| TransferError::from_io_error(e, Some(&target.to_string_lossy())))?;
+                tokio::fs::remove_file(target).await.map_err(|e| {
+                    TransferError::from_io_error(e, Some(&target.to_string_lossy()))
+                })?;
             }
         }
 
@@ -171,7 +171,11 @@ impl ResumableTransfer {
                 let progress = TransferProgress {
                     task_id: task_id.to_string(),
                     total_files: 1,
-                    completed_files: if transferred == checkpoint.total_size { 1 } else { 0 },
+                    completed_files: if transferred == checkpoint.total_size {
+                        1
+                    } else {
+                        0
+                    },
                     total_size: checkpoint.total_size,
                     transferred_size: transferred,
                     speed,

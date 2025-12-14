@@ -36,8 +36,9 @@ impl CheckpointManager {
         #[cfg(target_os = "macos")]
         {
             if let Some(home) = dirs::home_dir() {
-                return Ok(home
-                    .join("Library/Application Support/com.btjawa.bilitools/checkpoints"));
+                return Ok(
+                    home.join("Library/Application Support/com.btjawa.bilitools/checkpoints")
+                );
             }
         }
 
@@ -56,14 +57,17 @@ impl CheckpointManager {
     /// 创建默认的检查点管理器
     pub async fn create_default() -> Result<Self, TransferError> {
         let checkpoint_dir = Self::default_checkpoint_dir()?;
-        fs::create_dir_all(&checkpoint_dir)
-            .await
-            .map_err(|e| TransferError::from_io_error(e, Some(&checkpoint_dir.to_string_lossy())))?;
+        fs::create_dir_all(&checkpoint_dir).await.map_err(|e| {
+            TransferError::from_io_error(e, Some(&checkpoint_dir.to_string_lossy()))
+        })?;
         Ok(Self::new(checkpoint_dir))
     }
 
     /// 保存检查点
-    pub async fn save_checkpoint(&self, checkpoint: &TransferCheckpoint) -> Result<(), TransferError> {
+    pub async fn save_checkpoint(
+        &self,
+        checkpoint: &TransferCheckpoint,
+    ) -> Result<(), TransferError> {
         // 确保目录存在
         fs::create_dir_all(&self.checkpoint_dir)
             .await
@@ -72,36 +76,37 @@ impl CheckpointManager {
             })?;
 
         let checkpoint_file = self.get_checkpoint_path(&checkpoint.task_id);
-        let json = serde_json::to_string_pretty(checkpoint).map_err(|e| {
-            TransferError::Unknown {
+        let json =
+            serde_json::to_string_pretty(checkpoint).map_err(|e| TransferError::Unknown {
                 message: format!("序列化检查点失败: {}", e),
-            }
-        })?;
+            })?;
 
-        fs::write(&checkpoint_file, json)
-            .await
-            .map_err(|e| TransferError::from_io_error(e, Some(&checkpoint_file.to_string_lossy())))?;
+        fs::write(&checkpoint_file, json).await.map_err(|e| {
+            TransferError::from_io_error(e, Some(&checkpoint_file.to_string_lossy()))
+        })?;
 
         Ok(())
     }
 
     /// 加载检查点
-    pub async fn load_checkpoint(&self, task_id: &str) -> Result<Option<TransferCheckpoint>, TransferError> {
+    pub async fn load_checkpoint(
+        &self,
+        task_id: &str,
+    ) -> Result<Option<TransferCheckpoint>, TransferError> {
         let checkpoint_file = self.get_checkpoint_path(task_id);
 
         if !checkpoint_file.exists() {
             return Ok(None);
         }
 
-        let json = fs::read_to_string(&checkpoint_file)
-            .await
-            .map_err(|e| TransferError::from_io_error(e, Some(&checkpoint_file.to_string_lossy())))?;
-
-        let checkpoint = serde_json::from_str(&json).map_err(|_| {
-            TransferError::CheckpointCorrupted {
-                task_id: task_id.to_string(),
-            }
+        let json = fs::read_to_string(&checkpoint_file).await.map_err(|e| {
+            TransferError::from_io_error(e, Some(&checkpoint_file.to_string_lossy()))
         })?;
+
+        let checkpoint =
+            serde_json::from_str(&json).map_err(|_| TransferError::CheckpointCorrupted {
+                task_id: task_id.to_string(),
+            })?;
 
         Ok(Some(checkpoint))
     }
@@ -111,9 +116,9 @@ impl CheckpointManager {
         let checkpoint_file = self.get_checkpoint_path(task_id);
 
         if checkpoint_file.exists() {
-            fs::remove_file(&checkpoint_file)
-                .await
-                .map_err(|e| TransferError::from_io_error(e, Some(&checkpoint_file.to_string_lossy())))?;
+            fs::remove_file(&checkpoint_file).await.map_err(|e| {
+                TransferError::from_io_error(e, Some(&checkpoint_file.to_string_lossy()))
+            })?;
         }
 
         Ok(())
@@ -125,11 +130,9 @@ impl CheckpointManager {
             return Ok(());
         }
 
-        let mut entries = fs::read_dir(&self.checkpoint_dir)
-            .await
-            .map_err(|err| {
-                TransferError::from_io_error(err, Some(&self.checkpoint_dir.to_string_lossy()))
-            })?;
+        let mut entries = fs::read_dir(&self.checkpoint_dir).await.map_err(|err| {
+            TransferError::from_io_error(err, Some(&self.checkpoint_dir.to_string_lossy()))
+        })?;
 
         let now = std::time::SystemTime::now();
         let seven_days = std::time::Duration::from_secs(7 * 24 * 60 * 60);
@@ -169,11 +172,9 @@ impl CheckpointManager {
             return Ok(checkpoints);
         }
 
-        let mut entries = fs::read_dir(&self.checkpoint_dir)
-            .await
-            .map_err(|err| {
-                TransferError::from_io_error(err, Some(&self.checkpoint_dir.to_string_lossy()))
-            })?;
+        let mut entries = fs::read_dir(&self.checkpoint_dir).await.map_err(|err| {
+            TransferError::from_io_error(err, Some(&self.checkpoint_dir.to_string_lossy()))
+        })?;
 
         while let Some(entry) = entries.next_entry().await.map_err(|err| {
             TransferError::from_io_error(err, Some(&self.checkpoint_dir.to_string_lossy()))

@@ -903,12 +903,11 @@ pub struct ScanPreviewInfo {
     pub duration: i32,
 }
 
-
 // 传输功能相关命令
 
 use crate::services::transfer::{
-    DeviceInfo, LocalFileProtocol, TransferManager, TransferProgress, TransferRequest,
-    TransferTarget, RootMigrationRequest, TransferProtocol,
+    DeviceInfo, LocalFileProtocol, RootMigrationRequest, TransferManager, TransferProgress,
+    TransferProtocol, TransferRequest, TransferTarget,
 };
 use std::sync::OnceLock;
 
@@ -918,6 +917,16 @@ static TRANSFER_MANAGER: OnceLock<TransferManager> = OnceLock::new();
 /// 获取或初始化传输管理器
 fn get_transfer_manager() -> &'static TransferManager {
     TRANSFER_MANAGER.get_or_init(|| TransferManager::new(3))
+}
+
+/// 初始化传输管理器（注册协议）
+async fn init_transfer_manager() -> Result<(), crate::TauriError> {
+    let manager = get_transfer_manager();
+    let local_protocol = Arc::new(LocalFileProtocol::new());
+    manager
+        .register_protocol("local".to_string(), local_protocol)
+        .await?;
+    Ok(())
 }
 
 /// 发现可用的传输目标（本地文件夹和移动设备）
@@ -959,6 +968,9 @@ pub async fn check_available_space(target_path: String, required_size: u64) -> T
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn start_transfer(request: TransferRequest) -> TauriResult<String> {
+    // 确保传输管理器已初始化
+    init_transfer_manager().await?;
+
     let manager = get_transfer_manager();
     let task_id = manager.start_transfer(request).await?;
     Ok(task_id)
@@ -1009,6 +1021,30 @@ pub async fn get_transfer_progress(task_id: String) -> TauriResult<Option<Transf
     Ok(progress)
 }
 
+/// 打开文件夹选择对话框
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn select_folder(app: tauri::AppHandle) -> TauriResult<Option<String>> {
+    use tauri_plugin_dialog::DialogExt;
+    use tokio::sync::oneshot;
+
+    let (tx, rx) = oneshot::channel();
+
+    app.dialog()
+        .file()
+        .set_title("选择文件夹")
+        .pick_folder(move |folder_path| {
+            let _ = tx.send(folder_path);
+        });
+
+    let folder_path = rx.await.map_err(|_| anyhow::anyhow!("文件夹选择被取消"))?;
+
+    match folder_path {
+        Some(path) => Ok(Some(path.to_string())),
+        None => Ok(None),
+    }
+}
+
 /// 获取所有活跃的传输任务
 #[tauri::command(async)]
 #[specta::specta]
@@ -1030,7 +1066,8 @@ pub async fn get_queued_transfers() -> TauriResult<Vec<crate::services::transfer
 /// 获取已完成的传输任务
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn get_completed_transfers() -> TauriResult<Vec<crate::services::transfer::TransferTask>> {
+pub async fn get_completed_transfers() -> TauriResult<Vec<crate::services::transfer::TransferTask>>
+{
     let manager = get_transfer_manager();
     let tasks = manager.get_completed_tasks().await;
     Ok(tasks)
@@ -1067,9 +1104,7 @@ pub async fn get_device_list() -> TauriResult<Vec<DeviceInfo>> {
 /// 监听设备变化（使用 Channel 事件流）
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn listen_device_changes(
-    event: tauri::ipc::Channel<Vec<DeviceInfo>>,
-) -> TauriResult<()> {
+pub async fn listen_device_changes(event: tauri::ipc::Channel<Vec<DeviceInfo>>) -> TauriResult<()> {
     // 启动一个后台任务持续监听设备变化
     tokio::spawn(async move {
         let protocol = LocalFileProtocol::new();
@@ -1086,7 +1121,9 @@ pub async fn listen_device_changes(
                         || current_devices
                             .iter()
                             .zip(last_devices.iter())
-                            .any(|(a, b)| a.id != b.id || a.connection_status != b.connection_status)
+                            .any(|(a, b)| {
+                                a.id != b.id || a.connection_status != b.connection_status
+                            })
                     {
                         last_devices = current_devices.clone();
                         if event.send(current_devices).is_err() {

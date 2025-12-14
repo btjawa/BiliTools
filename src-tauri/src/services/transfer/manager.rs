@@ -4,9 +4,7 @@
 
 use super::error::TransferError;
 use super::protocol::{ProgressSender, TransferProtocol};
-use super::types::{
-    TaskStatus, TransferProgress, TransferRequest, TransferTarget, TransferTask,
-};
+use super::types::{TaskStatus, TransferProgress, TransferRequest, TransferTarget, TransferTask};
 use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::sync::Arc;
@@ -71,10 +69,7 @@ impl TransferManager {
     }
 
     /// 启动传输任务
-    pub async fn start_transfer(
-        &self,
-        request: TransferRequest,
-    ) -> Result<String, TransferError> {
+    pub async fn start_transfer(&self, request: TransferRequest) -> Result<String, TransferError> {
         // 验证源文件
         for source in &request.source_files {
             let path = Path::new(source);
@@ -275,12 +270,24 @@ impl TransferManager {
         }
 
         // 再检查已完成任务
-        if let Some(task) = self.completed_tasks.read().await.iter().find(|t| t.id == task_id) {
+        if let Some(task) = self
+            .completed_tasks
+            .read()
+            .await
+            .iter()
+            .find(|t| t.id == task_id)
+        {
             return Some(task.status.clone());
         }
 
         // 最后检查队列
-        if let Some(task) = self.task_queue.read().await.iter().find(|t| t.id == task_id) {
+        if let Some(task) = self
+            .task_queue
+            .read()
+            .await
+            .iter()
+            .find(|t| t.id == task_id)
+        {
             return Some(task.status.clone());
         }
 
@@ -289,12 +296,7 @@ impl TransferManager {
 
     /// 获取所有活跃任务
     pub async fn get_active_tasks(&self) -> Vec<TransferTask> {
-        self.active_tasks
-            .read()
-            .await
-            .values()
-            .cloned()
-            .collect()
+        self.active_tasks.read().await.values().cloned().collect()
     }
 
     /// 获取队列中的任务
@@ -426,7 +428,9 @@ async fn execute_transfer_task(
     let task_id_clone = task_id.clone();
     tokio::spawn(async move {
         while let Some(progress) = rx.recv().await {
-            manager_clone.update_task_progress(&task_id_clone, progress).await;
+            manager_clone
+                .update_task_progress(&task_id_clone, progress)
+                .await;
         }
     });
 
@@ -454,13 +458,11 @@ async fn execute_transfer_task(
         for source in &source_files {
             let source_path = Path::new(source);
             if source_path.is_file() {
-                std::fs::remove_file(source_path).map_err(|e| {
-                    TransferError::from_io_error(e, Some(source))
-                })?;
+                std::fs::remove_file(source_path)
+                    .map_err(|e| TransferError::from_io_error(e, Some(source)))?;
             } else if source_path.is_dir() {
-                std::fs::remove_dir_all(source_path).map_err(|e| {
-                    TransferError::from_io_error(e, Some(source))
-                })?;
+                std::fs::remove_dir_all(source_path)
+                    .map_err(|e| TransferError::from_io_error(e, Some(source)))?;
             }
         }
     }

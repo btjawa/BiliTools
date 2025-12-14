@@ -116,7 +116,10 @@ impl FileValidator {
     ///
     /// # 返回
     /// 如果文件大小匹配返回 true，否则返回 false
-    pub async fn verify_file_size(file_path: &Path, expected_size: u64) -> Result<bool, TransferError> {
+    pub async fn verify_file_size(
+        file_path: &Path,
+        expected_size: u64,
+    ) -> Result<bool, TransferError> {
         let metadata = tokio::fs::metadata(file_path)
             .await
             .map_err(|e| TransferError::from_io_error(e, Some(&file_path.to_string_lossy())))?;

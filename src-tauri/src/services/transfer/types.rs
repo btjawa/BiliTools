@@ -48,7 +48,6 @@ pub enum ConnectionStatus {
     Disconnected,
 }
 
-
 /// 设备信息
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct DeviceInfo {
@@ -131,7 +130,6 @@ impl TransferProgress {
     }
 }
 
-
 /// 传输任务
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct TransferTask {
@@ -205,24 +203,18 @@ pub struct RootMigrationRequest {
 }
 
 /// 文件名冲突处理策略
-#[derive(Clone, Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Type, PartialEq, Eq, Default)]
 pub enum ConflictStrategy {
     /// 跳过
     Skip,
     /// 覆盖
     Overwrite,
     /// 重命名（添加数字后缀）
+    #[default]
     Rename,
     /// 询问用户
     Ask,
 }
-
-impl Default for ConflictStrategy {
-    fn default() -> Self {
-        Self::Rename
-    }
-}
-
 
 /// 检查点状态
 #[derive(Clone, Debug, Serialize, Deserialize, Type, PartialEq, Eq)]
@@ -296,5 +288,3 @@ impl TransferCheckpoint {
         self.updated_at = OffsetDateTime::now_utc().unix_timestamp();
     }
 }
-
-

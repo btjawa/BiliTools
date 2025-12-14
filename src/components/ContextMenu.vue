@@ -7,7 +7,7 @@
       class="fixed flex flex-col min-w-36 w-fit shadow-lg rounded-lg"
       @mousedown.prevent
     >
-      <button v-for="(t, k) in options" :key="k" @click="t.action">
+      <button v-for="(t, k) in currentOptions" :key="k" @click="t.action">
         <i :class="['fa-light', t.icon]"></i>
         <span>{{ $t(t.text) }}</span>
       </button>
@@ -17,9 +17,10 @@
 
 <script lang="ts" setup>
 import { readText } from '@tauri-apps/plugin-clipboard-manager';
-import { nextTick, onMounted, reactive, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref, computed } from 'vue';
 
-const options = [
+// 文本相关的默认菜单项
+const textOptions = [
   {
     icon: 'fa-scissors',
     text: 'contextMenu.cut',
@@ -58,8 +59,37 @@ const v = reactive({
   y: 0,
 });
 
-defineExpose({ init });
+// 自定义菜单项状态
+const customOptions = ref<Array<{
+  icon: string;
+  text: string;
+  action: () => void;
+}>>([]);
+
+// 当前显示的菜单项
+const currentOptions = computed(() => {
+  return customOptions.value.length > 0 ? customOptions.value : textOptions;
+});
+
+defineExpose({ init, initWithOptions });
+
 async function init(e: MouseEvent) {
+  // 重置为默认文本菜单
+  customOptions.value = [];
+  await showMenu(e);
+}
+
+async function initWithOptions(e: MouseEvent, options: Array<{
+  icon: string;
+  text: string;
+  action: () => void;
+}>) {
+  // 使用自定义菜单项
+  customOptions.value = options;
+  await showMenu(e);
+}
+
+async function showMenu(e: MouseEvent) {
   close();
   await nextTick();
   v.active = true;
@@ -80,6 +110,7 @@ async function init(e: MouseEvent) {
 
 function close() {
   v.active = false;
+  // 不在这里清除自定义选项，让它们保持到下次设置
 }
 
 onMounted(() => document.addEventListener('click', close));

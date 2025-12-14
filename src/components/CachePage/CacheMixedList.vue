@@ -52,6 +52,8 @@
           @toggle-expand="$emit('toggleExpand', item.data.groupId)"
           @open-folder="$emit('openGroupFolder', item.data)"
           @delete="$emit('deleteGroup', item.data)"
+          @copy-group="$emit('copyGroup', $event)"
+          @cut-group="$emit('cutGroup', $event)"
           @select-video="$emit('selectVideo', $event)"
           @select-video-range="$emit('selectVideoRange', $event)"
           @play-video="$emit('playVideo', $event)"
@@ -112,6 +114,8 @@ interface Emits {
   (e: 'toggleExpand', groupId: string): void;
   (e: 'openGroupFolder', group: Types.CacheGroup): void;
   (e: 'deleteGroup', group: Types.CacheGroup): void;
+  (e: 'copyGroup', group: Types.CacheGroup): void;
+  (e: 'cutGroup', group: Types.CacheGroup): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {

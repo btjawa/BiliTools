@@ -130,6 +130,8 @@
             @select-all="cacheStore.selectAllCurrentPage"
             @unselect-all="cacheStore.unselectAllCurrentPage"
             @clear-selection="cacheStore.clearSelection"
+            @batch-copy="startCopyOperation"
+            @batch-cut="startCutOperation"
             @batch-delete="batchDelete"
           />
         </Transition>
@@ -183,6 +185,8 @@
                 @toggle-expand="cacheStore.toggleGroupExpansion"
                 @open-group-folder="openGroupFolder"
                 @delete-group="deleteGroup"
+                @copy-group="handleCopyGroupFromContextMenu"
+                @cut-group="handleCutGroupFromContextMenu"
               />
             </div>
           </Transition>
@@ -335,22 +339,6 @@
         </button>
 
         <!-- 传输操作按钮 -->
-        <button
-          :disabled="cacheStore.selectedItems.length === 0"
-          @click="startCopyOperation"
-        >
-          <i :class="[$fa.weight, 'fa-copy']"></i>
-          <span>{{ $t('transfer.copy') }}</span>
-        </button>
-
-        <button
-          :disabled="cacheStore.selectedItems.length === 0"
-          @click="startCutOperation"
-        >
-          <i :class="[$fa.weight, 'fa-scissors']"></i>
-          <span>{{ $t('transfer.cut') }}</span>
-        </button>
-
         <button @click="openCacheRootMigration">
           <i :class="[$fa.weight, 'fa-folder-arrow-right']"></i>
           <span>{{ $t('transfer.cacheRootMigration') }}</span>
@@ -589,7 +577,7 @@ let deleteAbortController: AbortController | null = null;
 const showTransferDialog = ref(false);
 const showTransferProgressDialog = ref(false);
 const showCacheRootMigrationDialog = ref(false);
-const currentTransferOperation = ref<TransferTypes.TransferOperation>('copy');
+const currentTransferOperation = ref<TransferTypes.TransferOperation>('Copy');
 const currentTransferType = ref<TransferTypes.TransferType>('individual');
 
 // ============================================================================
@@ -1171,7 +1159,7 @@ async function startCopyOperation(): Promise<void> {
       return;
     }
 
-    currentTransferOperation.value = 'copy';
+    currentTransferOperation.value = 'Copy';
     currentTransferType.value = 'individual';
     showTransferDialog.value = true;
   } catch (error) {
@@ -1190,7 +1178,7 @@ async function startCutOperation(): Promise<void> {
       return;
     }
 
-    currentTransferOperation.value = 'cut';
+    currentTransferOperation.value = 'Cut';
     currentTransferType.value = 'individual';
     showTransferDialog.value = true;
   } catch (error) {
@@ -1227,15 +1215,15 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
     const { items: allCacheItems } = await cacheManagementService.getCacheList();
 
     // 构建源文件列表
-    const sourceFiles: string[] = [];
+    const source_files: string[] = [];
     for (const selectedId of cacheStore.selectedItems) {
       const cacheItem = allCacheItems.find((item) => item.id === selectedId);
       if (cacheItem) {
-        sourceFiles.push(cacheItem.cachePath);
+        source_files.push(cacheItem.cachePath);
       }
     }
 
-    if (sourceFiles.length === 0) {
+    if (source_files.length === 0) {
       new AppError('无法获取缓存文件路径', { name: 'error' }).handle();
       return;
     }
@@ -1246,9 +1234,9 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
     // 创建传输请求
     const transferRequest: TransferTypes.TransferRequest = {
       operation: currentTransferOperation.value,
-      sourceFiles,
-      targetPath: target.path || '',
-      transferType: currentTransferType.value,
+      source_files,
+      target_path: target.path || '',
+      conflict_strategy: 'Rename', // 默认使用重命名策略
     };
 
     // 开始传输
@@ -1340,6 +1328,28 @@ function handleCutFromContextMenu(item: Types.CacheItem): void {
   // 确保项目被选中
   if (!cacheStore.selectedItems.includes(item.id)) {
     cacheStore.toggleCacheItemSelection(item.id);
+  }
+  startCutOperation();
+}
+
+/**
+ * 处理组右键菜单复制
+ */
+function handleCopyGroupFromContextMenu(group: Types.CacheGroup): void {
+  // 确保组被选中
+  if (!cacheStore.isGroupSelected(group.groupId)) {
+    cacheStore.selectGroup(group.groupId);
+  }
+  startCopyOperation();
+}
+
+/**
+ * 处理组右键菜单剪切
+ */
+function handleCutGroupFromContextMenu(group: Types.CacheGroup): void {
+  // 确保组被选中
+  if (!cacheStore.isGroupSelected(group.groupId)) {
+    cacheStore.selectGroup(group.groupId);
   }
   startCutOperation();
 }

@@ -5,7 +5,7 @@
 /**
  * 传输操作类型
  */
-export type TransferOperation = 'copy' | 'cut';
+export type TransferOperation = 'Copy' | 'Cut';
 
 /**
  * 传输类型
@@ -13,14 +13,19 @@ export type TransferOperation = 'copy' | 'cut';
 export type TransferType = 'individual' | 'root_migration';
 
 /**
+ * 文件冲突处理策略
+ */
+export type ConflictStrategy = 'Skip' | 'Overwrite' | 'Rename' | 'Ask';
+
+/**
  * 设备类型
  */
-export type DeviceType = 'local' | 'removable';
+export type DeviceType = 'LocalDrive' | 'RemovableStorage';
 
 /**
  * 连接状态
  */
-export type ConnectionStatus = 'connected' | 'disconnected';
+export type ConnectionStatus = 'Connected' | 'Disconnected';
 
 /**
  * 传输任务状态
@@ -33,10 +38,10 @@ export type TransferTaskStatus = 'pending' | 'running' | 'paused' | 'completed' 
 export interface TransferTarget {
   id: string;
   name: string;
-  type: DeviceType;
+  device_type: DeviceType;
   path?: string;
-  availableSpace?: number;
-  connectionStatus: ConnectionStatus;
+  available_space?: number;
+  connection_status: ConnectionStatus;
 }
 
 /**
@@ -60,9 +65,9 @@ export interface TransferProgress {
  */
 export interface TransferRequest {
   operation: TransferOperation;
-  sourceFiles: string[]; // 缓存ID列表
-  targetPath: string;
-  transferType: TransferType;
+  source_files: string[]; // 缓存ID列表
+  target_path: string;
+  conflict_strategy: ConflictStrategy;
 }
 
 /**
@@ -82,12 +87,12 @@ export interface RootMigrationRequest {
 export interface TransferTask {
   id: string;
   operation: TransferOperation;
-  sourceFiles: string[];
-  targetPath: string;
+  source_files: string[];
+  target_path: string;
   status: TransferTaskStatus;
   progress: TransferProgress;
-  createdAt: number;
-  updatedAt: number;
+  created_at: number;
+  updated_at: number;
 }
 
 /**

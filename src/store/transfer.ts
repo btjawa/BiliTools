@@ -185,6 +185,21 @@ export const useTransferStore = defineStore('transfer', () => {
     selectedTarget.value = null;
   }
 
+  /**
+   * 打开文件夹选择对话框
+   */
+  async function selectFolder(): Promise<string | null> {
+    try {
+      lastError.value = null;
+      const folderPath = await transferService.selectFolder();
+      return folderPath;
+    } catch (error) {
+      lastError.value = error instanceof Error ? error.message : '选择文件夹失败';
+      console.error('选择文件夹失败:', error);
+      return null;
+    }
+  }
+
   // ============================================================================
   // Actions - 传输任务管理
   // ============================================================================
@@ -204,7 +219,7 @@ export const useTransferStore = defineStore('transfer', () => {
       // 检查可用空间
       const hasSpace = await transferService.checkAvailableSpace(
         selectedTarget.value.path || '',
-        request.sourceFiles.length * 1024 * 1024, // 估算大小
+        request.source_files.length * 1024 * 1024, // 估算大小
       );
 
       if (!hasSpace) {
@@ -218,12 +233,12 @@ export const useTransferStore = defineStore('transfer', () => {
       const task: Types.TransferTask = {
         id: taskId,
         operation: request.operation,
-        sourceFiles: request.sourceFiles,
-        targetPath: request.targetPath,
+        source_files: request.source_files,
+        target_path: request.target_path,
         status: 'pending',
         progress: {
           taskId,
-          totalFiles: request.sourceFiles.length,
+          totalFiles: request.source_files.length,
           completedFiles: 0,
           totalSize: 0,
           transferredSize: 0,
@@ -232,8 +247,8 @@ export const useTransferStore = defineStore('transfer', () => {
           currentFile: '',
           status: 'pending',
         },
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        created_at: Date.now(),
+        updated_at: Date.now(),
       };
 
       // 添加到活跃任务或队列
@@ -268,9 +283,9 @@ export const useTransferStore = defineStore('transfer', () => {
       // 创建任务对象
       const task: Types.TransferTask = {
         id: taskId,
-        operation: 'copy',
-        sourceFiles: [],
-        targetPath: request.targetRoot,
+        operation: 'Copy',
+        source_files: [],
+        target_path: request.targetRoot,
         status: 'pending',
         progress: {
           taskId,
@@ -283,8 +298,8 @@ export const useTransferStore = defineStore('transfer', () => {
           currentFile: '正在扫描文件...',
           status: 'pending',
         },
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        created_at: Date.now(),
+        updated_at: Date.now(),
       };
 
       // 添加到活跃任务或队列
@@ -314,7 +329,7 @@ export const useTransferStore = defineStore('transfer', () => {
       const task = activeTasks.value.get(taskId);
       if (task) {
         task.status = 'paused';
-        task.updatedAt = Date.now();
+        task.updated_at = Date.now();
       }
 
       const progress = progressMap.value.get(taskId);
@@ -352,7 +367,7 @@ export const useTransferStore = defineStore('transfer', () => {
           const task = activeTasks.value.get(nextTaskId);
           if (task) {
             task.status = 'running';
-            task.updatedAt = Date.now();
+            task.updated_at = Date.now();
           }
         }
       }
@@ -374,7 +389,7 @@ export const useTransferStore = defineStore('transfer', () => {
       const task = activeTasks.value.get(taskId);
       if (task) {
         task.status = 'running';
-        task.updatedAt = Date.now();
+        task.updated_at = Date.now();
       }
 
       const progress = progressMap.value.get(taskId);
@@ -397,7 +412,7 @@ export const useTransferStore = defineStore('transfer', () => {
     if (task) {
       task.progress = progress;
       task.status = progress.status;
-      task.updatedAt = Date.now();
+      task.updated_at = Date.now();
 
       // 如果任务完成，从活跃任务中移除
       if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') {
@@ -410,7 +425,7 @@ export const useTransferStore = defineStore('transfer', () => {
             const nextTask = activeTasks.value.get(nextTaskId);
             if (nextTask) {
               nextTask.status = 'running';
-              nextTask.updatedAt = Date.now();
+              nextTask.updated_at = Date.now();
             }
           }
         }
@@ -515,6 +530,7 @@ export const useTransferStore = defineStore('transfer', () => {
     discoverTargets,
     selectTarget,
     clearSelectedTarget,
+    selectFolder,
     startTransfer,
     startRootMigration,
     pauseTransfer,

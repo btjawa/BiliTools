@@ -1,6 +1,6 @@
 <template>
   <SideBar />
-  <div id="main" @contextmenu.prevent="contextMenu?.init">
+  <div id="main" @contextmenu.prevent="handleMainContextMenu">
     <TitleBar />
     <ContextMenu ref="contextMenu" />
     <div class="loading"></div>
@@ -40,6 +40,23 @@ import i18n from './i18n';
 
 const page = ref();
 const contextMenu = ref<InstanceType<typeof ContextMenu>>();
+
+// 标记是否有自定义右键菜单正在处理
+let hasCustomContextMenu = false;
+
+/**
+ * 处理主容器的右键菜单
+ */
+function handleMainContextMenu(e: MouseEvent) {
+  // 如果有自定义右键菜单正在处理，不显示默认菜单
+  if (hasCustomContextMenu) {
+    hasCustomContextMenu = false;
+    return;
+  }
+  
+  // 显示默认文本菜单
+  contextMenu.value?.init(e);
+}
 
 const queues = useQueueStore();
 const settings = useSettingsStore();
@@ -87,6 +104,17 @@ clipboard.register(async (s) => {
 });
 
 onMounted(async () => {
+  // 监听缓存项右键菜单事件
+  document.addEventListener('cache-context-menu', (e: Event) => {
+    const customEvent = e as CustomEvent;
+    const { event, options } = customEvent.detail;
+    
+    // 设置标记，阻止默认右键菜单
+    hasCustomContextMenu = true;
+    
+    contextMenu.value?.initWithOptions(event, options);
+  });
+
   router.push('/');
   setEventHook();
 

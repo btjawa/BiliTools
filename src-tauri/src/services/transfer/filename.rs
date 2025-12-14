@@ -2,9 +2,9 @@
 //!
 //! 提供文件名冲突检测、自动重命名、特殊字符转换等功能。
 
-use std::path::{Path, PathBuf};
 use super::error::TransferError;
 use super::types::ConflictStrategy;
+use std::path::{Path, PathBuf};
 
 /// 文件名处理器
 pub struct FilenameHandler;
@@ -77,9 +77,7 @@ impl FilenameHandler {
         filename
             .chars()
             .map(|c| {
-                if invalid_chars.contains(&c) {
-                    '_'
-                } else if c.is_control() {
+                if invalid_chars.contains(&c) || c.is_control() {
                     '_'
                 } else {
                     c
@@ -126,11 +124,9 @@ impl FilenameHandler {
         strategy: &ConflictStrategy,
     ) -> Result<PathBuf, TransferError> {
         match strategy {
-            ConflictStrategy::Skip => {
-                Err(TransferError::FileNameConflict {
-                    file_name: target_path.to_string_lossy().to_string(),
-                })
-            }
+            ConflictStrategy::Skip => Err(TransferError::FileNameConflict {
+                file_name: target_path.to_string_lossy().to_string(),
+            }),
             ConflictStrategy::Overwrite => Ok(target_path.to_path_buf()),
             ConflictStrategy::Rename => Ok(Self::generate_unique_filename(target_path)),
             ConflictStrategy::Ask => {
@@ -155,7 +151,9 @@ impl FilenameHandler {
 
         // 检查是否包含无效字符
         let invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*', '\0'];
-        !filename.chars().any(|c| invalid_chars.contains(&c) || c.is_control())
+        !filename
+            .chars()
+            .any(|c| invalid_chars.contains(&c) || c.is_control())
     }
 
     /// 获取安全的文件名
@@ -192,14 +190,14 @@ impl FilenameHandler {
 
     /// 检查文件是否为只读
     pub fn is_readonly(path: &Path) -> Result<bool, TransferError> {
-        let metadata = std::fs::metadata(path).map_err(|e| {
-            TransferError::from_io_error(e, Some(&path.to_string_lossy()))
-        })?;
+        let metadata = std::fs::metadata(path)
+            .map_err(|e| TransferError::from_io_error(e, Some(&path.to_string_lossy())))?;
 
         Ok(metadata.permissions().readonly())
     }
 
     /// 尝试修改文件权限为可写
+    #[allow(clippy::permissions_set_readonly_false)]
     pub fn make_writable(path: &Path) -> Result<(), TransferError> {
         let mut perms = std::fs::metadata(path)
             .map_err(|e| TransferError::from_io_error(e, Some(&path.to_string_lossy())))?
@@ -215,22 +213,20 @@ impl FilenameHandler {
     pub fn get_filename(path: &Path) -> String {
         path.file_name()
             .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| String::new())
+            .unwrap_or_default()
     }
 
     /// 获取文件扩展名
     pub fn get_extension(path: &Path) -> String {
         path.extension()
             .map(|e| e.to_string_lossy().to_string())
-            .unwrap_or_else(|| String::new())
+            .unwrap_or_default()
     }
 
     /// 获取不含扩展名的文件名
     pub fn get_stem(path: &Path) -> String {
         path.file_stem()
             .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_else(|| String::new())
+            .unwrap_or_default()
     }
 }
-
-

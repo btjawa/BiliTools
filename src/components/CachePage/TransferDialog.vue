@@ -67,7 +67,7 @@
                     @click="handleBrowseFolder"
                   >
                     <i :class="[$fa.weight, 'fa-folder-open']"></i>
-                    {{ $t('transfer.selectFolder') }}
+                    选择目标文件夹
                   </button>
                 </div>
               </div>
@@ -98,7 +98,7 @@
                       <!-- 设备图标 -->
                       <div class="flex-shrink-0 mt-1">
                         <i
-                          :class="[$fa.weight, device.connectionStatus === 'connected' ? 'fa-check-circle text-green-500' : 'fa-exclamation-circle text-red-500']"
+                          :class="[$fa.weight, device.connection_status === 'Connected' ? 'fa-check-circle text-green-500' : 'fa-exclamation-circle text-red-500']"
                         ></i>
                       </div>
 
@@ -109,10 +109,10 @@
                           {{ device.path }}
                         </div>
                         <div
-                          v-if="device.availableSpace"
+                          v-if="device.available_space"
                           class="text-xs text-(--desc-color) mt-1"
                         >
-                          {{ $t('transfer.availableSpace') }}: {{ formatFileSize(device.availableSpace) }}
+                          {{ $t('transfer.availableSpace') }}: {{ formatFileSize(device.available_space) }}
                         </div>
                       </div>
 
@@ -224,7 +224,7 @@ const operationTitle = computed(() => {
   if (props.transferType === 'root_migration') {
     return t('transfer.cacheRootMigration');
   }
-  return props.operation === 'copy' ? t('transfer.copy') : t('transfer.cut');
+  return props.operation === 'Copy' ? t('transfer.copy') : t('transfer.cut');
 });
 
 /**
@@ -234,14 +234,14 @@ const operationIcon = computed(() => {
   if (props.transferType === 'root_migration') {
     return 'fa-folder-arrow-right';
   }
-  return props.operation === 'copy' ? 'fa-copy' : 'fa-scissors';
+  return props.operation === 'Copy' ? 'fa-copy' : 'fa-scissors';
 });
 
 /**
  * 可移动设备列表
  */
 const removableDevices = computed(() => {
-  return transferStore.availableTargets.filter((target) => target.type === 'removable');
+  return transferStore.availableTargets.filter((target) => target.device_type === 'RemovableStorage');
 });
 
 /**
@@ -285,7 +285,7 @@ async function discoverDevices() {
  * 选择设备
  */
 function selectDevice(device: Types.TransferTarget) {
-  if (device.connectionStatus === 'connected') {
+  if (device.connection_status === 'Connected') {
     selectedTarget.value = device;
     lastError.value = null;
   } else {
@@ -299,11 +299,26 @@ function selectDevice(device: Types.TransferTarget) {
 async function handleBrowseFolder() {
   try {
     lastError.value = null;
-    // 这里会在后续的 Tauri 命令中实现
-    // 暂时使用占位符
-    console.log('打开文件夹浏览器');
+    
+    // 调用文件夹选择对话框
+    const folderPath = await transferStore.selectFolder();
+    
+    if (folderPath) {
+      // 创建本地文件夹目标
+      const localTarget: Types.TransferTarget = {
+        id: `local_${Date.now()}`,
+        name: folderPath.split(/[/\\]/).pop() || folderPath,
+        device_type: 'LocalDrive',
+        path: folderPath,
+        available_space: null,
+        connection_status: 'Connected',
+      };
+      
+      selectedTarget.value = localTarget;
+    }
   } catch (error) {
     lastError.value = error instanceof Error ? error.message : t('transfer.error');
+    console.error('选择文件夹失败:', error);
   }
 }
 
