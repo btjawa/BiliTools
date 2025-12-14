@@ -30,10 +30,9 @@ pub use crate::{
     },
     shared::{self, get_app_handle, set_window, HEADERS, READY},
     storage::{
-        self,
+        self, cache_group_states,
         config::{self, CacheKey},
         cookies, db, queue as queues, schedulers, tasks,
-        cache_group_states,
     },
 };
 
@@ -286,24 +285,24 @@ pub async fn get_cache_list_by_status(status: String) -> TauriResult<Vec<CacheRe
 pub async fn delete_cache_item(id: String) -> TauriResult<()> {
     use std::path::PathBuf;
     use tokio::fs;
-    
+
     // 先获取缓存记录以获得文件路径
     if let Some(record) = cache_records::get_by_id(&id).await? {
         let cache_path = PathBuf::from(&record.cache_path);
-        
+
         // 先删除实际文件夹
         if cache_path.exists() {
             fs::remove_dir_all(&cache_path).await.map_err(|e| {
                 anyhow::anyhow!("删除缓存文件夹失败: {} - {}", cache_path.display(), e)
             })?;
         }
-        
+
         // 再删除数据库记录
         cache_records::delete(&id).await?;
     } else {
         return Err(anyhow::anyhow!("缓存记录不存在: {}", id).into());
     }
-    
+
     Ok(())
 }
 
@@ -404,9 +403,18 @@ pub async fn get_cache_statistics() -> TauriResult<CacheStatistics> {
     let total_duration: i64 = all_records.iter().map(|r| r.duration).sum();
 
     // 状态统计
-    let available_count = all_records.iter().filter(|r| r.status == "available").count() as i64;
-    let unavailable_count = all_records.iter().filter(|r| r.status == "unavailable").count() as i64;
-    let incomplete_count = all_records.iter().filter(|r| r.status == "incomplete").count() as i64;
+    let available_count = all_records
+        .iter()
+        .filter(|r| r.status == "available")
+        .count() as i64;
+    let unavailable_count = all_records
+        .iter()
+        .filter(|r| r.status == "unavailable")
+        .count() as i64;
+    let incomplete_count = all_records
+        .iter()
+        .filter(|r| r.status == "incomplete")
+        .count() as i64;
 
     // 计算平均大小
     let average_size = if total_count > 0 {
@@ -420,8 +428,14 @@ pub async fn get_cache_statistics() -> TauriResult<CacheStatistics> {
         .build_display_items_from_records(all_records)
         .await?;
 
-    let group_count = display_items.iter().filter(|item| matches!(item, DisplayItem::VideoGroup { .. })).count() as i32;
-    let single_video_count = display_items.iter().filter(|item| matches!(item, DisplayItem::SingleVideo { .. })).count() as i32;
+    let group_count = display_items
+        .iter()
+        .filter(|item| matches!(item, DisplayItem::VideoGroup { .. }))
+        .count() as i32;
+    let single_video_count = display_items
+        .iter()
+        .filter(|item| matches!(item, DisplayItem::SingleVideo { .. }))
+        .count() as i32;
 
     // 计算平均每组视频数量
     let average_videos_per_group = if group_count > 0 {
@@ -475,7 +489,7 @@ pub async fn get_cache_display_items() -> TauriResult<Vec<DisplayItem>> {
 #[specta::specta]
 pub async fn get_cache_display_items_paginated(
     page: i32,
-    page_size: i32,  // 使用 snake_case 命名符合 Rust 约定
+    page_size: i32, // 使用 snake_case 命名符合 Rust 约定
     sort_by: Option<String>,
     sort_order: Option<String>,
     filters: Option<CacheFilterOptions>,
@@ -724,18 +738,18 @@ pub async fn batch_delete_cache_items(
                 // 使用统一的删除逻辑（删除文件+数据库记录）
                 if let Some(record) = cache_records::get_by_id(item_id).await.unwrap_or(None) {
                     let cache_path = std::path::PathBuf::from(&record.cache_path);
-                    
+
                     // 先删除实际文件夹
                     if cache_path.exists() {
                         match tokio::fs::remove_dir_all(&cache_path).await {
-                            Ok(_) => {},
+                            Ok(_) => {}
                             Err(e) => {
                                 errors.push(format!("删除视频文件 {} 失败: {}", item_id, e));
                                 continue;
                             }
                         }
                     }
-                    
+
                     // 再删除数据库记录
                     match cache_records::delete(item_id).await {
                         Ok(_) => deleted_videos += 1,
@@ -744,7 +758,7 @@ pub async fn batch_delete_cache_items(
                 } else {
                     errors.push(format!("视频记录不存在: {}", item_id));
                 }
-            },
+            }
             _ => errors.push(format!("未知的项目类型: {}", item_type)),
         }
     }
@@ -838,15 +852,15 @@ pub struct PaginatedDisplayItems {
 /// 完整的缓存统计信息
 #[derive(Serialize, Type)]
 pub struct CacheStatistics {
-    pub total_count: i64,           // 总缓存数量
-    pub available_count: i64,       // 可用缓存数量
-    pub unavailable_count: i64,     // 不可用缓存数量
-    pub incomplete_count: i64,      // 不完整缓存数量
-    pub total_size: i64,            // 总文件大小
-    pub average_size: i64,          // 平均文件大小
-    pub total_duration: i64,        // 总时长（秒）
-    pub group_count: i32,           // 组数量
-    pub single_video_count: i32,    // 单个视频数量
+    pub total_count: i64,              // 总缓存数量
+    pub available_count: i64,          // 可用缓存数量
+    pub unavailable_count: i64,        // 不可用缓存数量
+    pub incomplete_count: i64,         // 不完整缓存数量
+    pub total_size: i64,               // 总文件大小
+    pub average_size: i64,             // 平均文件大小
+    pub total_duration: i64,           // 总时长（秒）
+    pub group_count: i32,              // 组数量
+    pub single_video_count: i32,       // 单个视频数量
     pub average_videos_per_group: f64, // 平均每组视频数量
 }
 
@@ -887,4 +901,251 @@ pub struct ScanPreviewInfo {
     pub title: String,
     pub file_size: i64,
     pub duration: i32,
+}
+
+
+// 传输功能相关命令
+
+use crate::services::transfer::{
+    DeviceInfo, LocalFileProtocol, TransferManager, TransferProgress, TransferRequest,
+    TransferTarget, RootMigrationRequest, TransferProtocol,
+};
+use std::sync::OnceLock;
+
+/// 全局传输管理器实例
+static TRANSFER_MANAGER: OnceLock<TransferManager> = OnceLock::new();
+
+/// 获取或初始化传输管理器
+fn get_transfer_manager() -> &'static TransferManager {
+    TRANSFER_MANAGER.get_or_init(|| TransferManager::new(3))
+}
+
+/// 发现可用的传输目标（本地文件夹和移动设备）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn discover_transfer_targets() -> TauriResult<Vec<TransferTarget>> {
+    let protocol = LocalFileProtocol::new();
+    let targets = protocol.discover_targets().await?;
+    Ok(targets)
+}
+
+/// 验证传输目标的有效性
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn validate_transfer_target(target: TransferTarget) -> TauriResult<bool> {
+    let protocol = LocalFileProtocol::new();
+    let is_valid = protocol.validate_target(&target).await?;
+    Ok(is_valid)
+}
+
+/// 检查目标位置的可用空间
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn check_available_space(target_path: String, required_size: u64) -> TauriResult<bool> {
+    let protocol = LocalFileProtocol::new();
+    let target = TransferTarget {
+        id: target_path.clone(),
+        name: target_path.clone(),
+        device_type: crate::services::transfer::DeviceType::LocalDrive,
+        path: Some(target_path),
+        available_space: None,
+        connection_status: crate::services::transfer::ConnectionStatus::Connected,
+    };
+    let has_space = protocol.check_space(&target, required_size).await?;
+    Ok(has_space)
+}
+
+/// 开始文件传输
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn start_transfer(request: TransferRequest) -> TauriResult<String> {
+    let manager = get_transfer_manager();
+    let task_id = manager.start_transfer(request).await?;
+    Ok(task_id)
+}
+
+/// 开始缓存根目录迁移
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn start_root_migration(_request: RootMigrationRequest) -> TauriResult<String> {
+    // 这个命令会在后续的缓存根目录迁移功能中实现
+    // 目前返回一个占位符
+    Err(anyhow::anyhow!("缓存根目录迁移功能尚未实现").into())
+}
+
+/// 暂停传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn pause_transfer(task_id: String) -> TauriResult<()> {
+    let manager = get_transfer_manager();
+    manager.pause_transfer(&task_id).await?;
+    Ok(())
+}
+
+/// 恢复传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn resume_transfer(task_id: String) -> TauriResult<()> {
+    let manager = get_transfer_manager();
+    manager.resume_transfer(&task_id).await?;
+    Ok(())
+}
+
+/// 取消传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn cancel_transfer(task_id: String) -> TauriResult<()> {
+    let manager = get_transfer_manager();
+    manager.cancel_transfer(&task_id).await?;
+    Ok(())
+}
+
+/// 获取传输进度
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_transfer_progress(task_id: String) -> TauriResult<Option<TransferProgress>> {
+    let manager = get_transfer_manager();
+    let progress = manager.get_progress(&task_id).await;
+    Ok(progress)
+}
+
+/// 获取所有活跃的传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_active_transfers() -> TauriResult<Vec<crate::services::transfer::TransferTask>> {
+    let manager = get_transfer_manager();
+    let tasks = manager.get_active_tasks().await;
+    Ok(tasks)
+}
+
+/// 获取队列中的传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_queued_transfers() -> TauriResult<Vec<crate::services::transfer::TransferTask>> {
+    let manager = get_transfer_manager();
+    let tasks = manager.get_queued_tasks().await;
+    Ok(tasks)
+}
+
+/// 获取已完成的传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_completed_transfers() -> TauriResult<Vec<crate::services::transfer::TransferTask>> {
+    let manager = get_transfer_manager();
+    let tasks = manager.get_completed_tasks().await;
+    Ok(tasks)
+}
+
+/// 清空已完成的传输任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn clear_completed_transfers() -> TauriResult<()> {
+    let manager = get_transfer_manager();
+    manager.clear_completed_tasks().await;
+    Ok(())
+}
+
+/// 获取当前缓存根目录
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_current_cache_root() -> TauriResult<String> {
+    let config = config::read();
+    // 缓存根目录存储在 down_dir 中
+    let cache_root = config.down_dir.to_string_lossy().to_string();
+    Ok(cache_root)
+}
+
+/// 获取设备列表
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_device_list() -> TauriResult<Vec<DeviceInfo>> {
+    let protocol = LocalFileProtocol::new();
+    let devices = protocol.get_all_devices().await?;
+    Ok(devices)
+}
+
+/// 监听设备变化（使用 Channel 事件流）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn listen_device_changes(
+    event: tauri::ipc::Channel<Vec<DeviceInfo>>,
+) -> TauriResult<()> {
+    // 启动一个后台任务持续监听设备变化
+    tokio::spawn(async move {
+        let protocol = LocalFileProtocol::new();
+        let mut last_devices: Vec<DeviceInfo> = Vec::new();
+
+        loop {
+            // 每2秒检查一次设备变化
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+            match protocol.get_all_devices().await {
+                Ok(current_devices) => {
+                    // 检查设备列表是否发生变化
+                    if current_devices.len() != last_devices.len()
+                        || current_devices
+                            .iter()
+                            .zip(last_devices.iter())
+                            .any(|(a, b)| a.id != b.id || a.connection_status != b.connection_status)
+                    {
+                        last_devices = current_devices.clone();
+                        if event.send(current_devices).is_err() {
+                            // Channel 已关闭，停止监听
+                            break;
+                        }
+                    }
+                }
+                Err(_) => {
+                    // 发生错误，继续尝试
+                    continue;
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// 监听传输进度更新（使用 Channel 事件流）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn listen_transfer_progress(
+    task_id: String,
+    event: tauri::ipc::Channel<TransferProgress>,
+) -> TauriResult<()> {
+    let manager = get_transfer_manager();
+
+    // 启动一个后台任务持续发送进度更新
+    tokio::spawn(async move {
+        loop {
+            // 每500ms检查一次进度
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+            match manager.get_progress(&task_id).await {
+                Some(progress) => {
+                    // 发送进度更新
+                    if event.send(progress.clone()).is_err() {
+                        // Channel 已关闭，停止监听
+                        break;
+                    }
+
+                    // 如果传输已完成或失败，停止监听
+                    match progress.status {
+                        crate::services::transfer::TaskStatus::Completed
+                        | crate::services::transfer::TaskStatus::Failed
+                        | crate::services::transfer::TaskStatus::Cancelled => {
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                None => {
+                    // 任务不存在，停止监听
+                    break;
+                }
+            }
+        }
+    });
+
+    Ok(())
 }

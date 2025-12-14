@@ -34,6 +34,7 @@ tauri-build = { version = "2.3.1", features = [] }
 [dependencies]
 anyhow = "1.0.98"
 arc-swap = "1.7.1"
+async-trait = "0.1"
 base64 = "0.22.1"
 dark-light = "2.0.0"
 hmac = "0.12.1"
@@ -68,11 +69,19 @@ walkdir = "2.5.0"
 tokio-util = "0.7.16"
 serde_plain = "1.0.2"
 tauri-plugin-notification = "2.3.3"
+uuid = { version = "1.11", features = ["v4"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.61.3", features = ["Win32_Foundation", "Win32_System_Com"] }
 windows-core = "0.61.2"
+windows-sys = { version = "0.59", features = ["Win32_Storage_FileSystem"] }
 webview2-com = "0.37.0"
+dirs = "5.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+dirs = "5.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.9.0"
+

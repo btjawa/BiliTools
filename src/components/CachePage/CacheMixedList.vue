@@ -35,6 +35,8 @@
           @play="$emit('playVideo', item.data)"
           @open-folder="$emit('openVideoFolder', item.data)"
           @delete="$emit('deleteVideo', item.data)"
+          @copy="$emit('copyVideo', $event)"
+          @cut="$emit('cutVideo', $event)"
         />
 
         <!-- 视频组项 -->
@@ -101,6 +103,8 @@ interface Emits {
   (e: 'playVideo', video: Types.CacheItem): void;
   (e: 'openVideoFolder', video: Types.CacheItem): void;
   (e: 'deleteVideo', video: Types.CacheItem): void;
+  (e: 'copyVideo', video: Types.CacheItem): void;
+  (e: 'cutVideo', video: Types.CacheItem): void;
 
   // 组相关事件
   (e: 'selectGroup', groupId: string): void;

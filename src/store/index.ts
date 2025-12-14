@@ -6,5 +6,6 @@ export { useSettingsStore } from './settings';
 export { useUserStore } from './user';
 export { useComponentsStore } from './components';
 export { useCacheStore } from './cache';
+export { useTransferStore } from './transfer';
 
 export default createPinia();

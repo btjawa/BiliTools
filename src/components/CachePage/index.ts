@@ -6,3 +6,6 @@ export { default as BatchDeleteDialog } from './BatchDeleteDialog.vue';
 export { default as BatchDeleteProgressDialog } from './BatchDeleteProgressDialog.vue';
 export { default as BatchDeleteResultDialog } from './BatchDeleteResultDialog.vue';
 export { default as BatchActionBar } from './BatchActionBar.vue';
+export { default as TransferDialog } from './TransferDialog.vue';
+export { default as TransferProgressDialog } from './TransferProgressDialog.vue';
+export { default as CacheRootMigrationDialog } from './CacheRootMigrationDialog.vue';

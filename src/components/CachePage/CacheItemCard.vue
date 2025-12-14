@@ -8,6 +8,7 @@
       'border border-yellow-500': item.status === 'incomplete',
     }"
     @click="handleClick"
+    @contextmenu.prevent="handleContextMenu"
   >
     <!-- 封面图片区域 -->
     <div class="relative flex rounded-lg min-w-40 overflow-hidden">
@@ -145,6 +146,8 @@ interface Emits {
   (e: 'play', item: Types.CacheItem): void;
   (e: 'openFolder', item: Types.CacheItem): void;
   (e: 'delete', item: Types.CacheItem): void;
+  (e: 'copy', item: Types.CacheItem): void;
+  (e: 'cut', item: Types.CacheItem): void;
 }
 
 const props = defineProps<Props>();
@@ -161,6 +164,20 @@ function handleClick(event: MouseEvent) {
     // 普通点击：切换选择
     emit('select');
   }
+}
+
+/**
+ * 处理右键菜单
+ * 需求 1.1, 2.1: 在右键菜单中添加复制/剪切选项
+ */
+function handleContextMenu(event: MouseEvent) {
+  // 确保项目被选中
+  if (!props.selected) {
+    emit('select');
+  }
+
+  // 触发复制事件
+  emit('copy', props.item);
 }
 
 // ============================================================================

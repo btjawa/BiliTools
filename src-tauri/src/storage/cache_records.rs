@@ -101,13 +101,13 @@ impl TableSpec for CacheRecordsTable {
 
     // 自定义升级逻辑，保留现有数据
     async fn check_latest() -> Result<()> {
-        use super::db::{init_meta, get_db, get_version, set_version};
+        use super::db::{get_db, get_version, init_meta, set_version};
         use sea_query::SqliteQueryBuilder;
-        
+
         init_meta().await?;
         let pool = get_db().await?;
         let cur = get_version(Self::NAME).await?;
-        
+
         if cur == 0 {
             // 首次创建表
             let create_sql = Self::create_stmt().to_string(SqliteQueryBuilder);
@@ -116,7 +116,7 @@ impl TableSpec for CacheRecordsTable {
         } else if cur < Self::LATEST {
             // 需要升级表结构
             let mut tx = pool.begin().await?;
-            
+
             // 检查是否缺少 group_title 字段
             if cur < 4 {
                 // 添加 group_title 字段
@@ -127,11 +127,11 @@ impl TableSpec for CacheRecordsTable {
                 );
                 sqlx::query(&add_column_sql).execute(&mut *tx).await.ok();
             }
-            
+
             tx.commit().await?;
             set_version(Self::NAME, Self::LATEST).await?;
         }
-        
+
         Ok(())
     }
 }

@@ -176,6 +176,8 @@
                 @play-video="playItem"
                 @open-video-folder="openFolder"
                 @delete-video="deleteItem"
+                @copy-video="handleCopyFromContextMenu"
+                @cut-video="handleCutFromContextMenu"
                 @select-group="toggleGroupSelection"
                 @select-group-range="handleGroupRangeSelect"
                 @toggle-expand="cacheStore.toggleGroupExpansion"
@@ -332,6 +334,28 @@
           <span>{{ $t('cache.sidebar.exportList') }}</span>
         </button>
 
+        <!-- 传输操作按钮 -->
+        <button
+          :disabled="cacheStore.selectedItems.length === 0"
+          @click="startCopyOperation"
+        >
+          <i :class="[$fa.weight, 'fa-copy']"></i>
+          <span>{{ $t('transfer.copy') }}</span>
+        </button>
+
+        <button
+          :disabled="cacheStore.selectedItems.length === 0"
+          @click="startCutOperation"
+        >
+          <i :class="[$fa.weight, 'fa-scissors']"></i>
+          <span>{{ $t('transfer.cut') }}</span>
+        </button>
+
+        <button @click="openCacheRootMigration">
+          <i :class="[$fa.weight, 'fa-folder-arrow-right']"></i>
+          <span>{{ $t('transfer.cacheRootMigration') }}</span>
+        </button>
+
         <!-- 统计信息（紧凑显示） -->
         <div class="text-xs text-(--desc-color) space-y-0.5 mt-1">
           <!-- 基础统计 -->
@@ -430,6 +454,28 @@
       :result="deleteResult"
       @confirm="handleDeleteResultConfirm"
     />
+
+    <!-- 传输对话框 -->
+    <TransferDialog
+      :visible="showTransferDialog"
+      :operation="currentTransferOperation"
+      :transfer-type="currentTransferType"
+      @confirm="handleTransferConfirm"
+      @cancel="handleTransferCancel"
+    />
+
+    <!-- 传输进度对话框 -->
+    <TransferProgressDialog
+      :visible="showTransferProgressDialog"
+      @close="showTransferProgressDialog = false"
+    />
+
+    <!-- 缓存根目录迁移对话框 -->
+    <CacheRootMigrationDialog
+      :visible="showCacheRootMigrationDialog"
+      @confirm="handleCacheRootMigrationConfirm"
+      @cancel="handleCacheRootMigrationCancel"
+    />
   </div>
 </template>
 
@@ -439,12 +485,15 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import * as dialog from '@tauri-apps/plugin-dialog';
 import { useCacheStore } from '@/store/cache';
+import { useTransferStore } from '@/store/transfer';
 import { cacheManagementService } from '@/services/cache';
 import { formatBytes } from '@/services/utils';
 import { AppError } from '@/services/error';
 import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar } from '@/components';
+import { TransferDialog, TransferProgressDialog, CacheRootMigrationDialog } from '@/components/CachePage';
 import { initializeCacheKeyboardShortcuts, cleanupCacheKeyboardShortcuts } from '@/services/keyboard';
 import type * as Types from '@/types/cache.d';
+import type * as TransferTypes from '@/types/transfer.d';
 
 // ============================================================================
 // 路由和状态管理
@@ -453,6 +502,7 @@ import type * as Types from '@/types/cache.d';
 const router = useRouter();
 const { t: $t } = useI18n();
 const cacheStore = useCacheStore();
+const transferStore = useTransferStore();
 
 // ============================================================================
 // 响应式状态
@@ -534,6 +584,13 @@ const deleteResult = ref<{
 
 let deleteStartTime = 0;
 let deleteAbortController: AbortController | null = null;
+
+// 传输相关状态
+const showTransferDialog = ref(false);
+const showTransferProgressDialog = ref(false);
+const showCacheRootMigrationDialog = ref(false);
+const currentTransferOperation = ref<TransferTypes.TransferOperation>('copy');
+const currentTransferType = ref<TransferTypes.TransferType>('individual');
 
 // ============================================================================
 // 计算属性
@@ -1097,6 +1154,194 @@ async function deleteGroup(group: Types.CacheGroup): Promise<void> {
   } catch (error) {
     new AppError(error).handle();
   }
+}
+
+// ============================================================================
+// 传输相关方法
+// ============================================================================
+
+/**
+ * 开始复制操作
+ * 需求 1.1: 在右键菜单中添加复制选项
+ */
+async function startCopyOperation(): Promise<void> {
+  try {
+    if (cacheStore.selectedItems.length === 0) {
+      new AppError('请先选择要复制的缓存', { name: 'warning' }).handle();
+      return;
+    }
+
+    currentTransferOperation.value = 'copy';
+    currentTransferType.value = 'individual';
+    showTransferDialog.value = true;
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 开始剪切操作
+ * 需求 2.1: 在右键菜单中添加剪切选项
+ */
+async function startCutOperation(): Promise<void> {
+  try {
+    if (cacheStore.selectedItems.length === 0) {
+      new AppError('请先选择要剪切的缓存', { name: 'warning' }).handle();
+      return;
+    }
+
+    currentTransferOperation.value = 'cut';
+    currentTransferType.value = 'individual';
+    showTransferDialog.value = true;
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 打开缓存根目录迁移对话框
+ * 需求 8.1: 添加缓存根目录迁移入口
+ */
+async function openCacheRootMigration(): Promise<void> {
+  try {
+    showCacheRootMigrationDialog.value = true;
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理传输对话框确认
+ * 需求 1.2, 2.2: 用户选择目标位置后开始传输
+ */
+async function handleTransferConfirm(target: TransferTypes.TransferTarget): Promise<void> {
+  try {
+    showTransferDialog.value = false;
+
+    if (cacheStore.selectedItems.length === 0) {
+      new AppError('没有选中任何项目', { name: 'warning' }).handle();
+      return;
+    }
+
+    // 获取所有缓存项
+    const { items: allCacheItems } = await cacheManagementService.getCacheList();
+
+    // 构建源文件列表
+    const sourceFiles: string[] = [];
+    for (const selectedId of cacheStore.selectedItems) {
+      const cacheItem = allCacheItems.find((item) => item.id === selectedId);
+      if (cacheItem) {
+        sourceFiles.push(cacheItem.cachePath);
+      }
+    }
+
+    if (sourceFiles.length === 0) {
+      new AppError('无法获取缓存文件路径', { name: 'error' }).handle();
+      return;
+    }
+
+    // 选择目标
+    await transferStore.selectTarget(target);
+
+    // 创建传输请求
+    const transferRequest: TransferTypes.TransferRequest = {
+      operation: currentTransferOperation.value,
+      sourceFiles,
+      targetPath: target.path || '',
+      transferType: currentTransferType.value,
+    };
+
+    // 开始传输
+    const taskId = await transferStore.startTransfer(transferRequest);
+
+    if (taskId) {
+      showTransferProgressDialog.value = true;
+      new AppError(`传输已开始 (ID: ${taskId})`, { name: 'success' }).handle();
+    } else {
+      new AppError(transferStore.lastError || '开始传输失败', { name: 'error' }).handle();
+    }
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理传输对话框取消
+ */
+function handleTransferCancel(): void {
+  showTransferDialog.value = false;
+}
+
+/**
+ * 处理缓存根目录迁移确认
+ * 需求 8.2, 8.3: 用户选择新位置后开始迁移
+ */
+async function handleCacheRootMigrationConfirm(target: TransferTypes.TransferTarget): Promise<void> {
+  try {
+    showCacheRootMigrationDialog.value = false;
+
+    // 获取当前缓存根目录
+    await transferStore.loadCurrentCacheRoot();
+    const currentRoot = transferStore.currentCacheRoot;
+
+    if (!currentRoot) {
+      new AppError('无法获取当前缓存根目录', { name: 'error' }).handle();
+      return;
+    }
+
+    // 选择目标
+    await transferStore.selectTarget(target);
+
+    // 创建迁移请求
+    const migrationRequest: TransferTypes.RootMigrationRequest = {
+      currentRoot,
+      targetRoot: target.path || '',
+      updateDatabase: true,
+    };
+
+    // 开始迁移
+    const taskId = await transferStore.startRootMigration(migrationRequest);
+
+    if (taskId) {
+      showTransferProgressDialog.value = true;
+      new AppError(`缓存根目录迁移已开始 (ID: ${taskId})`, { name: 'success' }).handle();
+    } else {
+      new AppError(transferStore.lastError || '开始迁移失败', { name: 'error' }).handle();
+    }
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理缓存根目录迁移取消
+ */
+function handleCacheRootMigrationCancel(): void {
+  showCacheRootMigrationDialog.value = false;
+}
+
+/**
+ * 处理右键菜单复制
+ * 需求 1.1: 在右键菜单中添加复制选项
+ */
+function handleCopyFromContextMenu(item: Types.CacheItem): void {
+  // 确保项目被选中
+  if (!cacheStore.selectedItems.includes(item.id)) {
+    cacheStore.toggleCacheItemSelection(item.id);
+  }
+  startCopyOperation();
+}
+
+/**
+ * 处理右键菜单剪切
+ * 需求 2.1: 在右键菜单中添加剪切选项
+ */
+function handleCutFromContextMenu(item: Types.CacheItem): void {
+  // 确保项目被选中
+  if (!cacheStore.selectedItems.includes(item.id)) {
+    cacheStore.toggleCacheItemSelection(item.id);
+  }
+  startCutOperation();
 }
 
 // ============================================================================

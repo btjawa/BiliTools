@@ -417,6 +417,193 @@ async batchExportCacheItems(itemIds: string[], itemTypes: string[], exportPath: 
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * 发现可用的传输目标（本地文件夹和移动设备）
+ */
+async discoverTransferTargets() : Promise<Result<TransferTarget[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("discover_transfer_targets") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 验证传输目标的有效性
+ */
+async validateTransferTarget(target: TransferTarget) : Promise<Result<boolean, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("validate_transfer_target", { target }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 检查目标位置的可用空间
+ */
+async checkAvailableSpace(targetPath: string, requiredSize: number) : Promise<Result<boolean, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("check_available_space", { targetPath, requiredSize }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 开始文件传输
+ */
+async startTransfer(request: TransferRequest) : Promise<Result<string, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_transfer", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 开始缓存根目录迁移
+ */
+async startRootMigration(request: RootMigrationRequest) : Promise<Result<string, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_root_migration", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 暂停传输任务
+ */
+async pauseTransfer(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pause_transfer", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 恢复传输任务
+ */
+async resumeTransfer(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("resume_transfer", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 取消传输任务
+ */
+async cancelTransfer(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cancel_transfer", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取传输进度
+ */
+async getTransferProgress(taskId: string) : Promise<Result<TransferProgress | null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_transfer_progress", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取所有活跃的传输任务
+ */
+async getActiveTransfers() : Promise<Result<TransferTask[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_active_transfers") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取队列中的传输任务
+ */
+async getQueuedTransfers() : Promise<Result<TransferTask[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_queued_transfers") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取已完成的传输任务
+ */
+async getCompletedTransfers() : Promise<Result<TransferTask[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_completed_transfers") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 清空已完成的传输任务
+ */
+async clearCompletedTransfers() : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clear_completed_transfers") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取当前缓存根目录
+ */
+async getCurrentCacheRoot() : Promise<Result<string, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_current_cache_root") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取设备列表
+ */
+async getDeviceList() : Promise<Result<DeviceInfo[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_device_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 监听设备变化（使用 Channel 事件流）
+ */
+async listenDeviceChanges(event: TAURI_CHANNEL<DeviceInfo[]>) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("listen_device_changes", { event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 监听传输进度更新（使用 Channel 事件流）
+ */
+async listenTransferProgress(taskId: string, event: TAURI_CHANNEL<TransferProgress>) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("listen_transfer_progress", { taskId, event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -463,7 +650,79 @@ export type CacheStatistics = { total_count: number; available_count: number; un
  * 缓存统计信息
  */
 export type CacheStats = { total_count: number; total_size: number; available_count: number }
+/**
+ * 文件名冲突处理策略
+ */
+export type ConflictStrategy = 
+/**
+ * 跳过
+ */
+"Skip" | 
+/**
+ * 覆盖
+ */
+"Overwrite" | 
+/**
+ * 重命名（添加数字后缀）
+ */
+"Rename" | 
+/**
+ * 询问用户
+ */
+"Ask"
+/**
+ * 设备连接状态
+ */
+export type ConnectionStatus = 
+/**
+ * 已连接
+ */
+"Connected" | 
+/**
+ * 已断开
+ */
+"Disconnected"
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
+/**
+ * 设备信息
+ */
+export type DeviceInfo = { 
+/**
+ * 设备唯一标识符
+ */
+id: string; 
+/**
+ * 设备名称
+ */
+name: string; 
+/**
+ * 设备类型
+ */
+device_type: DeviceType; 
+/**
+ * 可用空间（字节）
+ */
+available_space: number | null; 
+/**
+ * 总空间（字节）
+ */
+total_space: number | null; 
+/**
+ * 连接状态
+ */
+connection_status: ConnectionStatus }
+/**
+ * 设备类型
+ */
+export type DeviceType = 
+/**
+ * 本地驱动器
+ */
+"LocalDrive" | 
+/**
+ * 可移动存储设备（U盘、移动硬盘等）
+ */
+"RemovableStorage"
 /**
  * 显示项枚举（组或单个视频）
  */
@@ -547,6 +806,22 @@ export type QueueEvent = { type: "taskUpdated"; id: string; state: TaskState | n
 export type QueueType = "backlog" | "pending" | "doing" | "complete"
 export type RequestAction = "prepareTask" | "getFilename" | "getNfo" | "getThumbs" | "getDanmaku" | "getSubtitle" | "getAISummary" | "getOpusContent" | "getOpusImages"
 /**
+ * 缓存根目录迁移请求
+ */
+export type RootMigrationRequest = { 
+/**
+ * 当前缓存根目录
+ */
+current_root: string; 
+/**
+ * 目标缓存根目录
+ */
+target_root: string; 
+/**
+ * 是否更新数据库
+ */
+update_database: boolean }
+/**
  * 扫描目录信息
  */
 export type ScanDirectoryInfo = { path: string; is_valid: boolean; invalid_reason: string | null; preview: ScanPreviewInfo | null }
@@ -575,6 +850,34 @@ export type TaskHotData = { status: Partial<{ [key in string]: SubTaskStatus }>;
 export type TaskMeta = { id: string; ts: number; seq: number; item: MediaItem; type: string }
 export type TaskPrepare = { select: PopupSelect; subtasks: SubTask[]; nfo: MediaNfo; folder: string }
 export type TaskState = "backlog" | "pending" | "active" | "completed" | "paused" | "failed" | "cancelled"
+/**
+ * 传输任务状态
+ */
+export type TaskStatus = 
+/**
+ * 等待中
+ */
+"Pending" | 
+/**
+ * 运行中
+ */
+"Running" | 
+/**
+ * 已暂停
+ */
+"Paused" | 
+/**
+ * 已完成
+ */
+"Completed" | 
+/**
+ * 失败
+ */
+"Failed" | 
+/**
+ * 已取消
+ */
+"Cancelled"
 export type TaskType = "opusContent" | "opusImages" | "aiSummary" | "subtitles" | "albumNfo" | "singleNfo" | "liveDanmaku" | "historyDanmaku" | "thumb" | "video" | "audio" | "audioVideo"
 export type TaskView = { meta: TaskMeta; prepare: TaskPrepare; hot: TaskHotData }
 export type TauriError = { code: AnyInt | null; message: string; stack: string }
@@ -591,6 +894,150 @@ export type Theme =
  * Auto theme.
  */
 "auto"
+/**
+ * 传输操作类型
+ */
+export type TransferOperation = 
+/**
+ * 复制操作，保留原文件
+ */
+"Copy" | 
+/**
+ * 剪切操作，移动文件并删除原文件
+ */
+"Cut" | 
+/**
+ * 缓存根目录迁移
+ */
+"RootMigration"
+/**
+ * 传输进度信息
+ */
+export type TransferProgress = { 
+/**
+ * 任务ID
+ */
+task_id: string; 
+/**
+ * 总文件数
+ */
+total_files: number; 
+/**
+ * 已完成文件数
+ */
+completed_files: number; 
+/**
+ * 总大小（字节）
+ */
+total_size: number; 
+/**
+ * 已传输大小（字节）
+ */
+transferred_size: number; 
+/**
+ * 传输速度（字节/秒）
+ */
+speed: number; 
+/**
+ * 预计剩余时间（秒）
+ */
+remaining_time: number; 
+/**
+ * 当前正在传输的文件
+ */
+current_file: string; 
+/**
+ * 任务状态
+ */
+status: TaskStatus }
+/**
+ * 传输请求
+ */
+export type TransferRequest = { 
+/**
+ * 传输操作类型
+ */
+operation: TransferOperation; 
+/**
+ * 源文件路径列表
+ */
+source_files: string[]; 
+/**
+ * 目标路径
+ */
+target_path: string; 
+/**
+ * 文件名冲突处理策略
+ */
+conflict_strategy: ConflictStrategy }
+/**
+ * 传输目标
+ */
+export type TransferTarget = { 
+/**
+ * 目标唯一标识符
+ */
+id: string; 
+/**
+ * 目标名称
+ */
+name: string; 
+/**
+ * 设备类型
+ */
+device_type: DeviceType; 
+/**
+ * 目标路径
+ */
+path: string | null; 
+/**
+ * 可用空间（字节）
+ */
+available_space: number | null; 
+/**
+ * 连接状态
+ */
+connection_status: ConnectionStatus }
+/**
+ * 传输任务
+ */
+export type TransferTask = { 
+/**
+ * 任务唯一标识符
+ */
+id: string; 
+/**
+ * 传输操作类型
+ */
+operation: TransferOperation; 
+/**
+ * 源文件路径列表
+ */
+source_files: string[]; 
+/**
+ * 传输目标
+ */
+target: TransferTarget; 
+/**
+ * 任务状态
+ */
+status: TaskStatus; 
+/**
+ * 传输进度
+ */
+progress: TransferProgress; 
+/**
+ * 创建时间（Unix时间戳）
+ */
+created_at: number; 
+/**
+ * 更新时间（Unix时间戳）
+ */
+updated_at: number; 
+/**
+ * 错误消息（如果失败）
+ */
+error_message: string | null }
 export type WindowEffect = 
 /**
  * Auto window effect based on platform

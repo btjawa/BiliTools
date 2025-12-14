@@ -3,6 +3,7 @@ pub mod cache;
 pub mod ffmpeg;
 pub mod login;
 pub mod queue;
+pub mod transfer;
 
 use crate::shared::process_err as err;
 

@@ -196,12 +196,10 @@ impl GroupService {
         if let Some(group_id) = &record.group_id {
             if !group_id.is_empty() {
                 // 核心判断：检查是否有其他视频共享相同的 group_id
-                let has_other_videos_with_same_group = all_records
-                    .iter()
-                    .any(|other| {
-                        other.id != record.id && // 不是同一个视频
+                let has_other_videos_with_same_group = all_records.iter().any(|other| {
+                    other.id != record.id && // 不是同一个视频
                         (other.group_id.as_ref() == Some(group_id))
-                    });
+                });
 
                 if has_other_videos_with_same_group {
                     return true; // 有其他视频共享相同 group_id，属于集合
@@ -220,12 +218,10 @@ impl GroupService {
         if let Some(group_id) = &record.group_id {
             if !group_id.is_empty() {
                 // 检查是否有其他视频共享相同的 group_id
-                let has_other_videos_with_same_group = all_records
-                    .iter()
-                    .any(|other| {
-                        other.id != record.id && // 不是同一个视频
+                let has_other_videos_with_same_group = all_records.iter().any(|other| {
+                    other.id != record.id && // 不是同一个视频
                         (other.group_id.as_ref() == Some(group_id))
-                    });
+                });
 
                 if has_other_videos_with_same_group {
                     return Some(group_id.clone()); // 使用 group_id 作为分组键
