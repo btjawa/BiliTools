@@ -1074,10 +1074,18 @@ pub async fn start_root_migration(request: RootMigrationRequest) -> TauriResult<
     };
     use std::path::Path;
 
+    // 从配置中获取当前缓存根目录
+    let config = config::read();
+    let current_root_str = config.cache_root
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("尚未设置缓存根目录"))?
+        .to_string_lossy()
+        .to_string();
+
     // 验证当前根目录存在
-    let current_root = Path::new(&request.current_root);
+    let current_root = Path::new(&current_root_str);
     if !current_root.exists() || !current_root.is_dir() {
-        return Err(anyhow::anyhow!("当前缓存根目录不存在: {}", request.current_root).into());
+        return Err(anyhow::anyhow!("当前缓存根目录不存在: {}", current_root_str).into());
     }
 
     // 验证目标根目录的父目录存在
@@ -1155,7 +1163,7 @@ pub async fn start_root_migration(request: RootMigrationRequest) -> TauriResult<
     // 如果需要更新数据库，在传输完成后异步更新
     if request.update_database {
         let task_id_clone = task_id.clone();
-        let current_root_clone = request.current_root.clone();
+        let current_root_clone = current_root_str.clone();
         let target_root_clone = request.target_root.clone();
         let records_clone = records_to_migrate.clone();
 
@@ -1229,6 +1237,13 @@ async fn update_cache_paths_after_migration(
                 eprintln!("更新缓存记录路径失败 {}: {}", record.id, e);
             }
         }
+    }
+
+    // 更新配置中的缓存根目录
+    let mut settings = serde_json::Map::new();
+    settings.insert("cache_root".to_string(), serde_json::Value::String(new_root.to_string()));
+    if let Err(e) = config::write(settings).await {
+        eprintln!("更新配置中的缓存根目录失败: {}", e);
     }
 
     Ok(())

@@ -74,7 +74,6 @@ export interface TransferRequest {
  * 缓存根目录迁移请求
  */
 export interface RootMigrationRequest {
-  currentRoot: string;
   targetRoot: string;
   updateDatabase: boolean;
 }

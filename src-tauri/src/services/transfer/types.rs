@@ -194,8 +194,6 @@ pub struct TransferRequest {
 /// 缓存根目录迁移请求
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct RootMigrationRequest {
-    /// 当前缓存根目录
-    pub current_root: String,
     /// 目标缓存根目录
     pub target_root: String,
     /// 是否更新数据库

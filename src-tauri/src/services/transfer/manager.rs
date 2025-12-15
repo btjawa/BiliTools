@@ -451,8 +451,32 @@ async fn execute_transfer_task(
         }
     });
 
+    // 计算总大小和总文件数
+    let total_files = source_files.len();
+    let mut total_size: u64 = 0;
+    for source in &source_files {
+        let path = Path::new(source);
+        if path.is_file() {
+            total_size += std::fs::metadata(path)
+                .map(|m| m.len())
+                .unwrap_or(0);
+        } else if path.is_dir() {
+            let (size, _) = super::calculate_directory_size(path).await.unwrap_or((0, 0));
+            total_size += size;
+        }
+    }
+
+    // 创建全局进度对象
+    let mut global_progress = TransferProgress::new(task_id.clone(), total_files, total_size);
+    global_progress.status = TaskStatus::Running;
+
+    // 发送初始进度
+    let _ = tx.send(global_progress.clone()).await;
+
     // 执行传输
     let transfer_result: Result<(), TransferError> = async {
+        let mut transferred_size: u64 = 0;
+        
         for (index, source) in source_files.iter().enumerate() {
             let source_path = Path::new(source);
             let filename = source_path
@@ -460,15 +484,33 @@ async fn execute_transfer_task(
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| format!("file_{}", index));
 
+            // 更新当前文件
+            global_progress.current_file = source.clone();
+            let _ = tx.send(global_progress.clone()).await;
+
             if source_path.is_file() {
                 protocol
                     .transfer_file(source_path, &target, &filename, &task_id, Some(tx.clone()))
                     .await?;
+                
+                // 更新已传输大小
+                transferred_size += std::fs::metadata(source_path)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
             } else if source_path.is_dir() {
                 protocol
                     .transfer_directory(source_path, &target, &filename, &task_id, Some(tx.clone()))
                     .await?;
+                
+                // 更新已传输大小
+                let (size, _) = super::calculate_directory_size(source_path).await.unwrap_or((0, 0));
+                transferred_size += size;
             }
+
+            // 更新完成的文件数
+            global_progress.completed_files = index + 1;
+            global_progress.transferred_size = transferred_size;
+            let _ = tx.send(global_progress.clone()).await;
         }
         Ok(())
     }

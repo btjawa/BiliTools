@@ -74,8 +74,14 @@ export async function startTransfer(request: Types.TransferRequest): Promise<str
  */
 export async function startRootMigration(request: Types.RootMigrationRequest): Promise<string> {
   try {
+    // 转换前端 camelCase 为后端 snake_case
+    const backendRequest = {
+      target_root: request.targetRoot,
+      update_database: request.updateDatabase,
+    };
+    
     const taskId = await invoke<string>('start_root_migration', {
-      request,
+      request: backendRequest,
     });
     return taskId;
   } catch (error) {

@@ -843,10 +843,6 @@ export type RequestAction = "prepareTask" | "getFilename" | "getNfo" | "getThumb
  */
 export type RootMigrationRequest = { 
 /**
- * 当前缓存根目录
- */
-current_root: string; 
-/**
  * 目标缓存根目录
  */
 target_root: string; 
