@@ -96,7 +96,7 @@ impl TransferManager {
         // 验证目标
         protocol.validate_target(&target).await?;
 
-        // 计算总大小
+        // 计算总大小，文件数量按源路径数量计算（每个视频文件夹算作一个单位）
         let mut total_size: u64 = 0;
         for source in &request.source_files {
             let path = Path::new(source);
@@ -109,6 +109,9 @@ impl TransferManager {
                 total_size += size;
             }
         }
+        
+        // 对于B站缓存传输，每个源路径（视频文件夹）算作一个传输单位
+        let total_files = request.source_files.len();
 
         // 检查空间
         protocol.check_space(&target, total_size).await?;
@@ -121,6 +124,7 @@ impl TransferManager {
             request.source_files,
             target,
             total_size,
+            total_files,
         );
 
         // 添加到队列

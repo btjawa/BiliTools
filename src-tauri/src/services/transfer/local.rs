@@ -39,12 +39,6 @@ impl LocalFileProtocol {
         }
     }
 
-    /// 注册任务
-    async fn register_task(&self, task_id: &str) {
-        let mut tasks = self.active_tasks.write().await;
-        tasks.insert(task_id.to_string(), TaskState::default());
-    }
-
     /// 确保任务已注册（如果尚未注册则注册）
     async fn ensure_task_registered(&self, task_id: &str) {
         let mut tasks = self.active_tasks.write().await;
@@ -257,7 +251,7 @@ impl LocalFileProtocol {
                     current_progress,
                 )
                 .await?;
-                current_progress.completed_files += 1;
+                // 注意：不再按文件数量更新 completed_files，因为整个目录算作一个单位
             }
         }
 
@@ -416,11 +410,12 @@ impl TransferProtocol for LocalFileProtocol {
         // 确保任务已注册（如果尚未注册）
         self.ensure_task_registered(task_id).await;
 
-        // 计算目录总大小和文件数
-        let (total_size, total_files) = calculate_directory_size(source).await?;
+        // 计算目录总大小，但将整个目录视为一个传输单位
+        let (total_size, _) = calculate_directory_size(source).await?;
 
-        let mut progress = TransferProgress::new(task_id.to_string(), total_files, total_size);
+        let mut progress = TransferProgress::new(task_id.to_string(), 1, total_size);
         progress.status = TaskStatus::Running;
+        progress.current_file = source.to_string_lossy().to_string();
 
         let mut target_dir_path = PathBuf::from(target_path).join(target_dirname);
 
@@ -436,7 +431,19 @@ impl TransferProtocol for LocalFileProtocol {
             progress_sender.as_ref(),
             &mut progress,
         )
-        .await
+        .await?;
+
+        // 整个目录传输完成，更新进度
+        progress.completed_files = 1;
+        progress.status = TaskStatus::Completed;
+        progress.current_file = source.to_string_lossy().to_string(); // 确保显示目录路径而不是最后一个文件
+        
+        // 发送最终进度更新
+        if let Some(sender) = progress_sender {
+            let _ = sender.send(progress.clone()).await;
+        }
+
+        Ok(())
     }
 
     async fn cancel_transfer(&self, task_id: &str) -> Result<(), TransferError> {

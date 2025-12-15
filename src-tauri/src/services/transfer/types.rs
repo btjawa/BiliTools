@@ -161,9 +161,9 @@ impl TransferTask {
         source_files: Vec<String>,
         target: TransferTarget,
         total_size: u64,
+        total_files: usize,
     ) -> Self {
         let now = OffsetDateTime::now_utc().unix_timestamp();
-        let total_files = source_files.len();
         Self {
             id: id.clone(),
             operation,
