@@ -285,7 +285,11 @@
       "name": "路径",
       "desc": "“临时文件” 存储未下载完毕的文件，经过处理后转移至 “输出文件”。",
       "down_dir": "输出文件",
-      "temp_dir": "临时文件"
+      "temp_dir": "临时文件",
+      "cacheRoot": "B站缓存根目录",
+      "cacheRootNotSet": "未设置",
+      "cacheRootSet": "已设置B站缓存根目录为: {0}",
+      "cacheRootSetFailed": "设置B站缓存根目录失败"
     },
     "sidecar": {
       "name": "自定义执行路径",
@@ -710,6 +714,18 @@
     "confirmTitle": "确认操作",
     "startFailed": "开始传输失败",
     "sourceNotFound": "缓存文件不存在，可能已被移动或删除。请重新扫描缓存目录。",
+    "rootMigration": {
+      "title": "缓存根目录迁移",
+      "currentRootNotFound": "当前缓存根目录不存在",
+      "targetParentNotFound": "目标路径的父目录不存在",
+      "targetIsFile": "目标路径是一个文件，不能作为目录",
+      "targetNotEmpty": "目标目录不为空",
+      "noCacheFiles": "当前根目录下没有找到任何缓存文件",
+      "migrationStarted": "根目录迁移已开始",
+      "migrationCompleted": "根目录迁移已完成",
+      "migrationFailed": "根目录迁移失败",
+      "updatingDatabase": "正在更新数据库路径..."
+    },
     "successCount": "成功数",
     "failureCount": "失败数",
     "totalTransferred": "已传输",

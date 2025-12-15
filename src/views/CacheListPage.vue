@@ -1304,9 +1304,9 @@ async function handleCacheRootMigrationConfirm(target: TransferTypes.TransferTar
 
     if (taskId) {
       showTransferProgressDialog.value = true;
-      new AppError(`缓存根目录迁移已开始 (ID: ${taskId})`, { name: 'success' }).handle();
+      new AppError($t('transfer.rootMigration.migrationStarted'), { name: 'success' }).handle();
     } else {
-      new AppError(transferStore.lastError || '开始迁移失败', { name: 'error' }).handle();
+      new AppError(transferStore.lastError || $t('transfer.startFailed'), { name: 'error' }).handle();
     }
   } catch (error) {
     new AppError(error).handle();

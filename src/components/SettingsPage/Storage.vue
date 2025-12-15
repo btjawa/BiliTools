@@ -12,6 +12,15 @@
         <i class="fa-light fa-folder-open"></i>
       </button>
     </div>
+    <div class="io">
+      <h3>{{ $t('settings.paths.cacheRoot') }}</h3>
+      <button :disabled="!cacheRoot" @click="openCacheRoot">
+        {{ cacheRoot || $t('settings.paths.cacheRootNotSet') }}
+      </button>
+      <button @click="setCacheRoot">
+        <i class="fa-light fa-folder-open"></i>
+      </button>
+    </div>
   </section>
   <hr />
   <section>
@@ -66,26 +75,40 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import i18n from '@/i18n';
 
 import { openPath } from '@tauri-apps/plugin-opener';
 import { Channel } from '@tauri-apps/api/core';
 import * as dialog from '@tauri-apps/plugin-dialog';
 
-import { useAppStore, useSettingsStore } from '@/store';
+import { useAppStore, useSettingsStore, useTransferStore } from '@/store';
 import { commands } from '@/services/backend';
 import { AppLog, formatBytes } from '@/services/utils';
 
 const settings = useSettingsStore();
 const app = useAppStore();
+const transferStore = useTransferStore();
 
 const pathList = ['down_dir', 'temp_dir'] as const;
+const cacheRoot = ref<string>('');
 const sidecarList = ['aria2c', 'ffmpeg', 'danmakufactory'] as const;
 const cacheList = ['log', 'temp', 'webview', 'database'] as const;
 type CacheKey = keyof typeof app.cache;
 
-onMounted(() => cacheList.forEach((k) => getSize(k)));
+onMounted(async () => {
+  cacheList.forEach((k) => getSize(k));
+  await loadCacheRoot();
+});
+
+async function loadCacheRoot() {
+  try {
+    await transferStore.loadCurrentCacheRoot();
+    cacheRoot.value = transferStore.currentCacheRoot || '';
+  } catch (error) {
+    console.error('加载缓存根目录失败:', error);
+  }
+}
 
 async function getSize(type: CacheKey) {
   const event = new Channel<number>();
@@ -141,6 +164,29 @@ async function exportDb() {
   const result = await commands.dbExport(path);
   if (result.status === 'error') throw result.error;
   AppLog(i18n.global.t('settings.database.exported', [path]), 'success');
+}
+
+async function openCacheRoot() {
+  if (cacheRoot.value) {
+    await openPath(cacheRoot.value);
+  }
+}
+
+async function setCacheRoot() {
+  const path = await dialog.open({
+    directory: true,
+    defaultPath: cacheRoot.value || settings.down_dir,
+  });
+  if (!path) return;
+  
+  try {
+    await transferStore.setCacheRoot(path);
+    cacheRoot.value = path;
+    AppLog(i18n.global.t('settings.paths.cacheRootSet', [path]), 'success');
+  } catch (error) {
+    AppLog(i18n.global.t('settings.paths.cacheRootSetFailed'), 'error');
+    console.error('设置缓存根目录失败:', error);
+  }
 }
 </script>
 

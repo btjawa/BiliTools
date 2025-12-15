@@ -211,7 +211,15 @@ pub async fn scan_cache_directory(path: String) -> TauriResult<ScanResult> {
 #[specta::specta]
 pub async fn import_cache_directory(path: String, options: ImportOptions) -> TauriResult<String> {
     let import_service = ImportService::new();
-    let root_path = PathBuf::from(path);
+    let root_path = PathBuf::from(&path);
+
+    // 在导入前，自动设置缓存根目录（如果尚未设置）
+    let config = config::read();
+    if config.cache_root.is_none() {
+        let mut settings = serde_json::Map::new();
+        settings.insert("cache_root".to_string(), serde_json::Value::String(path.clone()));
+        config::write(settings).await?;
+    }
 
     // 启动异步导入并返回导入ID
     let result = import_service
@@ -1060,10 +1068,170 @@ pub async fn start_transfer(request: TransferRequest) -> TauriResult<String> {
 /// 开始缓存根目录迁移
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn start_root_migration(_request: RootMigrationRequest) -> TauriResult<String> {
-    // 这个命令会在后续的缓存根目录迁移功能中实现
-    // 目前返回一个占位符
-    Err(anyhow::anyhow!("缓存根目录迁移功能尚未实现").into())
+pub async fn start_root_migration(request: RootMigrationRequest) -> TauriResult<String> {
+    use crate::services::transfer::types::{
+        ConflictStrategy, TaskStatus, TransferOperation, TransferRequest,
+    };
+    use std::path::Path;
+
+    // 验证当前根目录存在
+    let current_root = Path::new(&request.current_root);
+    if !current_root.exists() || !current_root.is_dir() {
+        return Err(anyhow::anyhow!("当前缓存根目录不存在: {}", request.current_root).into());
+    }
+
+    // 验证目标根目录的父目录存在
+    let target_root = Path::new(&request.target_root);
+    if let Some(parent) = target_root.parent() {
+        if !parent.exists() {
+            return Err(anyhow::anyhow!("目标路径的父目录不存在: {}", parent.display()).into());
+        }
+    }
+
+    // 如果目标目录已存在且不为空，返回错误
+    if target_root.exists() {
+        if target_root.is_file() {
+            return Err(anyhow::anyhow!(
+                "目标路径是一个文件，不能作为目录: {}",
+                request.target_root
+            )
+            .into());
+        }
+
+        // 检查目录是否为空
+        let mut entries = tokio::fs::read_dir(target_root)
+            .await
+            .map_err(|e| anyhow::anyhow!("无法读取目标目录: {}", e))?;
+        if entries
+            .next_entry()
+            .await
+            .map_err(|e| anyhow::anyhow!("无法检查目标目录内容: {}", e))?
+            .is_some()
+        {
+            return Err(anyhow::anyhow!("目标目录不为空: {}", request.target_root).into());
+        }
+    }
+
+    // 获取所有缓存记录，用于后续更新数据库
+    let all_records = cache_records::get_all().await?;
+
+    // 筛选出在当前根目录下的记录
+    let records_to_migrate: Vec<_> = all_records
+        .into_iter()
+        .filter(|record| {
+            let cache_path = Path::new(&record.cache_path);
+            cache_path.starts_with(current_root)
+        })
+        .collect();
+
+    if records_to_migrate.is_empty() {
+        return Err(anyhow::anyhow!("当前根目录下没有找到任何缓存文件").into());
+    }
+
+    // 收集所有需要迁移的文件夹路径
+    let source_files: Vec<String> = records_to_migrate
+        .iter()
+        .map(|record| record.cache_path.clone())
+        .collect();
+
+    // 初始化传输管理器
+    init_transfer_manager().await?;
+    let manager = get_transfer_manager();
+
+    // 创建传输请求（使用剪切操作进行迁移）
+    let transfer_request = TransferRequest {
+        operation: TransferOperation::RootMigration,
+        source_files,
+        target_path: request.target_root.clone(),
+        conflict_strategy: ConflictStrategy::Rename,
+    };
+
+    // 启动传输任务
+    let task_id = manager
+        .start_transfer(transfer_request)
+        .await
+        .map_err(|e| anyhow::anyhow!("启动根目录迁移失败: {}", e))?;
+
+    // 如果需要更新数据库，在传输完成后异步更新
+    if request.update_database {
+        let task_id_clone = task_id.clone();
+        let current_root_clone = request.current_root.clone();
+        let target_root_clone = request.target_root.clone();
+        let records_clone = records_to_migrate.clone();
+
+        tokio::spawn(async move {
+            // 等待传输完成
+            let manager = get_transfer_manager();
+            loop {
+                match manager.get_task_status(&task_id_clone).await {
+                    Some(status) => {
+                        match status {
+                            TaskStatus::Completed => {
+                                // 传输完成，更新数据库
+                                if let Err(e) = update_cache_paths_after_migration(
+                                    &records_clone,
+                                    &current_root_clone,
+                                    &target_root_clone,
+                                )
+                                .await
+                                {
+                                    eprintln!("更新数据库路径失败: {}", e);
+                                }
+                                break;
+                            }
+                            TaskStatus::Failed | TaskStatus::Cancelled => {
+                                // 传输失败或取消，不更新数据库
+                                eprintln!("根目录迁移失败或被取消，不更新数据库");
+                                break;
+                            }
+                            _ => {
+                                // 继续等待
+                                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                            }
+                        }
+                    }
+                    None => {
+                        eprintln!("无法获取传输任务状态: {}", task_id_clone);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    Ok(task_id)
+}
+
+/// 更新缓存记录的路径（迁移完成后调用）
+async fn update_cache_paths_after_migration(
+    records: &[CacheRecord],
+    old_root: &str,
+    new_root: &str,
+) -> TauriResult<()> {
+    use std::path::Path;
+
+    let old_root_path = Path::new(old_root);
+    let new_root_path = Path::new(new_root);
+
+    for record in records {
+        let old_cache_path = Path::new(&record.cache_path);
+
+        // 计算相对路径
+        if let Ok(relative_path) = old_cache_path.strip_prefix(old_root_path) {
+            let new_cache_path = new_root_path.join(relative_path);
+            let new_cache_path_str = new_cache_path.to_string_lossy().to_string();
+
+            // 更新数据库记录
+            let mut updated_record = record.clone();
+            updated_record.cache_path = new_cache_path_str;
+
+            if let Err(e) = cache_records::upsert(&updated_record).await {
+                eprintln!("更新缓存记录路径失败 {}: {}", record.id, e);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// 暂停传输任务
@@ -1168,9 +1336,38 @@ pub async fn clear_completed_transfers() -> TauriResult<()> {
 #[specta::specta]
 pub async fn get_current_cache_root() -> TauriResult<String> {
     let config = config::read();
-    // 缓存根目录存储在 down_dir 中
-    let cache_root = config.down_dir.to_string_lossy().to_string();
-    Ok(cache_root)
+    
+    // 如果配置中有缓存根目录，直接返回
+    if let Some(cache_root) = &config.cache_root {
+        return Ok(cache_root.to_string_lossy().to_string());
+    }
+    
+    // 如果没有配置，返回空字符串表示未设置
+    Ok(String::new())
+}
+
+/// 设置缓存根目录
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn set_cache_root(path: String) -> TauriResult<()> {
+    use std::path::PathBuf;
+    use serde_json::json;
+    
+    let cache_root = PathBuf::from(path);
+    
+    // 验证路径存在且是目录
+    if !cache_root.exists() || !cache_root.is_dir() {
+        return Err(anyhow::anyhow!("指定的路径不存在或不是目录").into());
+    }
+    
+    // 更新配置
+    let mut settings = json!({
+        "cache_root": cache_root.to_string_lossy().to_string()
+    });
+    
+    config::write(settings.as_object_mut().unwrap().clone()).await?;
+    
+    Ok(())
 }
 
 /// 获取设备列表
@@ -1238,7 +1435,7 @@ pub async fn listen_transfer_progress(
         // 最多等待 10 秒让任务出现
         let mut retry_count = 0;
         let max_retries = 20;
-        
+
         loop {
             match manager.get_progress(&task_id).await {
                 Some(progress) => {
@@ -1257,7 +1454,7 @@ pub async fn listen_transfer_progress(
                         }
                         _ => {}
                     }
-                    
+
                     // 重置重试计数
                     retry_count = 0;
                 }
@@ -1270,7 +1467,7 @@ pub async fn listen_transfer_progress(
                     }
                 }
             }
-            
+
             // 每200ms检查一次进度
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }

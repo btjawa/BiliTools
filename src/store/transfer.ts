@@ -304,7 +304,7 @@ export const useTransferStore = defineStore('transfer', () => {
       lastError.value = null;
 
       if (!selectedTarget.value) {
-        lastError.value = '请先选择迁移目标';
+        lastError.value = 'Please select a migration target first';
         return null;
       }
 
@@ -568,6 +568,23 @@ export const useTransferStore = defineStore('transfer', () => {
     }
   }
 
+  /**
+   * 设置缓存根目录
+   */
+  async function setCacheRoot(path: string): Promise<void> {
+    try {
+      lastError.value = null;
+
+      await transferService.setCacheRoot(path);
+      currentCacheRoot.value = path;
+      cacheRootLoaded.value = true;
+    } catch (error) {
+      lastError.value = error instanceof Error ? error.message : '设置缓存根目录失败';
+      console.error('设置缓存根目录失败:', error);
+      throw error;
+    }
+  }
+
   // ============================================================================
   // Actions - 其他
   // ============================================================================
@@ -718,6 +735,7 @@ export const useTransferStore = defineStore('transfer', () => {
     updateTransferProgress,
     loadCurrentCacheRoot,
     refreshCacheRoot,
+    setCacheRoot,
     clearError,
     clearCompletedTasks,
     reset,

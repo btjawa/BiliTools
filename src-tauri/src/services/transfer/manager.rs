@@ -109,7 +109,7 @@ impl TransferManager {
                 total_size += size;
             }
         }
-        
+
         // 对于B站缓存传输，每个源路径（视频文件夹）算作一个传输单位
         let total_files = request.source_files.len();
 
@@ -385,10 +385,10 @@ async fn handle_transfer_result(
             }
         }
     }
-    
+
     // 等待一小段时间让前端有机会获取最终状态
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-    
+
     // 从活跃任务中移除
     let task = match manager.active_tasks.write().await.remove(&task_id) {
         Some(t) => t,
@@ -482,8 +482,8 @@ async fn execute_transfer_task(
     // 检查传输结果
     transfer_result?;
 
-    // 如果是剪切操作，删除源文件
-    if operation == TransferOperation::Cut {
+    // 如果是剪切操作或根目录迁移，删除源文件
+    if operation == TransferOperation::Cut || operation == TransferOperation::RootMigration {
         for source in &source_files {
             let source_path = Path::new(source);
             if source_path.is_file() {

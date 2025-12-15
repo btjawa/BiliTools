@@ -437,7 +437,7 @@ impl TransferProtocol for LocalFileProtocol {
         progress.completed_files = 1;
         progress.status = TaskStatus::Completed;
         progress.current_file = source.to_string_lossy().to_string(); // 确保显示目录路径而不是最后一个文件
-        
+
         // 发送最终进度更新
         if let Some(sender) = progress_sender {
             let _ = sender.send(progress.clone()).await;
@@ -634,9 +634,12 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
 
     let mut targets = Vec::new();
     let drives_bitmask = unsafe { GetLogicalDrives() };
-    
+
     println!("=== Windows 设备发现开始 ===");
-    println!("发现驱动器位掩码: {:b} (十进制: {})", drives_bitmask, drives_bitmask);
+    println!(
+        "发现驱动器位掩码: {:b} (十进制: {})",
+        drives_bitmask, drives_bitmask
+    );
     println!("检查 26 个可能的驱动器字母 (A-Z)...");
 
     for i in 0..26 {
@@ -649,10 +652,10 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
                 .collect();
 
             let drive_type = unsafe { GetDriveTypeW(wide_path.as_ptr()) };
-            
+
             let _drive_type_name = match drive_type {
                 DRIVE_UNKNOWN => "UNKNOWN",
-                DRIVE_NO_ROOT_DIR => "NO_ROOT_DIR", 
+                DRIVE_NO_ROOT_DIR => "NO_ROOT_DIR",
                 DRIVE_REMOVABLE => "REMOVABLE",
                 DRIVE_FIXED => "FIXED",
                 DRIVE_REMOTE => "REMOTE",
@@ -660,9 +663,12 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
                 DRIVE_RAMDISK => "RAMDISK",
                 _ => "OTHER",
             };
-            
+
             // 处理固定驱动器、可移动设备和CD-ROM
-            if drive_type != DRIVE_FIXED && drive_type != DRIVE_REMOVABLE && drive_type != DRIVE_CDROM {
+            if drive_type != DRIVE_FIXED
+                && drive_type != DRIVE_REMOVABLE
+                && drive_type != DRIVE_CDROM
+            {
                 continue;
             }
 
@@ -722,8 +728,6 @@ async fn discover_windows_drives() -> Result<Vec<TransferTarget>, TransferError>
                 format!("{} ({}:)", volume_label, drive_letter)
             };
 
-
-            
             targets.push(TransferTarget {
                 id: drive_path.clone(),
                 name,

@@ -1373,6 +1373,11 @@ export const useCacheStore = defineStore('cache', () => {
             if (progress.status === 'Completed') {
               // 刷新缓存列表
               refreshCacheList();
+              // 刷新缓存根目录状态
+              import('@/store/transfer').then(({ useTransferStore }) => {
+                const transferStore = useTransferStore();
+                transferStore.refreshCacheRoot();
+              });
             }
           }
         },

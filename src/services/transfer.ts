@@ -164,6 +164,18 @@ export async function getCurrentCacheRoot(): Promise<string> {
 }
 
 /**
+ * 设置缓存根目录
+ */
+export async function setCacheRoot(path: string): Promise<void> {
+  try {
+    await invoke('set_cache_root', { path });
+  } catch (error) {
+    console.error('设置缓存根目录失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 监听设备变化
  */
 export function onDeviceChange(): () => void {

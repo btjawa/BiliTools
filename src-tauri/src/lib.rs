@@ -87,6 +87,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             get_completed_transfers,
             clear_completed_transfers,
             get_current_cache_root,
+            set_cache_root,
             get_device_list,
             listen_device_changes,
             listen_transfer_progress,

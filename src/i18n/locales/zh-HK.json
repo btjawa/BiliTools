@@ -285,7 +285,11 @@
       "name": "路徑",
       "desc": "「臨時檔案」儲存未下載完成的檔案，處理後將轉移至「輸出檔案」。",
       "down_dir": "輸出檔案",
-      "temp_dir": "臨時檔案"
+      "temp_dir": "臨時檔案",
+      "cacheRoot": "B站快取根目錄",
+      "cacheRootNotSet": "未設定",
+      "cacheRootSet": "已設定B站快取根目錄為: {0}",
+      "cacheRootSetFailed": "設定B站快取根目錄失敗"
     },
     "sidecar": {
       "name": "自訂執行路徑",
@@ -708,6 +712,18 @@
     "confirmTitle": "確認操作",
     "startFailed": "開始傳輸失敗",
     "sourceNotFound": "快取檔案不存在，可能已被移動或刪除。請重新掃描快取目錄。",
+    "rootMigration": {
+      "title": "快取根目錄遷移",
+      "currentRootNotFound": "當前快取根目錄不存在",
+      "targetParentNotFound": "目標路徑的父目錄不存在",
+      "targetIsFile": "目標路徑是一個檔案，不能作為目錄",
+      "targetNotEmpty": "目標目錄不為空",
+      "noCacheFiles": "當前根目錄下沒有找到任何快取檔案",
+      "migrationStarted": "根目錄遷移已開始",
+      "migrationCompleted": "根目錄遷移已完成",
+      "migrationFailed": "根目錄遷移失敗",
+      "updatingDatabase": "正在更新資料庫路徑..."
+    },
     "successCount": "成功數",
     "failureCount": "失敗數",
     "totalTransferred": "已傳輸",

@@ -285,7 +285,11 @@
       "name": "Paths",
       "desc": "\"Temp Files\" store unfinished downloads; after processing, they are moved to \"Output Files\".",
       "down_dir": "Output Files",
-      "temp_dir": "Temp Files"
+      "temp_dir": "Temp Files",
+      "cacheRoot": "Bilibili Cache Root Directory",
+      "cacheRootNotSet": "Not Set",
+      "cacheRootSet": "Bilibili cache root directory set to: {0}",
+      "cacheRootSetFailed": "Failed to set Bilibili cache root directory"
     },
     "sidecar": {
       "name": "Custom Executable Paths",
@@ -708,6 +712,18 @@
     "confirmTitle": "Confirm Action",
     "startFailed": "Failed to start transfer",
     "sourceNotFound": "Cache file not found. It may have been moved or deleted. Please rescan the cache directory.",
+    "rootMigration": {
+      "title": "Cache Root Directory Migration",
+      "currentRootNotFound": "Current cache root directory not found",
+      "targetParentNotFound": "Target path parent directory not found",
+      "targetIsFile": "Target path is a file, cannot be used as directory",
+      "targetNotEmpty": "Target directory is not empty",
+      "noCacheFiles": "No cache files found in current root directory",
+      "migrationStarted": "Root directory migration started",
+      "migrationCompleted": "Root directory migration completed",
+      "migrationFailed": "Root directory migration failed",
+      "updatingDatabase": "Updating database paths..."
+    },
     "successCount": "Success count",
     "failureCount": "Failure count",
     "totalTransferred": "Total transferred",

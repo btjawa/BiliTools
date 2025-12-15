@@ -595,6 +595,17 @@ async getCurrentCacheRoot() : Promise<Result<string, TauriError>> {
 }
 },
 /**
+ * 设置缓存根目录
+ */
+async setCacheRoot(path: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_cache_root", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 获取设备列表
  */
 async getDeviceList() : Promise<Result<DeviceInfo[], TauriError>> {
@@ -857,7 +868,7 @@ export type ScanPreviewInfo = { title: string; file_size: number; duration: numb
 export type ScanResult = { root_path: string; total_directories: number; valid_directories: number; invalid_directories: number; estimated_total_size: number; scan_duration: number; directories: ScanDirectoryInfo[] }
 export type SchedulerState = "idle" | "running" | "paused" | "completed" | "failed" | "cancelled"
 export type SchedulerView = { sid: string; ts: number; list: string[]; queue: QueueType; state: SchedulerState }
-export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; drag_search: boolean; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy; sidecar: SettingsSidecar; speed_limit: number }
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; cache_root: string | null; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; drag_search: boolean; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy; sidecar: SettingsSidecar; speed_limit: number }
 export type SettingsConvert = { danmaku: boolean; mp4: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { series: string; item: string; file: string }

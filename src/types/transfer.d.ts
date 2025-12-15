@@ -5,7 +5,7 @@
 /**
  * 传输操作类型
  */
-export type TransferOperation = 'Copy' | 'Cut';
+export type TransferOperation = 'Copy' | 'Cut' | 'RootMigration';
 
 /**
  * 传输类型

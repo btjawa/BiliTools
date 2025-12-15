@@ -285,7 +285,11 @@
       "name": "パス",
       "desc": "未完了のファイルは「一時ファイル」に保存され、処理後に「出力ファイル」へ移動します。",
       "down_dir": "出力ファイル",
-      "temp_dir": "一時ファイル"
+      "temp_dir": "一時ファイル",
+      "cacheRoot": "Bilibiliキャッシュルートディレクトリ",
+      "cacheRootNotSet": "未設定",
+      "cacheRootSet": "Bilibiliキャッシュルートディレクトリを設定しました: {0}",
+      "cacheRootSetFailed": "Bilibiliキャッシュルートディレクトリの設定に失敗しました"
     },
     "sidecar": {
       "name": "外部実行パスの設定",
@@ -708,6 +712,18 @@
     "confirmTitle": "操作の確認",
     "startFailed": "転送の開始に失敗しました",
     "sourceNotFound": "キャッシュファイルが見つかりません。移動または削除された可能性があります。キャッシュディレクトリを再スキャンしてください。",
+    "rootMigration": {
+      "title": "キャッシュルートディレクトリの移行",
+      "currentRootNotFound": "現在のキャッシュルートディレクトリが見つかりません",
+      "targetParentNotFound": "ターゲットパスの親ディレクトリが見つかりません",
+      "targetIsFile": "ターゲットパスはファイルです。ディレクトリとして使用できません",
+      "targetNotEmpty": "ターゲットディレクトリが空ではありません",
+      "noCacheFiles": "現在のルートディレクトリにキャッシュファイルが見つかりません",
+      "migrationStarted": "ルートディレクトリの移行が開始されました",
+      "migrationCompleted": "ルートディレクトリの移行が完了しました",
+      "migrationFailed": "ルートディレクトリの移行に失敗しました",
+      "updatingDatabase": "データベースパスを更新中..."
+    },
     "successCount": "成功数",
     "failureCount": "失敗数",
     "totalTransferred": "転送済み合計",

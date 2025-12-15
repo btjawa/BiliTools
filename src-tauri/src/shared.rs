@@ -35,6 +35,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
         auto_check_update: true,
         auto_download: false,
         block_pcdn: true,
+        cache_root: None,
         check_update: true,
         clipboard: false,
         convert: SettingsConvert {

@@ -31,6 +31,7 @@ pub struct Settings {
     pub auto_check_update: bool,
     pub auto_download: bool,
     pub block_pcdn: bool,
+    pub cache_root: Option<PathBuf>,
     pub check_update: bool,
     pub clipboard: bool,
     pub convert: SettingsConvert,
