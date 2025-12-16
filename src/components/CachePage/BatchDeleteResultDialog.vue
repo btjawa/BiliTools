@@ -145,8 +145,9 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { formatFileSize } from '@/utils/format';
 
-useI18n();
+const { t: $t } = useI18n();
 
 // ============================================================================
 // Props 和 Emits
@@ -185,23 +186,9 @@ const emit = defineEmits<Emits>();
 // ============================================================================
 
 /**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
-
-/**
  * 格式化持续时间（毫秒转为可读格式）
  */
 function formatDuration(ms: number): string {
-  const { t: $t } = useI18n();
   const seconds = Math.floor(ms / 1000);
 
   if (seconds < 60) {

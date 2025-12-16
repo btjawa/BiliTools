@@ -259,11 +259,23 @@ impl TransferManager {
 
     /// 获取任务进度
     pub async fn get_progress(&self, task_id: &str) -> Option<TransferProgress> {
-        self.active_tasks
+        // 先检查活跃任务
+        if let Some(task) = self.active_tasks.read().await.get(task_id) {
+            return Some(task.progress.clone());
+        }
+
+        // 再检查已完成任务
+        if let Some(task) = self
+            .completed_tasks
             .read()
             .await
-            .get(task_id)
-            .map(|t| t.progress.clone())
+            .iter()
+            .find(|t| t.id == task_id)
+        {
+            return Some(task.progress.clone());
+        }
+
+        None
     }
 
     /// 获取任务状态
@@ -386,8 +398,8 @@ async fn handle_transfer_result(
         }
     }
 
-    // 等待一小段时间让前端有机会获取最终状态
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // 等待一段时间让前端有机会获取最终状态
+    tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
 
     // 从活跃任务中移除
     let task = match manager.active_tasks.write().await.remove(&task_id) {

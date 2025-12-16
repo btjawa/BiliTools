@@ -408,7 +408,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useCacheStore } from '@/store/cache';
 import { cacheImportService, validateCachePath } from '@/services/cache';
-import { formatBytes } from '@/services/utils';
+import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
 import { ProgressBar } from '@/components';
 import type * as Types from '@/types/cache.d';

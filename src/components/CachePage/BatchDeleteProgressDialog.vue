@@ -32,7 +32,7 @@
               <div class="flex justify-between text-sm text-(--desc-color) mt-2">
                 <span>{{ progress.processed }} / {{ progress.total }}</span>
                 <span v-if="progress.estimatedTimeRemaining > 0">
-                  {{ $t('cache.batchDelete.estimatedTime') }}: {{ formatTime(progress.estimatedTimeRemaining) }}
+                  {{ $t('cache.batchDelete.estimatedTime') }}: {{ formatTimeSimple(progress.estimatedTimeRemaining) }}
                 </span>
               </div>
             </div>
@@ -159,6 +159,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ProgressBar } from '@/components';
+import { formatFileSize, formatTimeSimple } from '@/utils/format';
 
 const { t: $t } = useI18n();
 
@@ -221,35 +222,9 @@ const failedItems = computed(() => {
 // 方法
 // ============================================================================
 
-/**
- * 格式化时间（秒转为可读格式）
- */
-function formatTime(seconds: number): string {
-  if (seconds < 60) {
-    return $t('cache.time.seconds', [Math.round(seconds)]);
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round(seconds % 60);
-    return $t('cache.time.minutesSeconds', [minutes, remainingSeconds]);
-  } else {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return $t('cache.time.hoursMinutes', [hours, minutes]);
-  }
-}
 
-/**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
 
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
 
 /**
  * 处理取消操作

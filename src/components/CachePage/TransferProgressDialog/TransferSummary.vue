@@ -96,14 +96,6 @@ const estimatedRemainingTime = computed(() => {
 
   return formatTimeSimple(remainingSeconds);
 });
-
-// ============================================================================
-// 方法
-// ============================================================================
-
-
-
-
 </script>
 
 <style scoped>

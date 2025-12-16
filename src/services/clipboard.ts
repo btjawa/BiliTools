@@ -2,6 +2,7 @@ import { readText } from '@tauri-apps/plugin-clipboard-manager';
 import { strip } from './utils';
 import { watch } from 'vue';
 import { useSettingsStore } from '@/store';
+import { TIMER } from '@/constants';
 
 let timer: number | null = null;
 let sentry = '';
@@ -63,5 +64,5 @@ function schedule() {
       inFlight = false;
       schedule();
     }
-  }, 1000);
+  }, TIMER.CLIPBOARD_INTERVAL);
 }

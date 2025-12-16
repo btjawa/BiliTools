@@ -148,7 +148,9 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTransferStore } from '@/store/transfer';
+import { handleComponentError } from '@/utils/error-handler';
 import type * as Types from '@/types/transfer.d';
+import { formatFileSize } from '@/utils/format';
 
 // ============================================================================
 // Props 和 Emits
@@ -248,8 +250,6 @@ async function initialize() {
     // 加载当前缓存根目录
     await transferStore.loadCurrentCacheRoot();
 
-
-
     // 计算缓存根目录信息（这里暂时使用占位符）
     // 实际实现需要后端支持
     cacheRootInfo.value = {
@@ -257,8 +257,7 @@ async function initialize() {
       fileCount: 0,
     };
   } catch (error) {
-    lastError.value = error instanceof Error ? error.message : t('transfer.error');
-    console.error('初始化对话框失败:', error);
+    handleComponentError(error, '初始化对话框', (msg) => { lastError.value = msg; });
   }
 }
 
@@ -312,23 +311,11 @@ async function handleBrowseFolder() {
       checkSpace();
     }
   } catch (error) {
-    lastError.value = error instanceof Error ? error.message : t('transfer.error');
-    console.error('选择文件夹失败:', error);
+    handleComponentError(error, '选择文件夹', (msg) => { lastError.value = msg; });
   }
 }
 
-/**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
 
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
 
 /**
  * 处理确认按钮
@@ -349,8 +336,7 @@ async function handleConfirm() {
 
     emit('confirm', selectedTarget.value);
   } catch (error) {
-    lastError.value = error instanceof Error ? error.message : t('transfer.error');
-    console.error('确认失败:', error);
+    handleComponentError(error, '确认', (msg) => { lastError.value = msg; });
   } finally {
     isValidating.value = false;
   }

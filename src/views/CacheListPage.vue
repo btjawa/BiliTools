@@ -475,7 +475,7 @@ import * as dialog from '@tauri-apps/plugin-dialog';
 import { useCacheStore } from '@/store/cache';
 import { useTransferStore } from '@/store/transfer';
 import { cacheManagementService } from '@/services/cache';
-import { formatBytes } from '@/services/utils';
+import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
 import { AppLog } from '@/services/utils';
 import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar } from '@/components';

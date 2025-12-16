@@ -181,7 +181,7 @@
               <span
                 >{{ $t('cache.import.totalTime') }}:
                 {{
-                  formatDuration(
+                  formatDurationMs(
                     result.endTime.getTime() - result.startTime.getTime(),
                   )
                 }}</span
@@ -235,6 +235,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ProgressBar } from '@/components';
 import type * as Types from '@/types/cache.d';
+import { formatDurationMs } from '@/utils/format';
 
 // ============================================================================
 // Props 和 Emits
@@ -389,12 +390,7 @@ function formatTime(seconds: number): string {
   }
 }
 
-/**
- * 格式化持续时间（毫秒转为可读格式）
- */
-function formatDuration(milliseconds: number): string {
-  return formatTime(Math.floor(milliseconds / 1000));
-}
+
 
 /**
  * 格式化错误时间

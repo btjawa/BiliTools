@@ -10,6 +10,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { AppError } from './error';
 import * as backend from './backend';
 import * as Types from '@/types/cache.d';
+import { transformCacheRecord } from '@/utils/transform';
 
 // ============================================================================
 // 缓存导入服务类
@@ -237,25 +238,7 @@ export class CacheManagementService {
       const result = await invoke('get_cache_list');
 
       // 转换后端数据格式为前端类型
-      const items: Types.CacheItem[] = (result as Types.CacheRecordRaw[]).map(
-        (record: Types.CacheRecordRaw) => ({
-          id: record.id,
-          bvid: record.bvid,
-          aid: record.aid,
-          cid: record.cid,
-          title: record.title,
-          uname: record.uname,
-          coverUrl: record.cover_url,
-          duration: record.duration,
-          fileSize: record.file_size,
-          cachePath: record.cache_path,
-          p: record.p || 1, // 添加 p 字段，默认为 1
-          // 安全的时间戳转换，处理异常值
-          downloadTime: safeTimestampToDate(record.download_time),
-          importTime: safeTimestampToDate(record.import_time),
-          status: record.status as Types.CacheStatus,
-        }),
-      );
+      const items: Types.CacheItem[] = (result as Types.CacheRecordRaw[]).map(transformCacheRecord);
 
       // 构造分页信息（当前为简单实现）
       const paginationInfo: Types.CachePagination = {
@@ -620,70 +603,9 @@ export async function performFullImport(
   }
 }
 
-/**
- * 格式化文件大小
- * 将字节数转换为人类可读的文件大小格式
- *
- * @param bytes 字节数
- * @returns 格式化的文件大小字符串
- */
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
 
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
 
-/**
- * 格式化时长
- * 将秒数转换为时:分:秒格式
- *
- * @param seconds 秒数
- * @returns 格式化的时长字符串
- */
-export function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  } else {
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  }
-}
-
-/**
- * 安全的时间戳转换
- * 处理异常时间戳值，确保转换结果合理
- *
- * @param timestamp 时间戳（秒或毫秒）
- * @returns Date对象
- */
-function safeTimestampToDate(timestamp: number): Date {
-  // 处理无效值（包括 0 时间戳）
-  if (!timestamp || timestamp <= 0) {
-    console.warn(`无效时间戳: ${timestamp}, 使用当前时间`);
-    return new Date(); // 返回当前时间
-  }
-
-  // 判断是秒还是毫秒时间戳
-  // 如果大于 1e10，认为是毫秒时间戳
-  const isMilliseconds = timestamp > 1e10;
-  const date = new Date(isMilliseconds ? timestamp : timestamp * 1000);
-
-  // 检查转换结果是否合理（1970-2100年之间）
-  const year = date.getFullYear();
-  if (year < 1970 || year > 2100) {
-    console.warn(`异常时间戳: ${timestamp}, 转换结果: ${date.toISOString()}`);
-    return new Date(); // 返回当前时间
-  }
-
-  return date;
-}
 
 /**
  * 检查本地封面文件

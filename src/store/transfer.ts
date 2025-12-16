@@ -8,11 +8,15 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import * as transferService from '@/services/transfer';
+import { PROGRESS } from '@/constants';
 import * as backend from '@/services/backend';
 import { Channel } from '@tauri-apps/api/core';
 import { useCacheStore } from '@/store/cache';
+import { handleStoreError, UnifiedErrorHandler } from '@/utils/error-handler';
 import type * as Types from '@/types/transfer.d';
 import type * as CacheTypes from '@/types/cache.d';
+import { migrateTransferProgress } from '@/types/transfer.d';
+
 
 /**
  * 传输 Store
@@ -125,7 +129,7 @@ export const useTransferStore = defineStore('transfer', () => {
    */
   const overallProgressPercentage = computed(() => {
     if (totalTransferSize.value === 0) return 0;
-    return Math.round((totalTransferredSize.value / totalTransferSize.value) * 100);
+    return Math.round((totalTransferredSize.value / totalTransferSize.value) * PROGRESS.MAX_PERCENTAGE);
   });
 
   /**
@@ -150,56 +154,66 @@ export const useTransferStore = defineStore('transfer', () => {
   async function discoverTargets(): Promise<void> {
     if (isDiscoveringTargets.value) return;
 
-    try {
-      isDiscoveringTargets.value = true;
-      lastError.value = null;
+    await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        isDiscoveringTargets.value = true;
+        lastError.value = null;
 
-      console.log('开始发现传输目标设备...');
-      const targets = await transferService.discoverTransferTargets();
-      console.log('发现的设备列表:', targets);
-      console.log('设备数量:', targets.length);
-      
-      // 详细输出每个设备的信息
-      targets.forEach((target, index) => {
-        console.log(`设备 ${index + 1}:`, {
-          id: target.id,
-          name: target.name,
-          device_type: target.device_type,
-          path: target.path,
-          available_space: target.available_space,
-          connection_status: target.connection_status,
+        console.log('开始发现传输目标设备...');
+        const targets = await transferService.discoverTransferTargets();
+        console.log('发现的设备列表:', targets);
+        console.log('设备数量:', targets.length);
+        
+        // 详细输出每个设备的信息
+        targets.forEach((target, index) => {
+          console.log(`设备 ${index + 1}:`, {
+            id: target.id,
+            name: target.name,
+            device_type: target.device_type,
+            path: target.path,
+            available_space: target.available_space,
+            connection_status: target.connection_status,
+          });
         });
-      });
-      
-      availableTargets.value = targets;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '发现传输目标失败';
-      console.error('发现传输目标失败:', error);
-    } finally {
-      isDiscoveringTargets.value = false;
-    }
+        
+        availableTargets.value = targets;
+        return targets;
+      },
+      {
+        operation: '发现传输目标',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
+
+    isDiscoveringTargets.value = false;
   }
 
   /**
    * 选择传输目标
    */
   async function selectTarget(target: Types.TransferTarget): Promise<boolean> {
-    try {
-      lastError.value = null;
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
 
-      const isValid = await transferService.validateTransferTarget(target);
-      if (!isValid) {
-        lastError.value = '选择的目标位置无效';
-        return false;
+        const isValid = await transferService.validateTransferTarget(target);
+        if (!isValid) {
+          lastError.value = '选择的目标位置无效';
+          return false;
+        }
+
+        selectedTarget.value = target;
+        return true;
+      },
+      {
+        operation: '验证传输目标',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
       }
+    );
 
-      selectedTarget.value = target;
-      return true;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '验证传输目标失败';
-      console.error('验证传输目标失败:', error);
-      return false;
-    }
+    return result ?? false;
   }
 
   /**
@@ -213,15 +227,17 @@ export const useTransferStore = defineStore('transfer', () => {
    * 打开文件夹选择对话框
    */
   async function selectFolder(): Promise<string | null> {
-    try {
-      lastError.value = null;
-      const folderPath = await transferService.selectFolder();
-      return folderPath;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '选择文件夹失败';
-      console.error('选择文件夹失败:', error);
-      return null;
-    }
+    return await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
+        return await transferService.selectFolder();
+      },
+      {
+        operation: '选择文件夹',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
   }
 
   // ============================================================================
@@ -232,122 +248,128 @@ export const useTransferStore = defineStore('transfer', () => {
    * 开始文件传输
    */
   async function startTransfer(request: Types.TransferRequest): Promise<string | null> {
-    try {
-      lastError.value = null;
-      
-      // 清理已完成的任务
-      completedTasks.value.clear();
-
-      if (!selectedTarget.value) {
-        lastError.value = '请先选择传输目标';
-        return null;
-      }
-
-      // 检查可用空间
-      const hasSpace = await transferService.checkAvailableSpace(
-        selectedTarget.value.path || '',
-        request.source_files.length * 1024 * 1024, // 估算大小
-      );
-
-      if (!hasSpace) {
-        lastError.value = '目标位置空间不足';
-        return null;
-      }
-
-      const taskId = await transferService.startTransfer(request);
-
-      // 创建任务对象
-      const task: Types.TransferTask = {
-        id: taskId,
-        operation: request.operation,
-        source_files: request.source_files,
-        target_path: request.target_path,
-        status: 'pending',
-        progress: {
-          taskId,
-          totalFiles: request.source_files.length,
-          completedFiles: 0,
-          totalSize: 0,
-          transferredSize: 0,
-          speed: 0,
-          remainingTime: 0,
-          currentFile: '',
-          status: 'pending',
-        },
-        created_at: Date.now(),
-        updated_at: Date.now(),
-      };
-
-      // 添加到活跃任务或队列
-      if (canStartNewTask.value) {
-        activeTasks.value.set(taskId, task);
+    return await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
         
-        // 开始监听进度
-        startProgressListener(taskId);
-      } else {
-        taskQueue.value.push(taskId);
-      }
+        // 清理已完成的任务
+        completedTasks.value.clear();
 
-      return taskId;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '开始传输失败';
-      console.error('开始传输失败:', error);
-      return null;
-    }
+        if (!selectedTarget.value) {
+          lastError.value = '请先选择传输目标';
+          return null;
+        }
+
+        // 检查可用空间
+        const hasSpace = await transferService.checkAvailableSpace(
+          selectedTarget.value.path || '',
+          request.source_files.length * 1024 * 1024, // 估算大小
+        );
+
+        if (!hasSpace) {
+          lastError.value = '目标位置空间不足';
+          return null;
+        }
+
+        const taskId = await transferService.startTransfer(request);
+
+        // 创建任务对象
+        const task: Types.TransferTask = {
+          id: taskId,
+          operation: request.operation,
+          source_files: request.source_files,
+          target_path: request.target_path,
+          status: 'pending',
+          progress: migrateTransferProgress({
+            taskId,
+            totalFiles: request.source_files.length,
+            completedFiles: 0,
+            totalSize: 0,
+            transferredSize: 0,
+            speed: 0,
+            remainingTime: 0,
+            currentFile: '',
+            status: 'pending',
+          }),
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        };
+
+        // 添加到活跃任务或队列
+        if (canStartNewTask.value) {
+          activeTasks.value.set(taskId, task);
+          
+          // 开始监听进度
+          startProgressListener(taskId);
+        } else {
+          taskQueue.value.push(taskId);
+        }
+
+        return taskId;
+      },
+      {
+        operation: '开始传输',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
   }
 
   /**
    * 开始缓存根目录迁移
    */
   async function startRootMigration(request: Types.RootMigrationRequest): Promise<string | null> {
-    try {
-      lastError.value = null;
+    return await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
 
-      if (!selectedTarget.value) {
-        lastError.value = 'Please select a migration target first';
-        return null;
-      }
+        if (!selectedTarget.value) {
+          lastError.value = 'Please select a migration target first';
+          return null;
+        }
 
-      const taskId = await transferService.startRootMigration(request);
+        const taskId = await transferService.startRootMigration(request);
 
-      // 创建任务对象
-      const task: Types.TransferTask = {
-        id: taskId,
-        operation: 'Copy',
-        source_files: [],
-        target_path: request.targetRoot,
-        status: 'pending',
-        progress: {
-          taskId,
-          totalFiles: 0,
-          completedFiles: 0,
-          totalSize: 0,
-          transferredSize: 0,
-          speed: 0,
-          remainingTime: 0,
-          currentFile: '正在扫描文件...',
+        // 创建任务对象
+        const task: Types.TransferTask = {
+          id: taskId,
+          operation: 'Copy',
+          source_files: [],
+          target_path: request.targetRoot,
           status: 'pending',
-        },
-        created_at: Date.now(),
-        updated_at: Date.now(),
-      };
+          progress: migrateTransferProgress({
+            taskId,
+            totalFiles: 0,
+            completedFiles: 0,
+            totalSize: 0,
+            transferredSize: 0,
+            speed: 0,
+            remainingTime: 0,
+            currentFile: '正在扫描文件...',
+            status: 'pending',
+          }),
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        };
 
-      // 添加到活跃任务或队列
-      if (canStartNewTask.value) {
-        activeTasks.value.set(taskId, task);
-        
-        // 开始监听进度
-        startProgressListener(taskId);
-      } else {
-        taskQueue.value.push(taskId);
+        // 添加到活跃任务或队列
+        if (canStartNewTask.value) {
+          activeTasks.value.set(taskId, task);
+          
+          // 开始监听进度
+          startProgressListener(taskId);
+        } else {
+          taskQueue.value.push(taskId);
+        }
+
+        return taskId;
+      },
+      {
+        operation: '开始缓存根目录迁移',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
       }
-
-      return taskId;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '开始缓存根目录迁移失败';
-      console.error('开始缓存根目录迁移失败:', error);
-      return null;
-    }
+    );
   }
 
   /**
@@ -385,8 +407,7 @@ export const useTransferStore = defineStore('transfer', () => {
         return;
       }
       
-      lastError.value = error instanceof Error ? error.message : '暂停传输失败';
-      console.error('暂停传输失败:', error);
+      handleStoreError(error, '暂停传输', (msg) => { lastError.value = msg; });
       throw error;
     }
   }
@@ -444,8 +465,7 @@ export const useTransferStore = defineStore('transfer', () => {
         return;
       }
       
-      lastError.value = error instanceof Error ? error.message : '取消传输失败';
-      console.error('取消传输失败:', error);
+      handleStoreError(error, '取消传输', (msg) => { lastError.value = msg; });
       throw error;
     }
   }
@@ -485,8 +505,7 @@ export const useTransferStore = defineStore('transfer', () => {
         return;
       }
       
-      lastError.value = error instanceof Error ? error.message : '恢复传输失败';
-      console.error('恢复传输失败:', error);
+      handleStoreError(error, '恢复传输', (msg) => { lastError.value = msg; });
       throw error;
     }
   }
@@ -497,14 +516,23 @@ export const useTransferStore = defineStore('transfer', () => {
   function updateTransferProgress(progress: Types.TransferProgress): void {
     progressMap.value.set(progress.taskId, progress);
 
-    const task = activeTasks.value.get(progress.taskId);
+    // 先检查活跃任务
+    let task = activeTasks.value.get(progress.taskId);
+    let isActiveTask = true;
+    
+    // 如果不在活跃任务中，检查已完成任务
+    if (!task) {
+      task = completedTasks.value.get(progress.taskId);
+      isActiveTask = false;
+    }
+
     if (task) {
       task.progress = progress;
       task.status = progress.status;
       task.updated_at = Date.now();
 
-      // 如果任务完成，从活跃任务中移除并添加到已完成任务
-      if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') {
+      // 如果是活跃任务且已完成，需要移动到已完成任务
+      if (isActiveTask && (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled')) {
         // 如果是剪切操作且成功完成，更新缓存列表
         if (progress.status === 'completed' && task.operation === 'Cut') {
           handleCutOperationCompleted(task);
@@ -525,6 +553,9 @@ export const useTransferStore = defineStore('transfer', () => {
             }
           }
         }
+      } else if (!isActiveTask) {
+        // 如果是已完成任务，直接更新已完成任务集合
+        completedTasks.value.set(progress.taskId, task);
       }
     }
   }
@@ -541,47 +572,65 @@ export const useTransferStore = defineStore('transfer', () => {
   async function loadCurrentCacheRoot(): Promise<void> {
     if (cacheRootLoaded.value) return;
 
-    try {
-      lastError.value = null;
+    await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
 
-      const root = await transferService.getCurrentCacheRoot();
-      currentCacheRoot.value = root;
-      cacheRootLoaded.value = true;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '加载缓存根目录失败';
-      console.error('加载缓存根目录失败:', error);
-    }
+        const root = await transferService.getCurrentCacheRoot();
+        currentCacheRoot.value = root;
+        cacheRootLoaded.value = true;
+        return root;
+      },
+      {
+        operation: '加载缓存根目录',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
   }
 
   /**
    * 刷新缓存根目录
    */
   async function refreshCacheRoot(): Promise<void> {
-    try {
-      lastError.value = null;
+    await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
 
-      const root = await transferService.getCurrentCacheRoot();
-      currentCacheRoot.value = root;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '刷新缓存根目录失败';
-      console.error('刷新缓存根目录失败:', error);
-    }
+        const root = await transferService.getCurrentCacheRoot();
+        currentCacheRoot.value = root;
+        return root;
+      },
+      {
+        operation: '刷新缓存根目录',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
   }
 
   /**
    * 设置缓存根目录
    */
   async function setCacheRoot(path: string): Promise<void> {
-    try {
-      lastError.value = null;
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        lastError.value = null;
 
-      await transferService.setCacheRoot(path);
-      currentCacheRoot.value = path;
-      cacheRootLoaded.value = true;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '设置缓存根目录失败';
-      console.error('设置缓存根目录失败:', error);
-      throw error;
+        await transferService.setCacheRoot(path);
+        currentCacheRoot.value = path;
+        cacheRootLoaded.value = true;
+        return true;
+      },
+      {
+        operation: '设置缓存根目录',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
+
+    if (!result) {
+      throw new Error('设置缓存根目录失败');
     }
   }
 
@@ -649,7 +698,7 @@ export const useTransferStore = defineStore('transfer', () => {
       // 监听进度更新
       channel.onmessage = (backendProgress) => {
         // 将后端的 snake_case 字段转换为前端的 camelCase 字段
-        const progress: Types.TransferProgress = {
+        const progress: Types.TransferProgress = migrateTransferProgress({
           taskId: backendProgress.task_id,
           totalFiles: backendProgress.total_files,
           completedFiles: backendProgress.completed_files,
@@ -659,7 +708,7 @@ export const useTransferStore = defineStore('transfer', () => {
           remainingTime: backendProgress.remaining_time,
           currentFile: backendProgress.current_file,
           status: backendProgress.status.toLowerCase() as Types.TransferTaskStatus,
-        };
+        });
         
         updateTransferProgress(progress);
       };
@@ -668,6 +717,34 @@ export const useTransferStore = defineStore('transfer', () => {
       await backend.commands.listenTransferProgress(taskId, channel);
     } catch (error) {
       console.error('开始监听传输进度失败:', error);
+    }
+  }
+
+  /**
+   * 刷新任务进度（从后端获取最新状态）
+   */
+  async function refreshTaskProgress(taskId: string): Promise<Types.TransferProgress | null> {
+    try {
+      const backendProgress = await backend.commands.getTransferProgress(taskId);
+      if (backendProgress.status === 'ok' && backendProgress.data) {
+        // 将后端的 snake_case 字段转换为前端的 camelCase 字段
+        const progress: Types.TransferProgress = migrateTransferProgress({
+          taskId: backendProgress.data.task_id,
+          totalFiles: backendProgress.data.total_files,
+          completedFiles: backendProgress.data.completed_files,
+          totalSize: backendProgress.data.total_size,
+          transferredSize: backendProgress.data.transferred_size,
+          speed: backendProgress.data.speed,
+          remainingTime: backendProgress.data.remaining_time,
+          currentFile: backendProgress.data.current_file,
+          status: backendProgress.data.status.toLowerCase() as Types.TransferTaskStatus,
+        });
+        return progress;
+      }
+      return null;
+    } catch (error) {
+      console.error('刷新任务进度失败:', error);
+      return null;
     }
   }
 
@@ -733,6 +810,7 @@ export const useTransferStore = defineStore('transfer', () => {
     cancelTransfer,
     resumeTransfer,
     updateTransferProgress,
+    refreshTaskProgress,
     loadCurrentCacheRoot,
     refreshCacheRoot,
     setCacheRoot,

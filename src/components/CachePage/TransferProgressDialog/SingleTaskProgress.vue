@@ -38,7 +38,7 @@
       </div>
       <div class="bg-(--solid-button-color) rounded-lg p-4">
         <div class="text-xs text-(--desc-color) mb-1">{{ $t('transfer.remainingTime') }}</div>
-        <div class="text-lg font-bold text-(--content-color)">{{ formatTime(progress?.remainingTime ?? 0) }}</div>
+        <div class="text-lg font-bold text-(--content-color)">{{ formatTimeSimple(progress?.remainingTime ?? 0) }}</div>
       </div>
       <div class="bg-(--solid-button-color) rounded-lg p-4">
         <div class="text-xs text-(--desc-color) mb-1">{{ $t('transfer.status') }}</div>
@@ -67,6 +67,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type * as Types from '@/types/transfer.d';
+import { formatFileSize, formatSpeed, formatTimeSimple } from '@/utils/format';
 
 // ============================================================================
 // Props
@@ -130,43 +131,9 @@ const statusColor = computed(() => {
 // 方法
 // ============================================================================
 
-/**
- * 格式化文件大小
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
 
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
 
-/**
- * 格式化速度
- */
-function formatSpeed(bytesPerSecond: number): string {
-  return formatFileSize(bytesPerSecond) + '/s';
-}
-
-/**
- * 格式化时间
- */
-function formatTime(seconds: number): string {
-  if (seconds === 0) return '-';
-  if (seconds < 60) return Math.round(seconds) + 's';
-
-  const minutes = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-
-  if (minutes < 60) return `${minutes}m ${secs}s`;
-
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  return `${hours}h ${mins}m`;
-}
 </script>
 
 <style scoped>

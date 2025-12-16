@@ -96,6 +96,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTransferStore } from '@/store/transfer';
+import { handleComponentError } from '@/utils/error-handler';
 import type * as Types from '@/types/transfer.d';
 
 // ============================================================================
@@ -204,8 +205,7 @@ async function handleBrowseFolder() {
       selectedTarget.value = localTarget;
     }
   } catch (error) {
-    lastError.value = error instanceof Error ? error.message : t('transfer.error');
-    console.error('选择文件夹失败:', error);
+    handleComponentError(error, '选择文件夹', (msg) => { lastError.value = msg; });
   }
 }
 

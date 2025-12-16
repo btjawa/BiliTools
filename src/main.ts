@@ -3,6 +3,7 @@ import { AppError } from './services/error';
 import store from './store';
 import router from './router';
 import i18n from './i18n';
+import { PAGINATION } from '@/constants';
 import App from './App.vue';
 
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
@@ -21,7 +22,7 @@ const ToastOptions: PluginOptions = {
   pauseOnHover: true,
   closeButton: 'button',
   closeOnClick: false,
-  maxToasts: 20,
+  maxToasts: PAGINATION.MAX_TOASTS,
   newestOnTop: true,
   icon: true,
 };

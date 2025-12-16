@@ -3,6 +3,7 @@ import { DanmakuEventToXML } from '@/services/media/dm';
 import { useUserStore } from '@/store';
 import { AppError } from '../error';
 import { UserInfo } from '@/types/login.d';
+import { TIMER } from '@/constants';
 import * as Types from '@/types/shared.d';
 import * as Resps from '@/types/media/extras.d';
 
@@ -235,7 +236,7 @@ export async function getDanmaku(
     );
     DanmakuEventToXML(new Uint8Array(buffer), doc);
     await new Promise((resolve) =>
-      setTimeout(resolve, getRandomInRange(100, 500)),
+      setTimeout(resolve, getRandomInRange(TIMER.RANDOM_DELAY.MIN, TIMER.RANDOM_DELAY.MAX)),
     );
   }
   const xml = new XMLSerializer().serializeToString(doc);

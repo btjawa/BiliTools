@@ -2,6 +2,9 @@
  * 传输功能相关的类型定义
  */
 
+import { FileTransferProgress, ProgressStatus } from './common';
+import { PROGRESS } from '@/constants';
+
 /**
  * 传输操作类型
  */
@@ -29,8 +32,9 @@ export type ConnectionStatus = 'Connected' | 'Disconnected';
 
 /**
  * 传输任务状态
+ * @deprecated 请使用 ProgressStatus from './common'
  */
-export type TransferTaskStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
+export type TransferTaskStatus = ProgressStatus;
 
 /**
  * 传输目标
@@ -46,18 +50,54 @@ export interface TransferTarget {
 
 /**
  * 传输进度信息
+ * 扩展 FileTransferProgress 以保持向后兼容性
  */
-export interface TransferProgress {
+export interface TransferProgress extends FileTransferProgress {
+  /** 当前文件名 (兼容性别名) */
+  currentFile: string;
+}
+
+/**
+ * 类型迁移映射：将旧的 TransferProgress 转换为新的 FileTransferProgress
+ */
+export function migrateTransferProgress(oldProgress: {
   taskId: string;
   totalFiles: number;
   completedFiles: number;
   totalSize: number;
   transferredSize: number;
-  speed: number; // 字节/秒
-  remainingTime: number; // 秒
+  speed: number;
+  remainingTime: number;
   currentFile: string;
   status: TransferTaskStatus;
   errorMessage?: string;
+}): TransferProgress {
+  const percentage = oldProgress.totalFiles > 0 
+    ? (oldProgress.completedFiles / oldProgress.totalFiles) * PROGRESS.MAX_PERCENTAGE 
+    : PROGRESS.MIN_PERCENTAGE;
+
+  return {
+    // FileTransferProgress 字段
+    taskId: oldProgress.taskId,
+    totalFiles: oldProgress.totalFiles,
+    completedFiles: oldProgress.completedFiles,
+    totalSize: oldProgress.totalSize,
+    transferredSize: oldProgress.transferredSize,
+    currentFile: oldProgress.currentFile,
+    errorMessage: oldProgress.errorMessage,
+    
+    // BaseProgress 字段
+    total: oldProgress.totalFiles,
+    completed: oldProgress.completedFiles,
+    percentage,
+    speed: oldProgress.speed,
+    remainingTime: oldProgress.remainingTime,
+    currentItem: oldProgress.currentFile,
+    status: oldProgress.status,
+    
+    // 兼容性字段
+    currentFile: oldProgress.currentFile,
+  };
 }
 
 /**
@@ -116,6 +156,7 @@ export interface TransferResponse {
 
 /**
  * 传输进度回调
+ * @deprecated 请使用 ProgressCallback<TransferProgress> from './common'
  */
 export type ProgressCallback = (progress: TransferProgress) => void;
 

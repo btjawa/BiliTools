@@ -5,6 +5,9 @@
  * 包括缓存项目、导入进度、导入结果等核心数据结构
  */
 
+import { DataImportProgress, ProgressStatus } from './common';
+import { PROGRESS } from '@/constants';
+
 // ============================================================================
 // 核心数据模型
 // ============================================================================
@@ -112,33 +115,22 @@ export interface GroupState {
 
 /**
  * 导入进度信息
- * 用于实时显示导入操作的进度状态
+ * 扩展 DataImportProgress 以保持向后兼容性
  */
-export interface ImportProgress {
-  /** 导入操作的唯一标识符 */
-  importId: string;
-  /** 总共需要处理的目录数量 */
-  totalDirectories: number;
-  /** 已处理完成的目录数量 */
-  processedDirectories: number;
-  /** 当前正在处理的目录路径 */
-  currentDirectory: string;
-  /** 当前导入状态 */
-  status: ImportStatus;
+export interface ImportProgress extends DataImportProgress {
   /** 导入过程中遇到的错误列表 */
   errors: ImportError[];
-  /** 成功导入的数量 */
-  successCount: number;
-  /** 失败的数量 */
-  failureCount: number;
-  /** 跳过的数量（重复或无效） */
-  skippedCount: number;
-  /** 预计剩余时间（秒） */
+  /** 预计剩余时间（秒，兼容性字段） */
   estimatedTimeRemaining?: number;
 }
 
 /**
  * 导入状态枚举
+ * @deprecated 请使用 ProgressStatus from './common'，并使用以下映射：
+ * - 'Scanning'/'Parsing'/'Validating'/'Saving' -> 'running'
+ * - 'Completed' -> 'completed'
+ * - 'Cancelled' -> 'cancelled'
+ * - 'Error' -> 'failed'
  */
 export type ImportStatus =
   | 'Scanning' // 扫描目录中
@@ -148,6 +140,67 @@ export type ImportStatus =
   | 'Completed' // 导入完成
   | 'Cancelled' // 用户取消
   | 'Error'; // 发生错误
+
+/**
+ * 类型迁移映射：将旧的 ImportProgress 转换为新的 DataImportProgress
+ */
+export function migrateImportProgress(oldProgress: {
+  importId: string;
+  totalDirectories: number;
+  processedDirectories: number;
+  currentDirectory: string;
+  status: ImportStatus;
+  errors: ImportError[];
+  successCount: number;
+  failureCount: number;
+  skippedCount: number;
+  estimatedTimeRemaining?: number;
+}): ImportProgress {
+  // 将旧状态映射到新状态
+  const statusMapping: Record<ImportStatus, ProgressStatus> = {
+    'Scanning': 'running',
+    'Parsing': 'running',
+    'Validating': 'running',
+    'Saving': 'running',
+    'Completed': 'completed',
+    'Cancelled': 'cancelled',
+    'Error': 'failed'
+  };
+
+  const newStatus = statusMapping[oldProgress.status];
+  const percentage = oldProgress.totalDirectories > 0 
+    ? (oldProgress.processedDirectories / oldProgress.totalDirectories) * PROGRESS.MAX_PERCENTAGE 
+    : PROGRESS.MIN_PERCENTAGE;
+
+  // 计算处理速度（目录/秒）
+  const speed = oldProgress.estimatedTimeRemaining && oldProgress.estimatedTimeRemaining > 0
+    ? (oldProgress.totalDirectories - oldProgress.processedDirectories) / oldProgress.estimatedTimeRemaining
+    : 0;
+
+  return {
+    // DataImportProgress 字段
+    importId: oldProgress.importId,
+    totalDirectories: oldProgress.totalDirectories,
+    processedDirectories: oldProgress.processedDirectories,
+    currentDirectory: oldProgress.currentDirectory,
+    successCount: oldProgress.successCount,
+    failureCount: oldProgress.failureCount,
+    skippedCount: oldProgress.skippedCount,
+    
+    // BaseProgress 字段
+    total: oldProgress.totalDirectories,
+    completed: oldProgress.processedDirectories,
+    percentage,
+    speed,
+    remainingTime: oldProgress.estimatedTimeRemaining || 0,
+    currentItem: oldProgress.currentDirectory,
+    status: newStatus,
+    
+    // 兼容性字段
+    errors: oldProgress.errors,
+    estimatedTimeRemaining: oldProgress.estimatedTimeRemaining,
+  };
+}
 
 /**
  * 导入错误信息
@@ -655,8 +708,10 @@ export interface CacheRecordRaw {
 export interface CacheStatisticsRaw {
   total_count: number;
   available_count: number;
+  unavailable_count: number;
+  incomplete_count: number;
   total_size: number;
-  average_file_size: number;
+  average_size: number;
   total_duration: number;
   group_count: number;
   single_video_count: number;
@@ -701,19 +756,7 @@ export interface PaginatedDisplayItemsRaw {
   has_prev: boolean;
 }
 
-/** 后端完整统计信息原始格式 */
-export interface CacheStatisticsRaw {
-  total_count: number;
-  available_count: number;
-  unavailable_count: number;
-  incomplete_count: number;
-  total_size: number;
-  average_size: number;
-  total_duration: number;
-  group_count: number;
-  single_video_count: number;
-  average_videos_per_group: number;
-}
+
 
 /** 后端筛选选项原始格式 */
 export interface CacheFilterOptionsRaw {

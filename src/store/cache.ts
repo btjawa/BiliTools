@@ -9,7 +9,10 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { cacheImportService, cacheManagementService } from '@/services/cache';
+import { UnifiedErrorHandler } from '@/utils/error-handler';
+import { PROGRESS, PAGINATION } from '@/constants';
 import type * as Types from '@/types/cache.d';
+
 
 /**
  * 缓存 Store
@@ -23,8 +26,8 @@ export const useCacheStore = defineStore('cache', () => {
   const cacheItems = ref<Types.CacheItem[]>([]);
   const cacheStatistics = ref<Types.CacheStatistics | null>(null);
   const pagination = ref<Types.CachePagination>({
-    currentPage: 1,
-    pageSize: 20,
+    currentPage: PAGINATION.DEFAULT_PAGE,
+    pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
     totalCount: 0,
     totalPages: 0,
   });
@@ -251,7 +254,7 @@ export const useCacheStore = defineStore('cache', () => {
       0,
     );
 
-    return Math.round((totalVideos / groups.length) * 100) / 100;
+    return Math.round((totalVideos / groups.length) * PROGRESS.MAX_PERCENTAGE) / PROGRESS.MAX_PERCENTAGE;
   });
 
   /**
@@ -347,7 +350,7 @@ export const useCacheStore = defineStore('cache', () => {
     const progress = importProgress.value;
     if (progress.totalDirectories === 0) return 0;
     const percentage = Math.round(
-      (progress.processedDirectories / progress.totalDirectories) * 100,
+      (progress.processedDirectories / progress.totalDirectories) * PROGRESS.MAX_PERCENTAGE,
     );
     return isNaN(percentage) ? 0 : percentage;
   });
@@ -362,73 +365,77 @@ export const useCacheStore = defineStore('cache', () => {
   async function loadDisplayItems(): Promise<void> {
     if (isLoading.value) return;
 
-    try {
-      isLoading.value = true;
-      lastError.value = null;
+    await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        isLoading.value = true;
+        lastError.value = null;
 
-      const keyword = currentFilter.value.keyword || '';
+        const keyword = currentFilter.value.keyword || '';
 
-      const filters: Types.CacheFilterOptionsRaw = {
-        search_query: keyword || null,
-        filter_status: currentFilter.value.status?.[0] ?? null,
-        filter_uploader: currentFilter.value.uploader ?? null,
-        min_size: currentFilter.value.sizeRange?.min ?? null,
-        max_size: currentFilter.value.sizeRange?.max ?? null,
-        min_duration: currentFilter.value.durationRange?.min ?? null,
-        max_duration: currentFilter.value.durationRange?.max ?? null,
-        display_type: currentFilter.value.displayType ?? null,
-        group_id: currentFilter.value.groupId ?? null,
-      };
+        const filters: Types.CacheFilterOptionsRaw = {
+          search_query: keyword || null,
+          filter_status: currentFilter.value.status?.[0] ?? null,
+          filter_uploader: currentFilter.value.uploader ?? null,
+          min_size: currentFilter.value.sizeRange?.min ?? null,
+          max_size: currentFilter.value.sizeRange?.max ?? null,
+          min_duration: currentFilter.value.durationRange?.min ?? null,
+          max_duration: currentFilter.value.durationRange?.max ?? null,
+          display_type: currentFilter.value.displayType ?? null,
+          group_id: currentFilter.value.groupId ?? null,
+        };
 
-      const result = await invoke<Types.PaginatedDisplayItemsRaw>(
-        'get_cache_display_items_paginated',
-        {
-          page: pagination.value.currentPage,
-          pageSize: pagination.value.pageSize,
-          sort_by: currentSort.value.field,
-          sort_order: currentSort.value.direction,
-          filters,
-        },
-      );
+        const result = await invoke<Types.PaginatedDisplayItemsRaw>(
+          'get_cache_display_items_paginated',
+          {
+            page: pagination.value.currentPage,
+            pageSize: pagination.value.pageSize,
+            sort_by: currentSort.value.field,
+            sort_order: currentSort.value.direction,
+            filters,
+          },
+        );
 
-      pagination.value = {
-        ...pagination.value,
-        totalCount: result.total_count,
-        totalPages: result.total_pages,
-        currentPage: result.current_page,
-        pageSize: result.page_size,
-      };
+        pagination.value = {
+          ...pagination.value,
+          totalCount: result.total_count,
+          totalPages: result.total_pages,
+          currentPage: result.current_page,
+          pageSize: result.page_size,
+        };
 
-      displayItems.value = result.items
-        .map((item) => {
-          if (item.type === 'single_video' && item.video) {
-            return {
-              type: 'video' as const,
-              data: convertCacheRecordFromRaw(item.video),
-            };
-          } else if (item.type === 'video_group' && item.group) {
-            return {
-              type: 'group' as const,
-              data: convertCacheGroupFromRaw(item.group),
-            };
-          }
-          return null;
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null);
+        displayItems.value = result.items
+          .map((item) => {
+            if (item.type === 'single_video' && item.video) {
+              return {
+                type: 'video' as const,
+                data: convertCacheRecordFromRaw(item.video),
+              };
+            } else if (item.type === 'video_group' && item.group) {
+              return {
+                type: 'group' as const,
+                data: convertCacheGroupFromRaw(item.group),
+              };
+            }
+            return null;
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null);
 
-      cacheItems.value = displayItems.value
-        .filter((item) => item.type === 'video')
-        .map((item) => item.data as Types.CacheItem);
+        cacheItems.value = displayItems.value
+          .filter((item) => item.type === 'video')
+          .map((item) => item.data as Types.CacheItem);
 
-      await loadGroupStates();
-      await updateStatistics();
-    } catch (error) {
-      lastError.value =
-        error instanceof Error ? error.message : '加载显示项列表失败';
-      console.error('加载显示项列表失败:', error);
-    } finally {
-      isLoading.value = false;
-    }
+        await loadGroupStates();
+        await updateStatistics();
+        return true;
+      },
+      {
+        operation: '加载显示项列表',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
+
+    isLoading.value = false;
   }
 
   /**
@@ -466,35 +473,41 @@ export const useCacheStore = defineStore('cache', () => {
    * 切换组展开/折叠状态
    */
   async function toggleGroupExpansion(groupId: string): Promise<void> {
-    try {
-      const currentState =
-        groupStates.value.get(groupId) ??
-        groupManagerConfig.value.defaultExpanded;
-      const newState = !currentState;
+    const currentState =
+      groupStates.value.get(groupId) ??
+      groupManagerConfig.value.defaultExpanded;
+    const newState = !currentState;
 
-      // 更新本地状态
-      groupStates.value.set(groupId, newState);
+    // 更新本地状态
+    groupStates.value.set(groupId, newState);
 
-      // 更新显示项中的状态
-      const groupItem = displayItems.value.find(
-        (item) => item.type === 'group' && item.data.groupId === groupId,
-      );
-      if (groupItem && groupItem.type === 'group') {
-        groupItem.data.isExpanded = newState;
+    // 更新显示项中的状态
+    const groupItem = displayItems.value.find(
+      (item) => item.type === 'group' && item.data.groupId === groupId,
+    );
+    if (groupItem && groupItem.type === 'group') {
+      groupItem.data.isExpanded = newState;
+    }
+
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        // 持久化到后端
+        await invoke('set_group_expansion', {
+          groupId,
+          isExpanded: newState,
+        });
+        return true;
+      },
+      {
+        operation: '更新组状态',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
       }
+    );
 
-      // 持久化到后端
-      await invoke('set_group_expansion', {
-        groupId,
-        isExpanded: newState,
-      });
-    } catch (error) {
-      lastError.value =
-        error instanceof Error ? error.message : '更新组状态失败';
-      console.error('更新组状态失败:', error);
-
-      // 回滚本地状态
-      const originalState = !groupStates.value.get(groupId);
+    // 如果后端操作失败，回滚本地状态
+    if (!result) {
+      const originalState = !newState;
       groupStates.value.set(groupId, originalState);
 
       const groupItem = displayItems.value.find(
@@ -541,40 +554,45 @@ export const useCacheStore = defineStore('cache', () => {
     // 否则使用原有的加载方法（向后兼容）
     if (isLoading.value) return;
 
-    try {
-      isLoading.value = true;
-      lastError.value = null;
+    await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        isLoading.value = true;
+        lastError.value = null;
 
-      const result = await cacheManagementService.getCacheList(
-        currentFilter.value,
-        currentSort.value,
-        pagination.value,
-      );
+        const result = await cacheManagementService.getCacheList(
+          currentFilter.value,
+          currentSort.value,
+          pagination.value,
+        );
 
-      cacheItems.value = result.items;
-      cacheStatistics.value = result.statistics;
+        cacheItems.value = result.items;
+        cacheStatistics.value = result.statistics;
 
-      // 转换为显示项格式
-      displayItems.value = result.items.map((item) => ({
-        type: 'video' as const,
-        data: item,
-      }));
+        // 转换为显示项格式
+        displayItems.value = result.items.map((item) => ({
+          type: 'video' as const,
+          data: item,
+        }));
 
-      // 更新分页信息
-      pagination.value = {
-        ...pagination.value,
-        totalCount: result.statistics.totalCount,
-        totalPages: Math.ceil(
-          result.statistics.totalCount / pagination.value.pageSize,
-        ),
-      };
-    } catch (error) {
-      lastError.value =
-        error instanceof Error ? error.message : '加载缓存列表失败';
-      console.error('加载缓存列表失败:', error);
-    } finally {
-      isLoading.value = false;
-    }
+        // 更新分页信息
+        pagination.value = {
+          ...pagination.value,
+          totalCount: result.statistics.totalCount,
+          totalPages: Math.ceil(
+            result.statistics.totalCount / pagination.value.pageSize,
+          ),
+        };
+
+        return result;
+      },
+      {
+        operation: '加载缓存列表',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
+
+    isLoading.value = false;
   }
 
   /**
@@ -629,38 +647,119 @@ export const useCacheStore = defineStore('cache', () => {
    * 删除缓存项
    */
   async function deleteCacheItem(id: string): Promise<void> {
-    try {
-      await cacheManagementService.deleteCacheItem(id);
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        await cacheManagementService.deleteCacheItem(id);
 
-      // 从本地状态中移除
-      const index = cacheItems.value.findIndex((item) => item.id === id);
-      if (index !== -1) {
-        cacheItems.value.splice(index, 1);
-      }
+        // 从本地状态中移除
+        const index = cacheItems.value.findIndex((item) => item.id === id);
+        if (index !== -1) {
+          cacheItems.value.splice(index, 1);
+        }
 
-      // 从显示项列表中移除
-      displayItems.value = displayItems.value.filter((item) => {
-        if (item.type === 'video') {
-          return item.data.id !== id;
-        } else {
-          // 对于组，移除被删除的视频
-          item.data.videos = item.data.videos.filter(
-            (video) => video.id !== id,
-          );
+        // 从显示项列表中移除
+        displayItems.value = displayItems.value.filter((item) => {
+          if (item.type === 'video') {
+            return item.data.id !== id;
+          } else {
+            // 对于组，移除被删除的视频
+            item.data.videos = item.data.videos.filter(
+              (video) => video.id !== id,
+            );
 
-          // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
-          if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
-            item.data.videos.forEach((video) => {
-              displayItems.value.push({
-                type: 'video',
-                data: video,
+            // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
+            if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
+              item.data.videos.forEach((video) => {
+                displayItems.value.push({
+                  type: 'video',
+                  data: video,
+                });
               });
-            });
-            return false; // 移除组
-          }
+              return false; // 移除组
+            }
 
-          // 更新组统计信息
-          if (item.data.videos.length > 0) {
+            // 更新组统计信息
+            if (item.data.videos.length > 0) {
+              item.data.videoCount = item.data.videos.length;
+              item.data.totalDuration = item.data.videos.reduce(
+                (sum, video) => sum + video.duration,
+                0,
+              );
+              item.data.totalFileSize = item.data.videos.reduce(
+                (sum, video) => sum + video.fileSize,
+                0,
+              );
+              item.data.latestDownloadTime = new Date(
+                Math.max(
+                  ...item.data.videos.map((video) => video.downloadTime.getTime()),
+                ),
+              );
+            }
+
+            return true; // 保留组
+          }
+        });
+
+        // 从选中列表中移除
+        const selectedIndex = selectedItems.value.indexOf(id);
+        if (selectedIndex !== -1) {
+          selectedItems.value.splice(selectedIndex, 1);
+        }
+
+        // 更新统计信息
+        await updateStatistics();
+        return true;
+      },
+      {
+        operation: '删除缓存项',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
+      }
+    );
+
+    if (!result) {
+      throw new Error('删除缓存项失败');
+    }
+  }
+
+  /**
+   * 批量删除缓存项
+   */
+  async function batchDeleteCacheItems(
+    ids: string[],
+  ): Promise<Types.BatchOperationResult[]> {
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        const results = await cacheManagementService.batchDeleteCacheItems(ids);
+
+        // 移除成功删除的项目
+        const successIds = results.filter((r) => r.success).map((r) => r.cacheId);
+        cacheItems.value = cacheItems.value.filter(
+          (item) => !successIds.includes(item.id),
+        );
+
+        // 更新显示项列表
+        displayItems.value = displayItems.value.filter((item) => {
+          if (item.type === 'video') {
+            return !successIds.includes(item.data.id);
+          } else {
+            // 对于组，移除被删除的视频
+            item.data.videos = item.data.videos.filter(
+              (video) => !successIds.includes(video.id),
+            );
+
+            // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
+            if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
+              item.data.videos.forEach((video) => {
+                displayItems.value.push({
+                  type: 'video',
+                  data: video,
+                });
+              });
+              return false; // 移除组
+            }
+
+            // 更新组统计信息
             item.data.videoCount = item.data.videos.length;
             item.data.totalDuration = item.data.videos.reduce(
               (sum, video) => sum + video.duration,
@@ -675,96 +774,33 @@ export const useCacheStore = defineStore('cache', () => {
                 ...item.data.videos.map((video) => video.downloadTime.getTime()),
               ),
             );
+
+            return true; // 保留组
           }
+        });
 
-          return true; // 保留组
-        }
-      });
+        // 清除选中状态
+        selectedItems.value = selectedItems.value.filter(
+          (id) => !successIds.includes(id),
+        );
 
-      // 从选中列表中移除
-      const selectedIndex = selectedItems.value.indexOf(id);
-      if (selectedIndex !== -1) {
-        selectedItems.value.splice(selectedIndex, 1);
+        // 更新统计信息
+        await updateStatistics();
+
+        return results;
+      },
+      {
+        operation: '批量删除',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
       }
+    );
 
-      // 更新统计信息
-      await updateStatistics();
-    } catch (error) {
-      lastError.value =
-        error instanceof Error ? error.message : '删除缓存项失败';
-      throw error;
+    if (!result) {
+      throw new Error('批量删除失败');
     }
-  }
 
-  /**
-   * 批量删除缓存项
-   */
-  async function batchDeleteCacheItems(
-    ids: string[],
-  ): Promise<Types.BatchOperationResult[]> {
-    try {
-      const results = await cacheManagementService.batchDeleteCacheItems(ids);
-
-      // 移除成功删除的项目
-      const successIds = results.filter((r) => r.success).map((r) => r.cacheId);
-      cacheItems.value = cacheItems.value.filter(
-        (item) => !successIds.includes(item.id),
-      );
-
-      // 更新显示项列表
-      displayItems.value = displayItems.value.filter((item) => {
-        if (item.type === 'video') {
-          return !successIds.includes(item.data.id);
-        } else {
-          // 对于组，移除被删除的视频
-          item.data.videos = item.data.videos.filter(
-            (video) => !successIds.includes(video.id),
-          );
-
-          // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
-          if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
-            item.data.videos.forEach((video) => {
-              displayItems.value.push({
-                type: 'video',
-                data: video,
-              });
-            });
-            return false; // 移除组
-          }
-
-          // 更新组统计信息
-          item.data.videoCount = item.data.videos.length;
-          item.data.totalDuration = item.data.videos.reduce(
-            (sum, video) => sum + video.duration,
-            0,
-          );
-          item.data.totalFileSize = item.data.videos.reduce(
-            (sum, video) => sum + video.fileSize,
-            0,
-          );
-          item.data.latestDownloadTime = new Date(
-            Math.max(
-              ...item.data.videos.map((video) => video.downloadTime.getTime()),
-            ),
-          );
-
-          return true; // 保留组
-        }
-      });
-
-      // 清除选中状态
-      selectedItems.value = selectedItems.value.filter(
-        (id) => !successIds.includes(id),
-      );
-
-      // 更新统计信息
-      await updateStatistics();
-
-      return results;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '批量删除失败';
-      throw error;
-    }
+    return result;
   }
 
   /**
@@ -1342,58 +1378,70 @@ export const useCacheStore = defineStore('cache', () => {
     path: string,
     options: Types.ImportOptions,
   ): Promise<string> {
-    try {
-      isImporting.value = true;
-      lastError.value = null;
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        isImporting.value = true;
+        lastError.value = null;
 
-      const importId = await cacheImportService.startImport(path, options);
-      activeImportId.value = importId;
+        const importId = await cacheImportService.startImport(path, options);
+        activeImportId.value = importId;
 
-      // 开始监听进度
-      const cancelProgress = await cacheImportService.listenImportProgress(
-        importId,
-        (progress) => {
-          // 确保统计数据有默认值
-          importProgress.value = {
-            ...progress,
-            successCount: progress.successCount ?? 0,
-            failureCount: progress.failureCount ?? 0,
-            skippedCount: progress.skippedCount ?? 0,
-            totalDirectories: progress.totalDirectories ?? 0,
-            processedDirectories: progress.processedDirectories ?? 0,
-          };
+        // 开始监听进度
+        const cancelProgress = await cacheImportService.listenImportProgress(
+          importId,
+          (progress) => {
+            // 确保统计数据有默认值
+            importProgress.value = {
+              ...progress,
+              successCount: progress.successCount ?? 0,
+              failureCount: progress.failureCount ?? 0,
+              skippedCount: progress.skippedCount ?? 0,
+              totalDirectories: progress.totalDirectories ?? 0,
+              processedDirectories: progress.processedDirectories ?? 0,
+            };
 
-          // 检查是否完成
-          if (
-            progress.status === 'Completed' ||
-            progress.status === 'Error' ||
-            progress.status === 'Cancelled'
-          ) {
-            isImporting.value = false;
-            if (progress.status === 'Completed') {
-              // 刷新缓存列表
-              refreshCacheList();
-              // 刷新缓存根目录状态
-              import('@/store/transfer').then(({ useTransferStore }) => {
-                const transferStore = useTransferStore();
-                transferStore.refreshCacheRoot();
-              });
+            // 检查是否完成
+            if (
+              progress.status === 'completed' ||
+              progress.status === 'failed' ||
+              progress.status === 'cancelled'
+            ) {
+              isImporting.value = false;
+              if (progress.status === 'completed') {
+                // 刷新缓存列表
+                refreshCacheList();
+                // 刷新缓存根目录状态
+                import('@/store/transfer').then(({ useTransferStore }) => {
+                  const transferStore = useTransferStore();
+                  transferStore.refreshCacheRoot();
+                });
+              }
             }
-          }
+          },
+        );
+
+        // 保存取消函数以便后续使用
+        (
+          window as Window & { __cacheImportCancelProgress?: () => void }
+        ).__cacheImportCancelProgress = cancelProgress;
+
+        return importId;
+      },
+      {
+        operation: '开始导入',
+        onError: (msg) => { 
+          lastError.value = msg;
+          isImporting.value = false;
         },
-      );
+        logLevel: 'error',
+      }
+    );
 
-      // 保存取消函数以便后续使用
-      (
-        window as Window & { __cacheImportCancelProgress?: () => void }
-      ).__cacheImportCancelProgress = cancelProgress;
-
-      return importId;
-    } catch (error) {
-      isImporting.value = false;
-      lastError.value = error instanceof Error ? error.message : '开始导入失败';
-      throw error;
+    if (!result) {
+      throw new Error('开始导入失败');
     }
+
+    return result;
   }
 
   /**
@@ -1402,25 +1450,34 @@ export const useCacheStore = defineStore('cache', () => {
   async function cancelImport(): Promise<void> {
     if (!activeImportId.value) return;
 
-    try {
-      await cacheImportService.cancelImport(activeImportId.value);
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        await cacheImportService.cancelImport(activeImportId.value!);
 
-      // 取消进度监听
-      const windowWithCancel = window as Window & {
-        __cacheImportCancelProgress?: (() => void) | null;
-      };
-      if (windowWithCancel.__cacheImportCancelProgress) {
-        windowWithCancel.__cacheImportCancelProgress();
-        windowWithCancel.__cacheImportCancelProgress = null;
+        // 取消进度监听
+        const windowWithCancel = window as Window & {
+          __cacheImportCancelProgress?: (() => void) | null;
+        };
+        if (windowWithCancel.__cacheImportCancelProgress) {
+          windowWithCancel.__cacheImportCancelProgress();
+          windowWithCancel.__cacheImportCancelProgress = null;
+        }
+
+        // 清理状态
+        isImporting.value = false;
+        importProgress.value = null;
+        activeImportId.value = null;
+        return true;
+      },
+      {
+        operation: '取消导入',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
       }
+    );
 
-      // 清理状态
-      isImporting.value = false;
-      importProgress.value = null;
-      activeImportId.value = null;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '取消导入失败';
-      throw error;
+    if (!result) {
+      throw new Error('取消导入失败');
     }
   }
 
@@ -1447,24 +1504,34 @@ export const useCacheStore = defineStore('cache', () => {
    * 检测新增或删除的视频，自动导入新视频并清理已删除的记录
    */
   async function incrementalScanCacheRoot(): Promise<Types.IncrementalScanResult> {
-    try {
-      isLoading.value = true;
-      lastError.value = null;
+    const result = await UnifiedErrorHandler.withErrorBoundary(
+      async () => {
+        isLoading.value = true;
+        lastError.value = null;
 
-      const result = await cacheManagementService.incrementalScanCacheRoot();
+        const result = await cacheManagementService.incrementalScanCacheRoot();
 
-      // 如果有新导入或清理的记录，刷新缓存列表
-      if (result.importedCount > 0 || result.cleanedCount > 0) {
-        await refreshCacheList();
+        // 如果有新导入或清理的记录，刷新缓存列表
+        if (result.importedCount > 0 || result.cleanedCount > 0) {
+          await refreshCacheList();
+        }
+
+        return result;
+      },
+      {
+        operation: '增量扫描',
+        onError: (msg) => { lastError.value = msg; },
+        logLevel: 'error',
       }
+    );
 
-      return result;
-    } catch (error) {
-      lastError.value = error instanceof Error ? error.message : '增量扫描失败';
-      throw error;
-    } finally {
-      isLoading.value = false;
+    isLoading.value = false;
+
+    if (!result) {
+      throw new Error('增量扫描失败');
     }
+
+    return result;
   }
 
   // ============================================================================
@@ -1587,8 +1654,8 @@ export const useCacheStore = defineStore('cache', () => {
     selectedItems.value = [];
     lastError.value = null;
     pagination.value = {
-      currentPage: 1,
-      pageSize: 20,
+      currentPage: PAGINATION.DEFAULT_PAGE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
       totalCount: 0,
       totalPages: 0,
     };

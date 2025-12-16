@@ -84,7 +84,8 @@ import * as dialog from '@tauri-apps/plugin-dialog';
 
 import { useAppStore, useSettingsStore, useTransferStore } from '@/store';
 import { commands } from '@/services/backend';
-import { AppLog, formatBytes } from '@/services/utils';
+import { AppLog } from '@/services/utils';
+import { formatBytes } from '@/utils/format';
 
 const settings = useSettingsStore();
 const app = useAppStore();

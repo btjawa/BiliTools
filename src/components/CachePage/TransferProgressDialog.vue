@@ -42,7 +42,7 @@
               class="space-y-6"
             >
               <!-- 总体进度 -->
-              <OverallProgress
+              <TransferSummary
                 :total-files="totalFiles"
                 :completed-files="completedFiles"
                 :total-size="totalSize"
@@ -52,23 +52,11 @@
               />
 
               <!-- 任务列表 -->
-              <div class="space-y-3">
-                <h3 class="text-sm font-medium text-(--content-color)">
-                  {{ $t('transfer.taskList') }} ({{ allTasks.length }})
-                </h3>
-                <div class="task-list space-y-2">
-                  <div
-                    v-for="task in allTasks"
-                    :key="task.id"
-                    class="task-item"
-                  >
-                    <TaskProgressItem
-                      :task="task"
-                      :progress="getTaskProgress(task.id)"
-                    />
-                  </div>
-                </div>
-              </div>
+              <TransferTaskList
+                :tasks="allTasks"
+                :get-task-progress="getTaskProgress"
+                @task-select="handleTaskSelect"
+              />
             </div>
 
             <!-- 错误信息 -->
@@ -82,37 +70,17 @@
           </div>
 
           <!-- 对话框底部 -->
-          <div class="modal-footer flex justify-end gap-3">
-            <!-- 暂停/继续按钮 -->
-            <button
-              v-if="hasRunningTasks"
-              class="px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center gap-2"
-              :disabled="!canPause"
-              @click="handlePauseResume"
-            >
-              <i :class="[$fa.weight, isPaused ? 'fa-play' : 'fa-pause']"></i>
-              {{ isPaused ? $t('transfer.resume') : $t('transfer.pause') }}
-            </button>
-
-            <!-- 取消按钮 -->
-            <button
-              class="px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center gap-2"
-              :disabled="!canCancel"
-              @click="handleCancel"
-            >
-              <i :class="[$fa.weight, 'fa-stop']"></i>
-              {{ $t('transfer.stop') }}
-            </button>
-
-            <!-- 关闭按钮 -->
-            <button
-              v-if="canClose"
-              class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium flex items-center gap-2"
-              @click="handleClose"
-            >
-              <i :class="[$fa.weight, 'fa-check']"></i>
-              {{ $t('transfer.close') }}
-            </button>
+          <div class="modal-footer">
+            <TransferControls
+              :can-pause="canPause"
+              :can-cancel="canCancel"
+              :can-close="canClose"
+              :is-paused="isPaused"
+              :has-running-tasks="hasRunningTasks"
+              @pause="handlePauseResume"
+              @cancel="handleCancel"
+              @close="handleClose"
+            />
           </div>
         </div>
       </div>
@@ -126,8 +94,9 @@ import { useI18n } from 'vue-i18n';
 import { useTransferStore } from '@/store/transfer';
 import type * as Types from '@/types/transfer.d';
 import SingleTaskProgress from './TransferProgressDialog/SingleTaskProgress.vue';
-import OverallProgress from './TransferProgressDialog/OverallProgress.vue';
-import TaskProgressItem from './TransferProgressDialog/TaskProgressItem.vue';
+import TransferSummary from './TransferProgressDialog/TransferSummary.vue';
+import TransferTaskList from './TransferProgressDialog/TransferTaskList.vue';
+import TransferControls from './TransferProgressDialog/TransferControls.vue';
 
 // ============================================================================
 // Props 和 Emits
@@ -287,9 +256,22 @@ const $fa = computed(() => ({
 
 onMounted(() => {
   // 启动定期更新
-  updateInterval.value = window.setInterval(() => {
-    // 更新进度信息
-    // 这里会在后续的 Tauri 事件监听中实现
+  updateInterval.value = window.setInterval(async () => {
+    // 更新所有任务的进度信息（包括活跃和最近完成的任务）
+    for (const task of allTasks.value) {
+      // 只更新非最终状态的任务，或者刚完成的任务（避免过度轮询）
+      if (task.status === 'running' || task.status === 'paused' || task.status === 'pending' ||
+          (task.status === 'completed' && Date.now() - task.updated_at < 10000)) {
+        try {
+          const progress = await transferStore.refreshTaskProgress(task.id);
+          if (progress) {
+            transferStore.updateTransferProgress(progress);
+          }
+        } catch (error) {
+          console.warn(`获取任务 ${task.id} 进度失败:`, error);
+        }
+      }
+    }
   }, 500);
 });
 
@@ -408,6 +390,14 @@ async function handleCancel() {
 function handleClose() {
   emit('close');
 }
+
+/**
+ * 处理任务选择
+ */
+function handleTaskSelect(taskId: string) {
+  // 可以在这里添加任务选择逻辑，比如显示任务详情
+  console.log('选择任务:', taskId);
+}
 </script>
 
 <style scoped>
@@ -441,15 +431,6 @@ function handleClose() {
 /* 主体内容 */
 .modal-body {
   @apply flex-1 p-6 overflow-y-auto space-y-6;
-}
-
-/* 任务列表 */
-.task-list {
-  @apply bg-(--solid-button-color) rounded-lg p-3 space-y-2 max-h-64 overflow-y-auto;
-}
-
-.task-item {
-  @apply bg-(--input-bg) rounded-lg p-3 border border-(--split-color);
 }
 
 /* 底部按钮 */
@@ -508,11 +489,7 @@ function handleClose() {
   }
 
   .modal-footer {
-    @apply p-4 flex-col gap-2;
-  }
-
-  .task-list {
-    @apply max-h-48;
+    @apply p-4;
   }
 }
 </style>

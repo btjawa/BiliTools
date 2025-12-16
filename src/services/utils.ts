@@ -3,6 +3,7 @@ import { TYPE, useToast } from 'vue-toastification';
 import { MediaType } from '@/types/shared.d';
 import { watch } from 'vue';
 import i18n from '@/i18n';
+import { NOTIFICATION, TIMER } from '@/constants';
 
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
@@ -37,7 +38,7 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
   }
   useToast()(message, {
     type,
-    timeout: type === TYPE.ERROR ? false : 3000,
+    timeout: type === TYPE.ERROR ? NOTIFICATION.ERROR_TIMEOUT : NOTIFICATION.SUCCESS_TIMEOUT,
   });
 }
 
@@ -201,7 +202,7 @@ export async function tryFetch(
         }
         grisk_id = validateBody.data.grisk_id;
         await new Promise((resolve) =>
-          setTimeout(resolve, getRandomInRange(100, 500)),
+          setTimeout(resolve, getRandomInRange(TIMER.RANDOM_DELAY.MIN, TIMER.RANDOM_DELAY.MAX)),
         );
         continue;
       } else {
@@ -451,15 +452,7 @@ export function timestamp(ts: number, zone?: string) {
   return formatter.format(date).replace(/\//g, '-');
 }
 
-export function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) {
-    return (bytes / 1024).toFixed(2) + ' KB';
-  } else if (bytes < 1024 * 1024 * 1024) {
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
-  } else {
-    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
-  }
-}
+
 
 export function getDefaultQuality(
   ids: number[],
