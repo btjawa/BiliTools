@@ -518,6 +518,7 @@
       "totalSize": "總大小",
       "importMore": "匯入更多",
       "refresh": "重新整理",
+      "incrementalScan": "增量掃描",
       "export": "匯出清單",
       "selection": "選擇操作",
       "selectAll": "全選目前頁",
@@ -564,6 +565,17 @@
     "time": {
       "unknown": "未知時間",
       "formatError": "時間格式錯誤"
+    },
+    "incrementalScan": {
+      "title": "增量掃描結果",
+      "scannedRoot": "掃描根目錄",
+      "newDirectories": "新發現目錄",
+      "deletedDirectories": "已刪除目錄",
+      "importedCount": "成功匯入",
+      "cleanedCount": "清理記錄",
+      "noChanges": "未發現變化",
+      "success": "增量掃描完成",
+      "error": "增量掃描失敗"
     },
     "sidebar": {
       "refresh": "重新整理",

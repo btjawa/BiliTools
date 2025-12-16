@@ -518,6 +518,7 @@
       "totalSize": "总大小",
       "importMore": "导入更多",
       "refresh": "刷新",
+      "incrementalScan": "增量扫描",
       "export": "导出列表",
       "selection": "选择操作",
       "selectAll": "全选当前页",
@@ -566,6 +567,17 @@
     "time": {
       "unknown": "未知时间",
       "formatError": "时间格式错误"
+    },
+    "incrementalScan": {
+      "title": "增量扫描结果",
+      "scannedRoot": "扫描根目录",
+      "newDirectories": "新发现目录",
+      "deletedDirectories": "已删除目录",
+      "importedCount": "成功导入",
+      "cleanedCount": "清理记录",
+      "noChanges": "未发现变化",
+      "success": "增量扫描完成",
+      "error": "增量扫描失败"
     },
     "sidebar": {
       "refresh": "刷新",

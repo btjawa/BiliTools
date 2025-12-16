@@ -8,6 +8,7 @@ export const useSettingsStore = defineStore('settings', () => {
     auto_check_update: false, // for watch() to take effet when enabled
     auto_download: false,
     block_pcdn: true,
+    cache_root: null,
     check_update: true,
     clipboard: false,
     convert: {

@@ -518,6 +518,7 @@
       "totalSize": "Total size",
       "importMore": "Import more",
       "refresh": "Refresh",
+      "incrementalScan": "Incremental Scan",
       "export": "Export list",
       "selection": "Selection",
       "selectAll": "Select all on page",
@@ -564,6 +565,17 @@
     "time": {
       "unknown": "Unknown time",
       "formatError": "Invalid time format"
+    },
+    "incrementalScan": {
+      "title": "Incremental Scan Results",
+      "scannedRoot": "Scanned root directory",
+      "newDirectories": "New directories found",
+      "deletedDirectories": "Deleted directories",
+      "importedCount": "Successfully imported",
+      "cleanedCount": "Records cleaned",
+      "noChanges": "No changes detected",
+      "success": "Incremental scan completed",
+      "error": "Incremental scan failed"
     },
     "sidebar": {
       "refresh": "Refresh",

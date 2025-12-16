@@ -518,6 +518,7 @@
       "totalSize": "総サイズ",
       "importMore": "さらにインポート",
       "refresh": "更新",
+      "incrementalScan": "増分スキャン",
       "export": "リストをエクスポート",
       "selection": "選択操作",
       "selectAll": "現在のページをすべて選択",
@@ -564,6 +565,17 @@
     "time": {
       "unknown": "不明な時間",
       "formatError": "無効な時間形式"
+    },
+    "incrementalScan": {
+      "title": "増分スキャン結果",
+      "scannedRoot": "スキャンしたルートディレクトリ",
+      "newDirectories": "新しく発見されたディレクトリ",
+      "deletedDirectories": "削除されたディレクトリ",
+      "importedCount": "正常にインポート",
+      "cleanedCount": "クリーンアップされたレコード",
+      "noChanges": "変更は検出されませんでした",
+      "success": "増分スキャンが完了しました",
+      "error": "増分スキャンに失敗しました"
     },
     "sidebar": {
       "refresh": "更新",

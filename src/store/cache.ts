@@ -1442,6 +1442,31 @@ export const useCacheStore = defineStore('cache', () => {
     loadCacheList();
   }
 
+  /**
+   * 增量扫描缓存根目录
+   * 检测新增或删除的视频，自动导入新视频并清理已删除的记录
+   */
+  async function incrementalScanCacheRoot(): Promise<Types.IncrementalScanResult> {
+    try {
+      isLoading.value = true;
+      lastError.value = null;
+
+      const result = await cacheManagementService.incrementalScanCacheRoot();
+
+      // 如果有新导入或清理的记录，刷新缓存列表
+      if (result.importedCount > 0 || result.cleanedCount > 0) {
+        await refreshCacheList();
+      }
+
+      return result;
+    } catch (error) {
+      lastError.value = error instanceof Error ? error.message : '增量扫描失败';
+      throw error;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // ============================================================================
   // Actions - 数据转换函数
   // ============================================================================
@@ -1712,6 +1737,7 @@ export const useCacheStore = defineStore('cache', () => {
     startImport,
     cancelImport,
     completeImport,
+    incrementalScanCacheRoot,
 
     // 数据转换
     convertCacheRecordFromRaw,

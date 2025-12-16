@@ -410,6 +410,32 @@ export class CacheManagementService {
   }
 
   /**
+   * 增量扫描缓存根目录
+   * 检测新增或删除的视频，自动导入新视频并清理已删除的记录
+   *
+   * @returns 增量扫描结果
+   */
+  async incrementalScanCacheRoot(): Promise<Types.IncrementalScanResult> {
+    try {
+      const result = (await invoke('incremental_scan_cache_root')) as Types.IncrementalScanResultRaw;
+
+      // 转换后端数据格式为前端类型
+      return {
+        scannedRoot: result.scanned_root,
+        newDirectoriesCount: result.new_directories_count,
+        deletedDirectoriesCount: result.deleted_directories_count,
+        importedCount: result.imported_count,
+        cleanedCount: result.cleaned_count,
+        newDirectories: result.new_directories,
+        deletedDirectories: result.deleted_directories,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(`增量扫描失败: ${(error as Error)?.message || '未知错误'}`);
+    }
+  }
+
+  /**
    * 获取缓存统计信息
    * 获取缓存文件的统计数据
    *

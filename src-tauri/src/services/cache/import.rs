@@ -736,6 +736,47 @@ impl ImportService {
             Err(anyhow::anyhow!("{}", cache_error))
         }
     }
+
+    /// 导入单个缓存目录（用于增量扫描）
+    pub async fn import_single_cache_directory(&self, cache_dir: &PathBuf) -> Result<CacheRecord> {
+        // 验证文件完整性
+        let validation_result = self.validator.validate_cache_directory(cache_dir).await?;
+        
+        if !validation_result.is_valid {
+            return Err(anyhow::anyhow!("缓存目录无效: {}", cache_dir.display()));
+        }
+
+        // 解析videoInfo.json
+        let video_info_path = cache_dir.join("videoInfo.json");
+        let video_info = self.parser.parse_video_info(&video_info_path).await?;
+
+        // 创建缓存记录
+        let cache_record = CacheRecord {
+            id: rand::rng()
+                .sample_iter(&Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect(),
+            bvid: video_info.bvid.clone(),
+            aid: video_info.aid,
+            cid: video_info.cid,
+            title: video_info.title.clone(),
+            uname: video_info.uname.clone(),
+            cover_url: video_info.cover.clone(),
+            duration: video_info.duration,
+            file_size: video_info.total_size as i64,
+            cache_path: cache_dir.to_string_lossy().to_string(),
+            download_time: video_info.download_time.unwrap_or_else(get_millis),
+            import_time: get_millis(),
+            status: "available".to_string(),
+            source: "incremental_scan".to_string(),
+            group_id: video_info.group_id.clone(),
+            group_title: video_info.group_title.clone(),
+            p: video_info.p,
+        };
+
+        Ok(cache_record)
+    }
 }
 
 impl Default for ImportService {

@@ -368,6 +368,90 @@ pub async fn cleanup_invalid_cache_records() -> TauriResult<i32> {
     Ok(invalid_count)
 }
 
+/// 增量扫描缓存根目录，检测新增或删除的视频
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn incremental_scan_cache_root() -> TauriResult<IncrementalScanResult> {
+    use crate::services::cache::ImportService;
+    use std::collections::HashSet;
+
+    // 从配置中获取缓存根目录
+    let config = config::read();
+    let cache_root = config.cache_root
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("尚未设置缓存根目录"))?;
+
+    if !cache_root.exists() || !cache_root.is_dir() {
+        return Err(anyhow::anyhow!("缓存根目录不存在或不是目录").into());
+    }
+
+    // 获取当前数据库中的所有缓存记录
+    let existing_records = cache_records::get_all().await?;
+    let mut existing_paths: HashSet<String> = existing_records
+        .iter()
+        .map(|record| record.cache_path.clone())
+        .collect();
+
+    // 扫描文件系统中的缓存目录
+    let import_service = ImportService::new();
+    let discovered_dirs = import_service.scan_cache_directories(cache_root).await?;
+
+    let mut new_dirs = Vec::new();
+    let mut existing_dirs = Vec::new();
+
+    // 检查发现的目录
+    for dir in discovered_dirs {
+        let dir_str = dir.to_string_lossy().to_string();
+        if existing_paths.contains(&dir_str) {
+            existing_dirs.push(dir_str.clone());
+            existing_paths.remove(&dir_str); // 从集合中移除，剩下的就是已删除的
+        } else {
+            new_dirs.push(dir_str);
+        }
+    }
+
+    // remaining paths in existing_paths are deleted directories
+    let deleted_dirs: Vec<String> = existing_paths.into_iter().collect();
+
+    // 自动导入新发现的目录
+    let mut imported_count = 0;
+    if !new_dirs.is_empty() {
+        for new_dir in &new_dirs {
+            let dir_path = PathBuf::from(new_dir);
+            if let Ok(cache_record) = import_service.import_single_cache_directory(&dir_path).await {
+                if let Err(e) = cache_records::upsert(&cache_record).await {
+                    eprintln!("导入新缓存目录失败 {}: {}", new_dir, e);
+                } else {
+                    imported_count += 1;
+                }
+            }
+        }
+    }
+
+    // 清理已删除的目录记录
+    let mut cleaned_count = 0;
+    for deleted_dir in &deleted_dirs {
+        // 找到对应的记录并删除
+        if let Some(record) = existing_records.iter().find(|r| r.cache_path == *deleted_dir) {
+            if let Err(e) = cache_records::delete(&record.id).await {
+                eprintln!("删除已删除目录的记录失败 {}: {}", deleted_dir, e);
+            } else {
+                cleaned_count += 1;
+            }
+        }
+    }
+
+    Ok(IncrementalScanResult {
+        scanned_root: cache_root.to_string_lossy().to_string(),
+        new_directories_count: new_dirs.len() as i32,
+        deleted_directories_count: deleted_dirs.len() as i32,
+        imported_count,
+        cleaned_count,
+        new_directories: new_dirs,
+        deleted_directories: deleted_dirs,
+    })
+}
+
 /// 删除缓存项（同时删除文件和数据库记录）
 #[tauri::command(async)]
 #[specta::specta]
@@ -973,6 +1057,18 @@ pub struct ScanResult {
     pub estimated_total_size: i64,
     pub scan_duration: i64,
     pub directories: Vec<ScanDirectoryInfo>,
+}
+
+/// 增量扫描结果
+#[derive(Serialize, Type)]
+pub struct IncrementalScanResult {
+    pub scanned_root: String,
+    pub new_directories_count: i32,
+    pub deleted_directories_count: i32,
+    pub imported_count: i32,
+    pub cleaned_count: i32,
+    pub new_directories: Vec<String>,
+    pub deleted_directories: Vec<String>,
 }
 
 /// 扫描目录信息

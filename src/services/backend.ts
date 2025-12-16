@@ -254,6 +254,17 @@ async cleanupInvalidCacheRecords() : Promise<Result<number, TauriError>> {
 }
 },
 /**
+ * 增量扫描缓存根目录，检测新增或删除的视频
+ */
+async incrementalScanCacheRoot() : Promise<Result<IncrementalScanResult, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("incremental_scan_cache_root") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 删除缓存项（同时删除文件和数据库记录）
  */
 async deleteCacheItem(id: string) : Promise<Result<null, TauriError>> {
@@ -817,6 +828,10 @@ export type ImportProgress = { import_id: string; total_directories: number; pro
  * 导入进度状态
  */
 export type ImportProgressStatus = "Scanning" | "Parsing" | "Validating" | "Saving" | "Completed" | "Cancelled" | "Error"
+/**
+ * 增量扫描结果
+ */
+export type IncrementalScanResult = { scanned_root: string; new_directories_count: number; deleted_directories_count: number; imported_count: number; cleaned_count: number; new_directories: string[]; deleted_directories: string[] }
 export type InitData = { version: string; hash: string; config: Settings; tasks: Partial<{ [key in string]: TaskView }>; schedulers: Partial<{ [key in string]: SchedulerView }>; queue: Partial<{ [key in QueueType]: string[] }> }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type MediaItem = { title: string; cover: string; desc: string; duration: number; pubtime: number; type: string; url?: string; aid?: number | null; sid?: number | null; fid?: number | null; cid?: number | null; bvid?: string | null; epid?: number | null; ssid?: number | null; opid?: string | null; rlid?: number | null; index: number }

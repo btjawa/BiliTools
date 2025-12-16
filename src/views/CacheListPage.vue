@@ -477,6 +477,7 @@ import { useTransferStore } from '@/store/transfer';
 import { cacheManagementService } from '@/services/cache';
 import { formatBytes } from '@/services/utils';
 import { AppError } from '@/services/error';
+import { AppLog } from '@/services/utils';
 import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar } from '@/components';
 import { TransferDialog, TransferProgressDialog, CacheRootMigrationDialog } from '@/components/CachePage';
 import { initializeCacheKeyboardShortcuts, cleanupCacheKeyboardShortcuts } from '@/services/keyboard';
@@ -766,14 +767,23 @@ async function loadCacheList(): Promise<void> {
 
 /**
  * 刷新列表
- * 需求 7.2: 刷新缓存列表时清除所有选择状态
- * 自动清理无效的缓存记录
+ * 增量扫描缓存根目录，检测新增或删除的视频
  */
 async function refreshList(): Promise<void> {
   try {
-    // 清除选择状态（需求 7.2）
+    // 清除选择状态
     cacheStore.clearSelection();
-    await cacheStore.refreshCacheList();
+    
+    // 执行增量扫描
+    const result = await cacheStore.incrementalScanCacheRoot();
+    
+    // 显示扫描结果
+    if (result.newDirectoriesCount > 0 || result.deletedDirectoriesCount > 0) {
+      const message = `${$t('cache.incrementalScan.success')}: ${$t('cache.incrementalScan.importedCount')} ${result.importedCount}, ${$t('cache.incrementalScan.cleanedCount')} ${result.cleanedCount}`;
+      AppLog(message, 'success');
+    } else {
+      AppLog($t('cache.incrementalScan.noChanges'), 'info');
+    }
   } catch (error) {
     new AppError(error).handle();
   }
@@ -1280,21 +1290,11 @@ async function handleCacheRootMigrationConfirm(target: TransferTypes.TransferTar
   try {
     showCacheRootMigrationDialog.value = false;
 
-    // 获取当前缓存根目录
-    await transferStore.loadCurrentCacheRoot();
-    const currentRoot = transferStore.currentCacheRoot;
-
-    if (!currentRoot) {
-      new AppError('无法获取当前缓存根目录', { name: 'error' }).handle();
-      return;
-    }
-
     // 选择目标
     await transferStore.selectTarget(target);
 
     // 创建迁移请求
     const migrationRequest: TransferTypes.RootMigrationRequest = {
-      currentRoot,
       targetRoot: target.path || '',
       updateDatabase: true,
     };

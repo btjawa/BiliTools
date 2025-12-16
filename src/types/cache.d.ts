@@ -272,6 +272,27 @@ export interface ScanResult {
 }
 
 /**
+ * 增量扫描结果
+ * 表示增量扫描缓存根目录的结果
+ */
+export interface IncrementalScanResult {
+  /** 扫描的根目录路径 */
+  scannedRoot: string;
+  /** 新发现的目录数量 */
+  newDirectoriesCount: number;
+  /** 已删除的目录数量 */
+  deletedDirectoriesCount: number;
+  /** 成功导入的数量 */
+  importedCount: number;
+  /** 清理的记录数量 */
+  cleanedCount: number;
+  /** 新发现的目录列表 */
+  newDirectories: string[];
+  /** 已删除的目录列表 */
+  deletedDirectories: string[];
+}
+
+/**
  * 扫描发现的目录信息
  */
 export interface ScanDirectoryInfo {
@@ -596,6 +617,17 @@ export interface VideoInfoPreviewRaw {
   bvid: string;
   file_size: number;
   duration: number;
+}
+
+/** 后端增量扫描结果原始格式 */
+export interface IncrementalScanResultRaw {
+  scanned_root: string;
+  new_directories_count: number;
+  deleted_directories_count: number;
+  imported_count: number;
+  cleaned_count: number;
+  new_directories: string[];
+  deleted_directories: string[];
 }
 
 /** 后端缓存记录原始格式 */
