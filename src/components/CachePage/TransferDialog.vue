@@ -53,7 +53,7 @@
                     @click="handleBrowseFolder"
                   >
                     <i :class="[$fa.weight, 'fa-folder-open']"></i>
-                    选择目标文件夹
+                    {{ $t('transfer.selectTargetFolder') }}
                   </button>
                 </div>
               </div>
