@@ -59,17 +59,13 @@
               <span class="text-sm font-medium">{{
                 $t('cache.import.duplicateHandling')
               }}</span>
-              <select
+              <Dropdown
                 v-model="importOptions.duplicateHandling"
-                class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
-              >
-                <option value="skip">
-                  {{ $t('cache.import.duplicateSkip') }}
-                </option>
-                <option value="overwrite">
-                  {{ $t('cache.import.duplicateOverwrite') }}
-                </option>
-              </select>
+                :drop="[
+                  { id: 'skip', name: $t('cache.import.duplicateSkip') },
+                  { id: 'overwrite', name: $t('cache.import.duplicateOverwrite') },
+                ]"
+              />
             </div>
 
             <label class="flex items-center gap-2 cursor-pointer">
@@ -410,7 +406,7 @@ import { useCacheStore } from '@/store/cache';
 import { cacheImportService, validateCachePath } from '@/services/cache';
 import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
-import { ProgressBar } from '@/components';
+import { ProgressBar, Dropdown } from '@/components';
 import type * as Types from '@/types/cache.d';
 
 const { t: $t } = useI18n();

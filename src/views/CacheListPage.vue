@@ -28,30 +28,17 @@
             </div>
 
             <!-- 快速排序 -->
-            <select
+            <Dropdown
               v-model="selectedSort"
-              class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm"
-              @change="applySort"
-            >
-              <option value="completionTime-desc">
-                {{ $t('cache.list.sort.completionTimeDesc') }}
-              </option>
-              <option value="completionTime-asc">
-                {{ $t('cache.list.sort.completionTimeAsc') }}
-              </option>
-              <option value="title-asc">
-                {{ $t('cache.list.sort.titleAsc') }}
-              </option>
-              <option value="title-desc">
-                {{ $t('cache.list.sort.titleDesc') }}
-              </option>
-              <option value="fileSize-desc">
-                {{ $t('cache.list.sort.fileSizeDesc') }}
-              </option>
-              <option value="fileSize-asc">
-                {{ $t('cache.list.sort.fileSizeAsc') }}
-              </option>
-            </select>
+              :drop="[
+                { id: 'completionTime-desc', name: $t('cache.list.sort.completionTimeDesc') },
+                { id: 'completionTime-asc', name: $t('cache.list.sort.completionTimeAsc') },
+                { id: 'title-asc', name: $t('cache.list.sort.titleAsc') },
+                { id: 'title-desc', name: $t('cache.list.sort.titleDesc') },
+                { id: 'fileSize-desc', name: $t('cache.list.sort.fileSizeDesc') },
+                { id: 'fileSize-asc', name: $t('cache.list.sort.fileSizeAsc') },
+              ]"
+            />
           </div>
 
           <!-- 高级筛选（可折叠） -->
@@ -62,21 +49,17 @@
             >
               <div class="flex gap-3 items-center flex-wrap">
                 <!-- UP主筛选 -->
-                <select
+                <Dropdown
                   v-if="cacheStore.allUploaders.length > 0"
                   v-model="selectedUploader"
-                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm flex-1 min-w-32"
-                  @change="applyFilters"
-                >
-                  <option value="">{{ $t('cache.list.allUploaders') }}</option>
-                  <option
-                    v-for="uploader in cacheStore.allUploaders"
-                    :key="uploader"
-                    :value="uploader"
-                  >
-                    {{ uploader }}
-                  </option>
-                </select>
+                  :drop="[
+                    { id: '', name: $t('cache.list.allUploaders') },
+                    ...cacheStore.allUploaders.map((uploader) => ({
+                      id: uploader,
+                      name: uploader,
+                    })),
+                  ]"
+                />
 
                 <!-- 显示类型筛选（如果启用了组功能） -->
                 <select
@@ -478,7 +461,7 @@ import { cacheManagementService } from '@/services/cache';
 import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
 import { AppLog } from '@/services/utils';
-import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar } from '@/components';
+import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar, Dropdown } from '@/components';
 import { TransferDialog, TransferProgressDialog, CacheRootMigrationDialog } from '@/components/CachePage';
 import { initializeCacheKeyboardShortcuts, cleanupCacheKeyboardShortcuts } from '@/services/keyboard';
 import type * as Types from '@/types/cache.d';
@@ -504,6 +487,15 @@ const selectedUploader = ref<string>('');
 const selectedSort = ref<string>('completionTime-desc');
 const selectedDisplayType = ref<string>(''); // 显示类型筛选（组功能）
 const selectedGroupId = ref<string>(''); // 组ID筛选（组功能）
+
+// 监听排序和筛选变化
+watch(selectedSort, () => {
+  applySort();
+});
+
+watch(selectedUploader, () => {
+  applyFilters();
+});
 
 // 页面输入状态
 const pageInput = ref<number>(1);
