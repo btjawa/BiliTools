@@ -389,8 +389,8 @@ export const useCacheStore = defineStore('cache', () => {
           {
             page: pagination.value.currentPage,
             pageSize: pagination.value.pageSize,
-            sort_by: currentSort.value.field,
-            sort_order: currentSort.value.direction,
+            sortBy: currentSort.value.field,
+            sortOrder: currentSort.value.direction,
             filters,
           },
         );

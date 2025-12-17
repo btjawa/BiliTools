@@ -655,6 +655,33 @@ pub async fn get_cache_statistics() -> TauriResult<CacheStatistics> {
 
 use crate::services::cache::{DisplayItem, GroupService, GroupStatistics};
 
+/// 将前端排序字段名映射到后端字段名
+fn map_sort_field(frontend_field: &str) -> &str {
+    match frontend_field {
+        "completionTime" | "downloadTime" | "time" => "time",
+        "fileSize" | "size" => "size",
+        "title" => "title",
+        _ => "time" // 默认按时间排序
+    }
+}
+
+/// 获取字符串的排序键（中文转拼音首字母，其他字符保持原样）
+fn get_title_sort_key(title: &str) -> String {
+    use pinyin::ToPinyin;
+    
+    title
+        .chars()
+        .map(|c| {
+            if let Some(pinyin) = c.to_pinyin() {
+                // 中文字符，获取拼音首字母
+                pinyin.plain().chars().next().unwrap_or(c).to_ascii_lowercase()
+            } else {
+                c.to_ascii_lowercase()
+            }
+        })
+        .collect()
+}
+
 /// 获取缓存显示项列表（组和单个视频的混合）
 #[tauri::command(async)]
 #[specta::specta]
@@ -756,8 +783,8 @@ pub async fn get_cache_display_items_paginated(
         }
     }
 
-    // 应用排序
-    let sort_field = sort_by.as_deref().unwrap_or("time");
+    // 应用排序字段映射
+    let sort_field = map_sort_field(sort_by.as_deref().unwrap_or("time"));
     let sort_desc = sort_order.as_deref().unwrap_or("desc") == "desc";
 
     display_items.sort_by(|a, b| {
@@ -793,7 +820,10 @@ pub async fn get_cache_display_items_paginated(
                     DisplayItem::SingleVideo { video } => &video.title,
                     DisplayItem::VideoGroup { group } => &group.title,
                 };
-                title_a.cmp(title_b)
+                // 使用拼音排序键进行比较
+                let key_a = get_title_sort_key(title_a);
+                let key_b = get_title_sort_key(title_b);
+                key_a.cmp(&key_b)
             }
             _ => std::cmp::Ordering::Equal,
         };

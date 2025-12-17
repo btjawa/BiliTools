@@ -66,6 +66,7 @@ thiserror = "1.0"
 time = "0.3.41"
 tokio = { version = "1.47", features = ["macros", "io-util", "sync", "time", "fs", "signal"] }
 walkdir = "2.5.0"
+pinyin = "0.10"
 tokio-util = "0.7.16"
 serde_plain = "1.0.2"
 tauri-plugin-notification = "2.3.3"
