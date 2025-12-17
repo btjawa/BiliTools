@@ -15,7 +15,7 @@
           <!-- 对话框头部 -->
           <div class="modal-header">
             <h2 class="modal-title">
-              <i :class="[$fa.weight, 'fa-folder-arrow-right']"></i>
+              <i :class="[$fa.weight, 'fa-folder-arrow-up']"></i>
               <span class="text-(--content-color)">{{ $t('transfer.cacheRootMigration') }}</span>
             </h2>
             <button

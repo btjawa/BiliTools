@@ -698,7 +698,7 @@ export const useTransferStore = defineStore('transfer', () => {
       // 监听进度更新
       channel.onmessage = (backendProgress) => {
         // 将后端的 snake_case 字段转换为前端的 camelCase 字段
-        const progress: Types.TransferProgress = migrateTransferProgress({
+        const progress: Types.TransferProgress = {
           taskId: backendProgress.task_id,
           totalFiles: backendProgress.total_files,
           completedFiles: backendProgress.completed_files,
@@ -708,8 +708,9 @@ export const useTransferStore = defineStore('transfer', () => {
           remainingTime: backendProgress.remaining_time,
           currentFile: backendProgress.current_file,
           status: backendProgress.status.toLowerCase() as Types.TransferTaskStatus,
-        });
+        };
         
+        // 立即更新进度，包括完成状态
         updateTransferProgress(progress);
       };
       

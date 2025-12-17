@@ -153,7 +153,7 @@ const operationTitle = computed(() => {
  */
 const operationIcon = computed(() => {
   if (props.transferType === 'root_migration') {
-    return 'fa-folder-arrow-right';
+    return 'fa-folder-arrow-up';
   }
   return props.operation === 'Copy' ? 'fa-copy' : 'fa-scissors';
 });

@@ -380,26 +380,41 @@ async fn handle_transfer_result(
     task_id: String,
     result: Result<(), TransferError>,
 ) {
-    // 先更新任务状态（在移除之前）
+    // 发送最终状态通知给前端
     {
-        let mut active_tasks = manager.active_tasks.write().await;
-        if let Some(task) = active_tasks.get_mut(&task_id) {
-            match &result {
-                Ok(_) => {
-                    task.status = TaskStatus::Completed;
-                    task.progress.status = TaskStatus::Completed;
+        let progress_senders = manager.progress_senders.read().await;
+        if let Some(sender) = progress_senders.get(&task_id) {
+            let mut active_tasks = manager.active_tasks.write().await;
+            if let Some(task) = active_tasks.get_mut(&task_id) {
+                // 更新任务状态
+                match &result {
+                    Ok(_) => {
+                        task.status = TaskStatus::Completed;
+                        task.progress.status = TaskStatus::Completed;
+                        // 确保进度显示为100%
+                        task.progress.completed_files = task.progress.total_files;
+                        task.progress.transferred_size = task.progress.total_size;
+                        task.progress.speed = 0.0;
+                        task.progress.remaining_time = 0.0;
+                    }
+                    Err(e) => {
+                        task.status = TaskStatus::Failed;
+                        task.progress.status = TaskStatus::Failed;
+                        task.error_message = Some(e.user_friendly_message());
+                        task.progress.speed = 0.0;
+                        task.progress.remaining_time = 0.0;
+                    }
                 }
-                Err(e) => {
-                    task.status = TaskStatus::Failed;
-                    task.progress.status = TaskStatus::Failed;
-                    task.error_message = Some(e.user_friendly_message());
-                }
+
+                // 通过现有 Channel 发送最终进度状态
+                let final_progress = task.progress.clone();
+                let _ = sender.send(final_progress).await;
             }
         }
     }
 
-    // 等待一段时间让前端有机会获取最终状态
-    tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+    // 等待一段时间让前端接收最终状态
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
     // 从活跃任务中移除
     let task = match manager.active_tasks.write().await.remove(&task_id) {

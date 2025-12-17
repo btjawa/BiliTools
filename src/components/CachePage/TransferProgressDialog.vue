@@ -255,24 +255,24 @@ const $fa = computed(() => ({
 // ============================================================================
 
 onMounted(() => {
-  // 启动定期更新
+  // 启动轻量级状态检查（作为推送机制的备份）
   updateInterval.value = window.setInterval(async () => {
-    // 更新所有任务的进度信息（包括活跃和最近完成的任务）
+    // 只对可能存在状态不一致的任务进行轻量级检查
     for (const task of allTasks.value) {
-      // 只更新非最终状态的任务，或者刚完成的任务（避免过度轮询）
-      if (task.status === 'running' || task.status === 'paused' || task.status === 'pending' ||
-          (task.status === 'completed' && Date.now() - task.updated_at < 10000)) {
+      // 只检查运行中的任务，已完成的任务通过推送机制处理
+      if (task.status === 'running' || task.status === 'paused') {
         try {
           const progress = await transferStore.refreshTaskProgress(task.id);
-          if (progress) {
+          if (progress && progress.status !== task.status) {
+            // 只有状态发生变化时才更新
             transferStore.updateTransferProgress(progress);
           }
         } catch (error) {
-          console.warn(`获取任务 ${task.id} 进度失败:`, error);
+          console.warn(`检查任务 ${task.id} 状态失败:`, error);
         }
       }
     }
-  }, 500);
+  }, 2000); // 降低轮询频率，主要依赖推送机制
 });
 
 onUnmounted(() => {

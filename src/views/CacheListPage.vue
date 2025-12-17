@@ -340,7 +340,7 @@
 
         <!-- 传输操作按钮 -->
         <button @click="openCacheRootMigration">
-          <i :class="[$fa.weight, 'fa-folder-arrow-right']"></i>
+          <i :class="[$fa.weight, 'fa-folder-arrow-up']"></i>
           <span>{{ $t('transfer.cacheRootMigration') }}</span>
         </button>
 
