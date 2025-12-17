@@ -114,8 +114,8 @@ impl TransferError {
             } => {
                 format!(
                     "空间不足（需要：{}MB，可用：{}MB）",
-                    required / 1024 / 1024,
-                    available / 1024 / 1024
+                    required / (1024 * 1024),
+                    available / (1024 * 1024)
                 )
             }
             TransferError::DeviceDisconnected { device_name } => {

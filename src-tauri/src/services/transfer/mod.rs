@@ -14,6 +14,7 @@
 //! - `resumable`: 可恢复的文件传输实现
 
 pub mod checkpoint;
+pub mod constants;
 pub mod error;
 pub mod filename;
 pub mod local;
@@ -28,15 +29,13 @@ pub use checkpoint::CheckpointManager;
 pub use error::TransferError;
 pub use filename::FilenameHandler;
 pub use local::{
-    calculate_directory_size, check_write_permission, get_available_space, get_device_info,
-    is_device_connected, LocalFileProtocol,
+    calculate_directory_size, get_available_space, LocalFileProtocol,
 };
 pub use manager::TransferManager;
 pub use protocol::{ProgressCallback, ProgressSender, TransferProtocol};
 pub use resumable::ResumableTransfer;
 pub use types::{
-    CheckpointStatus, ConflictStrategy, ConnectionStatus, DeviceInfo, DeviceType,
-    RootMigrationRequest, TaskStatus, TransferCheckpoint, TransferOperation, TransferProgress,
+    CheckpointStatus, ConflictStrategy, RootMigrationRequest, TaskStatus, TransferCheckpoint, TransferOperation, TransferProgress,
     TransferRequest, TransferTarget, TransferTask,
 };
 pub use validator::FileValidator;

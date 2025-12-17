@@ -20,15 +20,9 @@ export type TransferType = 'individual' | 'root_migration';
  */
 export type ConflictStrategy = 'Skip' | 'Overwrite' | 'Rename' | 'Ask';
 
-/**
- * 设备类型
- */
-export type DeviceType = 'LocalDrive' | 'RemovableStorage';
 
-/**
- * 连接状态
- */
-export type ConnectionStatus = 'Connected' | 'Disconnected';
+
+
 
 /**
  * 传输任务状态
@@ -42,10 +36,8 @@ export type TransferTaskStatus = ProgressStatus;
 export interface TransferTarget {
   id: string;
   name: string;
-  device_type: DeviceType;
   path?: string;
   available_space?: number;
-  connection_status: ConnectionStatus;
 }
 
 /**
@@ -53,7 +45,9 @@ export interface TransferTarget {
  * 扩展 FileTransferProgress 以保持向后兼容性
  */
 export interface TransferProgress extends FileTransferProgress {
-  /** 当前文件名 (兼容性别名) */
+  /** 当前视频名称 */
+  currentVideoName: string;
+  /** 当前文件路径 */
   currentFile: string;
 }
 
@@ -68,6 +62,7 @@ export function migrateTransferProgress(oldProgress: {
   transferredSize: number;
   speed: number;
   remainingTime: number;
+  currentVideoName?: string;
   currentFile: string;
   status: TransferTaskStatus;
   errorMessage?: string;
@@ -83,6 +78,7 @@ export function migrateTransferProgress(oldProgress: {
     completedFiles: oldProgress.completedFiles,
     totalSize: oldProgress.totalSize,
     transferredSize: oldProgress.transferredSize,
+    currentVideoName: oldProgress.currentVideoName || '',
     currentFile: oldProgress.currentFile,
     errorMessage: oldProgress.errorMessage,
     
@@ -94,9 +90,6 @@ export function migrateTransferProgress(oldProgress: {
     remainingTime: oldProgress.remainingTime,
     currentItem: oldProgress.currentFile,
     status: oldProgress.status,
-    
-    // 兼容性字段
-    currentFile: oldProgress.currentFile,
   };
 }
 
@@ -134,16 +127,7 @@ export interface TransferTask {
   updated_at: number;
 }
 
-/**
- * 设备信息
- */
-export interface DeviceInfo {
-  id: string;
-  name: string;
-  type: DeviceType;
-  availableSpace?: number;
-  connectionStatus: ConnectionStatus;
-}
+
 
 /**
  * 传输响应
@@ -160,7 +144,4 @@ export interface TransferResponse {
  */
 export type ProgressCallback = (progress: TransferProgress) => void;
 
-/**
- * 设备变化回调
- */
-export type DeviceChangeCallback = (devices: DeviceInfo[]) => void;
+

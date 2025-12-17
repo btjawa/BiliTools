@@ -73,7 +73,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             batch_delete_cache_items,
             batch_export_cache_items,
             // Transfer
-            discover_transfer_targets,
             validate_transfer_target,
             check_available_space,
             select_folder,
@@ -89,8 +88,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             clear_completed_transfers,
             get_current_cache_root,
             set_cache_root,
-            get_device_list,
-            listen_device_changes,
             listen_transfer_progress,
         ])
         .events(collect_events![

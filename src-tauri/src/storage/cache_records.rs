@@ -589,3 +589,56 @@ pub async fn get_by_group_id(group_id: &str) -> Result<Vec<CacheRecord>> {
     }
     Ok(records)
 }
+/// 根据缓存路径查询缓存记录
+pub async fn get_by_cache_path(cache_path: &str) -> Result<Option<CacheRecord>> {
+    let pool = get_db().await?;
+    let (sql, values) = Query::select()
+        .columns([
+            CacheRecords::Id,
+            CacheRecords::Bvid,
+            CacheRecords::Aid,
+            CacheRecords::Cid,
+            CacheRecords::Title,
+            CacheRecords::Uname,
+            CacheRecords::CoverUrl,
+            CacheRecords::Duration,
+            CacheRecords::FileSize,
+            CacheRecords::CachePath,
+            CacheRecords::DownloadTime,
+            CacheRecords::ImportTime,
+            CacheRecords::Status,
+            CacheRecords::Source,
+            CacheRecords::GroupId,
+            CacheRecords::GroupTitle,
+            CacheRecords::P,
+        ])
+        .from(CacheRecords::Table)
+        .and_where(Expr::col(CacheRecords::CachePath).eq(cache_path))
+        .build_sqlx(SqliteQueryBuilder);
+
+    let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
+
+    if let Some(r) = rows.first() {
+        Ok(Some(CacheRecord {
+            id: r.try_get("id")?,
+            bvid: r.try_get("bvid")?,
+            aid: r.try_get("aid")?,
+            cid: r.try_get("cid")?,
+            title: r.try_get("title")?,
+            uname: r.try_get("uname")?,
+            cover_url: r.try_get("cover_url")?,
+            duration: r.try_get("duration")?,
+            file_size: r.try_get("file_size")?,
+            cache_path: r.try_get("cache_path")?,
+            download_time: r.try_get("download_time")?,
+            import_time: r.try_get("import_time")?,
+            status: r.try_get("status")?,
+            source: r.try_get("source")?,
+            group_id: r.try_get("group_id")?,
+            group_title: r.try_get("group_title")?,
+            p: r.try_get::<i32, _>("p").unwrap_or(1),
+        }))
+    } else {
+        Ok(None)
+    }
+}

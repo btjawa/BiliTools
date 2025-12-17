@@ -36,14 +36,12 @@ export const useTransferStore = defineStore('transfer', () => {
   const progressMap = ref<Map<string, Types.TransferProgress>>(new Map());
 
   // 传输目标相关状态
-  const availableTargets = ref<Types.TransferTarget[]>([]);
   const selectedTarget = ref<Types.TransferTarget | null>(null);
 
 
 
   // UI状态
   const isLoading = ref(false);
-  const isDiscoveringTargets = ref(false);
   const lastError = ref<string | null>(null);
 
   // 缓存根目录相关状态
@@ -138,56 +136,83 @@ export const useTransferStore = defineStore('transfer', () => {
   const averageTransferSpeed = computed(() => {
     if (progressMap.value.size === 0) return 0;
     let totalSpeed = 0;
+    let activeTaskCount = 0;
+    
     progressMap.value.forEach((progress) => {
-      totalSpeed += progress.speed;
+      // 只计算正在运行的任务的速度
+      if (progress.status === 'running' && progress.speed > 0) {
+        totalSpeed += progress.speed;
+        activeTaskCount++;
+      }
     });
-    return totalSpeed / progressMap.value.size;
+    
+    return activeTaskCount > 0 ? totalSpeed / activeTaskCount : 0;
+  });
+
+  /**
+   * 总体剩余时间（基于总体进度计算）
+   */
+  const overallRemainingTime = computed(() => {
+    const remainingSize = totalTransferSize.value - totalTransferredSize.value;
+    const currentSpeed = averageTransferSpeed.value;
+    
+    if (remainingSize <= 0 || currentSpeed <= 0) return 0;
+    
+    return remainingSize / currentSpeed;
+  });
+
+  /**
+   * 总体文件进度
+   */
+  const overallFileProgress = computed(() => {
+    let totalFiles = 0;
+    let completedFiles = 0;
+    
+    progressMap.value.forEach((progress) => {
+      totalFiles += progress.totalFiles;
+      completedFiles += progress.completedFiles;
+    });
+    
+    return {
+      completed: completedFiles,
+      total: totalFiles,
+      percentage: totalFiles > 0 ? (completedFiles / totalFiles) * 100 : 0,
+    };
+  });
+
+  /**
+   * 活跃任务的状态统计
+   */
+  const taskStatusStats = computed(() => {
+    const stats = {
+      running: 0,
+      paused: 0,
+      pending: 0,
+      completed: 0,
+      failed: 0,
+      cancelled: 0,
+    };
+    
+    activeTasks.value.forEach((task) => {
+      if (task.status in stats) {
+        stats[task.status as keyof typeof stats]++;
+      }
+    });
+    
+    completedTasks.value.forEach((task) => {
+      if (task.status in stats) {
+        stats[task.status as keyof typeof stats]++;
+      }
+    });
+    
+    return stats;
   });
 
   // ============================================================================
   // Actions - 传输目标管理
   // ============================================================================
 
-  /**
-   * 发现可用的传输目标
-   */
-  async function discoverTargets(): Promise<void> {
-    if (isDiscoveringTargets.value) return;
 
-    await UnifiedErrorHandler.withErrorBoundary(
-      async () => {
-        isDiscoveringTargets.value = true;
-        lastError.value = null;
-
-        console.log('开始发现传输目标设备...');
-        const targets = await transferService.discoverTransferTargets();
-        console.log('发现的设备列表:', targets);
-        console.log('设备数量:', targets.length);
-        
-        // 详细输出每个设备的信息
-        targets.forEach((target, index) => {
-          console.log(`设备 ${index + 1}:`, {
-            id: target.id,
-            name: target.name,
-            device_type: target.device_type,
-            path: target.path,
-            available_space: target.available_space,
-            connection_status: target.connection_status,
-          });
-        });
-        
-        availableTargets.value = targets;
-        return targets;
-      },
-      {
-        operation: '发现传输目标',
-        onError: (msg) => { lastError.value = msg; },
-        logLevel: 'error',
-      }
-    );
-
-    isDiscoveringTargets.value = false;
-  }
 
   /**
    * 选择传输目标
@@ -288,6 +313,7 @@ export const useTransferStore = defineStore('transfer', () => {
             transferredSize: 0,
             speed: 0,
             remainingTime: 0,
+            currentVideoName: '',
             currentFile: '',
             status: 'pending',
           }),
@@ -345,6 +371,7 @@ export const useTransferStore = defineStore('transfer', () => {
             transferredSize: 0,
             speed: 0,
             remainingTime: 0,
+            currentVideoName: '',
             currentFile: '正在扫描文件...',
             status: 'pending',
           }),
@@ -512,8 +539,17 @@ export const useTransferStore = defineStore('transfer', () => {
 
   /**
    * 更新传输进度
+   * 优化多文件传输时的状态同步
    */
   function updateTransferProgress(progress: Types.TransferProgress): void {
+    // 验证进度数据的有效性
+    if (!progress.taskId) {
+      console.warn('收到无效的进度更新：缺少 taskId');
+      return;
+    }
+
+    // 更新进度映射
+    const previousProgress = progressMap.value.get(progress.taskId);
     progressMap.value.set(progress.taskId, progress);
 
     // 先检查活跃任务
@@ -527,14 +563,16 @@ export const useTransferStore = defineStore('transfer', () => {
     }
 
     if (task) {
-      task.progress = progress;
-      task.status = progress.status;
+      // 确保进度数据的一致性
+      const updatedProgress = validateProgressData(progress, previousProgress);
+      task.progress = updatedProgress;
+      task.status = updatedProgress.status;
       task.updated_at = Date.now();
 
       // 如果是活跃任务且已完成，需要移动到已完成任务
-      if (isActiveTask && (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled')) {
+      if (isActiveTask && (updatedProgress.status === 'completed' || updatedProgress.status === 'failed' || updatedProgress.status === 'cancelled')) {
         // 如果是剪切操作且成功完成，更新缓存列表
-        if (progress.status === 'completed' && task.operation === 'Cut') {
+        if (updatedProgress.status === 'completed' && task.operation === 'Cut') {
           handleCutOperationCompleted(task);
         }
         
@@ -550,6 +588,9 @@ export const useTransferStore = defineStore('transfer', () => {
             if (nextTask) {
               nextTask.status = 'running';
               nextTask.updated_at = Date.now();
+              
+              // 开始监听新任务的进度
+              startProgressListener(nextTaskId);
             }
           }
         }
@@ -557,7 +598,89 @@ export const useTransferStore = defineStore('transfer', () => {
         // 如果是已完成任务，直接更新已完成任务集合
         completedTasks.value.set(progress.taskId, task);
       }
+    } else {
+      // 如果找不到对应的任务，可能是状态不同步，记录警告
+      console.warn(`收到未知任务的进度更新: ${progress.taskId}`);
     }
+  }
+
+  /**
+   * 验证和修正进度数据
+   * 确保进度数据的逻辑一致性
+   */
+  function validateProgressData(
+    current: Types.TransferProgress, 
+    previous?: Types.TransferProgress
+  ): Types.TransferProgress {
+    const validated = { ...current };
+
+    // 边界情况处理：空文件列表的错误处理
+    if (validated.totalFiles === 0) {
+      console.warn('检测到空文件列表，设置默认值');
+      validated.totalFiles = 1;
+      validated.completedFiles = 0;
+    }
+
+    // 边界情况处理：单文件传输的兼容性处理
+    if (validated.totalFiles === 1 && validated.completedFiles > 1) {
+      console.warn('单文件传输中检测到异常的完成文件数，修正为1');
+      validated.completedFiles = 1;
+    }
+
+    // 确保文件计数不会倒退
+    if (previous && current.completedFiles < previous.completedFiles) {
+      console.warn(`文件计数倒退: ${previous.completedFiles} -> ${current.completedFiles}`);
+      validated.completedFiles = previous.completedFiles;
+    }
+
+    // 确保已传输大小不会倒退（除非是重新开始）
+    if (previous && current.transferredSize < previous.transferredSize && current.status !== 'pending') {
+      console.warn(`传输大小倒退: ${previous.transferredSize} -> ${current.transferredSize}`);
+      validated.transferredSize = previous.transferredSize;
+    }
+
+    // 进度计算溢出保护：确保已完成文件数不超过总文件数
+    if (validated.completedFiles > validated.totalFiles) {
+      console.warn(`已完成文件数超过总数: ${validated.completedFiles} > ${validated.totalFiles}`);
+      validated.completedFiles = validated.totalFiles;
+    }
+
+    // 进度计算溢出保护：确保已传输大小不超过总大小
+    if (validated.transferredSize > validated.totalSize) {
+      console.warn(`已传输大小超过总大小: ${validated.transferredSize} > ${validated.totalSize}`);
+      validated.transferredSize = validated.totalSize;
+    }
+
+    // 确保百分比在合理范围内
+    if (validated.totalSize > 0) {
+      const calculatedPercentage = (validated.transferredSize / validated.totalSize) * 100;
+      if (Math.abs(validated.percentage - calculatedPercentage) > 1) {
+        validated.percentage = Math.min(100, Math.max(0, calculatedPercentage));
+      }
+    } else {
+      // 处理总大小为0的边界情况
+      validated.percentage = validated.completedFiles >= validated.totalFiles ? 100 : 0;
+    }
+
+    // 确保速度和剩余时间的合理性
+    if (validated.speed < 0 || !isFinite(validated.speed)) {
+      validated.speed = 0;
+    }
+    
+    if (validated.remainingTime < 0 || !isFinite(validated.remainingTime)) {
+      validated.remainingTime = 0;
+    }
+
+    // 处理当前文件信息缺失的情况
+    if (!validated.currentVideoName || validated.currentVideoName.trim() === '') {
+      validated.currentVideoName = '未知视频';
+    }
+    
+    if (!validated.currentFile || validated.currentFile.trim() === '') {
+      validated.currentFile = '未知路径';
+    }
+
+    return validated;
   }
 
 
@@ -697,18 +820,19 @@ export const useTransferStore = defineStore('transfer', () => {
       
       // 监听进度更新
       channel.onmessage = (backendProgress) => {
-        // 将后端的 snake_case 字段转换为前端的 camelCase 字段
-        const progress: Types.TransferProgress = {
-          taskId: backendProgress.task_id,
-          totalFiles: backendProgress.total_files,
-          completedFiles: backendProgress.completed_files,
-          totalSize: backendProgress.total_size,
-          transferredSize: backendProgress.transferred_size,
+        // 后端已经通过serde重命名为camelCase，直接使用
+        const progress: Types.TransferProgress = migrateTransferProgress({
+          taskId: backendProgress.taskId,
+          totalFiles: backendProgress.totalFiles,
+          completedFiles: backendProgress.completedFiles,
+          totalSize: backendProgress.totalSize,
+          transferredSize: backendProgress.transferredSize,
           speed: backendProgress.speed,
-          remainingTime: backendProgress.remaining_time,
-          currentFile: backendProgress.current_file,
+          remainingTime: backendProgress.remainingTime,
+          currentVideoName: backendProgress.currentVideoName || '',
+          currentFile: backendProgress.currentFile,
           status: backendProgress.status.toLowerCase() as Types.TransferTaskStatus,
-        };
+        });
         
         // 立即更新进度，包括完成状态
         updateTransferProgress(progress);
@@ -728,18 +852,20 @@ export const useTransferStore = defineStore('transfer', () => {
     try {
       const backendProgress = await backend.commands.getTransferProgress(taskId);
       if (backendProgress.status === 'ok' && backendProgress.data) {
-        // 将后端的 snake_case 字段转换为前端的 camelCase 字段
+        // 后端已经通过serde重命名为camelCase，直接使用
         const progress: Types.TransferProgress = migrateTransferProgress({
-          taskId: backendProgress.data.task_id,
-          totalFiles: backendProgress.data.total_files,
-          completedFiles: backendProgress.data.completed_files,
-          totalSize: backendProgress.data.total_size,
-          transferredSize: backendProgress.data.transferred_size,
+          taskId: backendProgress.data.taskId,
+          totalFiles: backendProgress.data.totalFiles,
+          completedFiles: backendProgress.data.completedFiles,
+          totalSize: backendProgress.data.totalSize,
+          transferredSize: backendProgress.data.transferredSize,
           speed: backendProgress.data.speed,
-          remainingTime: backendProgress.data.remaining_time,
-          currentFile: backendProgress.data.current_file,
+          remainingTime: backendProgress.data.remainingTime,
+          currentVideoName: backendProgress.data.currentVideoName || '',
+          currentFile: backendProgress.data.currentFile,
           status: backendProgress.data.status.toLowerCase() as Types.TransferTaskStatus,
         });
+        
         return progress;
       }
       return null;
@@ -757,6 +883,64 @@ export const useTransferStore = defineStore('transfer', () => {
   }
 
   /**
+   * 批量更新多个任务的进度
+   * 用于处理多文件传输时的批量状态更新
+   */
+  function batchUpdateProgress(progressList: Types.TransferProgress[]): void {
+    progressList.forEach((progress) => {
+      updateTransferProgress(progress);
+    });
+  }
+
+  /**
+   * 获取任务的详细状态信息
+   * 包含进度、状态和性能指标
+   */
+  function getTaskDetailedStatus(taskId: string): {
+    task: Types.TransferTask | null;
+    progress: Types.TransferProgress | null;
+    isActive: boolean;
+    isCompleted: boolean;
+  } {
+    const activeTask = activeTasks.value.get(taskId);
+    const completedTask = completedTasks.value.get(taskId);
+    const progress = progressMap.value.get(taskId);
+    
+    return {
+      task: activeTask || completedTask || null,
+      progress: progress || null,
+      isActive: !!activeTask,
+      isCompleted: !!completedTask,
+    };
+  }
+
+  /**
+   * 同步任务状态
+   * 确保任务状态与后端保持一致
+   */
+  async function syncTaskStatus(taskId: string): Promise<void> {
+    try {
+      const latestProgress = await refreshTaskProgress(taskId);
+      if (latestProgress) {
+        updateTransferProgress(latestProgress);
+      }
+    } catch (error) {
+      console.error(`同步任务状态失败 (${taskId}):`, error);
+    }
+  }
+
+  /**
+   * 同步所有活跃任务的状态
+   */
+  async function syncAllTaskStatus(): Promise<void> {
+    const syncPromises = Array.from(activeTasks.value.keys()).map(taskId => 
+      syncTaskStatus(taskId)
+    );
+    
+    await Promise.allSettled(syncPromises);
+  }
+
+  /**
    * 重置状态
    */
   function reset(): void {
@@ -764,10 +948,8 @@ export const useTransferStore = defineStore('transfer', () => {
     completedTasks.value.clear();
     taskQueue.value = [];
     progressMap.value.clear();
-    availableTargets.value = [];
     selectedTarget.value = null;
     isLoading.value = false;
-    isDiscoveringTargets.value = false;
     lastError.value = null;
     currentCacheRoot.value = '';
     cacheRootLoaded.value = false;
@@ -779,10 +961,8 @@ export const useTransferStore = defineStore('transfer', () => {
     taskQueue,
     maxConcurrentTasks,
     progressMap,
-    availableTargets,
     selectedTarget,
     isLoading,
-    isDiscoveringTargets,
     lastError,
     currentCacheRoot,
     cacheRootLoaded,
@@ -797,11 +977,14 @@ export const useTransferStore = defineStore('transfer', () => {
     totalTransferredSize,
     overallProgressPercentage,
     averageTransferSpeed,
+    overallRemainingTime,
+    overallFileProgress,
+    taskStatusStats,
 
     // 方法
     getTaskProgress,
     getTask,
-    discoverTargets,
+    getTaskDetailedStatus,
     selectTarget,
     clearSelectedTarget,
     selectFolder,
@@ -811,7 +994,10 @@ export const useTransferStore = defineStore('transfer', () => {
     cancelTransfer,
     resumeTransfer,
     updateTransferProgress,
+    batchUpdateProgress,
     refreshTaskProgress,
+    syncTaskStatus,
+    syncAllTaskStatus,
     loadCurrentCacheRoot,
     refreshCacheRoot,
     setCacheRoot,

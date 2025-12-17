@@ -28,11 +28,6 @@ pub trait TransferProtocol: Send + Sync + AsAny {
     /// 获取协议描述
     fn description(&self) -> &str;
 
-    /// 发现可用的传输目标
-    ///
-    /// 扫描并返回所有可用的传输目标设备或位置。
-    async fn discover_targets(&self) -> Result<Vec<TransferTarget>, TransferError>;
-
     /// 验证传输目标是否有效
     ///
     /// 检查目标路径是否存在、是否可写等。
@@ -98,6 +93,7 @@ pub trait TransferProtocol: Send + Sync + AsAny {
 
     /// 获取最大并发传输数
     fn max_concurrent_transfers(&self) -> usize {
-        3
+        use super::constants::concurrency;
+        concurrency::MAX_CONCURRENT_TRANSFERS
     }
 }

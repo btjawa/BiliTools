@@ -741,7 +741,7 @@ impl ImportService {
     pub async fn import_single_cache_directory(&self, cache_dir: &PathBuf) -> Result<CacheRecord> {
         // 验证文件完整性
         let validation_result = self.validator.validate_cache_directory(cache_dir).await?;
-        
+
         if !validation_result.is_valid {
             return Err(anyhow::anyhow!("缓存目录无效: {}", cache_dir.display()));
         }

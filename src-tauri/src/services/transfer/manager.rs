@@ -70,6 +70,13 @@ impl TransferManager {
 
     /// 启动传输任务
     pub async fn start_transfer(&self, request: TransferRequest) -> Result<String, TransferError> {
+        // 边界情况处理：空文件列表
+        if request.source_files.is_empty() {
+            return Err(TransferError::Unknown {
+                message: "源文件列表不能为空".to_string(),
+            });
+        }
+
         // 验证源文件
         for source in &request.source_files {
             let path = Path::new(source);
@@ -87,10 +94,8 @@ impl TransferManager {
         let target = TransferTarget {
             id: request.target_path.clone(),
             name: request.target_path.clone(),
-            device_type: super::types::DeviceType::LocalDrive,
             path: Some(request.target_path.clone()),
             available_space: None,
-            connection_status: super::types::ConnectionStatus::Connected,
         };
 
         // 验证目标
@@ -113,6 +118,10 @@ impl TransferManager {
         // 对于B站缓存传输，每个源路径（视频文件夹）算作一个传输单位
         let total_files = request.source_files.len();
 
+        // 边界情况处理：单文件传输兼容性
+        // 确保单文件传输也能正确显示进度
+        let adjusted_total_files = if total_files == 1 { 1 } else { total_files };
+
         // 检查空间
         protocol.check_space(&target, total_size).await?;
 
@@ -124,7 +133,7 @@ impl TransferManager {
             request.source_files,
             target,
             total_size,
-            total_files,
+            adjusted_total_files,
         );
 
         // 添加到队列
@@ -177,9 +186,13 @@ impl TransferManager {
     }
 
     /// 更新任务进度
-    async fn update_task_progress(&self, task_id: &str, progress: TransferProgress) {
+    async fn update_task_progress(&self, task_id: &str, mut progress: TransferProgress) {
+        // 验证和修正进度数据
+        progress.validate_and_fix();
+
         if let Some(task) = self.active_tasks.write().await.get_mut(task_id) {
             task.progress = progress;
+            task.updated_at = time::OffsetDateTime::now_utc().unix_timestamp();
         }
     }
 
@@ -247,9 +260,6 @@ impl TransferManager {
 
         // 添加到已完成任务
         self.completed_tasks.write().await.push(task);
-
-        // 移除进度发送器
-        self.progress_senders.write().await.remove(task_id);
 
         // 继续处理队列
         let _ = self.process_queue().await;
@@ -425,9 +435,6 @@ async fn handle_transfer_result(
     // 添加到已完成任务
     manager.completed_tasks.write().await.push(task);
 
-    // 移除进度发送器
-    manager.progress_senders.write().await.remove(&task_id);
-
     // 继续处理队列
     let _ = manager.process_queue().await;
 }
@@ -456,22 +463,24 @@ async fn execute_transfer_task(
             })?
     };
 
-    // 创建进度发送器
-    let (tx, mut rx) = mpsc::channel(100);
+    // 创建进度发送器（简化版本，直接更新任务状态）
+    const PROGRESS_CHANNEL_BUFFER_SIZE: usize = 100;
+    let (tx, mut rx) = mpsc::channel::<TransferProgress>(PROGRESS_CHANNEL_BUFFER_SIZE);
 
-    // 保存进度发送器
-    {
-        let mut senders = manager.progress_senders.write().await;
-        senders.insert(task_id.clone(), tx.clone());
-    }
-
-    // 在后台转发进度更新
+    // 在后台更新任务进度
     let manager_clone = manager.clone();
     let task_id_clone = task_id.clone();
     tokio::spawn(async move {
         while let Some(mut progress) = rx.recv().await {
-            // 使用正确的任务 ID
-            progress.task_id = task_id_clone.clone();
+            // 确保任务 ID 正确设置
+            if progress.task_id.is_empty() {
+                progress.task_id = task_id_clone.clone();
+            }
+
+            // 验证和修正进度数据
+            progress.validate_and_fix();
+
+            // 直接更新内部任务状态，前端通过轮询获取
             manager_clone
                 .update_task_progress(&task_id_clone, progress)
                 .await;
@@ -484,11 +493,11 @@ async fn execute_transfer_task(
     for source in &source_files {
         let path = Path::new(source);
         if path.is_file() {
-            total_size += std::fs::metadata(path)
-                .map(|m| m.len())
-                .unwrap_or(0);
+            total_size += std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
         } else if path.is_dir() {
-            let (size, _) = super::calculate_directory_size(path).await.unwrap_or((0, 0));
+            let (size, _) = super::calculate_directory_size(path)
+                .await
+                .unwrap_or((0, 0));
             total_size += size;
         }
     }
@@ -497,13 +506,35 @@ async fn execute_transfer_task(
     let mut global_progress = TransferProgress::new(task_id.clone(), total_files, total_size);
     global_progress.status = TaskStatus::Running;
 
+    // 设置初始视频名称（如果有文件的话）
+    if !source_files.is_empty() {
+        let first_source = &source_files[0];
+        let video_name = {
+            use crate::storage::cache_records;
+
+            // 尝试从数据库获取标题
+            match cache_records::get_by_cache_path(first_source).await {
+                Ok(Some(record)) => record.title,
+                _ => {
+                    // 查询失败则使用文件夹名
+                    Path::new(first_source)
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "未知视频".to_string())
+                }
+            }
+        };
+        global_progress.set_current_file(video_name, first_source.clone());
+    }
+
     // 发送初始进度
     let _ = tx.send(global_progress.clone()).await;
 
     // 执行传输
     let transfer_result: Result<(), TransferError> = async {
+
         let mut transferred_size: u64 = 0;
-        
+
         for (index, source) in source_files.iter().enumerate() {
             let source_path = Path::new(source);
             let filename = source_path
@@ -511,34 +542,71 @@ async fn execute_transfer_task(
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| format!("file_{}", index));
 
-            // 更新当前文件
-            global_progress.current_file = source.clone();
-            let _ = tx.send(global_progress.clone()).await;
+            // 从数据库查询视频标题
+            let video_title = {
+                use crate::storage::cache_records;
 
-            if source_path.is_file() {
-                protocol
-                    .transfer_file(source_path, &target, &filename, &task_id, Some(tx.clone()))
-                    .await?;
-                
-                // 更新已传输大小
-                transferred_size += std::fs::metadata(source_path)
-                    .map(|m| m.len())
-                    .unwrap_or(0);
-            } else if source_path.is_dir() {
-                protocol
-                    .transfer_directory(source_path, &target, &filename, &task_id, Some(tx.clone()))
-                    .await?;
-                
-                // 更新已传输大小
-                let (size, _) = super::calculate_directory_size(source_path).await.unwrap_or((0, 0));
-                transferred_size += size;
+                // 尝试通过cache_path查询标题
+                match cache_records::get_by_cache_path(source).await {
+                    Ok(Some(record)) => record.title,
+                    _ => filename.clone(), // 查询失败则使用文件夹名
+                }
+            };
+
+            // 更新当前视频名称和文件路径
+            global_progress.set_current_file(video_title, source.clone());
+
+            // 重置速度计算器以获得更准确的单文件传输速度
+            if index > 0 {
+                global_progress.reset_speed_calculator();
             }
 
-            // 更新完成的文件数
-            global_progress.completed_files = index + 1;
-            global_progress.transferred_size = transferred_size;
+            let _ = tx.send(global_progress.clone()).await;
+
+            // 获取文件大小用于进度计算
+            let file_size = if source_path.is_file() {
+                let size = std::fs::metadata(source_path).map(|m| m.len()).unwrap_or(0);
+                size
+            } else if source_path.is_dir() {
+                let (size, _file_count) = super::calculate_directory_size(source_path)
+                    .await
+                    .unwrap_or((0, 0));
+                size
+            } else {
+                0
+            };
+
+            // 执行传输（不传递 progress_sender，避免协议层发送进度）
+            if source_path.is_file() {
+                protocol
+                    .transfer_file(source_path, &target, &filename, &task_id, None)
+                    .await?;
+            } else if source_path.is_dir() {
+                protocol
+                    .transfer_directory(source_path, &target, &filename, &task_id, None)
+                    .await?;
+            }
+
+            // 更新已传输大小
+            transferred_size += file_size;
+
+            // 完成当前文件并更新进度
+            global_progress.complete_file();
+            global_progress.update_progress(transferred_size);
+
+            // 发送文件完成的进度更新
             let _ = tx.send(global_progress.clone()).await;
         }
+
+
+        // 发送最终完成状态
+        global_progress.status = TaskStatus::Completed;
+        global_progress.completed_files = global_progress.total_files;
+        global_progress.transferred_size = global_progress.total_size;
+        global_progress.speed = 0.0;
+        global_progress.remaining_time = 0.0;
+        let _ = tx.send(global_progress.clone()).await;
+
         Ok(())
     }
     .await;

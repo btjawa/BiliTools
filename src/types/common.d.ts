@@ -63,7 +63,9 @@ export interface FileTransferProgress extends BaseProgress {
   totalSize: number;
   /** 已传输大小 (字节) */
   transferredSize: number;
-  /** 当前处理的文件名 */
+  /** 当前视频名称 */
+  currentVideoName: string;
+  /** 当前处理的文件路径 */
   currentFile: string;
   /** 错误信息 (可选) */
   errorMessage?: string;

@@ -49,7 +49,14 @@
     <!-- 当前文件 -->
     <div class="bg-(--solid-button-color) rounded-lg p-4">
       <div class="text-xs text-(--desc-color) mb-2">{{ $t('transfer.currentFile') }}</div>
-      <div class="text-(--content-color) truncate font-medium">{{ progress?.currentFile || '-' }}</div>
+      <div class="space-y-1">
+        <div class="text-(--content-color) truncate font-medium">
+          {{ (progress?.currentVideoName && progress.currentVideoName.trim()) || '未知视频' }}
+        </div>
+        <div class="text-xs text-(--desc-color) truncate">
+          {{ progress?.currentFile || '-' }}
+        </div>
+      </div>
     </div>
 
     <!-- 错误信息 -->

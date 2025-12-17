@@ -294,20 +294,16 @@ const statusIcon = computed(() => {
   if (!props.progress) return 'fa-solid fa-check';
 
   switch (props.progress.status) {
-    case 'Scanning':
-      return 'fa-solid fa-magnifying-glass';
-    case 'Parsing':
-      return 'fa-solid fa-file-code';
-    case 'Validating':
-      return 'fa-solid fa-shield-check';
-    case 'Saving':
-      return 'fa-solid fa-database';
-    case 'Completed':
+    case 'running':
+      return 'fa-solid fa-spinner';
+    case 'completed':
       return 'fa-solid fa-check';
-    case 'Cancelled':
+    case 'cancelled':
       return 'fa-solid fa-stop';
-    case 'Error':
+    case 'failed':
       return 'fa-solid fa-exclamation-triangle';
+    case 'paused':
+      return 'fa-solid fa-pause';
     default:
       return 'fa-solid fa-spinner';
   }

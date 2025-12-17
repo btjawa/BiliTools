@@ -3,6 +3,7 @@
 //! 实现断点续传功能，支持从中断点恢复传输。
 
 use super::checkpoint::CheckpointManager;
+use super::constants::{buffer_sizes, progress_intervals};
 use super::error::TransferError;
 use super::protocol::ProgressSender;
 use super::types::{CheckpointStatus, TransferCheckpoint, TransferProgress};
@@ -123,10 +124,10 @@ impl ResumableTransfer {
         };
 
         // 5. 执行传输
-        let mut buffer = vec![0u8; 1024 * 1024]; // 1MB 缓冲区
+        let mut buffer = vec![0u8; buffer_sizes::RESUMABLE_BUFFER_SIZE];
         let mut transferred = checkpoint.transferred_size;
         let start_time = std::time::Instant::now();
-        let checkpoint_interval = 10 * 1024 * 1024; // 每 10MB 保存一次检查点
+
 
         loop {
             let n = source_file
@@ -145,10 +146,10 @@ impl ResumableTransfer {
 
             transferred += n as u64;
 
-            // 定期保存检查点
-            if transferred % checkpoint_interval == 0 || transferred == checkpoint.total_size {
-                checkpoint.transferred_size = transferred;
-                checkpoint.updated_at = OffsetDateTime::now_utc().unix_timestamp();
+            // 调试信息：定期输出传输进度
+            if transferred % progress_intervals::DEBUG_OUTPUT_INTERVAL == 0
+                || transferred == checkpoint.total_size
+            {
                 checkpoint_mgr.save_checkpoint(&checkpoint).await?;
             }
 
@@ -162,27 +163,29 @@ impl ResumableTransfer {
                 };
 
                 let remaining_bytes = checkpoint.total_size - transferred;
-                let remaining_time = if speed > 0.0 {
+                let _remaining_time = if speed > 0.0 {
                     remaining_bytes as f64 / speed
                 } else {
                     0.0
                 };
 
-                let progress = TransferProgress {
-                    task_id: task_id.to_string(),
-                    total_files: 1,
-                    completed_files: if transferred == checkpoint.total_size {
-                        1
-                    } else {
-                        0
-                    },
-                    total_size: checkpoint.total_size,
-                    transferred_size: transferred,
-                    speed,
-                    remaining_time,
-                    current_file: source.to_string_lossy().to_string(),
-                    status: super::types::TaskStatus::Running,
+                let mut progress =
+                    TransferProgress::new(task_id.to_string(), 1, checkpoint.total_size);
+                progress.completed_files = if transferred == checkpoint.total_size {
+                    1
+                } else {
+                    0
                 };
+                progress.update_progress(transferred);
+                progress.set_current_file(
+                    source
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default(),
+                    source.to_string_lossy().to_string(),
+                );
+                progress.status = super::types::TaskStatus::Running;
+
 
                 let _ = sender.send(progress).await;
             }

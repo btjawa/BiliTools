@@ -217,7 +217,10 @@ pub async fn import_cache_directory(path: String, options: ImportOptions) -> Tau
     let config = config::read();
     if config.cache_root.is_none() {
         let mut settings = serde_json::Map::new();
-        settings.insert("cache_root".to_string(), serde_json::Value::String(path.clone()));
+        settings.insert(
+            "cache_root".to_string(),
+            serde_json::Value::String(path.clone()),
+        );
         config::write(settings).await?;
     }
 
@@ -377,7 +380,8 @@ pub async fn incremental_scan_cache_root() -> TauriResult<IncrementalScanResult>
 
     // 从配置中获取缓存根目录
     let config = config::read();
-    let cache_root = config.cache_root
+    let cache_root = config
+        .cache_root
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("尚未设置缓存根目录"))?;
 
@@ -418,7 +422,10 @@ pub async fn incremental_scan_cache_root() -> TauriResult<IncrementalScanResult>
     if !new_dirs.is_empty() {
         for new_dir in &new_dirs {
             let dir_path = PathBuf::from(new_dir);
-            if let Ok(cache_record) = import_service.import_single_cache_directory(&dir_path).await {
+            if let Ok(cache_record) = import_service
+                .import_single_cache_directory(&dir_path)
+                .await
+            {
                 if let Err(e) = cache_records::upsert(&cache_record).await {
                     eprintln!("导入新缓存目录失败 {}: {}", new_dir, e);
                 } else {
@@ -432,7 +439,10 @@ pub async fn incremental_scan_cache_root() -> TauriResult<IncrementalScanResult>
     let mut cleaned_count = 0;
     for deleted_dir in &deleted_dirs {
         // 找到对应的记录并删除
-        if let Some(record) = existing_records.iter().find(|r| r.cache_path == *deleted_dir) {
+        if let Some(record) = existing_records
+            .iter()
+            .find(|r| r.cache_path == *deleted_dir)
+        {
             if let Err(e) = cache_records::delete(&record.id).await {
                 eprintln!("删除已删除目录的记录失败 {}: {}", deleted_dir, e);
             } else {
@@ -1091,7 +1101,7 @@ pub struct ScanPreviewInfo {
 // 传输功能相关命令
 
 use crate::services::transfer::{
-    DeviceInfo, LocalFileProtocol, RootMigrationRequest, TransferManager, TransferProgress,
+    LocalFileProtocol, RootMigrationRequest, TransferManager, TransferProgress,
     TransferProtocol, TransferRequest, TransferTarget,
 };
 use std::sync::OnceLock;
@@ -1114,15 +1124,6 @@ async fn init_transfer_manager() -> Result<(), crate::TauriError> {
     Ok(())
 }
 
-/// 发现可用的传输目标（本地文件夹和移动设备）
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn discover_transfer_targets() -> TauriResult<Vec<TransferTarget>> {
-    let protocol = LocalFileProtocol::new();
-    let targets = protocol.discover_targets().await?;
-    Ok(targets)
-}
-
 /// 验证传输目标的有效性
 #[tauri::command(async)]
 #[specta::specta]
@@ -1140,10 +1141,8 @@ pub async fn check_available_space(target_path: String, required_size: u64) -> T
     let target = TransferTarget {
         id: target_path.clone(),
         name: target_path.clone(),
-        device_type: crate::services::transfer::DeviceType::LocalDrive,
         path: Some(target_path),
         available_space: None,
-        connection_status: crate::services::transfer::ConnectionStatus::Connected,
     };
     let has_space = protocol.check_space(&target, required_size).await?;
     Ok(has_space)
@@ -1172,7 +1171,8 @@ pub async fn start_root_migration(request: RootMigrationRequest) -> TauriResult<
 
     // 从配置中获取当前缓存根目录
     let config = config::read();
-    let current_root_str = config.cache_root
+    let current_root_str = config
+        .cache_root
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("尚未设置缓存根目录"))?
         .to_string_lossy()
@@ -1337,7 +1337,10 @@ async fn update_cache_paths_after_migration(
 
     // 更新配置中的缓存根目录
     let mut settings = serde_json::Map::new();
-    settings.insert("cache_root".to_string(), serde_json::Value::String(new_root.to_string()));
+    settings.insert(
+        "cache_root".to_string(),
+        serde_json::Value::String(new_root.to_string()),
+    );
     if let Err(e) = config::write(settings).await {
         eprintln!("更新配置中的缓存根目录失败: {}", e);
     }
@@ -1447,12 +1450,12 @@ pub async fn clear_completed_transfers() -> TauriResult<()> {
 #[specta::specta]
 pub async fn get_current_cache_root() -> TauriResult<String> {
     let config = config::read();
-    
+
     // 如果配置中有缓存根目录，直接返回
     if let Some(cache_root) = &config.cache_root {
         return Ok(cache_root.to_string_lossy().to_string());
     }
-    
+
     // 如果没有配置，返回空字符串表示未设置
     Ok(String::new())
 }
@@ -1461,73 +1464,22 @@ pub async fn get_current_cache_root() -> TauriResult<String> {
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn set_cache_root(path: String) -> TauriResult<()> {
-    use std::path::PathBuf;
     use serde_json::json;
-    
+    use std::path::PathBuf;
+
     let cache_root = PathBuf::from(path);
-    
+
     // 验证路径存在且是目录
     if !cache_root.exists() || !cache_root.is_dir() {
         return Err(anyhow::anyhow!("指定的路径不存在或不是目录").into());
     }
-    
+
     // 更新配置
     let mut settings = json!({
         "cache_root": cache_root.to_string_lossy().to_string()
     });
-    
+
     config::write(settings.as_object_mut().unwrap().clone()).await?;
-    
-    Ok(())
-}
-
-/// 获取设备列表
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn get_device_list() -> TauriResult<Vec<DeviceInfo>> {
-    let protocol = LocalFileProtocol::new();
-    let devices = protocol.get_all_devices().await?;
-    Ok(devices)
-}
-
-/// 监听设备变化（使用 Channel 事件流）
-#[tauri::command(async)]
-#[specta::specta]
-pub async fn listen_device_changes(event: tauri::ipc::Channel<Vec<DeviceInfo>>) -> TauriResult<()> {
-    // 启动一个后台任务持续监听设备变化
-    tokio::spawn(async move {
-        let protocol = LocalFileProtocol::new();
-        let mut last_devices: Vec<DeviceInfo> = Vec::new();
-
-        loop {
-            // 每2秒检查一次设备变化
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-
-            match protocol.get_all_devices().await {
-                Ok(current_devices) => {
-                    // 检查设备列表是否发生变化
-                    if current_devices.len() != last_devices.len()
-                        || current_devices
-                            .iter()
-                            .zip(last_devices.iter())
-                            .any(|(a, b)| {
-                                a.id != b.id || a.connection_status != b.connection_status
-                            })
-                    {
-                        last_devices = current_devices.clone();
-                        if event.send(current_devices).is_err() {
-                            // Channel 已关闭，停止监听
-                            break;
-                        }
-                    }
-                }
-                Err(_) => {
-                    // 发生错误，继续尝试
-                    continue;
-                }
-            }
-        }
-    });
 
     Ok(())
 }

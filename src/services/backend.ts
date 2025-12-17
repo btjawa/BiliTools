@@ -441,17 +441,6 @@ async batchExportCacheItems(itemIds: string[], itemTypes: string[], exportPath: 
 }
 },
 /**
- * 发现可用的传输目标（本地文件夹和移动设备）
- */
-async discoverTransferTargets() : Promise<Result<TransferTarget[], TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("discover_transfer_targets") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * 验证传输目标的有效性
  */
 async validateTransferTarget(target: TransferTarget) : Promise<Result<boolean, TauriError>> {
@@ -617,28 +606,6 @@ async setCacheRoot(path: string) : Promise<Result<null, TauriError>> {
 }
 },
 /**
- * 获取设备列表
- */
-async getDeviceList() : Promise<Result<DeviceInfo[], TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_device_list") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * 监听设备变化（使用 Channel 事件流）
- */
-async listenDeviceChanges(event: TAURI_CHANNEL<DeviceInfo[]>) : Promise<Result<null, TauriError>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("listen_device_changes", { event }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * 监听传输进度更新（使用 Channel 事件流）
  */
 async listenTransferProgress(taskId: string, event: TAURI_CHANNEL<TransferProgress>) : Promise<Result<null, TauriError>> {
@@ -714,59 +681,7 @@ export type ConflictStrategy =
  * 询问用户
  */
 "Ask"
-/**
- * 设备连接状态
- */
-export type ConnectionStatus = 
-/**
- * 已连接
- */
-"Connected" | 
-/**
- * 已断开
- */
-"Disconnected"
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
-/**
- * 设备信息
- */
-export type DeviceInfo = { 
-/**
- * 设备唯一标识符
- */
-id: string; 
-/**
- * 设备名称
- */
-name: string; 
-/**
- * 设备类型
- */
-device_type: DeviceType; 
-/**
- * 可用空间（字节）
- */
-available_space: number | null; 
-/**
- * 总空间（字节）
- */
-total_space: number | null; 
-/**
- * 连接状态
- */
-connection_status: ConnectionStatus }
-/**
- * 设备类型
- */
-export type DeviceType = 
-/**
- * 本地驱动器
- */
-"LocalDrive" | 
-/**
- * 可移动存储设备（U盘、移动硬盘等）
- */
-"RemovableStorage"
 /**
  * 显示项枚举（组或单个视频）
  */
@@ -961,23 +876,23 @@ export type TransferProgress = {
 /**
  * 任务ID
  */
-task_id: string; 
+taskId: string; 
 /**
  * 总文件数
  */
-total_files: number; 
+totalFiles: number; 
 /**
  * 已完成文件数
  */
-completed_files: number; 
+completedFiles: number; 
 /**
  * 总大小（字节）
  */
-total_size: number; 
+totalSize: number; 
 /**
  * 已传输大小（字节）
  */
-transferred_size: number; 
+transferredSize: number; 
 /**
  * 传输速度（字节/秒）
  */
@@ -985,11 +900,15 @@ speed: number;
 /**
  * 预计剩余时间（秒）
  */
-remaining_time: number; 
+remainingTime: number; 
 /**
- * 当前正在传输的文件
+ * 当前视频名称
  */
-current_file: string; 
+currentVideoName: string; 
+/**
+ * 当前正在传输的文件路径
+ */
+currentFile: string; 
 /**
  * 任务状态
  */
@@ -1027,21 +946,13 @@ id: string;
  */
 name: string; 
 /**
- * 设备类型
- */
-device_type: DeviceType; 
-/**
  * 目标路径
  */
 path: string | null; 
 /**
  * 可用空间（字节）
  */
-available_space: number | null; 
-/**
- * 连接状态
- */
-connection_status: ConnectionStatus }
+available_space: number | null }
 /**
  * 传输任务
  */

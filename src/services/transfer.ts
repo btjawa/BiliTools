@@ -7,18 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type * as Types from '@/types/transfer.d';
 
-/**
- * 发现可用的传输目标（本地文件夹和移动设备）
- */
-export async function discoverTransferTargets(): Promise<Types.TransferTarget[]> {
-  try {
-    const targets = await invoke<Types.TransferTarget[]>('discover_transfer_targets');
-    return targets;
-  } catch (error) {
-    console.error('发现传输目标失败:', error);
-    throw error;
-  }
-}
+
 
 /**
  * 验证传输目标的有效性
