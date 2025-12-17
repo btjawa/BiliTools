@@ -58,56 +58,6 @@ impl FileValidator {
         Ok(actual_hash == expected_hash)
     }
 
-    /// 计算文件的部分哈希（用于断点续传验证）
-    ///
-    /// # 参数
-    /// * `file_path` - 文件路径
-    /// * `offset` - 起始偏移量（字节）
-    /// * `length` - 要计算的长度（字节）
-    ///
-    /// # 返回
-    /// 返回十六进制格式的 SHA256 哈希值
-    pub async fn calculate_partial_hash(
-        file_path: &Path,
-        offset: u64,
-        length: u64,
-    ) -> Result<String, TransferError> {
-        let mut file = File::open(file_path)
-            .await
-            .map_err(|e| TransferError::from_io_error(e, Some(&file_path.to_string_lossy())))?;
-
-        // 跳转到指定偏移量
-        use tokio::io::AsyncSeekExt;
-        file.seek(std::io::SeekFrom::Start(offset))
-            .await
-            .map_err(|e| TransferError::from_io_error(e, Some(&file_path.to_string_lossy())))?;
-
-        let mut hasher = Sha256::new();
-        let mut buffer = [0u8; 8192];
-        let mut remaining = length;
-
-        loop {
-            let to_read = std::cmp::min(remaining, buffer.len() as u64) as usize;
-            if to_read == 0 {
-                break;
-            }
-
-            let n = file
-                .read(&mut buffer[..to_read])
-                .await
-                .map_err(|e| TransferError::from_io_error(e, Some(&file_path.to_string_lossy())))?;
-
-            if n == 0 {
-                break;
-            }
-
-            hasher.update(&buffer[..n]);
-            remaining -= n as u64;
-        }
-
-        Ok(format!("{:x}", hasher.finalize()))
-    }
-
     /// 快速验证文件是否完整（通过文件大小）
     ///
     /// # 参数

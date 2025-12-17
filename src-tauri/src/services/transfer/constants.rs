@@ -9,9 +9,6 @@ pub mod buffer_sizes {
 
     /// 高性能文件复制缓冲区大小 (8MB)
     pub const HIGH_PERFORMANCE_BUFFER_SIZE: usize = 8 * 1024 * 1024;
-
-    /// 可恢复传输缓冲区大小 (1MB)
-    pub const RESUMABLE_BUFFER_SIZE: usize = 1024 * 1024;
 }
 
 /// 进度报告间隔常量
@@ -21,9 +18,6 @@ pub mod progress_intervals {
 
     /// 调试输出间隔 (50MB)
     pub const DEBUG_OUTPUT_INTERVAL: u64 = 50 * 1024 * 1024;
-
-    /// 检查点保存间隔 (10MB)
-    pub const CHECKPOINT_SAVE_INTERVAL: u64 = 10 * 1024 * 1024;
 }
 
 /// 缓冲区刷新常量
