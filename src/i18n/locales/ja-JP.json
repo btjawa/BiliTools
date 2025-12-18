@@ -542,7 +542,8 @@
       "all": "すべて",
       "normal": "正常",
       "invalid": "無効",
-      "incomplete_short": "不完全"
+      "incomplete_short": "不完全",
+      "collection": "コレクション"
     },
     "card": {
       "play": "再生",

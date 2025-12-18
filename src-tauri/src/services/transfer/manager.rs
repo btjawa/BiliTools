@@ -565,8 +565,7 @@ async fn execute_transfer_task(
 
             // 获取文件大小用于进度计算
             let file_size = if source_path.is_file() {
-                let size = std::fs::metadata(source_path).map(|m| m.len()).unwrap_or(0);
-                size
+                std::fs::metadata(source_path).map(|m| m.len()).unwrap_or(0)
             } else if source_path.is_dir() {
                 let (size, _file_count) = super::calculate_directory_size(source_path)
                     .await

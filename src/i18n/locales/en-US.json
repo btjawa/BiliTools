@@ -542,7 +542,8 @@
       "all": "All",
       "normal": "Normal",
       "invalid": "Invalid",
-      "incomplete_short": "Incomplete"
+      "incomplete_short": "Incomplete",
+      "collection": "Collection"
     },
     "card": {
       "play": "Play",

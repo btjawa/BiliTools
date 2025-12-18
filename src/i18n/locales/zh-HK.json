@@ -542,7 +542,8 @@
       "all": "全部",
       "normal": "正常",
       "invalid": "失效",
-      "incomplete_short": "殘缺"
+      "incomplete_short": "殘缺",
+      "collection": "合集"
     },
     "card": {
       "play": "播放",

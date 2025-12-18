@@ -61,34 +61,7 @@
                   ]"
                 />
 
-                <!-- 显示类型筛选（如果启用了组功能） -->
-                <select
-                  v-if="cacheStore.groupManagerConfig.enableGrouping"
-                  v-model="selectedDisplayType"
-                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm min-w-24"
-                  @change="applyFilters"
-                >
-                  <option value="">{{ $t('cache.list.allStatus') }}</option>
-                  <option value="groups">{{ $t('cache.list.sort.titleAsc') }}</option>
-                  <option value="singles">{{ $t('cache.list.sort.titleDesc') }}</option>
-                </select>
 
-                <!-- 组ID筛选（如果启用了组功能且有组） -->
-                <select
-                  v-if="cacheStore.groupManagerConfig.enableGrouping && cacheStore.allGroupIds.length > 0"
-                  v-model="selectedGroupId"
-                  class="px-3 py-2 bg-(--input-bg) border border-(--border-color) rounded-md text-sm min-w-32"
-                  @change="applyFilters"
-                >
-                  <option value="">{{ $t('cache.list.allStatus') }}</option>
-                  <option
-                    v-for="groupId in cacheStore.allGroupIds"
-                    :key="groupId"
-                    :value="groupId"
-                  >
-                    {{ groupId }}
-                  </option>
-                </select>
 
                 <!-- 清除筛选 -->
                 <button
@@ -262,24 +235,10 @@
             <label class="primary-color"></label>
           </button>
           <button
-            :class="{ active: selectedStatus === 'available' }"
-            @click="setStatusFilter('available')"
+            :class="{ active: selectedStatus === 'collection' }"
+            @click="setStatusFilter('collection')"
           >
-            <span>{{ $t('cache.status.normal') }}</span>
-            <label class="primary-color"></label>
-          </button>
-          <button
-            :class="{ active: selectedStatus === 'unavailable' }"
-            @click="setStatusFilter('unavailable')"
-          >
-            <span>{{ $t('cache.status.invalid') }}</span>
-            <label class="primary-color"></label>
-          </button>
-          <button
-            :class="{ active: selectedStatus === 'incomplete' }"
-            @click="setStatusFilter('incomplete')"
-          >
-            <span>{{ $t('cache.status.incomplete_short') }}</span>
+            <span>{{ $t('cache.status.collection') }}</span>
             <label class="primary-color"></label>
           </button>
         </div>
@@ -485,8 +444,7 @@ const searchKeyword = ref<string>('');
 const selectedStatus = ref<string>('');
 const selectedUploader = ref<string>('');
 const selectedSort = ref<string>('completionTime-desc');
-const selectedDisplayType = ref<string>(''); // 显示类型筛选（组功能）
-const selectedGroupId = ref<string>(''); // 组ID筛选（组功能）
+
 
 // 监听排序和筛选变化
 watch(selectedSort, () => {
@@ -581,9 +539,7 @@ const hasActiveFilters = computed(() => {
   return !!(
     searchKeyword.value ||
     selectedStatus.value ||
-    selectedUploader.value ||
-    selectedDisplayType.value ||
-    selectedGroupId.value
+    selectedUploader.value
   );
 });
 
@@ -618,8 +574,6 @@ function applyFilters(): void {
       status: [selectedStatus.value as Types.CacheStatus],
     }),
     ...(selectedUploader.value && { uploader: selectedUploader.value }),
-    ...(selectedDisplayType.value && { displayType: selectedDisplayType.value as 'all' | 'groups' | 'singles' }),
-    ...(selectedGroupId.value && { groupId: selectedGroupId.value }),
   };
 
   cacheStore.setFilter(filter);
@@ -675,8 +629,6 @@ function clearFilters(): void {
   searchKeyword.value = '';
   selectedStatus.value = '';
   selectedUploader.value = '';
-  selectedDisplayType.value = '';
-  selectedGroupId.value = '';
   cacheStore.clearFilter();
   loadCacheList();
 

@@ -711,7 +711,13 @@ pub async fn get_cache_display_items_paginated(
 
     // 获取所有记录
     let mut records = if let Some(status) = &filters.filter_status {
-        cache_records::get_by_status(status).await?
+        if status == "collection" {
+            // 集合筛选需要获取所有记录后动态判断
+            cache_records::get_all().await?
+        } else {
+            // 其他状态按数据库字段筛选
+            cache_records::get_by_status(status).await?
+        }
     } else {
         cache_records::get_all().await?
     };
@@ -746,6 +752,31 @@ pub async fn get_cache_display_items_paginated(
             records.retain(|record| {
                 record.title.to_lowercase().contains(&query_lower)
                     || record.uname.to_lowercase().contains(&query_lower)
+            });
+        }
+    }
+
+    // 应用集合筛选
+    if let Some(status) = &filters.filter_status {
+        if status == "collection" {
+            // 先创建一个副本用于检查
+            let records_for_check = records.clone();
+            // 只保留属于集合的视频
+            records.retain(|record| {
+                // 检查是否有其他视频共享相同的 group_id
+                if let Some(group_id) = &record.group_id {
+                    if !group_id.is_empty() {
+                        let has_other_videos_with_same_group = records_for_check.iter().any(|other| {
+                            other.id != record.id && 
+                            other.group_id.as_ref() == Some(group_id)
+                        });
+                        if has_other_videos_with_same_group {
+                            return true;
+                        }
+                    }
+                }
+                // 多P视频也属于集合
+                record.p > 1
             });
         }
     }
