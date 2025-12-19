@@ -82,7 +82,7 @@
           <BatchActionBar
             v-if="cacheStore.hasSelectedItems"
             :visible="true"
-            :show-group-details="cacheStore.groupManagerConfig.enableGrouping"
+            :show-group-details="true"
             @select-all="cacheStore.selectAllCurrentPage"
             @unselect-all="cacheStore.unselectAllCurrentPage"
             @clear-selection="cacheStore.clearSelection"
@@ -186,8 +186,8 @@
                   cacheStore.pagination.totalCount,
                 ])
               }}
-              <!-- 显示项类型统计（如果启用了组功能） -->
-              <span v-if="cacheStore.groupManagerConfig.enableGrouping" class="ml-2 text-xs">
+              <!-- 显示项类型统计 -->
+              <span class="ml-2 text-xs">
                 ({{ cacheStore.groupCount }}{{ $t('cache.sidebar.groups') }} + {{ cacheStore.singleVideoCount }}{{ $t('cache.sidebar.singleVideos') }})
               </span>
             </div>
@@ -311,22 +311,20 @@
               cacheStore.incompleteCacheCount
             }}</span>
           </div>
-          
-          <!-- 组统计（如果启用了组功能） -->
-          <template v-if="cacheStore.groupManagerConfig.enableGrouping">
-            <div class="flex justify-between pt-1 border-t border-(--border-color)">
-              <span class="text-blue-500">{{ $t('cache.sidebar.groups') }}:</span>
-              <span class="font-medium text-blue-500">{{ cacheStore.groupCount }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>{{ $t('cache.sidebar.singleVideos') }}:</span>
-              <span class="font-medium">{{ cacheStore.singleVideoCount }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>{{ $t('cache.sidebar.averagePerGroup') }}:</span>
-              <span class="font-medium">{{ cacheStore.averageVideosPerGroup }}</span>
-            </div>
-          </template>
+
+          <!-- 组统计 -->
+          <div class="flex justify-between pt-1 border-t border-(--border-color)">
+            <span class="text-blue-500">{{ $t('cache.sidebar.groups') }}:</span>
+            <span class="font-medium text-blue-500">{{ cacheStore.groupCount }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>{{ $t('cache.sidebar.singleVideos') }}:</span>
+            <span class="font-medium">{{ cacheStore.singleVideoCount }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>{{ $t('cache.sidebar.averagePerGroup') }}:</span>
+            <span class="font-medium">{{ cacheStore.averageVideosPerGroup }}</span>
+          </div>
           
           <div
             class="flex justify-between pt-1 border-t border-(--border-color)"
@@ -420,6 +418,7 @@ import { cacheManagementService } from '@/services/cache';
 import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
 import { AppLog } from '@/services/utils';
+import { transformCacheRecord } from '@/utils/transform';
 import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar, Dropdown } from '@/components';
 import { TransferDialog, TransferProgressDialog, CacheRootMigrationDialog } from '@/components/CachePage';
 import { initializeCacheKeyboardShortcuts, cleanupCacheKeyboardShortcuts } from '@/services/keyboard';
@@ -697,13 +696,7 @@ function toggleAdvancedFilters(): void {
  */
 async function loadCacheList(): Promise<void> {
   try {
-    // 如果启用了组功能，使用新的显示项加载方法
-    if (cacheStore.groupManagerConfig.enableGrouping) {
-      await cacheStore.loadDisplayItems();
-    } else {
-      // 否则使用原有的加载方法（向后兼容）
-      await cacheStore.loadCacheList();
-    }
+    await cacheStore.loadDisplayItems();
   } catch (error) {
     new AppError(error).handle();
   }
@@ -809,9 +802,13 @@ async function batchDelete(): Promise<void> {
       return;
     }
 
-    // 从后端获取所有缓存项（支持跨页选择）
-    const { items: allCacheItems } =
-      await cacheManagementService.getCacheList();
+    // 从后端获取所有显示项（支持跨页选择）
+    const allDisplayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+
+    // 提取所有视频项
+    const allCacheItems: Types.CacheItem[] = allDisplayItems
+      .filter((item): item is { type: 'single_video'; video: Types.CacheRecord } => item.type === 'single_video')
+      .map((item) => transformCacheRecord(item.video));
 
     // 创建 ID 到缓存项的映射，方便快速查找
     const cacheItemMap = new Map<string, Types.CacheItem>();
@@ -1166,8 +1163,13 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
       return;
     }
 
-    // 获取所有缓存项
-    const { items: allCacheItems } = await cacheManagementService.getCacheList();
+    // 获取所有显示项
+    const allDisplayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+
+    // 提取所有视频项
+    const allCacheItems: Types.CacheItem[] = allDisplayItems
+      .filter((item): item is { type: 'single_video'; video: Types.CacheRecord } => item.type === 'single_video')
+      .map((item) => transformCacheRecord(item.video));
 
     // 构建源文件列表
     const source_files: string[] = [];

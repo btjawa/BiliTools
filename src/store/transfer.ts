@@ -803,9 +803,9 @@ export const useTransferStore = defineStore('transfer', () => {
           });
         }
       }
-      
+
       // 重新加载缓存列表以确保数据一致性
-      cacheStore.loadCacheList();
+      cacheStore.loadDisplayItems();
     } catch (error) {
       console.error('处理剪切操作完成失败:', error);
     }

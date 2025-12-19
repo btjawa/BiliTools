@@ -39,7 +39,6 @@ export const useCacheStore = defineStore('cache', () => {
   const groupManagerConfig = ref<Types.GroupManagerConfig>({
     defaultExpanded: false,
     minGroupSize: 2,
-    enableGrouping: true,
     titleGenerationStrategy: 'prefix',
   });
 
@@ -540,67 +539,6 @@ export const useCacheStore = defineStore('cache', () => {
   // ============================================================================
   // Actions - 缓存列表管理
   // ============================================================================
-
-  /**
-   * 加载缓存列表
-   */
-  async function loadCacheList(): Promise<void> {
-    // 如果启用了组功能，使用新的显示项加载方法
-    if (groupManagerConfig.value.enableGrouping) {
-      await loadDisplayItems();
-      return;
-    }
-
-    // 否则使用原有的加载方法（向后兼容）
-    if (isLoading.value) return;
-
-    await UnifiedErrorHandler.withErrorBoundary(
-      async () => {
-        isLoading.value = true;
-        lastError.value = null;
-
-        const result = await cacheManagementService.getCacheList(
-          currentFilter.value,
-          currentSort.value,
-          pagination.value,
-        );
-
-        cacheItems.value = result.items;
-        cacheStatistics.value = result.statistics;
-
-        // 转换为显示项格式
-        displayItems.value = result.items.map((item) => ({
-          type: 'video' as const,
-          data: item,
-        }));
-
-        // 更新分页信息
-        pagination.value = {
-          ...pagination.value,
-          totalCount: result.statistics.totalCount,
-          totalPages: Math.ceil(
-            result.statistics.totalCount / pagination.value.pageSize,
-          ),
-        };
-
-        return result;
-      },
-      {
-        operation: '加载缓存列表',
-        onError: (msg) => { lastError.value = msg; },
-        logLevel: 'error',
-      }
-    );
-
-    isLoading.value = false;
-  }
-
-  /**
-   * 刷新缓存列表
-   */
-  async function refreshCacheList(): Promise<void> {
-    await loadCacheList();
-  }
 
   /**
    * 设置筛选条件
@@ -1409,7 +1347,7 @@ export const useCacheStore = defineStore('cache', () => {
               isImporting.value = false;
               if (progress.status === 'completed') {
                 // 刷新缓存列表
-                refreshCacheList();
+                loadDisplayItems();
                 // 刷新缓存根目录状态
                 import('@/store/transfer').then(({ useTransferStore }) => {
                   const transferStore = useTransferStore();
@@ -1496,7 +1434,7 @@ export const useCacheStore = defineStore('cache', () => {
     pagination.value.currentPage = 1;
 
     // 刷新缓存列表
-    loadCacheList();
+    loadDisplayItems();
   }
 
   /**
@@ -1513,7 +1451,7 @@ export const useCacheStore = defineStore('cache', () => {
 
         // 如果有新导入或清理的记录，刷新缓存列表
         if (result.importedCount > 0 || result.cleanedCount > 0) {
-          await refreshCacheList();
+          await loadDisplayItems();
         }
 
         return result;
@@ -1678,7 +1616,6 @@ export const useCacheStore = defineStore('cache', () => {
     groupManagerConfig.value = {
       defaultExpanded: false,
       minGroupSize: 2,
-      enableGrouping: true,
       titleGenerationStrategy: 'prefix',
     };
   }
@@ -1754,8 +1691,6 @@ export const useCacheStore = defineStore('cache', () => {
     setGroupManagerConfig,
 
     // 缓存列表管理
-    loadCacheList,
-    refreshCacheList,
     setFilter,
     clearFilter,
     setSort,

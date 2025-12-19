@@ -537,8 +537,6 @@ export interface GroupManagerConfig {
   defaultExpanded: boolean;
   /** 最小组大小（少于此数量的视频不会成组） */
   minGroupSize: number;
-  /** 是否启用组功能 */
-  enableGrouping: boolean;
   /** 组标题生成策略 */
   titleGenerationStrategy: 'prefix' | 'series' | 'default';
 }

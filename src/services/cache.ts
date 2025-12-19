@@ -214,73 +214,6 @@ export class CacheImportService {
  */
 export class CacheManagementService {
   /**
-   * 获取缓存列表
-   * 根据筛选条件获取缓存文件列表
-   *
-   * @param filter 筛选条件（可选，当前后端未使用）
-   * @param sort 排序选项（可选，当前后端未使用）
-   * @param pagination 分页信息（可选，当前后端未使用）
-   * @returns 缓存文件列表
-   */
-  async getCacheList(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _filter?: Types.CacheFilter,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _sort?: Types.SortOption,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _pagination?: Types.CachePagination,
-  ): Promise<{
-    items: Types.CacheItem[];
-    pagination: Types.CachePagination;
-    statistics: Types.CacheStatistics;
-  }> {
-    try {
-      const result = await invoke('get_cache_list');
-
-      // 转换后端数据格式为前端类型
-      const items: Types.CacheItem[] = (result as Types.CacheRecordRaw[]).map(transformCacheRecord);
-
-      // 构造分页信息（当前为简单实现）
-      const paginationInfo: Types.CachePagination = {
-        currentPage: 1,
-        pageSize: items.length,
-        totalCount: items.length,
-        totalPages: 1,
-      };
-
-      // 构造统计信息
-      const statistics: Types.CacheStatistics = {
-        totalCount: items.length,
-        availableCount: items.filter((item) => item.status === 'available')
-          .length,
-        unavailableCount: items.filter((item) => item.status === 'unavailable')
-          .length,
-        incompleteCount: items.filter((item) => item.status === 'incomplete')
-          .length,
-        totalSize: items.reduce((sum, item) => sum + item.fileSize, 0),
-        averageSize:
-          items.length > 0
-            ? items.reduce((sum, item) => sum + item.fileSize, 0) / items.length
-            : 0,
-        totalDuration: items.reduce((sum, item) => sum + item.duration, 0),
-        // 组相关统计（暂时使用默认值，后续任务会实现）
-        groupCount: 0,
-        singleVideoCount: items.length,
-        averageVideosPerGroup: 0,
-      };
-
-      return {
-        items,
-        pagination: paginationInfo,
-        statistics,
-      };
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError('获取缓存列表失败');
-    }
-  }
-
-  /**
    * 删除缓存项
    * 同时删除数据库记录和本地文件
    *
@@ -366,13 +299,16 @@ export class CacheManagementService {
    */
   async refreshCacheItemStatus(id: string): Promise<Types.CacheItem> {
     // TODO: 等待后端实现 refresh_cache_item_status 命令
-    // 目前通过重新获取列表的方式实现
-    const listResult = await this.getCacheList();
-    const item = listResult.items.find((item) => item.id === id);
-    if (!item) {
+    // 目前通过重新加载显示项的方式实现
+    const displayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+    const videoItem = displayItems.find(
+      (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
+        item.type === 'single_video' && item.video.id === id
+    );
+    if (!videoItem) {
       throw new AppError('缓存项不存在');
     }
-    return item;
+    return transformCacheRecord(videoItem.video);
   }
 
   /**
@@ -481,13 +417,24 @@ export class CacheManagementService {
   async exportCacheList(filter?: Types.CacheFilter): Promise<string> {
     // TODO: 等待后端实现 export_cache_list 命令
     // 目前通过前端实现导出功能
-    const listResult = await this.getCacheList(filter);
+    const displayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+    const videoItems = displayItems
+      .filter((item): item is { type: 'single_video'; video: Types.CacheRecord } => item.type === 'single_video')
+      .map((item) => transformCacheRecord(item.video));
+
+    // 应用筛选条件（如果提供）
+    const items = filter ? videoItems.filter((item) => {
+      if (filter.status && filter.status.length > 0 && !filter.status.includes(item.status)) {
+        return false;
+      }
+      return true;
+    }) : videoItems;
 
     // 使用现有的 exportData 命令
     const exportData = {
       exportTime: new Date().toISOString(),
-      totalCount: listResult.items.length,
-      items: listResult.items.map((item) => ({
+      totalCount: items.length,
+      items: items.map((item) => ({
         id: item.id,
         bvid: item.bvid,
         aid: item.aid,
