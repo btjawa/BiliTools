@@ -2,26 +2,18 @@
   <Teleport to="body">
     <!-- 模态框遮罩 -->
     <Transition name="modal">
-      <div
-        v-if="visible"
-        class="modal-overlay"
-        @click="handleCancel"
-      >
+      <div v-if="visible" class="modal-overlay" @click="handleCancel">
         <!-- 对话框容器 -->
-        <div
-          class="modal-content"
-          @click.stop
-        >
+        <div class="modal-content" @click.stop>
           <!-- 对话框头部 -->
           <div class="modal-header">
             <h2 class="modal-title">
               <i class="fa-solid fa-trash text-red-500"></i>
-              <span class="text-(--content-color)">{{ $t('cache.batchDelete.title') }}</span>
+              <span class="text-(--content-color)">{{
+                $t('cache.batchDelete.title')
+              }}</span>
             </h2>
-            <button
-              class="close-btn"
-              @click="handleCancel"
-            >
+            <button class="close-btn" @click="handleCancel">
               <i class="fa-solid fa-times"></i>
             </button>
           </div>
@@ -31,11 +23,15 @@
             <!-- 删除项目列表 -->
             <div>
               <h3 class="text-sm font-medium mb-3 text-(--content-color)">
-                {{ $t('cache.batchDelete.itemsToDelete', [itemsToDelete.length]) }}
+                {{
+                  $t('cache.batchDelete.itemsToDelete', [itemsToDelete.length])
+                }}
               </h3>
 
               <!-- 项目列表容器 -->
-              <div class="bg-(--solid-button-color) rounded-lg p-4 max-h-64 overflow-y-auto space-y-2">
+              <div
+                class="bg-(--solid-button-color) rounded-lg p-4 max-h-64 overflow-y-auto space-y-2"
+              >
                 <!-- 组项目 -->
                 <div
                   v-for="item in groupItems"
@@ -46,9 +42,13 @@
                     <i class="fa-solid fa-folder text-blue-500"></i>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-medium truncate text-(--content-color)">{{ item.title }}</div>
+                    <div class="font-medium truncate text-(--content-color)">
+                      {{ item.title }}
+                    </div>
                     <div class="text-xs text-(--desc-color) mt-1">
-                      {{ $t('cache.batchDelete.groupVideos', [item.videoCount]) }}
+                      {{
+                        $t('cache.batchDelete.groupVideos', [item.videoCount])
+                      }}
                     </div>
                     <!-- 组内视频列表 -->
                     <div class="mt-2 ml-4 space-y-1">
@@ -59,12 +59,16 @@
                       >
                         <i class="fa-solid fa-video text-gray-400"></i>
                         <span class="truncate">{{ video.title }}</span>
-                        <span class="text-gray-500 flex-shrink-0">({{ formatFileSize(video.fileSize) }})</span>
+                        <span class="text-gray-500 flex-shrink-0"
+                          >({{ formatFileSize(video.fileSize) }})</span
+                        >
                       </div>
                     </div>
                   </div>
                   <div class="flex-shrink-0 text-right">
-                    <div class="text-sm font-medium text-(--content-color)">{{ formatFileSize(item.totalFileSize) }}</div>
+                    <div class="text-sm font-medium text-(--content-color)">
+                      {{ formatFileSize(item.totalFileSize) }}
+                    </div>
                   </div>
                 </div>
 
@@ -78,10 +82,14 @@
                     <i class="fa-solid fa-film text-purple-500"></i>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-medium truncate text-(--content-color)">{{ item.title }}</div>
+                    <div class="font-medium truncate text-(--content-color)">
+                      {{ item.title }}
+                    </div>
                   </div>
                   <div class="flex-shrink-0 text-right">
-                    <div class="text-sm font-medium text-(--content-color)">{{ formatFileSize(item.fileSize) }}</div>
+                    <div class="text-sm font-medium text-(--content-color)">
+                      {{ formatFileSize(item.fileSize) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -90,24 +98,44 @@
             <!-- 统计信息 -->
             <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-2">
               <div class="flex justify-between items-center">
-                <span class="text-(--desc-color)">{{ $t('cache.batchDelete.totalItems') }}</span>
-                <span class="font-medium text-(--content-color)">{{ itemsToDelete.length }}</span>
+                <span class="text-(--desc-color)">{{
+                  $t('cache.batchDelete.totalItems')
+                }}</span>
+                <span class="font-medium text-(--content-color)">{{
+                  itemsToDelete.length
+                }}</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-(--desc-color)">{{ $t('cache.batchDelete.estimatedSpaceFreed') }}</span>
-                <span class="font-medium text-green-600">{{ formatFileSize(totalFileSize) }}</span>
+                <span class="text-(--desc-color)">{{
+                  $t('cache.batchDelete.estimatedSpaceFreed')
+                }}</span>
+                <span class="font-medium text-green-600">{{
+                  formatFileSize(totalFileSize)
+                }}</span>
               </div>
-              <div class="border-t border-(--split-color) pt-2 mt-2 flex justify-between items-center">
-                <span class="text-(--desc-color) font-medium">{{ $t('cache.batchDelete.totalSize') }}</span>
-                <span class="font-semibold text-lg text-(--content-color)">{{ formatFileSize(totalFileSize) }}</span>
+              <div
+                class="border-t border-(--split-color) pt-2 mt-2 flex justify-between items-center"
+              >
+                <span class="text-(--desc-color) font-medium">{{
+                  $t('cache.batchDelete.totalSize')
+                }}</span>
+                <span class="font-semibold text-lg text-(--content-color)">{{
+                  formatFileSize(totalFileSize)
+                }}</span>
               </div>
             </div>
 
             <!-- 删除说明 -->
             <div class="space-y-3">
-              <h3 class="text-sm font-medium text-(--content-color)">{{ $t('cache.batchDelete.deleteInfo') }}</h3>
-              <div class="p-3 rounded-lg border border-(--split-color) bg-(--solid-button-color)">
-                <div class="font-medium text-(--content-color)">{{ $t('cache.batchDelete.deleteAll') }}</div>
+              <h3 class="text-sm font-medium text-(--content-color)">
+                {{ $t('cache.batchDelete.deleteInfo') }}
+              </h3>
+              <div
+                class="p-3 rounded-lg border border-(--split-color) bg-(--solid-button-color)"
+              >
+                <div class="font-medium text-(--content-color)">
+                  {{ $t('cache.batchDelete.deleteAll') }}
+                </div>
                 <div class="text-xs text-(--desc-color) mt-1">
                   {{ $t('cache.batchDelete.deleteAllDesc') }}
                 </div>
@@ -116,7 +144,9 @@
 
             <!-- 警告信息 -->
             <div class="warning-box">
-              <i class="fa-solid fa-exclamation-triangle text-orange-500 flex-shrink-0 mt-0.5"></i>
+              <i
+                class="fa-solid fa-exclamation-triangle text-orange-500 flex-shrink-0 mt-0.5"
+              ></i>
               <div class="text-sm text-(--content-color)">
                 {{ $t('cache.batchDelete.warning') }}
               </div>
@@ -224,8 +254,6 @@ const totalFileSize = computed(() => {
 // ============================================================================
 // 方法
 // ============================================================================
-
-
 
 /**
  * 处理确认按钮

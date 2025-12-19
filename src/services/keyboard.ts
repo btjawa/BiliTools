@@ -174,11 +174,14 @@ const keyboardService = new KeyboardService();
  * 初始化缓存选择相关的快捷键
  */
 export function initializeCacheKeyboardShortcuts(): void {
-
   // Ctrl+A: 全选
-  keyboardService.registerShortcut('a', (event) => {
-    handleSelectAll(event);
-  }, { ctrlKey: true });
+  keyboardService.registerShortcut(
+    'a',
+    (event) => {
+      handleSelectAll(event);
+    },
+    { ctrlKey: true },
+  );
 
   // Delete: 批量删除
   keyboardService.registerShortcut('Delete', (event) => {
@@ -289,7 +292,6 @@ function handleEscape(event: KeyboardEvent): void {
  * 处理 ArrowUp 向上导航
  */
 function handleArrowUp(event: KeyboardEvent): void {
-
   // 检查是否在缓存列表页面
   if (!isInCacheListPage()) {
     return;
@@ -305,7 +307,6 @@ function handleArrowUp(event: KeyboardEvent): void {
  * 处理 ArrowDown 向下导航
  */
 function handleArrowDown(event: KeyboardEvent): void {
-
   // 检查是否在缓存列表页面
   if (!isInCacheListPage()) {
     return;

@@ -195,7 +195,7 @@ function handleContextMenu(event: MouseEvent) {
       ],
     },
   });
-  
+
   document.dispatchEvent(customEvent);
 }
 
@@ -257,7 +257,7 @@ function formatDownloadTime(date: Date): string {
   }
 
   const importDate = date instanceof Date ? date : new Date(date);
-  
+
   // 检查转换后的 Date 对象是否有效
   if (isNaN(importDate.getTime())) {
     return t('cache.time.unknown');

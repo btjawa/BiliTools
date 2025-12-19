@@ -60,11 +60,13 @@ const v = reactive({
 });
 
 // 自定义菜单项状态
-const customOptions = ref<Array<{
-  icon: string;
-  text: string;
-  action: () => void;
-}>>([]);
+const customOptions = ref<
+  Array<{
+    icon: string;
+    text: string;
+    action: () => void;
+  }>
+>([]);
 
 // 当前显示的菜单项
 const currentOptions = computed(() => {
@@ -79,11 +81,14 @@ async function init(e: MouseEvent) {
   await showMenu(e);
 }
 
-async function initWithOptions(e: MouseEvent, options: Array<{
-  icon: string;
-  text: string;
-  action: () => void;
-}>) {
+async function initWithOptions(
+  e: MouseEvent,
+  options: Array<{
+    icon: string;
+    text: string;
+    action: () => void;
+  }>,
+) {
   // 使用自定义菜单项
   customOptions.value = options;
   await showMenu(e);

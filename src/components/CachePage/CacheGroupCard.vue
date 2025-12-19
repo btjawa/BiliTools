@@ -65,10 +65,7 @@
       </div>
 
       <!-- 选中数量显示（有选中时） -->
-      <div 
-        v-if="selectedVideoCount > 0" 
-        class="selection-count"
-      >
+      <div v-if="selectedVideoCount > 0" class="selection-count">
         <i class="fa-solid fa-check-circle"></i>
         <span>{{ selectedVideoCount }}/{{ group.videoCount }}</span>
       </div>
@@ -339,7 +336,7 @@ function handleGroupContextMenu(event: MouseEvent) {
       ],
     },
   });
-  
+
   document.dispatchEvent(customEvent);
 }
 
@@ -371,7 +368,9 @@ const hasUnavailableVideos = computed(() => {
  * 计算组内选中的视频数量
  */
 const selectedVideoCount = computed(() => {
-  return props.group.videos.filter((video) => props.selectedVideos.has(video.id)).length;
+  return props.group.videos.filter((video) =>
+    props.selectedVideos.has(video.id),
+  ).length;
 });
 
 /**
@@ -502,7 +501,7 @@ function formatDownloadTime(date: Date): string {
   }
 
   const importDate = date instanceof Date ? date : new Date(date);
-  
+
   // 检查转换后的 Date 对象是否有效
   if (isNaN(importDate.getTime())) {
     return t('cache.time.unknown');

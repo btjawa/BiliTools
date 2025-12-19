@@ -335,6 +335,14 @@
       "password": "Password"
     },
     "strategy": "Strategy",
+    "cache_auto_refresh": {
+      "name": "Cache Auto Refresh",
+      "interval": {
+        "name": "Refresh Interval",
+        "desc": "Set the interval for automatically checking cache directory changes (0 to disable). A refresh will be performed automatically on startup.",
+        "unit": "min"
+      }
+    },
     "add_metadata": {
       "name": "Embed Metadata into Video & Audio",
       "desc": "If enabled, metadata will be embedded automatically when downloading video or audio files."
@@ -578,6 +586,9 @@
       "noChanges": "No changes detected",
       "success": "Incremental scan completed",
       "error": "Incremental scan failed"
+    },
+    "autoRefresh": {
+      "changed": "Cache auto refresh: imported {0}, cleaned {1}"
     },
     "sidebar": {
       "refresh": "Refresh",

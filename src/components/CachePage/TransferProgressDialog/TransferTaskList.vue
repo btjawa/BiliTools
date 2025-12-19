@@ -10,10 +10,7 @@
         class="task-item"
         @click="handleTaskSelect(task.id)"
       >
-        <TaskProgressItem
-          :task="task"
-          :progress="getTaskProgress(task.id)"
-        />
+        <TaskProgressItem :task="task" :progress="getTaskProgress(task.id)" />
       </div>
     </div>
   </div>

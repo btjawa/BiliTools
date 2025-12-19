@@ -158,24 +158,28 @@ export function migrateImportProgress(oldProgress: {
 }): ImportProgress {
   // 将旧状态映射到新状态
   const statusMapping: Record<ImportStatus, ProgressStatus> = {
-    'Scanning': 'running',
-    'Parsing': 'running',
-    'Validating': 'running',
-    'Saving': 'running',
-    'Completed': 'completed',
-    'Cancelled': 'cancelled',
-    'Error': 'failed'
+    Scanning: 'running',
+    Parsing: 'running',
+    Validating: 'running',
+    Saving: 'running',
+    Completed: 'completed',
+    Cancelled: 'cancelled',
+    Error: 'failed',
   };
 
   const newStatus = statusMapping[oldProgress.status];
-  const percentage = oldProgress.totalDirectories > 0 
-    ? (oldProgress.processedDirectories / oldProgress.totalDirectories) * PROGRESS.MAX_PERCENTAGE 
-    : PROGRESS.MIN_PERCENTAGE;
+  const percentage =
+    oldProgress.totalDirectories > 0
+      ? (oldProgress.processedDirectories / oldProgress.totalDirectories) *
+        PROGRESS.MAX_PERCENTAGE
+      : PROGRESS.MIN_PERCENTAGE;
 
   // 计算处理速度（目录/秒）
-  const speed = oldProgress.estimatedTimeRemaining && oldProgress.estimatedTimeRemaining > 0
-    ? (oldProgress.totalDirectories - oldProgress.processedDirectories) / oldProgress.estimatedTimeRemaining
-    : 0;
+  const speed =
+    oldProgress.estimatedTimeRemaining && oldProgress.estimatedTimeRemaining > 0
+      ? (oldProgress.totalDirectories - oldProgress.processedDirectories) /
+        oldProgress.estimatedTimeRemaining
+      : 0;
 
   return {
     // DataImportProgress 字段
@@ -186,7 +190,7 @@ export function migrateImportProgress(oldProgress: {
     successCount: oldProgress.successCount,
     failureCount: oldProgress.failureCount,
     skippedCount: oldProgress.skippedCount,
-    
+
     // BaseProgress 字段
     total: oldProgress.totalDirectories,
     completed: oldProgress.processedDirectories,
@@ -195,7 +199,7 @@ export function migrateImportProgress(oldProgress: {
     remainingTime: oldProgress.estimatedTimeRemaining || 0,
     currentItem: oldProgress.currentDirectory,
     status: newStatus,
-    
+
     // 兼容性字段
     errors: oldProgress.errors,
     estimatedTimeRemaining: oldProgress.estimatedTimeRemaining,
@@ -753,8 +757,6 @@ export interface PaginatedDisplayItemsRaw {
   has_next: boolean;
   has_prev: boolean;
 }
-
-
 
 /** 后端筛选选项原始格式 */
 export interface CacheFilterOptionsRaw {

@@ -19,8 +19,11 @@ export function safeTimestampToDate(timestamp: number): Date {
   }
 
   // 判断是否为毫秒时间戳（大于 10^10 的认为是毫秒）
-  const isMilliseconds = timestamp > TIME_CONVERSION.MILLISECOND_TIMESTAMP_THRESHOLD;
-  const date = new Date(isMilliseconds ? timestamp : timestamp * TIME_CONVERSION.MS_TO_SECONDS);
+  const isMilliseconds =
+    timestamp > TIME_CONVERSION.MILLISECOND_TIMESTAMP_THRESHOLD;
+  const date = new Date(
+    isMilliseconds ? timestamp : timestamp * TIME_CONVERSION.MS_TO_SECONDS,
+  );
 
   // 验证转换结果的合理性
   const year = date.getFullYear();
@@ -37,7 +40,9 @@ export function safeTimestampToDate(timestamp: number): Date {
  * @param record 后端原始缓存记录
  * @returns 前端缓存项格式
  */
-export function transformCacheRecord(record: Types.CacheRecordRaw): Types.CacheItem {
+export function transformCacheRecord(
+  record: Types.CacheRecordRaw,
+): Types.CacheItem {
   return {
     id: record.id,
     bvid: record.bvid,
@@ -63,7 +68,9 @@ export function transformCacheRecord(record: Types.CacheRecordRaw): Types.CacheI
  * @param group 后端原始缓存组
  * @returns 前端缓存组格式
  */
-export function transformCacheGroup(group: Types.CacheGroupRaw): Types.CacheGroup {
+export function transformCacheGroup(
+  group: Types.CacheGroupRaw,
+): Types.CacheGroup {
   return {
     groupId: group.group_id,
     title: group.title,
@@ -83,7 +90,9 @@ export function transformCacheGroup(group: Types.CacheGroupRaw): Types.CacheGrou
  * @param item 后端原始显示项
  * @returns 前端显示项格式
  */
-export function transformDisplayItem(item: Types.DisplayItemRaw): Types.DisplayItem {
+export function transformDisplayItem(
+  item: Types.DisplayItemRaw,
+): Types.DisplayItem {
   if (item.type === 'single_video') {
     return {
       type: 'video',
@@ -102,7 +111,9 @@ export function transformDisplayItem(item: Types.DisplayItemRaw): Types.DisplayI
  * @param stats 后端原始统计数据
  * @returns 前端统计数据格式
  */
-export function transformCacheStatistics(stats: Types.CacheStatisticsRaw): Types.CacheStatistics {
+export function transformCacheStatistics(
+  stats: Types.CacheStatisticsRaw,
+): Types.CacheStatistics {
   return {
     totalCount: stats.total_count,
     availableCount: stats.available_count,

@@ -2,26 +2,18 @@
   <Teleport to="body">
     <!-- 模态框遮罩 -->
     <Transition name="modal">
-      <div
-        v-if="visible"
-        class="modal-overlay"
-        @click="handleCancel"
-      >
+      <div v-if="visible" class="modal-overlay" @click="handleCancel">
         <!-- 对话框容器 -->
-        <div
-          class="modal-content"
-          @click.stop
-        >
+        <div class="modal-content" @click.stop>
           <!-- 对话框头部 -->
           <div class="modal-header">
             <h2 class="modal-title">
               <i :class="[$fa.weight, 'fa-folder-arrow-up']"></i>
-              <span class="text-(--content-color)">{{ $t('transfer.cacheRootMigration') }}</span>
+              <span class="text-(--content-color)">{{
+                $t('transfer.cacheRootMigration')
+              }}</span>
             </h2>
-            <button
-              class="close-btn"
-              @click="handleCancel"
-            >
+            <button class="close-btn" @click="handleCancel">
               <i :class="[$fa.weight, 'fa-times']"></i>
             </button>
           </div>
@@ -30,12 +22,16 @@
           <div class="modal-body space-y-6">
             <!-- 当前缓存根目录 -->
             <div class="space-y-3">
-              <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
+              <h3
+                class="text-sm font-medium text-(--content-color) flex items-center gap-2"
+              >
                 <i :class="[$fa.weight, 'fa-folder']"></i>
                 {{ $t('transfer.currentCacheRoot') }}
               </h3>
               <div class="bg-(--solid-button-color) rounded-lg p-4">
-                <div class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)">
+                <div
+                  class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)"
+                >
                   <div class="text-(--content-color) font-medium break-all">
                     {{ currentCacheRoot || $t('transfer.loading') }}
                   </div>
@@ -44,31 +40,38 @@
             </div>
 
             <!-- 空间信息 -->
-            <div
-              v-if="cacheRootInfo"
-              class="space-y-3"
-            >
-              <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
+            <div v-if="cacheRootInfo" class="space-y-3">
+              <h3
+                class="text-sm font-medium text-(--content-color) flex items-center gap-2"
+              >
                 <i :class="[$fa.weight, 'fa-chart-pie']"></i>
                 {{ $t('transfer.spaceInfo') }}
               </h3>
               <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-3">
                 <div class="flex justify-between items-center">
-                  <span class="text-(--desc-color)">{{ $t('transfer.totalSize') }}</span>
-                  <span class="text-(--content-color) font-medium">{{ formatFileSize(cacheRootInfo.totalSize) }}</span>
+                  <span class="text-(--desc-color)">{{
+                    $t('transfer.totalSize')
+                  }}</span>
+                  <span class="text-(--content-color) font-medium">{{
+                    formatFileSize(cacheRootInfo.totalSize)
+                  }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-(--desc-color)">{{ $t('transfer.fileCount') }}</span>
-                  <span class="text-(--content-color) font-medium">{{ cacheRootInfo.fileCount }}</span>
+                  <span class="text-(--desc-color)">{{
+                    $t('transfer.fileCount')
+                  }}</span>
+                  <span class="text-(--content-color) font-medium">{{
+                    cacheRootInfo.fileCount
+                  }}</span>
                 </div>
               </div>
             </div>
 
-
-
             <!-- 新位置选择 -->
             <div class="space-y-3">
-              <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
+              <h3
+                class="text-sm font-medium text-(--content-color) flex items-center gap-2"
+              >
                 <i :class="[$fa.weight, 'fa-arrow-right']"></i>
                 {{ $t('transfer.selectNewLocation') }}
               </h3>
@@ -80,13 +83,18 @@
                   v-if="selectedTarget"
                   class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)"
                 >
-                  <div class="text-sm text-(--desc-color) mb-1">{{ $t('transfer.selectedTarget') }}</div>
-                  <div class="text-(--content-color) font-medium truncate">{{ selectedTarget.path }}</div>
+                  <div class="text-sm text-(--desc-color) mb-1">
+                    {{ $t('transfer.selectedTarget') }}
+                  </div>
+                  <div class="text-(--content-color) font-medium truncate">
+                    {{ selectedTarget.path }}
+                  </div>
                   <div
                     v-if="selectedTarget.available_space"
                     class="text-xs text-(--desc-color) mt-2"
                   >
-                    {{ $t('transfer.availableSpace') }}: {{ formatFileSize(selectedTarget.available_space) }}
+                    {{ $t('transfer.availableSpace') }}:
+                    {{ formatFileSize(selectedTarget.available_space) }}
                   </div>
                 </div>
 
@@ -102,19 +110,15 @@
             </div>
 
             <!-- 空间检查警告 -->
-            <div
-              v-if="spaceWarning"
-              class="warning-box"
-            >
+            <div v-if="spaceWarning" class="warning-box">
               <i :class="[$fa.weight, 'fa-exclamation-triangle']"></i>
-              <div class="text-sm text-(--content-color)">{{ spaceWarning }}</div>
+              <div class="text-sm text-(--content-color)">
+                {{ spaceWarning }}
+              </div>
             </div>
 
             <!-- 错误信息 -->
-            <div
-              v-if="lastError"
-              class="error-box"
-            >
+            <div v-if="lastError" class="error-box">
               <i :class="[$fa.weight, 'fa-exclamation-circle']"></i>
               <div class="text-sm text-(--content-color)">{{ lastError }}</div>
             </div>
@@ -184,7 +188,6 @@ const transferStore = useTransferStore();
 // 状态
 // ============================================================================
 
-
 const isValidating = ref(false);
 const selectedTarget = ref<Types.TransferTarget | null>(null);
 const lastError = ref<string | null>(null);
@@ -205,7 +208,6 @@ const currentCacheRoot = computed(() => {
 /**
  * 可移动设备列表
  */
-
 
 /**
  * Font Awesome 权重
@@ -257,13 +259,11 @@ async function initialize() {
       fileCount: 0,
     };
   } catch (error) {
-    handleComponentError(error, '初始化对话框', (msg) => { lastError.value = msg; });
+    handleComponentError(error, '初始化对话框', (msg) => {
+      lastError.value = msg;
+    });
   }
 }
-
-
-
-
 
 /**
  * 检查目标空间
@@ -290,10 +290,10 @@ function checkSpace() {
 async function handleBrowseFolder() {
   try {
     lastError.value = null;
-    
+
     // 调用文件夹选择对话框
     const folderPath = await transferStore.selectFolder();
-    
+
     if (folderPath) {
       // 创建本地文件夹目标
       const localTarget: Types.TransferTarget = {
@@ -304,18 +304,18 @@ async function handleBrowseFolder() {
         available_space: undefined,
         connection_status: 'Connected',
       };
-      
+
       selectedTarget.value = localTarget;
-      
+
       // 检查空间
       checkSpace();
     }
   } catch (error) {
-    handleComponentError(error, '选择文件夹', (msg) => { lastError.value = msg; });
+    handleComponentError(error, '选择文件夹', (msg) => {
+      lastError.value = msg;
+    });
   }
 }
-
-
 
 /**
  * 处理确认按钮
@@ -336,7 +336,9 @@ async function handleConfirm() {
 
     emit('confirm', selectedTarget.value);
   } catch (error) {
-    handleComponentError(error, '确认', (msg) => { lastError.value = msg; });
+    handleComponentError(error, '确认', (msg) => {
+      lastError.value = msg;
+    });
   } finally {
     isValidating.value = false;
   }

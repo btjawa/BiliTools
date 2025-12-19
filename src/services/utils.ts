@@ -38,7 +38,10 @@ export function AppLog(message: string, _type?: `${TYPE}`) {
   }
   useToast()(message, {
     type,
-    timeout: type === TYPE.ERROR ? NOTIFICATION.ERROR_TIMEOUT : NOTIFICATION.SUCCESS_TIMEOUT,
+    timeout:
+      type === TYPE.ERROR
+        ? NOTIFICATION.ERROR_TIMEOUT
+        : NOTIFICATION.SUCCESS_TIMEOUT,
   });
 }
 
@@ -202,7 +205,10 @@ export async function tryFetch(
         }
         grisk_id = validateBody.data.grisk_id;
         await new Promise((resolve) =>
-          setTimeout(resolve, getRandomInRange(TIMER.RANDOM_DELAY.MIN, TIMER.RANDOM_DELAY.MAX)),
+          setTimeout(
+            resolve,
+            getRandomInRange(TIMER.RANDOM_DELAY.MIN, TIMER.RANDOM_DELAY.MAX),
+          ),
         );
         continue;
       } else {
@@ -451,8 +457,6 @@ export function timestamp(ts: number, zone?: string) {
   });
   return formatter.format(date).replace(/\//g, '-');
 }
-
-
 
 export function getDefaultQuality(
   ids: number[],

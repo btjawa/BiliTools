@@ -2,10 +2,7 @@
   <Teleport to="body">
     <!-- 模态框遮罩 -->
     <Transition name="modal">
-      <div
-        v-if="visible"
-        class="modal-overlay"
-      >
+      <div v-if="visible" class="modal-overlay">
         <!-- 对话框容器 -->
         <div class="modal-content">
           <!-- 对话框头部 -->
@@ -14,11 +11,7 @@
               <i :class="[$fa.weight, 'fa-exchange']"></i>
               <span class="text-(--content-color)">{{ transferTitle }}</span>
             </h2>
-            <button
-              v-if="canClose"
-              class="close-btn"
-              @click="handleClose"
-            >
+            <button v-if="canClose" class="close-btn" @click="handleClose">
               <i :class="[$fa.weight, 'fa-times']"></i>
             </button>
           </div>
@@ -26,10 +19,7 @@
           <!-- 对话框内容 -->
           <div class="modal-body">
             <!-- 单任务进度显示 -->
-            <div
-              v-if="allTasks.length === 1"
-              class="space-y-6"
-            >
+            <div v-if="allTasks.length === 1" class="space-y-6">
               <SingleTaskProgress
                 :task="allTasks[0]"
                 :progress="getTaskProgress(allTasks[0].id)"
@@ -37,10 +27,7 @@
             </div>
 
             <!-- 多任务进度显示 -->
-            <div
-              v-else
-              class="space-y-6"
-            >
+            <div v-else class="space-y-6">
               <!-- 总体进度 -->
               <TransferSummary
                 :total-files="totalFiles"
@@ -60,10 +47,7 @@
             </div>
 
             <!-- 错误信息 -->
-            <div
-              v-if="lastError"
-              class="error-box"
-            >
+            <div v-if="lastError" class="error-box">
               <i :class="[$fa.weight, 'fa-exclamation-circle']"></i>
               <div class="text-sm text-(--content-color)">{{ lastError }}</div>
             </div>
@@ -140,8 +124,8 @@ const allTasks = computed(() => transferStore.allTasks);
  * 是否有运行中的任务
  */
 const hasRunningTasks = computed(() => {
-  return allTasks.value.some((task) => 
-    task.status === 'running' || task.status === 'pending'
+  return allTasks.value.some(
+    (task) => task.status === 'running' || task.status === 'pending',
   );
 });
 
@@ -152,11 +136,15 @@ const transferTitle = computed(() => {
   if (allTasks.value.length === 0) {
     return t('transfer.transferring');
   }
-  
-  const allCompleted = allTasks.value.every(task => task.status === 'completed');
-  const anyFailed = allTasks.value.some(task => task.status === 'failed');
-  const anyCancelled = allTasks.value.some(task => task.status === 'cancelled');
-  
+
+  const allCompleted = allTasks.value.every(
+    (task) => task.status === 'completed',
+  );
+  const anyFailed = allTasks.value.some((task) => task.status === 'failed');
+  const anyCancelled = allTasks.value.some(
+    (task) => task.status === 'cancelled',
+  );
+
   if (anyFailed) {
     return t('transfer.transferFailed');
   } else if (anyCancelled) {
@@ -168,14 +156,12 @@ const transferTitle = computed(() => {
   }
 });
 
-
-
 /**
  * 是否可以暂停
  */
 const canPause = computed(() => {
-  const activeTasksCount = allTasks.value.filter(task => 
-    task.status === 'running' || task.status === 'paused'
+  const activeTasksCount = allTasks.value.filter(
+    (task) => task.status === 'running' || task.status === 'paused',
   ).length;
   return activeTasksCount > 0;
 });
@@ -184,10 +170,11 @@ const canPause = computed(() => {
  * 是否可以取消
  */
 const canCancel = computed(() => {
-  const activeTasksCount = allTasks.value.filter(task => 
-    task.status === 'running' || 
-    task.status === 'paused' || 
-    task.status === 'pending'
+  const activeTasksCount = allTasks.value.filter(
+    (task) =>
+      task.status === 'running' ||
+      task.status === 'paused' ||
+      task.status === 'pending',
   ).length;
   return activeTasksCount > 0;
 });
@@ -208,14 +195,20 @@ const canClose = computed(() => {
  * 总文件数
  */
 const totalFiles = computed(() => {
-  return allTasks.value.reduce((sum, task) => sum + task.progress.totalFiles, 0);
+  return allTasks.value.reduce(
+    (sum, task) => sum + task.progress.totalFiles,
+    0,
+  );
 });
 
 /**
  * 已完成文件数
  */
 const completedFiles = computed(() => {
-  return allTasks.value.reduce((sum, task) => sum + task.progress.completedFiles, 0);
+  return allTasks.value.reduce(
+    (sum, task) => sum + task.progress.completedFiles,
+    0,
+  );
 });
 
 /**
@@ -236,7 +229,9 @@ const averageSpeed = computed(() => transferStore.averageTransferSpeed);
 /**
  * 总体进度百分比
  */
-const overallPercentage = computed(() => transferStore.overallProgressPercentage);
+const overallPercentage = computed(
+  () => transferStore.overallProgressPercentage,
+);
 
 /**
  * 最后的错误信息
@@ -299,14 +294,17 @@ async function handlePauseResume() {
   try {
     if (isPaused.value) {
       // 继续所有暂停的任务
-      const pausedTasks = allTasks.value.filter(task => task.status === 'paused');
-      
+      const pausedTasks = allTasks.value.filter(
+        (task) => task.status === 'paused',
+      );
+
       for (const task of pausedTasks) {
         try {
           await transferStore.resumeTransfer(task.id);
         } catch (error) {
           // 忽略任务不存在的错误（可能已经完成）
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           if (!errorMessage.includes('传输任务不存在')) {
             console.error(`恢复任务 ${task.id} 失败:`, error);
           }
@@ -315,19 +313,22 @@ async function handlePauseResume() {
       isPaused.value = false;
     } else {
       // 暂停所有运行中的任务
-      const runningTasks = allTasks.value.filter(task => task.status === 'running');
-      
+      const runningTasks = allTasks.value.filter(
+        (task) => task.status === 'running',
+      );
+
       if (runningTasks.length === 0) {
         // 没有运行中的任务，可能都已经完成了
         return;
       }
-      
+
       for (const task of runningTasks) {
         try {
           await transferStore.pauseTransfer(task.id);
         } catch (error) {
           // 忽略任务不存在的错误（可能已经完成）
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           if (!errorMessage.includes('传输任务不存在')) {
             console.error(`暂停任务 ${task.id} 失败:`, error);
           }
@@ -351,16 +352,17 @@ async function handleCancel() {
       title: t('transfer.confirmTitle'),
       kind: 'warning',
     });
-    
+
     if (!shouldCancel) {
       return;
     }
 
     // 只取消仍然活跃的任务
-    const activeTasks = allTasks.value.filter(task => 
-      task.status === 'running' || 
-      task.status === 'paused' || 
-      task.status === 'pending'
+    const activeTasks = allTasks.value.filter(
+      (task) =>
+        task.status === 'running' ||
+        task.status === 'paused' ||
+        task.status === 'pending',
     );
 
     if (activeTasks.length === 0) {
@@ -373,7 +375,8 @@ async function handleCancel() {
         await transferStore.cancelTransfer(task.id);
       } catch (error) {
         // 忽略任务不存在的错误（可能已经完成）
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (!errorMessage.includes('传输任务不存在')) {
           console.error(`取消任务 ${task.id} 失败:`, error);
         }

@@ -236,7 +236,10 @@ export async function getDanmaku(
     );
     DanmakuEventToXML(new Uint8Array(buffer), doc);
     await new Promise((resolve) =>
-      setTimeout(resolve, getRandomInRange(TIMER.RANDOM_DELAY.MIN, TIMER.RANDOM_DELAY.MAX)),
+      setTimeout(
+        resolve,
+        getRandomInRange(TIMER.RANDOM_DELAY.MIN, TIMER.RANDOM_DELAY.MAX),
+      ),
     );
   }
   const xml = new XMLSerializer().serializeToString(doc);

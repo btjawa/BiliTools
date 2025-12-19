@@ -1,4 +1,28 @@
 <template>
+  <!-- 缓存自动刷新设置 -->
+  <section>
+    <h2>
+      <i :class="[$fa.weight, 'fa-rotate']"></i>
+      <span>{{ $t('settings.cache_auto_refresh.name') }}</span>
+    </h2>
+    <div>
+      <h3>{{ $t('settings.cache_auto_refresh.interval.name') }}</h3>
+      <input
+        v-model="settings.cacheAutoRefreshInterval"
+        type="number"
+        class="min-w-40"
+        :min="CACHE_AUTO_REFRESH.DISABLED"
+        :max="CACHE_AUTO_REFRESH.MAX_INTERVAL_MINUTES"
+      />
+      <span class="ml-2">{{
+        $t('settings.cache_auto_refresh.interval.unit')
+      }}</span>
+      <span class="desc">{{
+        $t('settings.cache_auto_refresh.interval.desc')
+      }}</span>
+    </div>
+  </section>
+  <hr />
   <section>
     <h3>
       <i :class="[$fa.weight, 'fa-file-import']"></i>
@@ -51,6 +75,7 @@
 import { useSettingsStore } from '@/store';
 import Switch from '../Switch.vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { CACHE_AUTO_REFRESH } from '@/constants';
 
 const settings = useSettingsStore();
 </script>

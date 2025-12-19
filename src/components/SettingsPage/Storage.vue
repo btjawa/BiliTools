@@ -179,7 +179,7 @@ async function setCacheRoot() {
     defaultPath: cacheRoot.value || settings.down_dir,
   });
   if (!path) return;
-  
+
   try {
     await transferStore.setCacheRoot(path);
     cacheRoot.value = path;

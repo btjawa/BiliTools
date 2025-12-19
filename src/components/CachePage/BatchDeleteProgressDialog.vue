@@ -11,8 +11,10 @@
           class="bg-(--solid-block-color) rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto z-50"
         >
           <!-- 对话框头部 -->
-          <div class="sticky top-0 bg-(--solid-block-color) border-b border-(--split-color) p-6 flex items-center justify-between">
-            <h2 class="text-lg font-semibold flex items-center gap-2">
+          <div
+            class="sticky top-0 bg-(--solid-block-color) border-b border-(--split-color) p-6 flex items-center justify-between"
+          >
+            <h2 class="text-lg font-semibold flex items-center gap-2 text-(--content-color)">
               <i class="fa-solid fa-trash text-red-500"></i>
               <span>{{ $t('cache.batchDelete.progressTitle') }}</span>
             </h2>
@@ -23,16 +25,23 @@
             <!-- 总体进度 -->
             <div class="progress-section">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-lg font-medium">{{ $t('cache.batchDelete.overallProgress') }}</span>
-                <span class="text-2xl font-bold text-(--primary-color)">{{ progressPercentage }}%</span>
+                <span class="text-lg font-medium text-(--content-color)">{{
+                  $t('cache.batchDelete.overallProgress')
+                }}</span>
+                <span class="text-2xl font-bold text-(--primary-color)"
+                  >{{ progressPercentage }}%</span
+                >
               </div>
 
               <ProgressBar :progress="progressPercentage" class="h-3" />
 
-              <div class="flex justify-between text-sm text-(--desc-color) mt-2">
+              <div
+                class="flex justify-between text-sm text-(--desc-color) mt-2"
+              >
                 <span>{{ progress.processed }} / {{ progress.total }}</span>
                 <span v-if="progress.estimatedTimeRemaining > 0">
-                  {{ $t('cache.batchDelete.estimatedTime') }}: {{ formatTimeSimple(progress.estimatedTimeRemaining) }}
+                  {{ $t('cache.batchDelete.estimatedTime') }}:
+                  {{ formatTimeSimple(progress.estimatedTimeRemaining) }}
                 </span>
               </div>
             </div>
@@ -46,12 +55,18 @@
 
               <div class="status-content">
                 <div class="flex items-center gap-2 mb-2">
-                  <i class="fa-solid fa-spinner fa-spin text-(--primary-color)"></i>
-                  <span class="font-medium">{{ $t('cache.batchDelete.deleting') }}</span>
+                  <i
+                    class="fa-solid fa-spinner fa-spin text-(--primary-color)"
+                  ></i>
+                  <span class="font-medium text-(--content-color)">{{
+                    $t('cache.batchDelete.deleting')
+                  }}</span>
                 </div>
 
                 <div class="current-item">
-                  <span class="text-sm text-(--desc-color)">{{ $t('cache.batchDelete.currentItem') }}:</span>
+                  <span class="text-sm text-(--desc-color)"
+                    >{{ $t('cache.batchDelete.currentItem') }}:</span
+                  >
                   <div class="item-name">{{ progress.currentItem }}</div>
                 </div>
               </div>
@@ -61,7 +76,11 @@
             <div v-if="completedItems.length > 0" class="completed-section">
               <h3 class="section-title">
                 <i class="fa-solid fa-check-circle text-green-500"></i>
-                <span>{{ $t('cache.batchDelete.completed') }} ({{ completedItems.length }})</span>
+                <span
+                  >{{ $t('cache.batchDelete.completed') }} ({{
+                    completedItems.length
+                  }})</span
+                >
               </h3>
 
               <div class="items-list">
@@ -79,12 +98,16 @@
             <!-- 进行中项目 -->
             <div class="current-section">
               <h3 class="section-title">
-                <i class="fa-solid fa-hourglass-half text-(--primary-color)"></i>
+                <i
+                  class="fa-solid fa-hourglass-half text-(--primary-color)"
+                ></i>
                 <span>{{ $t('cache.batchDelete.inProgress') }}</span>
               </h3>
 
               <div class="item-row processing">
-                <i class="fa-solid fa-spinner fa-spin text-(--primary-color)"></i>
+                <i
+                  class="fa-solid fa-spinner fa-spin text-(--primary-color)"
+                ></i>
                 <span class="item-title">{{ progress.currentItem }}</span>
               </div>
             </div>
@@ -93,7 +116,11 @@
             <div v-if="failedItems.length > 0" class="failed-section">
               <h3 class="section-title">
                 <i class="fa-solid fa-times-circle text-red-500"></i>
-                <span>{{ $t('cache.batchDelete.failed') }} ({{ failedItems.length }})</span>
+                <span
+                  >{{ $t('cache.batchDelete.failed') }} ({{
+                    failedItems.length
+                  }})</span
+                >
               </h3>
 
               <div class="items-list">
@@ -117,30 +144,48 @@
 
               <div class="stats-grid">
                 <div class="stat-item">
-                  <div class="stat-label">{{ $t('cache.batchDelete.spaceFreed') }}</div>
-                  <div class="stat-value">{{ formatFileSize(progress.spaceFreed) }}</div>
+                  <div class="stat-label">
+                    {{ $t('cache.batchDelete.spaceFreed') }}
+                  </div>
+                  <div class="stat-value text-(--content-color)">
+                    {{ formatFileSize(progress.spaceFreed) }}
+                  </div>
                 </div>
 
                 <div class="stat-item">
-                  <div class="stat-label">{{ $t('cache.batchDelete.totalSize') }}</div>
-                  <div class="stat-value">{{ formatFileSize(progress.totalSize) }}</div>
+                  <div class="stat-label">
+                    {{ $t('cache.batchDelete.totalSize') }}
+                  </div>
+                  <div class="stat-value text-(--content-color)">
+                    {{ formatFileSize(progress.totalSize) }}
+                  </div>
                 </div>
 
                 <div class="stat-item">
-                  <div class="stat-label">{{ $t('cache.batchDelete.successCount') }}</div>
-                  <div class="stat-value text-green-600">{{ progress.success }}</div>
+                  <div class="stat-label">
+                    {{ $t('cache.batchDelete.successCount') }}
+                  </div>
+                  <div class="stat-value text-green-500">
+                    {{ progress.success }}
+                  </div>
                 </div>
 
                 <div class="stat-item">
-                  <div class="stat-label">{{ $t('cache.batchDelete.failureCount') }}</div>
-                  <div class="stat-value text-red-600">{{ progress.failed }}</div>
+                  <div class="stat-label">
+                    {{ $t('cache.batchDelete.failureCount') }}
+                  </div>
+                  <div class="stat-value text-red-500">
+                    {{ progress.failed }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 对话框底部 -->
-          <div class="sticky bottom-0 bg-(--solid-block-color) border-t border-(--split-color) p-6 flex justify-end gap-3">
+          <div
+            class="sticky bottom-0 bg-(--solid-block-color) border-t border-(--split-color) p-6 flex justify-end gap-3"
+          >
             <button
               class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
               @click="handleCancel"
@@ -222,10 +267,6 @@ const failedItems = computed(() => {
 // 方法
 // ============================================================================
 
-
-
-
-
 /**
  * 处理取消操作
  */
@@ -259,7 +300,7 @@ function handleCancel() {
 }
 
 .section-title {
-  @apply text-lg font-medium flex items-center gap-2;
+  @apply text-lg font-medium flex items-center gap-2 text-(--content-color);
 }
 
 .status-content {
@@ -271,7 +312,7 @@ function handleCancel() {
 }
 
 .item-name {
-  @apply text-sm font-mono bg-(--solid-button-color) p-2 rounded border border-(--split-color);
+  @apply text-sm font-mono bg-(--solid-button-color) p-2 rounded border border-(--split-color) text-(--content-color);
   @apply break-all;
 }
 
@@ -305,7 +346,7 @@ function handleCancel() {
 }
 
 .item-title {
-  @apply flex-1 text-sm truncate;
+  @apply flex-1 text-sm truncate text-(--content-color);
 }
 
 /* 已完成区域 */

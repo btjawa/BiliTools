@@ -44,9 +44,13 @@
           v-else-if="item.type === 'group'"
           :group="item.data"
           :selected="props.selectedGroups.has(item.data.groupId)"
-          :partially-selected="props.partiallySelectedGroups.has(item.data.groupId)"
+          :partially-selected="
+            props.partiallySelectedGroups.has(item.data.groupId)
+          "
           :selected-videos="selectedVideos"
-          :in-range-preview="props.rangePreviewGroups.includes(item.data.groupId)"
+          :in-range-preview="
+            props.rangePreviewGroups.includes(item.data.groupId)
+          "
           @select="$emit('selectGroup', item.data.groupId)"
           @select-range="$emit('selectGroupRange', $event)"
           @toggle-expand="$emit('toggleExpand', item.data.groupId)"

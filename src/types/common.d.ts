@@ -1,6 +1,6 @@
 /**
  * 通用类型定义库
- * 
+ *
  * 提供项目中通用的基础类型定义，包括进度相关类型、状态枚举等
  * 用于统一不同模块间的类型定义，减少重复并提高类型安全性
  */
@@ -15,12 +15,12 @@ import { PROGRESS } from '@/constants';
  * 进度状态枚举
  * 定义所有进度相关操作的通用状态
  */
-export type ProgressStatus = 
-  | 'pending'    // 等待中
-  | 'running'    // 运行中
-  | 'paused'     // 已暂停
-  | 'completed'  // 已完成
-  | 'failed'     // 失败
+export type ProgressStatus =
+  | 'pending' // 等待中
+  | 'running' // 运行中
+  | 'paused' // 已暂停
+  | 'completed' // 已完成
+  | 'failed' // 失败
   | 'cancelled'; // 已取消
 
 /**
@@ -153,7 +153,9 @@ export interface BatchOperationResult<T = unknown> {
 /**
  * 进度回调函数类型
  */
-export type ProgressCallback<T extends BaseProgress = BaseProgress> = (progress: T) => void;
+export type ProgressCallback<T extends BaseProgress = BaseProgress> = (
+  progress: T,
+) => void;
 
 /**
  * 错误回调函数类型
@@ -163,7 +165,9 @@ export type ErrorCallback = (error: Error) => void;
 /**
  * 完成回调函数类型
  */
-export type CompletionCallback<T = unknown> = (result: OperationResult<T>) => void;
+export type CompletionCallback<T = unknown> = (
+  result: OperationResult<T>,
+) => void;
 
 // ============================================================================
 // 类型工具函数
@@ -172,14 +176,18 @@ export type CompletionCallback<T = unknown> = (result: OperationResult<T>) => vo
 /**
  * 类型守卫：检查是否为文件传输进度
  */
-export function isFileTransferProgress(progress: BaseProgress): progress is FileTransferProgress {
+export function isFileTransferProgress(
+  progress: BaseProgress,
+): progress is FileTransferProgress {
   return 'taskId' in progress && 'totalFiles' in progress;
 }
 
 /**
  * 类型守卫：检查是否为数据导入进度
  */
-export function isDataImportProgress(progress: BaseProgress): progress is DataImportProgress {
+export function isDataImportProgress(
+  progress: BaseProgress,
+): progress is DataImportProgress {
   return 'importId' in progress && 'totalDirectories' in progress;
 }
 
@@ -188,7 +196,13 @@ export function isDataImportProgress(progress: BaseProgress): progress is DataIm
  */
 export function calculatePercentage(completed: number, total: number): number {
   if (total === 0) return PROGRESS.MIN_PERCENTAGE;
-  return Math.min(PROGRESS.MAX_PERCENTAGE, Math.max(PROGRESS.MIN_PERCENTAGE, (completed / total) * PROGRESS.MAX_PERCENTAGE));
+  return Math.min(
+    PROGRESS.MAX_PERCENTAGE,
+    Math.max(
+      PROGRESS.MIN_PERCENTAGE,
+      (completed / total) * PROGRESS.MAX_PERCENTAGE,
+    ),
+  );
 }
 
 /**

@@ -13,7 +13,6 @@ import { UnifiedErrorHandler } from '@/utils/error-handler';
 import { PROGRESS, PAGINATION } from '@/constants';
 import type * as Types from '@/types/cache.d';
 
-
 /**
  * 缓存 Store
  */
@@ -180,7 +179,9 @@ export const useCacheStore = defineStore('cache', () => {
       return cacheStatistics.value.averageSize;
     }
     // 如果没有统计信息，回退到当前页计算
-    return totalCacheCount.value > 0 ? totalFileSize.value / totalCacheCount.value : 0;
+    return totalCacheCount.value > 0
+      ? totalFileSize.value / totalCacheCount.value
+      : 0;
   });
 
   /**
@@ -238,7 +239,10 @@ export const useCacheStore = defineStore('cache', () => {
       0,
     );
 
-    return Math.round((totalVideos / groups.length) * PROGRESS.MAX_PERCENTAGE) / PROGRESS.MAX_PERCENTAGE;
+    return (
+      Math.round((totalVideos / groups.length) * PROGRESS.MAX_PERCENTAGE) /
+      PROGRESS.MAX_PERCENTAGE
+    );
   });
 
   /**
@@ -334,7 +338,8 @@ export const useCacheStore = defineStore('cache', () => {
     const progress = importProgress.value;
     if (progress.totalDirectories === 0) return 0;
     const percentage = Math.round(
-      (progress.processedDirectories / progress.totalDirectories) * PROGRESS.MAX_PERCENTAGE,
+      (progress.processedDirectories / progress.totalDirectories) *
+        PROGRESS.MAX_PERCENTAGE,
     );
     return isNaN(percentage) ? 0 : percentage;
   });
@@ -414,9 +419,11 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '加载显示项列表',
-        onError: (msg) => { lastError.value = msg; },
+        onError: (msg) => {
+          lastError.value = msg;
+        },
         logLevel: 'error',
-      }
+      },
     );
 
     isLoading.value = false;
@@ -497,9 +504,11 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '更新组状态',
-        onError: (msg) => { lastError.value = msg; },
+        onError: (msg) => {
+          lastError.value = msg;
+        },
         logLevel: 'error',
-      }
+      },
     );
 
     // 如果后端操作失败，回滚本地状态
@@ -604,7 +613,9 @@ export const useCacheStore = defineStore('cache', () => {
             );
 
             // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
-            if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
+            if (
+              item.data.videos.length < groupManagerConfig.value.minGroupSize
+            ) {
               item.data.videos.forEach((video) => {
                 displayItems.value.push({
                   type: 'video',
@@ -627,7 +638,9 @@ export const useCacheStore = defineStore('cache', () => {
               );
               item.data.latestDownloadTime = new Date(
                 Math.max(
-                  ...item.data.videos.map((video) => video.downloadTime.getTime()),
+                  ...item.data.videos.map((video) =>
+                    video.downloadTime.getTime(),
+                  ),
                 ),
               );
             }
@@ -648,9 +661,11 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '删除缓存项',
-        onError: (msg) => { lastError.value = msg; },
+        onError: (msg) => {
+          lastError.value = msg;
+        },
         logLevel: 'error',
-      }
+      },
     );
 
     if (!result) {
@@ -669,7 +684,9 @@ export const useCacheStore = defineStore('cache', () => {
         const results = await cacheManagementService.batchDeleteCacheItems(ids);
 
         // 移除成功删除的项目
-        const successIds = results.filter((r) => r.success).map((r) => r.cacheId);
+        const successIds = results
+          .filter((r) => r.success)
+          .map((r) => r.cacheId);
         cacheItems.value = cacheItems.value.filter(
           (item) => !successIds.includes(item.id),
         );
@@ -685,7 +702,9 @@ export const useCacheStore = defineStore('cache', () => {
             );
 
             // 如果组内视频数量少于最小组大小，将剩余视频转为单个视频
-            if (item.data.videos.length < groupManagerConfig.value.minGroupSize) {
+            if (
+              item.data.videos.length < groupManagerConfig.value.minGroupSize
+            ) {
               item.data.videos.forEach((video) => {
                 displayItems.value.push({
                   type: 'video',
@@ -707,7 +726,9 @@ export const useCacheStore = defineStore('cache', () => {
             );
             item.data.latestDownloadTime = new Date(
               Math.max(
-                ...item.data.videos.map((video) => video.downloadTime.getTime()),
+                ...item.data.videos.map((video) =>
+                  video.downloadTime.getTime(),
+                ),
               ),
             );
 
@@ -727,9 +748,11 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '批量删除',
-        onError: (msg) => { lastError.value = msg; },
+        onError: (msg) => {
+          lastError.value = msg;
+        },
         logLevel: 'error',
-      }
+      },
     );
 
     if (!result) {
@@ -1089,7 +1112,9 @@ export const useCacheStore = defineStore('cache', () => {
 
     // 找到起始和结束位置
     const startIndex = flatItems.findIndex(
-      (item) => item.id === lastClickedItem.value && item.type === lastClickedItemType.value,
+      (item) =>
+        item.id === lastClickedItem.value &&
+        item.type === lastClickedItemType.value,
     );
     const endIndex = flatItems.findIndex(
       (item) => item.id === targetId && item.type === targetType,
@@ -1113,7 +1138,8 @@ export const useCacheStore = defineStore('cache', () => {
         // 同时添加组内的所有视频
         const groupItem = displayItems.value.find(
           (displayItem) =>
-            displayItem.type === 'group' && displayItem.data.groupId === item.id,
+            displayItem.type === 'group' &&
+            displayItem.data.groupId === item.id,
         );
         if (groupItem && groupItem.type === 'group') {
           groupItem.data.videos.forEach((video) => {
@@ -1198,7 +1224,10 @@ export const useCacheStore = defineStore('cache', () => {
   /**
    * 设置焦点项目
    */
-  function setFocusedItem(itemId: string | null, itemType: 'video' | 'group' | null): void {
+  function setFocusedItem(
+    itemId: string | null,
+    itemType: 'video' | 'group' | null,
+  ): void {
     focusedItem.value = itemId;
     focusedItemType.value = itemType;
   }
@@ -1206,7 +1235,10 @@ export const useCacheStore = defineStore('cache', () => {
   /**
    * 获取焦点项目
    */
-  function getFocusedItem(): { itemId: string | null; itemType: 'video' | 'group' | null } {
+  function getFocusedItem(): {
+    itemId: string | null;
+    itemType: 'video' | 'group' | null;
+  } {
     return {
       itemId: focusedItem.value,
       itemType: focusedItemType.value,
@@ -1235,8 +1267,12 @@ export const useCacheStore = defineStore('cache', () => {
     for (let i = 0; i < paginatedDisplayItems.value.length; i++) {
       const item = paginatedDisplayItems.value[i];
       if (
-        (focusedItemType.value === 'video' && item.type === 'video' && item.data.id === focusedItem.value) ||
-        (focusedItemType.value === 'group' && item.type === 'group' && item.data.groupId === focusedItem.value)
+        (focusedItemType.value === 'video' &&
+          item.type === 'video' &&
+          item.data.id === focusedItem.value) ||
+        (focusedItemType.value === 'group' &&
+          item.type === 'group' &&
+          item.data.groupId === focusedItem.value)
       ) {
         currentIndex = i;
         break;
@@ -1276,8 +1312,12 @@ export const useCacheStore = defineStore('cache', () => {
     for (let i = 0; i < paginatedDisplayItems.value.length; i++) {
       const item = paginatedDisplayItems.value[i];
       if (
-        (focusedItemType.value === 'video' && item.type === 'video' && item.data.id === focusedItem.value) ||
-        (focusedItemType.value === 'group' && item.type === 'group' && item.data.groupId === focusedItem.value)
+        (focusedItemType.value === 'video' &&
+          item.type === 'video' &&
+          item.data.id === focusedItem.value) ||
+        (focusedItemType.value === 'group' &&
+          item.type === 'group' &&
+          item.data.groupId === focusedItem.value)
       ) {
         currentIndex = i;
         break;
@@ -1285,7 +1325,10 @@ export const useCacheStore = defineStore('cache', () => {
     }
 
     // 移动到下一个项目
-    if (currentIndex >= 0 && currentIndex < paginatedDisplayItems.value.length - 1) {
+    if (
+      currentIndex >= 0 &&
+      currentIndex < paginatedDisplayItems.value.length - 1
+    ) {
       const nextItem = paginatedDisplayItems.value[currentIndex + 1];
       if (nextItem.type === 'video') {
         setFocusedItem(nextItem.data.id, 'video');
@@ -1365,12 +1408,12 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '开始导入',
-        onError: (msg) => { 
+        onError: (msg) => {
           lastError.value = msg;
           isImporting.value = false;
         },
         logLevel: 'error',
-      }
+      },
     );
 
     if (!result) {
@@ -1407,9 +1450,11 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '取消导入',
-        onError: (msg) => { lastError.value = msg; },
+        onError: (msg) => {
+          lastError.value = msg;
+        },
         logLevel: 'error',
-      }
+      },
     );
 
     if (!result) {
@@ -1456,9 +1501,11 @@ export const useCacheStore = defineStore('cache', () => {
       },
       {
         operation: '增量扫描',
-        onError: (msg) => { lastError.value = msg; },
+        onError: (msg) => {
+          lastError.value = msg;
+        },
         logLevel: 'error',
-      }
+      },
     );
 
     isLoading.value = false;
@@ -1517,7 +1564,7 @@ export const useCacheStore = defineStore('cache', () => {
     if (!raw) {
       throw new Error('缓存组数据为空');
     }
-    
+
     if (!raw.group_id) {
       throw new Error('缓存组缺少 group_id 字段');
     }
@@ -1548,7 +1595,9 @@ export const useCacheStore = defineStore('cache', () => {
    */
   async function updateStatistics(): Promise<void> {
     try {
-      const rawStats = await invoke<Types.CacheStatisticsRaw>('get_cache_statistics');
+      const rawStats = await invoke<Types.CacheStatisticsRaw>(
+        'get_cache_statistics',
+      );
 
       // 转换后端数据格式
       cacheStatistics.value = {

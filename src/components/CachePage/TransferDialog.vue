@@ -2,26 +2,16 @@
   <Teleport to="body">
     <!-- 模态框遮罩 -->
     <Transition name="modal">
-      <div
-        v-if="visible"
-        class="modal-overlay"
-        @click="handleCancel"
-      >
+      <div v-if="visible" class="modal-overlay" @click="handleCancel">
         <!-- 对话框容器 -->
-        <div
-          class="modal-content"
-          @click.stop
-        >
+        <div class="modal-content" @click.stop>
           <!-- 对话框头部 -->
           <div class="modal-header">
             <h2 class="modal-title">
               <i :class="[$fa.weight, operationIcon]"></i>
               <span class="text-(--content-color)">{{ operationTitle }}</span>
             </h2>
-            <button
-              class="close-btn"
-              @click="handleCancel"
-            >
+            <button class="close-btn" @click="handleCancel">
               <i :class="[$fa.weight, 'fa-times']"></i>
             </button>
           </div>
@@ -29,40 +19,43 @@
           <!-- 对话框内容 -->
           <div class="modal-body space-y-6">
             <!-- 文件夹选择 -->
-              <!-- 本地文件夹部分 -->
-              <div class="space-y-3">
-                <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
-                  <i :class="[$fa.weight, 'fa-folder']"></i>
-                  {{ $t('transfer.localFolder') }}
-                </h3>
+            <!-- 本地文件夹部分 -->
+            <div class="space-y-3">
+              <h3
+                class="text-sm font-medium text-(--content-color) flex items-center gap-2"
+              >
+                <i :class="[$fa.weight, 'fa-folder']"></i>
+                {{ $t('transfer.localFolder') }}
+              </h3>
 
-                <!-- 本地文件夹选择 -->
-                <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-3">
-                  <!-- 当前选择的路径 -->
-                  <div
-                    v-if="selectedTarget"
-                    class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)"
-                  >
-                    <div class="text-sm text-(--desc-color) mb-1">{{ $t('transfer.selectedTarget') }}</div>
-                    <div class="text-(--content-color) font-medium truncate">{{ selectedTarget.path }}</div>
+              <!-- 本地文件夹选择 -->
+              <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-3">
+                <!-- 当前选择的路径 -->
+                <div
+                  v-if="selectedTarget"
+                  class="p-3 rounded-lg bg-(--input-bg) border border-(--split-color)"
+                >
+                  <div class="text-sm text-(--desc-color) mb-1">
+                    {{ $t('transfer.selectedTarget') }}
                   </div>
-
-                  <!-- 浏览按钮 -->
-                  <button
-                    class="w-full px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center justify-center gap-2"
-                    @click="handleBrowseFolder"
-                  >
-                    <i :class="[$fa.weight, 'fa-folder-open']"></i>
-                    {{ $t('transfer.selectTargetFolder') }}
-                  </button>
+                  <div class="text-(--content-color) font-medium truncate">
+                    {{ selectedTarget.path }}
+                  </div>
                 </div>
+
+                <!-- 浏览按钮 -->
+                <button
+                  class="w-full px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center justify-center gap-2"
+                  @click="handleBrowseFolder"
+                >
+                  <i :class="[$fa.weight, 'fa-folder-open']"></i>
+                  {{ $t('transfer.selectTargetFolder') }}
+                </button>
               </div>
+            </div>
 
             <!-- 错误信息 -->
-            <div
-              v-if="lastError"
-              class="error-box"
-            >
+            <div v-if="lastError" class="error-box">
               <i :class="[$fa.weight, 'fa-exclamation-circle']"></i>
               <div class="text-sm text-(--content-color)">{{ lastError }}</div>
             </div>
@@ -130,7 +123,6 @@ const transferStore = useTransferStore();
 // 状态
 // ============================================================================
 
-
 const selectedTarget = ref<Types.TransferTarget | null>(null);
 const lastError = ref<string | null>(null);
 
@@ -158,8 +150,6 @@ const operationIcon = computed(() => {
   return props.operation === 'Copy' ? 'fa-copy' : 'fa-scissors';
 });
 
-
-
 /**
  * Font Awesome 权重
  */
@@ -171,15 +161,9 @@ const $fa = computed(() => ({
 // 生命周期
 // ============================================================================
 
-
-
 // ============================================================================
 // 方法
 // ============================================================================
-
-
-
-
 
 /**
  * 浏览本地文件夹
@@ -187,10 +171,10 @@ const $fa = computed(() => ({
 async function handleBrowseFolder() {
   try {
     lastError.value = null;
-    
+
     // 调用文件夹选择对话框
     const folderPath = await transferStore.selectFolder();
-    
+
     if (folderPath) {
       // 创建本地文件夹目标
       const localTarget: Types.TransferTarget = {
@@ -201,15 +185,15 @@ async function handleBrowseFolder() {
         available_space: undefined,
         connection_status: 'Connected',
       };
-      
+
       selectedTarget.value = localTarget;
     }
   } catch (error) {
-    handleComponentError(error, '选择文件夹', (msg) => { lastError.value = msg; });
+    handleComponentError(error, '选择文件夹', (msg) => {
+      lastError.value = msg;
+    });
   }
 }
-
-
 
 /**
  * 处理确认按钮

@@ -8,14 +8,20 @@
           <div :class="statusIconClass">
             <i :class="[$fa.weight, statusIcon]"></i>
           </div>
-          <span class="text-sm font-medium text-(--content-color)">总体进度</span>
+          <span class="text-sm font-medium text-(--content-color)"
+            >总体进度</span
+          >
         </div>
         <!-- 总体进度百分比 -->
-        <div class="text-lg font-bold text-blue-500">{{ overallPercentage }}%</div>
+        <div class="text-lg font-bold text-blue-500">
+          {{ overallPercentage }}%
+        </div>
       </div>
-      
+
       <!-- 总体进度条 (更大更突出) -->
-      <div class="w-full h-3 bg-(--input-bg) rounded-full overflow-hidden border border-(--split-color) shadow-sm">
+      <div
+        class="w-full h-3 bg-(--input-bg) rounded-full overflow-hidden border border-(--split-color) shadow-sm"
+      >
         <div
           class="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 ease-out"
           :style="{ width: `${overallPercentage}%` }"
@@ -32,10 +38,10 @@
           {{ fileCountDisplay }}
         </div>
       </div>
-      
+
       <!-- 分隔线 -->
       <div class="w-px h-8 bg-(--split-color)"></div>
-      
+
       <!-- 大小进度 -->
       <div class="flex-1 text-center">
         <div class="text-xs text-(--desc-color) mb-1">数据大小</div>
@@ -46,18 +52,20 @@
     </div>
 
     <!-- 当前文件信息 (独立区域) -->
-    <div class="bg-(--block-color) rounded-lg p-3 border border-(--split-color)">
+    <div
+      class="bg-(--block-color) rounded-lg p-3 border border-(--split-color)"
+    >
       <div class="text-xs text-(--desc-color) mb-1">当前文件</div>
       <div class="space-y-1">
         <!-- 视频名称 (大字体) -->
-        <div 
+        <div
           class="text-base font-semibold text-(--content-color) cursor-help leading-tight"
           :title="currentVideoName"
         >
           {{ truncatedVideoName }}
         </div>
         <!-- 文件路径 (小字体，辅助信息) -->
-        <div 
+        <div
           class="text-xs text-(--desc-color) cursor-help leading-tight"
           :title="currentFilePath"
         >
@@ -67,14 +75,20 @@
     </div>
 
     <!-- 性能信息 -->
-    <div class="flex items-center justify-between bg-(--input-bg) rounded-lg px-3 py-2 border border-(--split-color)">
+    <div
+      class="flex items-center justify-between bg-(--input-bg) rounded-lg px-3 py-2 border border-(--split-color)"
+    >
       <div class="flex items-center gap-2">
         <i class="fa-solid fa-gauge-high text-xs text-(--desc-color)"></i>
-        <span class="text-sm font-medium text-(--content-color)">{{ formattedSpeed }}</span>
+        <span class="text-sm font-medium text-(--content-color)">{{
+          formattedSpeed
+        }}</span>
       </div>
       <div v-if="formattedRemainingTime" class="flex items-center gap-2">
         <i class="fa-solid fa-clock text-xs text-(--desc-color)"></i>
-        <span class="text-sm text-(--desc-color)">{{ formattedRemainingTime }}</span>
+        <span class="text-sm text-(--desc-color)">{{
+          formattedRemainingTime
+        }}</span>
       </div>
     </div>
   </div>
@@ -113,15 +127,18 @@ const taskName = computed(() => {
  */
 const overallPercentage = computed(() => {
   if (!props.progress) return 0;
-  
+
   // 边界情况处理：总大小为0时基于文件计数计算进度
   if (props.progress.totalSize === 0) {
     if (props.progress.totalFiles === 0) return 0;
-    return Math.round((props.progress.completedFiles / props.progress.totalFiles) * 100);
+    return Math.round(
+      (props.progress.completedFiles / props.progress.totalFiles) * 100,
+    );
   }
-  
+
   // 进度计算溢出保护：确保百分比在0-100范围内
-  const percentage = (props.progress.transferredSize / props.progress.totalSize) * 100;
+  const percentage =
+    (props.progress.transferredSize / props.progress.totalSize) * 100;
   return Math.min(100, Math.max(0, Math.round(percentage)));
 });
 
@@ -130,11 +147,14 @@ const overallPercentage = computed(() => {
  */
 const fileCountDisplay = computed(() => {
   if (!props.progress) return '0/0';
-  
+
   // 边界情况处理：确保显示的数值合理
-  const completed = Math.min(props.progress.completedFiles, props.progress.totalFiles);
+  const completed = Math.min(
+    props.progress.completedFiles,
+    props.progress.totalFiles,
+  );
   const total = Math.max(props.progress.totalFiles, 1); // 避免显示0/0
-  
+
   return `${completed}/${total}`;
 });
 
@@ -143,12 +163,15 @@ const fileCountDisplay = computed(() => {
  */
 const sizeProgressDisplay = computed(() => {
   if (!props.progress) return '0 B/0 B';
-  
+
   // 进度计算溢出保护：确保已传输大小不超过总大小
-  const transferredSize = Math.min(props.progress.transferredSize, props.progress.totalSize);
+  const transferredSize = Math.min(
+    props.progress.transferredSize,
+    props.progress.totalSize,
+  );
   const transferred = formatFileSize(transferredSize);
   const total = formatFileSize(props.progress.totalSize);
-  
+
   return `${transferred}/${total}`;
 });
 
@@ -157,7 +180,10 @@ const sizeProgressDisplay = computed(() => {
  */
 const currentVideoName = computed(() => {
   // 当前文件信息缺失处理：提供默认值
-  if (!props.progress?.currentVideoName || !props.progress.currentVideoName.trim()) {
+  if (
+    !props.progress?.currentVideoName ||
+    !props.progress.currentVideoName.trim()
+  ) {
     return taskName.value;
   }
   return props.progress.currentVideoName.trim();
@@ -198,7 +224,7 @@ const formattedSpeed = computed(() => {
   if (!props.progress) {
     return '等待中...';
   }
-  
+
   switch (props.progress.status) {
     case 'paused':
       return '已暂停';
@@ -226,12 +252,12 @@ const formattedRemainingTime = computed(() => {
   if (!props.progress || props.progress.status !== 'running') {
     return '';
   }
-  
+
   const remainingTime = props.progress.remainingTime ?? 0;
   if (remainingTime <= 0) {
     return '计算中...';
   }
-  
+
   return formatTime(remainingTime);
 });
 
@@ -287,8 +313,6 @@ const $fa = computed(() => ({
 // ============================================================================
 // 方法
 // ============================================================================
-
-
 </script>
 
 <style scoped>

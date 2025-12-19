@@ -335,6 +335,14 @@
       "password": "密碼"
     },
     "strategy": "策略",
+    "cache_auto_refresh": {
+      "name": "快取自動重新整理",
+      "interval": {
+        "name": "重新整理間隔",
+        "desc": "設定自動檢查快取目錄變化的時間間隔（0 表示停用）。啟動時會自動執行一次重新整理。",
+        "unit": "分鐘"
+      }
+    },
     "add_metadata": {
       "name": "為影片與音訊嵌入中繼資料",
       "desc": "若啟用，下載影片或音訊時會自動寫入中繼資料。"
@@ -578,6 +586,9 @@
       "noChanges": "未發現變化",
       "success": "增量掃描完成",
       "error": "增量掃描失敗"
+    },
+    "autoRefresh": {
+      "changed": "快取自動重新整理：匯入 {0} 個，清理 {1} 個"
     },
     "sidebar": {
       "refresh": "重新整理",

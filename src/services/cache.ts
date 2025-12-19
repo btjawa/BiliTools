@@ -225,7 +225,9 @@ export class CacheManagementService {
     } catch (error) {
       if (error instanceof AppError) throw error;
       console.error('删除缓存项详细错误:', error);
-      throw new AppError(`删除缓存项失败: ${error instanceof Error ? error.message : String(error)}`);
+      throw new AppError(
+        `删除缓存项失败: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -300,10 +302,12 @@ export class CacheManagementService {
   async refreshCacheItemStatus(id: string): Promise<Types.CacheItem> {
     // TODO: 等待后端实现 refresh_cache_item_status 命令
     // 目前通过重新加载显示项的方式实现
-    const displayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+    const displayItems = (await invoke(
+      'get_cache_display_items',
+    )) as Types.DisplayItem[];
     const videoItem = displayItems.find(
       (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
-        item.type === 'single_video' && item.video.id === id
+        item.type === 'single_video' && item.video.id === id,
     );
     if (!videoItem) {
       throw new AppError('缓存项不存在');
@@ -336,7 +340,9 @@ export class CacheManagementService {
    */
   async incrementalScanCacheRoot(): Promise<Types.IncrementalScanResult> {
     try {
-      const result = (await invoke('incremental_scan_cache_root')) as Types.IncrementalScanResultRaw;
+      const result = (await invoke(
+        'incremental_scan_cache_root',
+      )) as Types.IncrementalScanResultRaw;
 
       // 转换后端数据格式为前端类型
       return {
@@ -350,7 +356,9 @@ export class CacheManagementService {
       };
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(`增量扫描失败: ${(error as Error)?.message || '未知错误'}`);
+      throw new AppError(
+        `增量扫描失败: ${(error as Error)?.message || '未知错误'}`,
+      );
     }
   }
 
@@ -417,18 +425,29 @@ export class CacheManagementService {
   async exportCacheList(filter?: Types.CacheFilter): Promise<string> {
     // TODO: 等待后端实现 export_cache_list 命令
     // 目前通过前端实现导出功能
-    const displayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+    const displayItems = (await invoke(
+      'get_cache_display_items',
+    )) as Types.DisplayItem[];
     const videoItems = displayItems
-      .filter((item): item is { type: 'single_video'; video: Types.CacheRecord } => item.type === 'single_video')
+      .filter(
+        (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
+          item.type === 'single_video',
+      )
       .map((item) => transformCacheRecord(item.video));
 
     // 应用筛选条件（如果提供）
-    const items = filter ? videoItems.filter((item) => {
-      if (filter.status && filter.status.length > 0 && !filter.status.includes(item.status)) {
-        return false;
-      }
-      return true;
-    }) : videoItems;
+    const items = filter
+      ? videoItems.filter((item) => {
+          if (
+            filter.status &&
+            filter.status.length > 0 &&
+            !filter.status.includes(item.status)
+          ) {
+            return false;
+          }
+          return true;
+        })
+      : videoItems;
 
     // 使用现有的 exportData 命令
     const exportData = {
@@ -549,10 +568,6 @@ export async function performFullImport(
     }
   }
 }
-
-
-
-
 
 /**
  * 检查本地封面文件

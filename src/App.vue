@@ -26,8 +26,10 @@ import {
 } from '@/components';
 
 import { useAppStore, useQueueStore, useSettingsStore } from '@/store';
+import { useCacheStore } from '@/store/cache';
 import { useComponentsStore, routeMap } from './store/components';
 import router from './router';
+import { CACHE_AUTO_REFRESH, TIME_CONVERSION } from '@/constants';
 
 import { fetchUser, activateCookies } from '@/services/login';
 import { AppLog, parseId, setEventHook } from '@/services/utils';
@@ -53,16 +55,74 @@ function handleMainContextMenu(e: MouseEvent) {
     hasCustomContextMenu = false;
     return;
   }
-  
+
   // 显示默认文本菜单
   contextMenu.value?.init(e);
 }
 
 const queues = useQueueStore();
 const settings = useSettingsStore();
+const cacheStore = useCacheStore();
 const components = useComponentsStore();
 const app = useAppStore();
 const context = getCurrentInstance()?.appContext;
+
+// 缓存自动刷新定时器
+let cacheAutoRefreshTimer: number | null = null;
+
+// 启动缓存自动刷新
+function startCacheAutoRefresh() {
+  stopCacheAutoRefresh();
+
+  const intervalMinutes = settings.cacheAutoRefreshInterval;
+  if (intervalMinutes === CACHE_AUTO_REFRESH.DISABLED) return;
+
+  const intervalMs =
+    intervalMinutes *
+    TIME_CONVERSION.SECONDS_TO_MINUTES *
+    TIME_CONVERSION.MS_TO_SECONDS;
+
+  cacheAutoRefreshTimer = window.setInterval(async () => {
+    if (!settings.cache_root) return;
+
+    try {
+      const result = await cacheStore.incrementalScanCacheRoot();
+      // 只在有变更时显示提示
+      if (
+        result.newDirectoriesCount > 0 ||
+        result.deletedDirectoriesCount > 0
+      ) {
+        AppLog(
+          i18n.global.t('cache.autoRefresh.changed', [
+            result.importedCount,
+            result.cleanedCount,
+          ]),
+          'info',
+        );
+      }
+    } catch {
+      /**/
+    }
+  }, intervalMs);
+}
+
+// 停止缓存自动刷新
+function stopCacheAutoRefresh() {
+  if (cacheAutoRefreshTimer !== null) {
+    window.clearInterval(cacheAutoRefreshTimer);
+    cacheAutoRefreshTimer = null;
+  }
+}
+
+// 监听自动刷新间隔变化
+watch(
+  () => settings.cacheAutoRefreshInterval,
+  () => {
+    if (app.inited) {
+      startCacheAutoRefresh();
+    }
+  },
+);
 
 if (!context) throw new Error('No AppContext');
 
@@ -108,10 +168,10 @@ onMounted(async () => {
   document.addEventListener('cache-context-menu', (e: Event) => {
     const customEvent = e as CustomEvent;
     const { event, options } = customEvent.detail;
-    
+
     // 设置标记，阻止默认右键菜单
     hasCustomContextMenu = true;
-    
+
     contextMenu.value?.initWithOptions(event, options);
   });
 
@@ -151,6 +211,30 @@ onMounted(async () => {
   await fetchUser();
   await activateCookies();
   app.inited = true;
+
+  // 启动时自动刷新缓存（如果已设置缓存根目录）
+  if (settings.cache_root) {
+    try {
+      const result = await cacheStore.incrementalScanCacheRoot();
+      if (
+        result.newDirectoriesCount > 0 ||
+        result.deletedDirectoriesCount > 0
+      ) {
+        AppLog(
+          i18n.global.t('cache.autoRefresh.changed', [
+            result.importedCount,
+            result.cleanedCount,
+          ]),
+          'info',
+        );
+      }
+    } catch {
+      /**/
+    }
+  }
+
+  // 启动定时自动刷新
+  startCacheAutoRefresh();
 });
 </script>
 

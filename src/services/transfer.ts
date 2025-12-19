@@ -7,12 +7,12 @@
 import { invoke } from '@tauri-apps/api/core';
 import type * as Types from '@/types/transfer.d';
 
-
-
 /**
  * 验证传输目标的有效性
  */
-export async function validateTransferTarget(target: Types.TransferTarget): Promise<boolean> {
+export async function validateTransferTarget(
+  target: Types.TransferTarget,
+): Promise<boolean> {
   try {
     const isValid = await invoke<boolean>('validate_transfer_target', {
       target,
@@ -46,7 +46,9 @@ export async function checkAvailableSpace(
 /**
  * 开始文件传输
  */
-export async function startTransfer(request: Types.TransferRequest): Promise<string> {
+export async function startTransfer(
+  request: Types.TransferRequest,
+): Promise<string> {
   try {
     const taskId = await invoke<string>('start_transfer', {
       request,
@@ -61,14 +63,16 @@ export async function startTransfer(request: Types.TransferRequest): Promise<str
 /**
  * 开始缓存根目录迁移
  */
-export async function startRootMigration(request: Types.RootMigrationRequest): Promise<string> {
+export async function startRootMigration(
+  request: Types.RootMigrationRequest,
+): Promise<string> {
   try {
     // 转换前端 camelCase 为后端 snake_case
     const backendRequest = {
       target_root: request.targetRoot,
       update_database: request.updateDatabase,
     };
-    
+
     const taskId = await invoke<string>('start_root_migration', {
       request: backendRequest,
     });
@@ -118,19 +122,22 @@ export async function resumeTransfer(taskId: string): Promise<void> {
 /**
  * 获取传输进度
  */
-export async function getTransferProgress(taskId: string): Promise<Types.TransferProgress | null> {
+export async function getTransferProgress(
+  taskId: string,
+): Promise<Types.TransferProgress | null> {
   try {
-    const progress = await invoke<Types.TransferProgress | null>('get_transfer_progress', {
-      taskId,
-    });
+    const progress = await invoke<Types.TransferProgress | null>(
+      'get_transfer_progress',
+      {
+        taskId,
+      },
+    );
     return progress;
   } catch (error) {
     console.error('获取传输进度失败:', error);
     throw error;
   }
 }
-
-
 
 /**
  * 打开文件夹选择对话框

@@ -335,6 +335,14 @@
       "password": "密码"
     },
     "strategy": "策略",
+    "cache_auto_refresh": {
+      "name": "缓存自动刷新",
+      "interval": {
+        "name": "刷新间隔",
+        "desc": "设置自动检查缓存目录变化的时间间隔（0 表示禁用）。启动时会自动执行一次刷新。",
+        "unit": "分钟"
+      }
+    },
     "add_metadata": {
       "name": "为视频与音频文件嵌入元数据",
       "desc": "若启用，则会在下载音频或视频时自动为其嵌入元数据。"
@@ -579,6 +587,9 @@
       "noChanges": "未发现变化",
       "success": "增量扫描完成",
       "error": "增量扫描失败"
+    },
+    "autoRefresh": {
+      "changed": "缓存自动刷新：导入 {0} 个，清理 {1} 个"
     },
     "sidebar": {
       "refresh": "刷新",

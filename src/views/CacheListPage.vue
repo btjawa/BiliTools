@@ -31,11 +31,20 @@
             <Dropdown
               v-model="selectedSort"
               :drop="[
-                { id: 'completionTime-desc', name: $t('cache.list.sort.completionTimeDesc') },
-                { id: 'completionTime-asc', name: $t('cache.list.sort.completionTimeAsc') },
+                {
+                  id: 'completionTime-desc',
+                  name: $t('cache.list.sort.completionTimeDesc'),
+                },
+                {
+                  id: 'completionTime-asc',
+                  name: $t('cache.list.sort.completionTimeAsc'),
+                },
                 { id: 'title-asc', name: $t('cache.list.sort.titleAsc') },
                 { id: 'title-desc', name: $t('cache.list.sort.titleDesc') },
-                { id: 'fileSize-desc', name: $t('cache.list.sort.fileSizeDesc') },
+                {
+                  id: 'fileSize-desc',
+                  name: $t('cache.list.sort.fileSizeDesc'),
+                },
                 { id: 'fileSize-asc', name: $t('cache.list.sort.fileSizeAsc') },
               ]"
             />
@@ -60,8 +69,6 @@
                     })),
                   ]"
                 />
-
-
 
                 <!-- 清除筛选 -->
                 <button
@@ -126,7 +133,9 @@
                 :selected-groups="new Set(cacheStore.selectedGroupIds)"
                 :range-preview="cacheStore.rangePreview"
                 :range-preview-groups="cacheStore.rangePreviewGroups"
-                :partially-selected-groups="cacheStore.partiallySelectedGroupIds"
+                :partially-selected-groups="
+                  cacheStore.partiallySelectedGroupIds
+                "
                 :has-active-filters="hasActiveFilters"
                 @go-to-import="goToImport"
                 @select-video="cacheStore.toggleCacheItemSelection"
@@ -188,7 +197,9 @@
               }}
               <!-- 显示项类型统计 -->
               <span class="ml-2 text-xs">
-                ({{ cacheStore.groupCount }}{{ $t('cache.sidebar.groups') }} + {{ cacheStore.singleVideoCount }}{{ $t('cache.sidebar.singleVideos') }})
+                ({{ cacheStore.groupCount }}{{ $t('cache.sidebar.groups') }} +
+                {{ cacheStore.singleVideoCount
+                }}{{ $t('cache.sidebar.singleVideos') }})
               </span>
             </div>
 
@@ -294,28 +305,38 @@
             <span class="font-medium">{{ cacheStore.totalCacheCount }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500">{{ $t('cache.sidebar.available') }}:</span>
+            <span class="text-green-500"
+              >{{ $t('cache.sidebar.available') }}:</span
+            >
             <span class="font-medium text-green-500">{{
               cacheStore.availableCacheCount
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-red-500">{{ $t('cache.sidebar.unavailable') }}:</span>
+            <span class="text-red-500"
+              >{{ $t('cache.sidebar.unavailable') }}:</span
+            >
             <span class="font-medium text-red-500">{{
               cacheStore.unavailableCacheCount
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-yellow-500">{{ $t('cache.sidebar.incomplete') }}:</span>
+            <span class="text-yellow-500"
+              >{{ $t('cache.sidebar.incomplete') }}:</span
+            >
             <span class="font-medium text-yellow-500">{{
               cacheStore.incompleteCacheCount
             }}</span>
           </div>
 
           <!-- 组统计 -->
-          <div class="flex justify-between pt-1 border-t border-(--border-color)">
+          <div
+            class="flex justify-between pt-1 border-t border-(--border-color)"
+          >
             <span class="text-blue-500">{{ $t('cache.sidebar.groups') }}:</span>
-            <span class="font-medium text-blue-500">{{ cacheStore.groupCount }}</span>
+            <span class="font-medium text-blue-500">{{
+              cacheStore.groupCount
+            }}</span>
           </div>
           <div class="flex justify-between">
             <span>{{ $t('cache.sidebar.singleVideos') }}:</span>
@@ -323,9 +344,11 @@
           </div>
           <div class="flex justify-between">
             <span>{{ $t('cache.sidebar.averagePerGroup') }}:</span>
-            <span class="font-medium">{{ cacheStore.averageVideosPerGroup }}</span>
+            <span class="font-medium">{{
+              cacheStore.averageVideosPerGroup
+            }}</span>
           </div>
-          
+
           <div
             class="flex justify-between pt-1 border-t border-(--border-color)"
           >
@@ -342,7 +365,9 @@
           class="mt-2 pt-2 border-t border-(--border-color)"
         >
           <div class="text-xs text-(--desc-color) mb-1">
-            {{ $t('cache.sidebar.selectedItems', [cacheStore.selectedItemsCount]) }}
+            {{
+              $t('cache.sidebar.selectedItems', [cacheStore.selectedItemsCount])
+            }}
           </div>
           <button
             class="w-full text-xs text-(--primary-color) hover:underline mb-1 text-left"
@@ -420,9 +445,24 @@ import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
 import { AppLog } from '@/services/utils';
 import { transformCacheRecord } from '@/utils/transform';
-import { Empty, CacheMixedList, BatchDeleteDialog, BatchDeleteProgressDialog, BatchDeleteResultDialog, BatchActionBar, Dropdown } from '@/components';
-import { TransferDialog, TransferProgressDialog, CacheRootMigrationDialog } from '@/components/CachePage';
-import { initializeCacheKeyboardShortcuts, cleanupCacheKeyboardShortcuts } from '@/services/keyboard';
+import {
+  Empty,
+  CacheMixedList,
+  BatchDeleteDialog,
+  BatchDeleteProgressDialog,
+  BatchDeleteResultDialog,
+  BatchActionBar,
+  Dropdown,
+} from '@/components';
+import {
+  TransferDialog,
+  TransferProgressDialog,
+  CacheRootMigrationDialog,
+} from '@/components/CachePage';
+import {
+  initializeCacheKeyboardShortcuts,
+  cleanupCacheKeyboardShortcuts,
+} from '@/services/keyboard';
 import type * as Types from '@/types/cache.d';
 import type * as TransferTypes from '@/types/transfer.d';
 
@@ -444,7 +484,6 @@ const searchKeyword = ref<string>('');
 const selectedStatus = ref<string>('');
 const selectedUploader = ref<string>('');
 const selectedSort = ref<string>('completionTime-desc');
-
 
 // 监听排序和筛选变化
 watch(selectedSort, () => {
@@ -470,10 +509,12 @@ const showDeleteProgressDialog = ref(false);
 const showDeleteResultDialog = ref(false);
 
 // 批量删除相关状态
-const itemsToDelete = ref<Array<{
-  type: 'video' | 'group';
-  data: Types.CacheItem | Types.CacheGroup;
-}>>([]);
+const itemsToDelete = ref<
+  Array<{
+    type: 'video' | 'group';
+    data: Types.CacheItem | Types.CacheGroup;
+  }>
+>([]);
 
 const deleteProgress = ref<{
   total: number;
@@ -711,10 +752,10 @@ async function refreshList(): Promise<void> {
   try {
     // 清除选择状态
     cacheStore.clearSelection();
-    
+
     // 执行增量扫描
     const result = await cacheStore.incrementalScanCacheRoot();
-    
+
     // 显示扫描结果
     if (result.newDirectoriesCount > 0 || result.deletedDirectoriesCount > 0) {
       const message = `${$t('cache.incrementalScan.success')}: ${$t('cache.incrementalScan.importedCount')} ${result.importedCount}, ${$t('cache.incrementalScan.cleanedCount')} ${result.cleanedCount}`;
@@ -781,7 +822,7 @@ async function deleteItem(item: Types.CacheItem): Promise<void> {
       title: '删除确认',
       kind: 'warning',
     });
-    
+
     if (!confirmed) {
       return;
     }
@@ -804,11 +845,16 @@ async function batchDelete(): Promise<void> {
     }
 
     // 从后端获取所有显示项（支持跨页选择）
-    const allDisplayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+    const allDisplayItems = (await invoke(
+      'get_cache_display_items',
+    )) as Types.DisplayItem[];
 
     // 提取所有视频项
     const allCacheItems: Types.CacheItem[] = allDisplayItems
-      .filter((item): item is { type: 'single_video'; video: Types.CacheRecord } => item.type === 'single_video')
+      .filter(
+        (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
+          item.type === 'single_video',
+      )
       .map((item) => transformCacheRecord(item.video));
 
     // 创建 ID 到缓存项的映射，方便快速查找
@@ -899,9 +945,10 @@ async function handleDeleteConfirm(): Promise<void> {
       }
 
       const item = itemsToDelete.value[i];
-      const itemTitle = item.type === 'group' 
-        ? (item.data as Types.CacheGroup).title 
-        : (item.data as Types.CacheItem).title;
+      const itemTitle =
+        item.type === 'group'
+          ? (item.data as Types.CacheGroup).title
+          : (item.data as Types.CacheItem).title;
 
       deleteProgress.value.currentItem = itemTitle;
 
@@ -948,9 +995,10 @@ async function handleDeleteConfirm(): Promise<void> {
         deleteProgress.value.failed++;
         deleteProgress.value.failedItems.push(itemTitle);
         failures.push({
-          itemId: item.type === 'group' 
-            ? (item.data as Types.CacheGroup).groupId 
-            : (item.data as Types.CacheItem).id,
+          itemId:
+            item.type === 'group'
+              ? (item.data as Types.CacheGroup).groupId
+              : (item.data as Types.CacheItem).id,
           itemTitle,
           error: error instanceof Error ? error.message : '未知错误',
         });
@@ -1067,17 +1115,20 @@ async function openGroupFolder(group: Types.CacheGroup): Promise<void> {
 async function deleteGroup(group: Types.CacheGroup): Promise<void> {
   try {
     // 确认删除
-    const confirmed = await dialog.ask($t('cache.group.confirmDeleteGroup', [group.videoCount]), {
-      title: '删除确认',
-      kind: 'warning',
-    });
-    
+    const confirmed = await dialog.ask(
+      $t('cache.group.confirmDeleteGroup', [group.videoCount]),
+      {
+        title: '删除确认',
+        kind: 'warning',
+      },
+    );
+
     if (!confirmed) {
       return;
     }
 
     const results = await cacheStore.deleteGroup(group.groupId);
-    
+
     // 显示结果
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
@@ -1155,7 +1206,9 @@ async function openCacheRootMigration(): Promise<void> {
  * 处理传输对话框确认
  * 需求 1.2, 2.2: 用户选择目标位置后开始传输
  */
-async function handleTransferConfirm(target: TransferTypes.TransferTarget): Promise<void> {
+async function handleTransferConfirm(
+  target: TransferTypes.TransferTarget,
+): Promise<void> {
   try {
     showTransferDialog.value = false;
 
@@ -1165,11 +1218,16 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
     }
 
     // 获取所有显示项
-    const allDisplayItems = (await invoke('get_cache_display_items')) as Types.DisplayItem[];
+    const allDisplayItems = (await invoke(
+      'get_cache_display_items',
+    )) as Types.DisplayItem[];
 
     // 提取所有视频项
     const allCacheItems: Types.CacheItem[] = allDisplayItems
-      .filter((item): item is { type: 'single_video'; video: Types.CacheRecord } => item.type === 'single_video')
+      .filter(
+        (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
+          item.type === 'single_video',
+      )
       .map((item) => transformCacheRecord(item.video));
 
     // 构建源文件列表
@@ -1205,7 +1263,10 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
     } else {
       const errorMsg = transferStore.lastError || $t('transfer.startFailed');
       // 检测源文件不存在的错误
-      if (errorMsg.includes('源文件不存在') || errorMsg.includes('SourceNotFound')) {
+      if (
+        errorMsg.includes('源文件不存在') ||
+        errorMsg.includes('SourceNotFound')
+      ) {
         new AppError($t('transfer.sourceNotFound'), { name: 'error' }).handle();
       } else {
         new AppError(errorMsg, { name: 'error' }).handle();
@@ -1214,7 +1275,10 @@ async function handleTransferConfirm(target: TransferTypes.TransferTarget): Prom
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     // 检测源文件不存在的错误
-    if (errorMsg.includes('源文件不存在') || errorMsg.includes('SourceNotFound')) {
+    if (
+      errorMsg.includes('源文件不存在') ||
+      errorMsg.includes('SourceNotFound')
+    ) {
       new AppError($t('transfer.sourceNotFound'), { name: 'error' }).handle();
     } else {
       new AppError(error).handle();
@@ -1233,7 +1297,9 @@ function handleTransferCancel(): void {
  * 处理缓存根目录迁移确认
  * 需求 8.2, 8.3: 用户选择新位置后开始迁移
  */
-async function handleCacheRootMigrationConfirm(target: TransferTypes.TransferTarget): Promise<void> {
+async function handleCacheRootMigrationConfirm(
+  target: TransferTypes.TransferTarget,
+): Promise<void> {
   try {
     showCacheRootMigrationDialog.value = false;
 
@@ -1251,9 +1317,13 @@ async function handleCacheRootMigrationConfirm(target: TransferTypes.TransferTar
 
     if (taskId) {
       showTransferProgressDialog.value = true;
-      new AppError($t('transfer.rootMigration.migrationStarted'), { name: 'success' }).handle();
+      new AppError($t('transfer.rootMigration.migrationStarted'), {
+        name: 'success',
+      }).handle();
     } else {
-      new AppError(transferStore.lastError || $t('transfer.startFailed'), { name: 'error' }).handle();
+      new AppError(transferStore.lastError || $t('transfer.startFailed'), {
+        name: 'error',
+      }).handle();
     }
   } catch (error) {
     new AppError(error).handle();
@@ -1449,11 +1519,15 @@ function handleNavigateDownEvent(): void {
 
 /* 批量操作栏动画 */
 .batch-action-bar-enter-active {
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
 }
 
 .batch-action-bar-leave-active {
-  transition: opacity 0.15s ease-in, transform 0.15s ease-in;
+  transition:
+    opacity 0.15s ease-in,
+    transform 0.15s ease-in;
 }
 
 .batch-action-bar-enter-from,

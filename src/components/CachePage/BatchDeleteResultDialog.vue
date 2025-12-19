@@ -11,10 +11,14 @@
           class="bg-(--solid-block-color) rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto z-50"
         >
           <!-- 对话框头部 -->
-          <div class="sticky top-0 bg-(--solid-block-color) border-b border-(--split-color) p-6 flex items-center justify-between">
+          <div
+            class="sticky top-0 bg-(--solid-block-color) border-b border-(--split-color) p-6 flex items-center justify-between"
+          >
             <h2 class="text-lg font-semibold flex items-center gap-2">
               <i class="fa-solid fa-check-circle text-green-500"></i>
-              <span class="text-(--content-color)">{{ $t('cache.batchDelete.resultTitle') }}</span>
+              <span class="text-(--content-color)">{{
+                $t('cache.batchDelete.resultTitle')
+              }}</span>
             </h2>
           </div>
 
@@ -25,8 +29,12 @@
               <div class="completion-box">
                 <i class="fa-solid fa-check-circle text-green-500 text-2xl"></i>
                 <div>
-                  <div class="completion-title">{{ $t('cache.batchDelete.completionTitle') }}</div>
-                  <div class="completion-desc">{{ $t('cache.batchDelete.completionDesc') }}</div>
+                  <div class="completion-title">
+                    {{ $t('cache.batchDelete.completionTitle') }}
+                  </div>
+                  <div class="completion-desc">
+                    {{ $t('cache.batchDelete.completionDesc') }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -44,8 +52,12 @@
                     <i class="fa-solid fa-check text-green-500"></i>
                   </div>
                   <div class="stat-content">
-                    <div class="stat-label">{{ $t('cache.batchDelete.successCount') }}</div>
-                    <div class="stat-value text-green-600">{{ result.successCount }}</div>
+                    <div class="stat-label">
+                      {{ $t('cache.batchDelete.successCount') }}
+                    </div>
+                    <div class="stat-value text-green-600">
+                      {{ result.successCount }}
+                    </div>
                   </div>
                 </div>
 
@@ -54,8 +66,12 @@
                     <i class="fa-solid fa-times text-red-500"></i>
                   </div>
                   <div class="stat-content">
-                    <div class="stat-label">{{ $t('cache.batchDelete.failureCount') }}</div>
-                    <div class="stat-value text-red-600">{{ result.failedCount }}</div>
+                    <div class="stat-label">
+                      {{ $t('cache.batchDelete.failureCount') }}
+                    </div>
+                    <div class="stat-value text-red-600">
+                      {{ result.failedCount }}
+                    </div>
                   </div>
                 </div>
 
@@ -64,28 +80,45 @@
                     <i class="fa-solid fa-database text-(--desc-color)"></i>
                   </div>
                   <div class="stat-content">
-                    <div class="stat-label">{{ $t('cache.batchDelete.spaceFreed') }}</div>
-                    <div class="stat-value">{{ formatFileSize(result.spaceFreed) }}</div>
+                    <div class="stat-label">
+                      {{ $t('cache.batchDelete.spaceFreed') }}
+                    </div>
+                    <div class="stat-value">
+                      {{ formatFileSize(result.spaceFreed) }}
+                    </div>
                   </div>
                 </div>
 
                 <div class="stat-item">
                   <div class="stat-icon">
-                    <i class="fa-solid fa-hourglass-end text-(--desc-color)"></i>
+                    <i
+                      class="fa-solid fa-hourglass-end text-(--desc-color)"
+                    ></i>
                   </div>
                   <div class="stat-content">
-                    <div class="stat-label">{{ $t('cache.batchDelete.duration') }}</div>
-                    <div class="stat-value">{{ formatDuration(result.duration) }}</div>
+                    <div class="stat-label">
+                      {{ $t('cache.batchDelete.duration') }}
+                    </div>
+                    <div class="stat-value">
+                      {{ formatDuration(result.duration) }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- 失败详情 -->
-            <div v-if="result.failures && result.failures.length > 0" class="failures-section">
+            <div
+              v-if="result.failures && result.failures.length > 0"
+              class="failures-section"
+            >
               <h3 class="section-title">
                 <i class="fa-solid fa-exclamation-triangle text-red-500"></i>
-                <span>{{ $t('cache.batchDelete.failureDetails') }} ({{ result.failures.length }})</span>
+                <span
+                  >{{ $t('cache.batchDelete.failureDetails') }} ({{
+                    result.failures.length
+                  }})</span
+                >
               </h3>
 
               <div class="failures-list">
@@ -99,7 +132,9 @@
                     <span class="failure-title">{{ failure.itemTitle }}</span>
                   </div>
                   <div class="failure-error">
-                    <span class="error-label">{{ $t('cache.batchDelete.errorMessage') }}:</span>
+                    <span class="error-label"
+                      >{{ $t('cache.batchDelete.errorMessage') }}:</span
+                    >
                     <span class="error-text">{{ failure.error }}</span>
                   </div>
                 </div>
@@ -107,19 +142,28 @@
             </div>
 
             <!-- 建议信息 -->
-            <div v-if="result.failures && result.failures.length > 0" class="suggestion-section">
+            <div
+              v-if="result.failures && result.failures.length > 0"
+              class="suggestion-section"
+            >
               <div class="suggestion-box">
                 <i class="fa-solid fa-lightbulb text-blue-500 text-lg mt-1"></i>
                 <div>
-                  <div class="suggestion-title">{{ $t('cache.batchDelete.suggestion') }}</div>
-                  <div class="suggestion-desc">{{ $t('cache.batchDelete.suggestionDesc') }}</div>
+                  <div class="suggestion-title">
+                    {{ $t('cache.batchDelete.suggestion') }}
+                  </div>
+                  <div class="suggestion-desc">
+                    {{ $t('cache.batchDelete.suggestionDesc') }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 对话框底部 -->
-          <div class="sticky bottom-0 bg-(--solid-block-color) border-t border-(--split-color) p-6 flex justify-end gap-3">
+          <div
+            class="sticky bottom-0 bg-(--solid-block-color) border-t border-(--split-color) p-6 flex justify-end gap-3"
+          >
             <button
               v-if="result.failures && result.failures.length > 0"
               class="px-4 py-2 rounded-lg bg-(--solid-button-color) text-(--content-color) hover:bg-(--button-color) transition-colors font-medium"
@@ -209,7 +253,7 @@ function formatDuration(ms: number): string {
  */
 function generateErrorLog(): string {
   const { t: $t } = useI18n();
-  
+
   if (!props.result.failures || props.result.failures.length === 0) {
     return '';
   }

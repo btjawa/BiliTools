@@ -1,8 +1,14 @@
 import { defineStore } from 'pinia';
 import { Settings } from '@/services/backend';
 import { computed, reactive, ref, toRefs } from 'vue';
+import { CACHE_AUTO_REFRESH } from '@/constants';
 
 export const useSettingsStore = defineStore('settings', () => {
+  // 缓存自动刷新间隔（分钟），0 表示禁用
+  const cacheAutoRefreshInterval = ref(
+    CACHE_AUTO_REFRESH.DEFAULT_INTERVAL_MINUTES,
+  );
+
   const s = reactive<Settings>({
     add_metadata: true,
     auto_check_update: false, // for watch() to take effet when enabled
@@ -80,5 +86,11 @@ export const useSettingsStore = defineStore('settings', () => {
     noProxy: s.proxy.address ? undefined : '*',
   }));
 
-  return { ...toRefs(s), isDark, proxyUrl, proxyConfig };
+  return {
+    ...toRefs(s),
+    isDark,
+    proxyUrl,
+    proxyConfig,
+    cacheAutoRefreshInterval,
+  };
 });

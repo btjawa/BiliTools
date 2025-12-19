@@ -386,8 +386,6 @@ function formatTime(seconds: number): string {
   }
 }
 
-
-
 /**
  * 格式化错误时间
  */

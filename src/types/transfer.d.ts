@@ -20,10 +20,6 @@ export type TransferType = 'individual' | 'root_migration';
  */
 export type ConflictStrategy = 'Skip' | 'Overwrite' | 'Rename' | 'Ask';
 
-
-
-
-
 /**
  * 传输任务状态
  * @deprecated 请使用 ProgressStatus from './common'
@@ -67,9 +63,11 @@ export function migrateTransferProgress(oldProgress: {
   status: TransferTaskStatus;
   errorMessage?: string;
 }): TransferProgress {
-  const percentage = oldProgress.totalFiles > 0 
-    ? (oldProgress.completedFiles / oldProgress.totalFiles) * PROGRESS.MAX_PERCENTAGE 
-    : PROGRESS.MIN_PERCENTAGE;
+  const percentage =
+    oldProgress.totalFiles > 0
+      ? (oldProgress.completedFiles / oldProgress.totalFiles) *
+        PROGRESS.MAX_PERCENTAGE
+      : PROGRESS.MIN_PERCENTAGE;
 
   return {
     // FileTransferProgress 字段
@@ -81,7 +79,7 @@ export function migrateTransferProgress(oldProgress: {
     currentVideoName: oldProgress.currentVideoName || '',
     currentFile: oldProgress.currentFile,
     errorMessage: oldProgress.errorMessage,
-    
+
     // BaseProgress 字段
     total: oldProgress.totalFiles,
     completed: oldProgress.completedFiles,
@@ -111,8 +109,6 @@ export interface RootMigrationRequest {
   updateDatabase: boolean;
 }
 
-
-
 /**
  * 传输任务
  */
@@ -126,8 +122,6 @@ export interface TransferTask {
   created_at: number;
   updated_at: number;
 }
-
-
 
 /**
  * 传输响应
@@ -143,5 +137,3 @@ export interface TransferResponse {
  * @deprecated 请使用 ProgressCallback<TransferProgress> from './common'
  */
 export type ProgressCallback = (progress: TransferProgress) => void;
-
-

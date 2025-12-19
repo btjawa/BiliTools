@@ -63,7 +63,10 @@
                 v-model="importOptions.duplicateHandling"
                 :drop="[
                   { id: 'skip', name: $t('cache.import.duplicateSkip') },
-                  { id: 'overwrite', name: $t('cache.import.duplicateOverwrite') },
+                  {
+                    id: 'overwrite',
+                    name: $t('cache.import.duplicateOverwrite'),
+                  },
                 ]"
               />
             </div>
@@ -290,7 +293,11 @@
               isScanning ? 'fa-spinner fa-spin' : 'fa-magnifying-glass',
             ]"
           ></i>
-          <span>{{ isScanning ? $t('cache.import.sidebar.scanning') : $t('cache.import.sidebar.scan') }}</span>
+          <span>{{
+            isScanning
+              ? $t('cache.import.sidebar.scanning')
+              : $t('cache.import.sidebar.scan')
+          }}</span>
         </button>
 
         <button
@@ -306,7 +313,11 @@
               isImporting ? 'fa-spinner fa-spin' : 'fa-download',
             ]"
           ></i>
-          <span>{{ isImporting ? $t('cache.import.sidebar.importing') : $t('cache.import.sidebar.startImport') }}</span>
+          <span>{{
+            isImporting
+              ? $t('cache.import.sidebar.importing')
+              : $t('cache.import.sidebar.startImport')
+          }}</span>
         </button>
 
         <button
@@ -333,13 +344,17 @@
             <span class="font-medium">{{ scanResult.totalDirectories }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500">{{ $t('cache.import.sidebar.valid') }}:</span>
+            <span class="text-green-500"
+              >{{ $t('cache.import.sidebar.valid') }}:</span
+            >
             <span class="font-medium text-green-500">{{
               scanResult.validDirectories
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-red-500">{{ $t('cache.import.sidebar.invalid') }}:</span>
+            <span class="text-red-500"
+              >{{ $t('cache.import.sidebar.invalid') }}:</span
+            >
             <span class="font-medium text-red-500">{{
               scanResult.invalidDirectories
             }}</span>
@@ -364,19 +379,25 @@
             <span class="font-medium">{{ importProgressPercentage }}%</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500">{{ $t('cache.import.sidebar.success') }}:</span>
+            <span class="text-green-500"
+              >{{ $t('cache.import.sidebar.success') }}:</span
+            >
             <span class="font-medium text-green-500">{{
               importProgress.successCount ?? 0
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-red-500">{{ $t('cache.import.sidebar.failure') }}:</span>
+            <span class="text-red-500"
+              >{{ $t('cache.import.sidebar.failure') }}:</span
+            >
             <span class="font-medium text-red-500">{{
               importProgress.failureCount ?? 0
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-yellow-500">{{ $t('cache.import.sidebar.skipped') }}:</span>
+            <span class="text-yellow-500"
+              >{{ $t('cache.import.sidebar.skipped') }}:</span
+            >
             <span class="font-medium text-yellow-500">{{
               importProgress.skippedCount ?? 0
             }}</span>
@@ -387,7 +408,9 @@
         <div
           class="text-xs text-(--desc-color) mt-3 pt-2 border-t border-(--border-color)"
         >
-          <div class="font-medium mb-1 text-(--text-color)">{{ $t('cache.import.sidebar.help') }}:</div>
+          <div class="font-medium mb-1 text-(--text-color)">
+            {{ $t('cache.import.sidebar.help') }}:
+          </div>
           <div class="space-y-1">
             <div>{{ $t('cache.import.sidebar.step1') }}</div>
             <div>{{ $t('cache.import.sidebar.step2') }}</div>
