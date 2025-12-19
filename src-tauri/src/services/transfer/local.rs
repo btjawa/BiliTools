@@ -2,16 +2,11 @@
 //!
 //! 提供本地文件系统和可移动存储设备的传输功能。
 
-use super::constants::{
-    buffer_sizes, concurrency, flush_intervals, progress_intervals, timing,
-};
+use super::constants::{buffer_sizes, concurrency, flush_intervals, progress_intervals, timing};
 use super::error::TransferError;
 use super::filename::FilenameHandler;
 use super::protocol::{ProgressSender, TransferProtocol};
-use super::types::{
-    ConflictStrategy, TaskStatus, TransferProgress,
-    TransferTarget,
-};
+use super::types::{ConflictStrategy, TaskStatus, TransferProgress, TransferTarget};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -708,4 +703,3 @@ fn get_available_space_unix(path: &Path) -> Result<u64, TransferError> {
         })
     }
 }
-

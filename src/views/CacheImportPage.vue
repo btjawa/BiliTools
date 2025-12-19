@@ -198,84 +198,6 @@
           </div>
         </div>
 
-        <!-- 导入进度区域 -->
-        <div v-if="importProgress" class="bg-(--block-color) rounded-lg p-6">
-          <h2 class="text-lg font-medium mb-4">
-            <i
-              :class="[$fa.weight, 'fa-spinner', { 'fa-spin': isImporting }]"
-            ></i>
-            <span>{{ $t('cache.import.progress') }}</span>
-          </h2>
-
-          <div class="space-y-4">
-            <!-- 总体进度 -->
-            <div>
-              <div class="flex justify-between text-sm mb-2">
-                <span>{{ $t('cache.import.overallProgress') }}</span>
-                <span>{{ importProgressPercentage }}%</span>
-              </div>
-              <ProgressBar :progress="importProgressPercentage" />
-            </div>
-
-            <!-- 当前状态 -->
-            <div class="text-sm">
-              <div class="flex justify-between mb-1">
-                <span>{{ $t('cache.import.currentStatus') }}:</span>
-                <span>{{
-                  $t('cache.import.status.' + importProgress.status)
-                }}</span>
-              </div>
-              <div class="text-(--desc-color) truncate">
-                {{ importProgress.currentDirectory }}
-              </div>
-            </div>
-
-            <!-- 统计信息 -->
-            <div class="grid grid-cols-3 gap-4 text-center text-sm">
-              <div>
-                <div class="font-medium text-green-500">
-                  {{ importProgress.successCount }}
-                </div>
-                <div class="text-(--desc-color)">
-                  {{ $t('cache.import.success') }}
-                </div>
-              </div>
-              <div>
-                <div class="font-medium text-red-500">
-                  {{ importProgress.failureCount }}
-                </div>
-                <div class="text-(--desc-color)">
-                  {{ $t('cache.import.failure') }}
-                </div>
-              </div>
-              <div>
-                <div class="font-medium text-yellow-500">
-                  {{ importProgress.skippedCount }}
-                </div>
-                <div class="text-(--desc-color)">
-                  {{ $t('cache.import.skipped') }}
-                </div>
-              </div>
-            </div>
-
-            <!-- 错误列表 -->
-            <div
-              v-if="importProgress.errors.length > 0"
-              class="max-h-32 overflow-y-auto"
-            >
-              <div class="text-sm font-medium text-red-500 mb-2">
-                {{ $t('cache.import.errors') }}:
-              </div>
-              <div
-                v-for="(error, index) in importProgress.errors"
-                :key="index"
-                class="text-sm text-red-500 mb-1"
-              >
-                {{ error.message }}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- 侧边栏操作区域 -->
@@ -429,7 +351,7 @@ import { useCacheStore } from '@/store/cache';
 import { cacheImportService, validateCachePath } from '@/services/cache';
 import { formatBytes } from '@/utils/format';
 import { AppError } from '@/services/error';
-import { ProgressBar, Dropdown } from '@/components';
+import { Dropdown } from '@/components';
 import type * as Types from '@/types/cache.d';
 
 const { t: $t } = useI18n();

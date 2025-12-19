@@ -59,7 +59,6 @@
               <div class="flex gap-3 items-center flex-wrap">
                 <!-- UP主筛选 -->
                 <Dropdown
-                  v-if="cacheStore.allUploaders.length > 0"
                   v-model="selectedUploader"
                   :drop="[
                     { id: '', name: $t('cache.list.allUploaders') },
@@ -105,7 +104,7 @@
             <div v-if="!cacheStore.isLoading" class="h-full">
               <!-- 空状态 -->
               <Empty
-                v-if="cacheStore.paginatedCacheItems.length === 0"
+                v-if="cacheStore.paginatedDisplayItems.length === 0"
                 :text="
                   hasActiveFilters
                     ? $t('cache.list.noResults')
@@ -556,13 +555,14 @@ function applyFilters(): void {
   const previousSelection = [...cacheStore.selectedItems];
 
   const filter: Types.CacheFilter = {
-    ...(searchKeyword.value && { keyword: searchKeyword.value }),
-    ...(selectedStatus.value && {
-      status: [selectedStatus.value as Types.CacheStatus],
-    }),
-    ...(selectedUploader.value && { uploader: selectedUploader.value }),
+    keyword: searchKeyword.value || undefined,
+    status: selectedStatus.value
+      ? [selectedStatus.value as Types.CacheStatus]
+      : undefined,
+    uploader: selectedUploader.value || undefined,
   };
 
+  cacheStore.clearFilter();
   cacheStore.setFilter(filter);
   loadCacheList();
 
@@ -701,6 +701,12 @@ async function refreshList(): Promise<void> {
 
     // 执行增量扫描
     const result = await cacheStore.incrementalScanCacheRoot();
+
+    // 未设置缓存根目录时显示提示
+    if (!result.scannedRoot) {
+      AppLog($t('cache.incrementalScan.cacheRootNotSet'), 'info');
+      return;
+    }
 
     // 显示扫描结果
     if (result.newDirectoriesCount > 0 || result.deletedDirectoriesCount > 0) {
@@ -1079,11 +1085,7 @@ async function deleteGroup(group: Types.CacheGroup): Promise<void> {
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
 
-    if (failureCount === 0) {
-      new AppError(`成功删除组 "${group.title}" 及其 ${successCount} 个视频`, {
-        name: 'success',
-      }).handle();
-    } else {
+    if (failureCount > 0) {
       new AppError(
         `删除组完成：成功 ${successCount} 个，失败 ${failureCount} 个`,
         { name: 'warning' },

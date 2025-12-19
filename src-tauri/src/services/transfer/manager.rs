@@ -532,7 +532,6 @@ async fn execute_transfer_task(
 
     // 执行传输
     let transfer_result: Result<(), TransferError> = async {
-
         let mut transferred_size: u64 = 0;
 
         for (index, source) in source_files.iter().enumerate() {
@@ -596,7 +595,6 @@ async fn execute_transfer_task(
             // 发送文件完成的进度更新
             let _ = tx.send(global_progress.clone()).await;
         }
-
 
         // 发送最终完成状态
         global_progress.status = TaskStatus::Completed;

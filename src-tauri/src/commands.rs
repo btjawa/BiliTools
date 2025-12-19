@@ -601,20 +601,25 @@ fn map_sort_field(frontend_field: &str) -> &str {
         "completionTime" | "downloadTime" | "time" => "time",
         "fileSize" | "size" => "size",
         "title" => "title",
-        _ => "time" // 默认按时间排序
+        _ => "time", // 默认按时间排序
     }
 }
 
 /// 获取字符串的排序键（中文转拼音首字母，其他字符保持原样）
 fn get_title_sort_key(title: &str) -> String {
     use pinyin::ToPinyin;
-    
+
     title
         .chars()
         .map(|c| {
             if let Some(pinyin) = c.to_pinyin() {
                 // 中文字符，获取拼音首字母
-                pinyin.plain().chars().next().unwrap_or(c).to_ascii_lowercase()
+                pinyin
+                    .plain()
+                    .chars()
+                    .next()
+                    .unwrap_or(c)
+                    .to_ascii_lowercase()
             } else {
                 c.to_ascii_lowercase()
             }
@@ -652,22 +657,13 @@ pub async fn get_cache_display_items_paginated(
     // 获取所有记录
     let mut records = if let Some(status) = &filters.filter_status {
         if status == "collection" {
-            // 集合筛选需要获取所有记录后动态判断
             cache_records::get_all().await?
         } else {
-            // 其他状态按数据库字段筛选
             cache_records::get_by_status(status).await?
         }
     } else {
         cache_records::get_all().await?
     };
-
-    // 应用基础过滤（UP主）
-    if let Some(uploader) = &filters.filter_uploader {
-        if !uploader.is_empty() {
-            records.retain(|record| record.uname == *uploader);
-        }
-    }
 
     // 应用文件大小过滤
     if let Some(min) = filters.min_size {
@@ -699,23 +695,19 @@ pub async fn get_cache_display_items_paginated(
     // 应用集合筛选
     if let Some(status) = &filters.filter_status {
         if status == "collection" {
-            // 先创建一个副本用于检查
             let records_for_check = records.clone();
-            // 只保留属于集合的视频
             records.retain(|record| {
-                // 检查是否有其他视频共享相同的 group_id
                 if let Some(group_id) = &record.group_id {
                     if !group_id.is_empty() {
-                        let has_other_videos_with_same_group = records_for_check.iter().any(|other| {
-                            other.id != record.id && 
-                            other.group_id.as_ref() == Some(group_id)
-                        });
+                        let has_other_videos_with_same_group =
+                            records_for_check.iter().any(|other| {
+                                other.id != record.id && other.group_id.as_ref() == Some(group_id)
+                            });
                         if has_other_videos_with_same_group {
                             return true;
                         }
                     }
                 }
-                // 多P视频也属于集合
                 record.p > 1
             });
         }
@@ -725,6 +717,18 @@ pub async fn get_cache_display_items_paginated(
     let mut display_items = group_service
         .build_display_items_with_states(records)
         .await?;
+
+    // 应用 UP 主筛选（在构建显示项后应用，以支持合集筛选）
+    if let Some(uploader) = &filters.filter_uploader {
+        if !uploader.is_empty() {
+            display_items.retain(|item| match item {
+                DisplayItem::SingleVideo { video } => video.uname == *uploader,
+                DisplayItem::VideoGroup { group } => {
+                    group.videos.iter().any(|v| v.uname == *uploader)
+                }
+            });
+        }
+    }
 
     // 应用组ID过滤
     if let Some(gid) = &filters.group_id {
@@ -1102,8 +1106,8 @@ pub struct ScanPreviewInfo {
 // 传输功能相关命令
 
 use crate::services::transfer::{
-    LocalFileProtocol, RootMigrationRequest, TransferManager, TransferProgress,
-    TransferProtocol, TransferRequest, TransferTarget,
+    LocalFileProtocol, RootMigrationRequest, TransferManager, TransferProgress, TransferProtocol,
+    TransferRequest, TransferTarget,
 };
 use std::sync::OnceLock;
 

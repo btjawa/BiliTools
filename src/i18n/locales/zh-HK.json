@@ -585,7 +585,8 @@
       "cleanedCount": "清理記錄",
       "noChanges": "未發現變化",
       "success": "增量掃描完成",
-      "error": "增量掃描失敗"
+      "error": "增量掃描失敗",
+      "cacheRootNotSet": "尚未設定快取根目錄"
     },
     "autoRefresh": {
       "changed": "快取自動重新整理：匯入 {0} 個，清理 {1} 個"
@@ -600,7 +601,8 @@
       "totalSize": "總大小",
       "selectedItems": "已選擇 {0} 項",
       "clearSelection": "清除選擇",
-      "batchDelete": "批次刪除"
+      "batchDelete": "批次刪除",
+      "singleVideos": "個單獨影片"
     },
     "batchDelete": {
       "title": "批次刪除確認",

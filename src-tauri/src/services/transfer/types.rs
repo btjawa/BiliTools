@@ -31,7 +31,7 @@ impl SpeedCalculator {
     pub fn new() -> Self {
         const TIME_WINDOW_SECONDS: u64 = 10;
         const MAX_SAMPLES: usize = 50;
-        
+
         Self {
             samples: VecDeque::new(),
             window_size: Duration::from_secs(TIME_WINDOW_SECONDS),

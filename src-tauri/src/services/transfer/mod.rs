@@ -23,9 +23,7 @@ pub mod validator;
 // 重新导出常用类型
 pub use error::TransferError;
 pub use filename::FilenameHandler;
-pub use local::{
-    calculate_directory_size, get_available_space, LocalFileProtocol,
-};
+pub use local::{calculate_directory_size, get_available_space, LocalFileProtocol};
 pub use manager::TransferManager;
 pub use protocol::{ProgressCallback, ProgressSender, TransferProtocol};
 pub use types::{

@@ -586,7 +586,8 @@
       "cleanedCount": "清理记录",
       "noChanges": "未发现变化",
       "success": "增量扫描完成",
-      "error": "增量扫描失败"
+      "error": "增量扫描失败",
+      "cacheRootNotSet": "尚未设置缓存根目录"
     },
     "autoRefresh": {
       "changed": "缓存自动刷新：导入 {0} 个，清理 {1} 个"
@@ -601,7 +602,8 @@
       "totalSize": "总大小",
       "selectedItems": "已选择 {0} 项",
       "clearSelection": "清除选择",
-      "batchDelete": "批量删除"
+      "batchDelete": "批量删除",
+      "singleVideos": "个单独视频"
     },
     "batchDelete": {
       "title": "批量删除确认",

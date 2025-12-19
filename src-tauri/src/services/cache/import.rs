@@ -58,6 +58,7 @@ impl Default for ImportOptions {
 
 /// 导入结果
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ImportResult {
     pub import_id: String,
     pub total_found: i32,
@@ -69,6 +70,7 @@ pub struct ImportResult {
 
 /// 导入详情
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ImportDetail {
     pub directory_path: String,
     pub status: ImportStatus,
@@ -86,6 +88,7 @@ pub enum ImportStatus {
 
 /// 导入进度
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ImportProgress {
     pub import_id: String,
     pub total_directories: i32,
@@ -94,8 +97,11 @@ pub struct ImportProgress {
     pub status: ImportProgressStatus,
     pub errors: Vec<ImportError>,
     pub error_statistics: ErrorStatistics,
-    pub estimated_time_remaining: Option<u64>, // 预计剩余时间（秒）
-    pub processing_speed: f64,                 // 处理速度（目录/秒）
+    pub estimated_time_remaining: Option<u64>,
+    pub processing_speed: f64,
+    pub success_count: i32,
+    pub failure_count: i32,
+    pub skipped_count: i32,
 }
 
 /// 导入进度状态
@@ -121,6 +127,7 @@ pub enum CacheImportTaskType {
 
 /// 导入错误
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ImportError {
     pub directory_path: String,
     pub error_message: String,
@@ -198,6 +205,9 @@ impl ImportService {
             error_statistics: ErrorStatistics::new(),
             estimated_time_remaining: None,
             processing_speed: 0.0,
+            success_count: 0,
+            failure_count: 0,
+            skipped_count: 0,
         }));
 
         // 注册进度状态到全局管理器
@@ -328,10 +338,22 @@ impl ImportService {
                         ImportStatus::Failure => failure_count += 1,
                         ImportStatus::Skipped => skipped_count += 1,
                     }
+                    // 实时更新进度统计
+                    {
+                        let mut prog = progress.write().await;
+                        prog.success_count = success_count;
+                        prog.failure_count = failure_count;
+                        prog.skipped_count = skipped_count;
+                    }
                     details.push(detail);
                 }
                 Err(e) => {
                     failure_count += 1;
+                    // 实时更新进度统计
+                    {
+                        let mut prog = progress.write().await;
+                        prog.failure_count = failure_count;
+                    }
                     details.push(ImportDetail {
                         directory_path: "unknown".to_string(),
                         status: ImportStatus::Failure,
@@ -347,6 +369,9 @@ impl ImportService {
             let mut prog = progress.write().await;
             prog.status = ImportProgressStatus::Completed;
             prog.current_directory = "导入完成".to_string();
+            prog.success_count = success_count;
+            prog.failure_count = failure_count;
+            prog.skipped_count = skipped_count;
         }
 
         // 延迟清理进度状态，给前端足够时间获取最终状态

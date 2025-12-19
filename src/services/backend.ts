@@ -703,7 +703,7 @@ export type HeadersData = { Cookie: string; "User-Agent": string; Referer: strin
 /**
  * 导入错误
  */
-export type ImportError = { directory_path: string; error_message: string; error_type: string; user_friendly_message: string; suggested_solution: string | null; severity: string; is_retryable: boolean }
+export type ImportError = { directoryPath: string; errorMessage: string; errorType: string; userFriendlyMessage: string; suggestedSolution: string | null; severity: string; isRetryable: boolean }
 /**
  * 导入选项
  */
@@ -727,7 +727,7 @@ create_playlist: boolean }
 /**
  * 导入进度
  */
-export type ImportProgress = { import_id: string; total_directories: number; processed_directories: number; current_directory: string; status: ImportProgressStatus; errors: ImportError[]; error_statistics: ErrorStatistics; estimated_time_remaining: number | null; processing_speed: number }
+export type ImportProgress = { importId: string; totalDirectories: number; processedDirectories: number; currentDirectory: string; status: ImportProgressStatus; errors: ImportError[]; errorStatistics: ErrorStatistics; estimatedTimeRemaining: number | null; processingSpeed: number; successCount: number; failureCount: number; skippedCount: number }
 /**
  * 导入进度状态
  */

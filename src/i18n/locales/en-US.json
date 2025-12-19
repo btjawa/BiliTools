@@ -585,7 +585,8 @@
       "cleanedCount": "Records cleaned",
       "noChanges": "No changes detected",
       "success": "Incremental scan completed",
-      "error": "Incremental scan failed"
+      "error": "Incremental scan failed",
+      "cacheRootNotSet": "Cache root directory not set"
     },
     "autoRefresh": {
       "changed": "Cache auto refresh: imported {0}, cleaned {1}"
@@ -600,7 +601,8 @@
       "totalSize": "Total size",
       "selectedItems": "{0} items selected",
       "clearSelection": "Clear selection",
-      "batchDelete": "Batch delete"
+      "batchDelete": "Batch delete",
+      "singleVideos": " single videos"
     },
     "batchDelete": {
       "title": "Confirm Batch Delete",

@@ -607,8 +607,9 @@ export const useCacheStore = defineStore('cache', () => {
           selectedItems.value.splice(selectedIndex, 1);
         }
 
-        // 更新统计信息
+        // 更新统计信息和 UP 主列表
         await updateStatistics();
+        await loadAllUploaders();
         return true;
       },
       {
@@ -693,8 +694,9 @@ export const useCacheStore = defineStore('cache', () => {
           (id) => !successIds.includes(id),
         );
 
-        // 更新统计信息
+        // 更新统计信息和 UP 主列表
         await updateStatistics();
+        await loadAllUploaders();
 
         return results;
       },
@@ -1333,12 +1335,12 @@ export const useCacheStore = defineStore('cache', () => {
 
             // 检查是否完成
             if (
-              progress.status === 'completed' ||
-              progress.status === 'failed' ||
-              progress.status === 'cancelled'
+              progress.status === 'Completed' ||
+              progress.status === 'Error' ||
+              progress.status === 'Cancelled'
             ) {
               isImporting.value = false;
-              if (progress.status === 'completed') {
+              if (progress.status === 'Completed') {
                 // 刷新缓存列表
                 loadDisplayItems();
                 // 刷新缓存根目录状态
@@ -1437,6 +1439,21 @@ export const useCacheStore = defineStore('cache', () => {
    * 检测新增或删除的视频，自动导入新视频并清理已删除的记录
    */
   async function incrementalScanCacheRoot(): Promise<Types.IncrementalScanResult> {
+    // 检查是否已设置缓存根目录，未设置时直接返回空结果
+    const { useTransferStore } = await import('@/store/transfer');
+    const transferStore = useTransferStore();
+    if (!transferStore.currentCacheRoot) {
+      return {
+        scannedRoot: '',
+        newDirectoriesCount: 0,
+        deletedDirectoriesCount: 0,
+        importedCount: 0,
+        cleanedCount: 0,
+        newDirectories: [],
+        deletedDirectories: [],
+      };
+    }
+
     const result = await UnifiedErrorHandler.withErrorBoundary(
       async () => {
         isLoading.value = true;
