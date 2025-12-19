@@ -195,12 +195,6 @@
                   cacheStore.pagination.totalCount,
                 ])
               }}
-              <!-- 显示项类型统计 -->
-              <span class="ml-2 text-xs">
-                ({{ cacheStore.groupCount }}{{ $t('cache.sidebar.groups') }} +
-                {{ cacheStore.singleVideoCount
-                }}{{ $t('cache.sidebar.singleVideos') }})
-              </span>
             </div>
 
             <div class="flex items-center gap-2">
@@ -297,61 +291,13 @@
           <span>{{ $t('transfer.cacheRootMigration') }}</span>
         </button>
 
-        <!-- 统计信息（紧凑显示） -->
+        <!-- 统计信息 -->
         <div class="text-xs text-(--desc-color) space-y-0.5 mt-1">
-          <!-- 基础统计 -->
           <div class="flex justify-between">
             <span>{{ $t('cache.sidebar.total') }}:</span>
             <span class="font-medium">{{ cacheStore.totalCacheCount }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-green-500"
-              >{{ $t('cache.sidebar.available') }}:</span
-            >
-            <span class="font-medium text-green-500">{{
-              cacheStore.availableCacheCount
-            }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-red-500"
-              >{{ $t('cache.sidebar.unavailable') }}:</span
-            >
-            <span class="font-medium text-red-500">{{
-              cacheStore.unavailableCacheCount
-            }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-yellow-500"
-              >{{ $t('cache.sidebar.incomplete') }}:</span
-            >
-            <span class="font-medium text-yellow-500">{{
-              cacheStore.incompleteCacheCount
-            }}</span>
-          </div>
-
-          <!-- 组统计 -->
-          <div
-            class="flex justify-between pt-1 border-t border-(--border-color)"
-          >
-            <span class="text-blue-500">{{ $t('cache.sidebar.groups') }}:</span>
-            <span class="font-medium text-blue-500">{{
-              cacheStore.groupCount
-            }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>{{ $t('cache.sidebar.singleVideos') }}:</span>
-            <span class="font-medium">{{ cacheStore.singleVideoCount }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>{{ $t('cache.sidebar.averagePerGroup') }}:</span>
-            <span class="font-medium">{{
-              cacheStore.averageVideosPerGroup
-            }}</span>
-          </div>
-
-          <div
-            class="flex justify-between pt-1 border-t border-(--border-color)"
-          >
             <span>{{ $t('cache.sidebar.totalSize') }}:</span>
             <span class="font-medium">{{
               formatBytes(cacheStore.totalFileSize)

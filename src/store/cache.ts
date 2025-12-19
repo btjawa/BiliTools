@@ -131,32 +131,15 @@ export const useCacheStore = defineStore('cache', () => {
   });
 
   /**
-   * 总缓存数量
+   * 总缓存数量（使用全量统计数据）
    */
-  const totalCacheCount = computed(() => cacheItems.value.length);
+  const totalCacheCount = computed(() => {
+    if (cacheStatistics.value) {
+      return cacheStatistics.value.totalCount;
+    }
+    return cacheItems.value.length;
+  });
 
-  /**
-   * 可用缓存数量
-   */
-  const availableCacheCount = computed(
-    () => cacheItems.value.filter((item) => item.status === 'available').length,
-  );
-
-  /**
-   * 不可用缓存数量
-   */
-  const unavailableCacheCount = computed(
-    () =>
-      cacheItems.value.filter((item) => item.status === 'unavailable').length,
-  );
-
-  /**
-   * 不完整缓存数量
-   */
-  const incompleteCacheCount = computed(
-    () =>
-      cacheItems.value.filter((item) => item.status === 'incomplete').length,
-  );
 
   /**
    * 总文件大小（使用全量统计数据）
@@ -213,37 +196,6 @@ export const useCacheStore = defineStore('cache', () => {
     return Array.from(groupIds).sort();
   });
 
-  /**
-   * 组数量
-   */
-  const groupCount = computed(
-    () => displayItems.value.filter((item) => item.type === 'group').length,
-  );
-
-  /**
-   * 单个视频数量（不属于任何组）
-   */
-  const singleVideoCount = computed(
-    () => displayItems.value.filter((item) => item.type === 'video').length,
-  );
-
-  /**
-   * 平均每组视频数量
-   */
-  const averageVideosPerGroup = computed(() => {
-    const groups = displayItems.value.filter((item) => item.type === 'group');
-    if (groups.length === 0) return 0;
-
-    const totalVideos = groups.reduce(
-      (sum, item) => sum + (item.data as Types.CacheGroup).videoCount,
-      0,
-    );
-
-    return (
-      Math.round((totalVideos / groups.length) * PROGRESS.MAX_PERCENTAGE) /
-      PROGRESS.MAX_PERCENTAGE
-    );
-  });
 
   /**
    * 是否有选中的项目
@@ -1711,17 +1663,11 @@ export const useCacheStore = defineStore('cache', () => {
     sortedDisplayItems,
     paginatedDisplayItems,
     totalCacheCount,
-    availableCacheCount,
-    unavailableCacheCount,
-    incompleteCacheCount,
     totalFileSize,
     averageFileSize,
     totalDuration,
     allUploaders,
     allGroupIds,
-    groupCount,
-    singleVideoCount,
-    averageVideosPerGroup,
     hasSelectedItems,
     selectedItemsCount,
     isAllSelected,
