@@ -298,6 +298,17 @@ async getCacheStatistics() : Promise<Result<CacheStatistics, TauriError>> {
 }
 },
 /**
+ * 获取所有UP主列表（从全量数据）
+ */
+async getAllUploaders() : Promise<Result<string[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_all_uploaders") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 获取缓存显示项列表（组和单个视频的混合）
  */
 async getCacheDisplayItems() : Promise<Result<DisplayItem[], TauriError>> {

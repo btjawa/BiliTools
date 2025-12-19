@@ -73,6 +73,9 @@ export const useCacheStore = defineStore('cache', () => {
   // 错误状态
   const lastError = ref<string | null>(null);
 
+  // UP主列表（从全量数据获取）
+  const allUploaders = ref<string[]>([]);
+
   // ============================================================================
   // 计算属性
   // ============================================================================
@@ -190,24 +193,6 @@ export const useCacheStore = defineStore('cache', () => {
     }
     // 如果没有统计信息，回退到当前页计算
     return cacheItems.value.reduce((sum, item) => sum + item.duration, 0);
-  });
-
-  /**
-   * 所有UP主列表（用于筛选）
-   */
-  const allUploaders = computed(() => {
-    const uploaders = new Set<string>();
-
-    displayItems.value.forEach((item) => {
-      if (item.type === 'video') {
-        uploaders.add(item.data.uname);
-      } else {
-        uploaders.add(item.data.uname);
-        item.data.videos.forEach((video) => uploaders.add(video.uname));
-      }
-    });
-
-    return Array.from(uploaders).sort();
   });
 
   /**
@@ -435,6 +420,19 @@ export const useCacheStore = defineStore('cache', () => {
     );
 
     isLoading.value = false;
+  }
+
+  /**
+   * 加载所有UP主列表（从全量数据）
+   */
+  async function loadAllUploaders(): Promise<void> {
+    try {
+      const uploaders = await invoke<string[]>('get_all_uploaders');
+      allUploaders.value = uploaders;
+    } catch (error) {
+      console.error('加载UP主列表失败:', error);
+      allUploaders.value = [];
+    }
   }
 
   /**
@@ -1686,6 +1684,7 @@ export const useCacheStore = defineStore('cache', () => {
     // 组状态管理
     loadDisplayItems,
     loadGroupStates,
+    loadAllUploaders,
     toggleGroupExpansion,
     getGroupExpansionState,
     setGroupManagerConfig,

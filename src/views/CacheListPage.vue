@@ -412,6 +412,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import * as dialog from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import { useCacheStore } from '@/store/cache';
 import { useTransferStore } from '@/store/transfer';
 import { cacheManagementService } from '@/services/cache';
@@ -1317,6 +1318,8 @@ function handleCutGroupFromContextMenu(group: Types.CacheGroup): void {
 // ============================================================================
 
 onMounted(async () => {
+  // 加载所有UP主列表（从全量数据）
+  await cacheStore.loadAllUploaders();
   // 初始加载缓存列表
   await loadCacheList();
   // 初始化页面输入

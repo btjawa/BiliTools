@@ -642,3 +642,24 @@ pub async fn get_by_cache_path(cache_path: &str) -> Result<Option<CacheRecord>> 
         Ok(None)
     }
 }
+
+
+/// 获取所有不重复的UP主名称列表（按字母排序）
+pub async fn get_all_uploaders() -> Result<Vec<String>> {
+    let pool = get_db().await?;
+    let (sql, values) = Query::select()
+        .distinct()
+        .column(CacheRecords::Uname)
+        .from(CacheRecords::Table)
+        .order_by(CacheRecords::Uname, sea_query::Order::Asc)
+        .build_sqlx(SqliteQueryBuilder);
+
+    let rows = sqlx::query_with(&sql, values).fetch_all(&pool).await?;
+
+    let uploaders: Vec<String> = rows
+        .iter()
+        .filter_map(|r| r.try_get::<String, _>("uname").ok())
+        .collect();
+
+    Ok(uploaders)
+}

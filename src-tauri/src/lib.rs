@@ -58,6 +58,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             check_local_cover,
             get_cache_stats,
             get_cache_statistics,
+            get_all_uploaders,
             // Group Management
             get_cache_display_items,
             get_cache_display_items_paginated,

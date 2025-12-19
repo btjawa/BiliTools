@@ -503,6 +503,14 @@ pub async fn get_cache_stats() -> TauriResult<CacheStats> {
     })
 }
 
+/// 获取所有UP主列表（从全量数据）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_all_uploaders() -> TauriResult<Vec<String>> {
+    let uploaders = cache_records::get_all_uploaders().await?;
+    Ok(uploaders)
+}
+
 /// 获取完整的缓存统计信息（包含组统计）
 #[tauri::command(async)]
 #[specta::specta]
