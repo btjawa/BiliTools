@@ -22,6 +22,14 @@ export const useSettingsStore = defineStore('settings', () => {
       mp3: false,
       mp4: false,
     },
+    convert_config: {
+      videoQuality: 0,
+      audioBitrate: 0,
+      embedCover: true,
+      danmakuFormat: 0,
+      writeMetadata: true,
+      lastOutputDir: null,
+    },
     default: {
       res: Number(),
       abr: Number(),

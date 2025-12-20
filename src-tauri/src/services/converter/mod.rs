@@ -42,7 +42,7 @@ use tokio::sync::{mpsc, RwLock};
 
 use crate::{
     shared::{get_app_handle, random_string},
-    storage::{cache_records, config},
+    storage::{cache_records, config, convert_tasks},
 };
 
 /// 转换事件类型
@@ -131,6 +131,9 @@ const INVALID_FILENAME_CHARS: &[char] = &['<', '>', ':', '"', '/', '\\', '|', '?
 
 /// 临时文件额外开销系数（1.5倍，用于保守估计）
 const DISK_SPACE_OVERHEAD_FACTOR: f64 = 1.5;
+
+/// 转换临时目录前缀
+const CONVERT_TEMP_PREFIX: &str = "convert_";
 
 /// 文件名处理器
 pub struct FilenameGenerator;
@@ -289,8 +292,13 @@ impl ConvertTaskManager {
         }
     }
 
-    /// 添加任务
+    /// 添加任务（同时持久化到数据库）
     pub async fn add_task(&self, task: ConvertTaskView) {
+        // 持久化到数据库
+        if let Err(e) = convert_tasks::upsert(&task).await {
+            log::error!("持久化转换任务失败: {}", e);
+        }
+
         let mut tasks = self.tasks.write().await;
         tasks.insert(task.id.clone(), task);
     }
@@ -301,37 +309,58 @@ impl ConvertTaskManager {
         tasks.get(task_id).cloned()
     }
 
-    /// 更新任务进度
+    /// 更新任务进度（同时持久化到数据库）
     pub async fn update_progress(&self, task_id: &str, progress: ConvertProgress) {
         let mut tasks = self.tasks.write().await;
         if let Some(task) = tasks.get_mut(task_id) {
             task.update_progress(progress.clone());
+
+            // 持久化进度到数据库
+            if let Err(e) = convert_tasks::update_progress(task_id, &progress).await {
+                log::error!("持久化转换进度失败: {}", e);
+            }
+
             // 发送进度事件
             emit_progress(task_id, &progress);
         }
     }
 
-    /// 设置任务输出路径
+    /// 设置任务输出路径（同时持久化到数据库）
     pub async fn set_output_path(&self, task_id: &str, path: PathBuf) {
         let mut tasks = self.tasks.write().await;
         if let Some(task) = tasks.get_mut(task_id) {
-            task.set_output_path(path);
+            task.set_output_path(path.clone());
+
+            // 持久化到数据库
+            if let Err(e) = convert_tasks::update_output_path(task_id, &path).await {
+                log::error!("持久化输出路径失败: {}", e);
+            }
         }
     }
 
-    /// 设置任务错误
+    /// 设置任务错误（同时持久化到数据库）
     pub async fn set_error(&self, task_id: &str, message: &str) {
         let mut tasks = self.tasks.write().await;
         if let Some(task) = tasks.get_mut(task_id) {
             task.set_error(message);
+
+            // 持久化到数据库
+            if let Err(e) = convert_tasks::set_error(task_id, message, &task.progress).await {
+                log::error!("持久化任务错误失败: {}", e);
+            }
         }
     }
 
-    /// 标记任务完成
+    /// 标记任务完成（同时持久化到数据库）
     pub async fn mark_completed(&self, task_id: &str) {
         let mut tasks = self.tasks.write().await;
         if let Some(task) = tasks.get_mut(task_id) {
             task.mark_completed();
+
+            // 持久化到数据库
+            if let Err(e) = convert_tasks::mark_completed(task_id, &task.progress).await {
+                log::error!("持久化任务完成状态失败: {}", e);
+            }
         }
     }
 
@@ -369,8 +398,13 @@ impl ConvertTaskManager {
         paused_map.get(task_id).copied().unwrap_or(false)
     }
 
-    /// 移除任务
+    /// 移除任务（同时从数据库删除）
     pub async fn remove_task(&self, task_id: &str) {
+        // 从数据库删除
+        if let Err(e) = convert_tasks::delete(task_id).await {
+            log::error!("从数据库删除转换任务失败: {}", e);
+        }
+
         let mut tasks = self.tasks.write().await;
         tasks.remove(task_id);
         let mut senders = self.cancel_senders.write().await;
@@ -383,6 +417,46 @@ impl ConvertTaskManager {
     pub async fn get_all_tasks(&self) -> Vec<ConvertTaskView> {
         let tasks = self.tasks.read().await;
         tasks.values().cloned().collect()
+    }
+
+    /// 从数据库加载未完成的任务
+    ///
+    /// 在应用启动时调用，恢复之前未完成的转换任务
+    pub async fn load_incomplete_tasks(&self) -> Result<Vec<ConvertTaskView>, ConvertError> {
+        let incomplete_tasks = convert_tasks::get_incomplete()
+            .await
+            .map_err(|e| ConvertError::DatabaseError {
+                message: format!("加载未完成任务失败: {}", e),
+            })?;
+
+        let mut tasks = self.tasks.write().await;
+
+        for task in &incomplete_tasks {
+            // 将正在执行的任务标记为中断状态
+            let mut task_to_add = task.clone();
+            if !task_to_add.progress.stage.is_terminal() {
+                // 将非终态任务标记为暂停，等待用户决定是否恢复
+                task_to_add.progress.stage = ConvertStage::Paused;
+            }
+            tasks.insert(task_to_add.id.clone(), task_to_add);
+        }
+
+        Ok(incomplete_tasks)
+    }
+
+    /// 清理已完成的任务（从数据库）
+    pub async fn cleanup_completed_tasks(&self, days_to_keep: Option<i64>) -> Result<i32, ConvertError> {
+        let deleted_count = convert_tasks::cleanup_completed(days_to_keep)
+            .await
+            .map_err(|e| ConvertError::DatabaseError {
+                message: format!("清理已完成任务失败: {}", e),
+            })?;
+
+        // 同时从内存中移除
+        let mut tasks = self.tasks.write().await;
+        tasks.retain(|_, task| !task.progress.stage.is_terminal());
+
+        Ok(deleted_count)
     }
 }
 
@@ -518,7 +592,12 @@ impl ConvertService {
         .await;
 
         // 清理临时文件
-        let _ = tokio::fs::remove_dir_all(&temp_dir).await;
+        if let Err(e) = tokio::fs::remove_dir_all(&temp_dir).await {
+            // 记录清理失败，下次启动时会重试
+            TempFileCleaner::log_cleanup_failure(&temp_dir, &e.to_string());
+        } else {
+            log::debug!("已清理任务临时目录: {}", temp_dir.display());
+        }
 
         // 移除取消信号发送器
         manager.remove_cancel_sender(task_id).await;
@@ -1191,6 +1270,183 @@ impl ConvertService {
         manager.remove_task(task_id).await;
         Ok(())
     }
+
+    /// 获取未完成的任务（用于恢复）
+    ///
+    /// 在应用启动时调用，检测之前未完成的转换任务
+    ///
+    /// # 返回
+    /// - `Ok(Vec<ConvertTaskView>)`: 未完成的任务列表
+    /// - `Err`: 加载失败
+    pub async fn get_incomplete_tasks() -> Result<Vec<ConvertTaskView>, ConvertError> {
+        let manager = get_task_manager();
+        manager.load_incomplete_tasks().await
+    }
+
+    /// 恢复未完成的任务
+    ///
+    /// 重新执行之前中断的转换任务
+    ///
+    /// # 参数
+    /// - `task_id`: 任务ID
+    ///
+    /// # 返回
+    /// - `Ok(PathBuf)`: 转换成功，返回输出文件路径
+    /// - `Err`: 转换失败
+    pub async fn recover_task(task_id: &str) -> Result<PathBuf, ConvertError> {
+        let manager = get_task_manager();
+
+        // 获取任务
+        let task = manager
+            .get_task(task_id)
+            .await
+            .ok_or_else(|| ConvertError::TaskNotFound {
+                task_id: task_id.to_string(),
+            })?;
+
+        // 验证缓存路径仍然存在
+        if !task.cache_path.exists() {
+            return Err(ConvertError::SourceFileMissing {
+                path: task.cache_path.to_string_lossy().to_string(),
+            });
+        }
+
+        // 验证输出目录仍然存在或可以创建
+        if !task.output_dir.exists() {
+            tokio::fs::create_dir_all(&task.output_dir).await.map_err(|e| {
+                ConvertError::from_io_error(e, Some(&task.output_dir.to_string_lossy()))
+            })?;
+        }
+
+        // 重置任务状态为准备中
+        let mut progress = ConvertProgress::new();
+        progress.set_stage(ConvertStage::Preparing);
+        progress.set_current_file("恢复任务...".to_string());
+        manager.update_progress(task_id, progress).await;
+
+        // 执行转换
+        Self::execute_task(task_id).await
+    }
+
+    /// 批量恢复未完成的任务
+    ///
+    /// # 参数
+    /// - `task_ids`: 任务ID列表
+    ///
+    /// # 返回
+    /// - `BatchConvertResult`: 批量转换结果
+    pub async fn recover_batch(task_ids: Vec<String>) -> BatchConvertResult {
+        let start_time = std::time::Instant::now();
+        let mut batch_result = BatchConvertResult::new();
+
+        for task_id in task_ids {
+            // 获取任务信息
+            let task = match get_task_manager().get_task(&task_id).await {
+                Some(t) => t,
+                None => {
+                    batch_result.add_result(ConvertResult::failure(
+                        task_id.clone(),
+                        String::new(),
+                        "任务不存在",
+                    ));
+                    continue;
+                }
+            };
+
+            let cache_id = task.cache_id.clone();
+
+            // 执行恢复
+            match Self::recover_task(&task_id).await {
+                Ok(output_path) => {
+                    batch_result.add_result(ConvertResult::success(
+                        task_id,
+                        cache_id,
+                        output_path,
+                    ));
+                }
+                Err(e) => {
+                    batch_result.add_result(ConvertResult::failure(
+                        task_id,
+                        cache_id,
+                        e.to_string(),
+                    ));
+                }
+            }
+        }
+
+        batch_result.set_total_time(start_time.elapsed().as_secs());
+
+        // 发送批量结果事件
+        emit_batch_result(&batch_result);
+
+        batch_result
+    }
+
+    /// 放弃未完成的任务
+    ///
+    /// 将未完成的任务标记为取消状态
+    ///
+    /// # 参数
+    /// - `task_id`: 任务ID
+    pub async fn abandon_task(task_id: &str) -> Result<(), ConvertError> {
+        let manager = get_task_manager();
+
+        // 获取任务
+        let task = manager
+            .get_task(task_id)
+            .await
+            .ok_or_else(|| ConvertError::TaskNotFound {
+                task_id: task_id.to_string(),
+            })?;
+
+        // 只能放弃未完成的任务
+        if task.is_terminal() {
+            return Err(ConvertError::Unknown {
+                message: "任务已经完成，无需放弃".to_string(),
+            });
+        }
+
+        // 更新进度为取消状态
+        let mut progress = task.progress.clone();
+        progress.mark_cancelled();
+        manager.update_progress(task_id, progress).await;
+
+        // 发送取消事件
+        emit_cancelled(task_id);
+
+        Ok(())
+    }
+
+    /// 批量放弃未完成的任务
+    ///
+    /// # 参数
+    /// - `task_ids`: 任务ID列表
+    ///
+    /// # 返回
+    /// - 成功放弃的任务数量
+    pub async fn abandon_batch(task_ids: Vec<String>) -> i32 {
+        let mut abandoned_count = 0;
+
+        for task_id in task_ids {
+            if Self::abandon_task(&task_id).await.is_ok() {
+                abandoned_count += 1;
+            }
+        }
+
+        abandoned_count
+    }
+
+    /// 清理已完成的任务记录
+    ///
+    /// # 参数
+    /// - `days_to_keep`: 保留最近 N 天的记录，None 表示清理所有已完成的任务
+    ///
+    /// # 返回
+    /// - 清理的任务数量
+    pub async fn cleanup_completed_tasks(days_to_keep: Option<i64>) -> Result<i32, ConvertError> {
+        let manager = get_task_manager();
+        manager.cleanup_completed_tasks(days_to_keep).await
+    }
 }
 
 /// 磁盘空间检查器
@@ -1335,4 +1591,176 @@ impl DiskSpaceChecker {
             format!("{} B", bytes)
         }
     }
+}
+
+
+/// 临时文件清理器
+///
+/// 负责清理转换过程中产生的临时文件
+pub struct TempFileCleaner;
+
+impl TempFileCleaner {
+    /// 清理指定任务的临时目录
+    ///
+    /// # 参数
+    /// - `task_id`: 任务ID
+    ///
+    /// # 返回
+    /// - `Ok(bool)`: 是否成功清理（true=清理成功或目录不存在，false=清理失败）
+    pub async fn cleanup_task_temp(task_id: &str) -> Result<bool, ConvertError> {
+        let temp_dir = config::read().temp_dir.join(format!("{}{}", CONVERT_TEMP_PREFIX, task_id));
+        
+        if !temp_dir.exists() {
+            return Ok(true);
+        }
+
+        match tokio::fs::remove_dir_all(&temp_dir).await {
+            Ok(_) => {
+                log::info!("已清理任务临时目录: {}", temp_dir.display());
+                Ok(true)
+            }
+            Err(e) => {
+                log::warn!("清理任务临时目录失败: {} - {}", temp_dir.display(), e);
+                Ok(false)
+            }
+        }
+    }
+
+    /// 清理所有残留的转换临时目录
+    ///
+    /// 在应用启动时调用，清理之前未正常清理的临时文件。
+    /// 只清理以 "convert_" 开头的目录。
+    ///
+    /// # 返回
+    /// - `Ok((cleaned, failed))`: 清理成功的数量和失败的数量
+    pub async fn cleanup_all_temp() -> Result<(i32, i32), ConvertError> {
+        let temp_base = config::read().temp_dir();
+        
+        if !temp_base.exists() {
+            return Ok((0, 0));
+        }
+
+        let mut cleaned = 0;
+        let mut failed = 0;
+
+        // 读取临时目录中的所有条目
+        let mut entries = match tokio::fs::read_dir(&temp_base).await {
+            Ok(entries) => entries,
+            Err(e) => {
+                log::warn!("无法读取临时目录: {} - {}", temp_base.display(), e);
+                return Ok((0, 0));
+            }
+        };
+
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            
+            // 只处理目录
+            if !path.is_dir() {
+                continue;
+            }
+
+            // 只处理以 convert_ 开头的目录
+            let dir_name = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name,
+                None => continue,
+            };
+
+            if !dir_name.starts_with(CONVERT_TEMP_PREFIX) {
+                continue;
+            }
+
+            // 尝试删除目录
+            match tokio::fs::remove_dir_all(&path).await {
+                Ok(_) => {
+                    log::info!("已清理残留临时目录: {}", path.display());
+                    cleaned += 1;
+                }
+                Err(e) => {
+                    log::warn!("清理残留临时目录失败: {} - {}", path.display(), e);
+                    failed += 1;
+                }
+            }
+        }
+
+        if cleaned > 0 || failed > 0 {
+            log::info!("临时文件清理完成: 成功 {} 个, 失败 {} 个", cleaned, failed);
+        }
+
+        Ok((cleaned, failed))
+    }
+
+    /// 清理指定目录下的所有临时文件
+    ///
+    /// 用于清理特定目录中的临时文件（如转换过程中的中间文件）
+    ///
+    /// # 参数
+    /// - `dir`: 要清理的目录路径
+    ///
+    /// # 返回
+    /// - `Ok(bool)`: 是否成功清理
+    pub async fn cleanup_directory(dir: &Path) -> Result<bool, ConvertError> {
+        if !dir.exists() {
+            return Ok(true);
+        }
+
+        match tokio::fs::remove_dir_all(dir).await {
+            Ok(_) => {
+                log::debug!("已清理目录: {}", dir.display());
+                Ok(true)
+            }
+            Err(e) => {
+                log::warn!("清理目录失败: {} - {}", dir.display(), e);
+                Ok(false)
+            }
+        }
+    }
+
+    /// 记录清理失败的文件路径
+    ///
+    /// 将清理失败的文件路径记录到日志，以便下次启动时重试
+    pub fn log_cleanup_failure(path: &Path, error: &str) {
+        log::error!("临时文件清理失败 - 路径: {}, 错误: {}", path.display(), error);
+    }
+}
+
+/// 初始化转换服务
+///
+/// 在应用启动时调用，执行以下操作：
+/// 1. 清理残留的临时文件
+/// 2. 加载未完成的转换任务
+///
+/// # 返回
+/// - `Ok(())`: 初始化成功
+/// - `Err`: 初始化失败
+pub async fn init() -> Result<(), ConvertError> {
+    // 清理残留的临时文件
+    match TempFileCleaner::cleanup_all_temp().await {
+        Ok((cleaned, failed)) => {
+            if cleaned > 0 {
+                log::info!("转换服务初始化: 清理了 {} 个残留临时目录", cleaned);
+            }
+            if failed > 0 {
+                log::warn!("转换服务初始化: {} 个临时目录清理失败", failed);
+            }
+        }
+        Err(e) => {
+            log::warn!("转换服务初始化: 清理临时文件时出错 - {}", e);
+        }
+    }
+
+    // 加载未完成的任务（不阻塞初始化）
+    let manager = get_task_manager();
+    match manager.load_incomplete_tasks().await {
+        Ok(tasks) => {
+            if !tasks.is_empty() {
+                log::info!("转换服务初始化: 发现 {} 个未完成的转换任务", tasks.len());
+            }
+        }
+        Err(e) => {
+            log::warn!("转换服务初始化: 加载未完成任务时出错 - {}", e);
+        }
+    }
+
+    Ok(())
 }

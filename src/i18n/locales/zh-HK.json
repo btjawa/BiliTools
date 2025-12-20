@@ -716,6 +716,18 @@
       "completed": "轉換完成",
       "failed": "轉換失敗",
       "cancelled": "轉換已取消"
+    },
+    "recovery": {
+      "title": "未完成的轉換任務",
+      "description": "檢測到 {count} 個未完成的轉換任務，是否要恢復？",
+      "recover": "恢復",
+      "recoverAll": "全部恢復",
+      "abandon": "放棄",
+      "abandonAll": "全部放棄",
+      "recovering": "正在恢復任務...",
+      "recovered": "任務已恢復",
+      "abandoned": "任務已放棄",
+      "noIncompleteTasks": "沒有未完成的轉換任務"
     }
   },
   "transfer": {

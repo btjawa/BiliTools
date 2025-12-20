@@ -669,11 +669,23 @@ async getDefaultConvertConfig() : Promise<ConvertConfig> {
     return await TAURI_INVOKE("get_default_convert_config");
 },
 /**
+ * 获取保存的转换配置
+ */
+async getSavedConvertConfig() : Promise<ConvertConfig> {
+    return await TAURI_INVOKE("get_saved_convert_config");
+},
+/**
+ * 获取上次使用的输出目录
+ */
+async getLastConvertOutputDir() : Promise<string | null> {
+    return await TAURI_INVOKE("get_last_convert_output_dir");
+},
+/**
  * 保存转换配置到设置
  */
-async saveConvertConfig(videoQuality: number, audioBitrate: number) : Promise<Result<null, TauriError>> {
+async saveConvertConfig(videoQuality: number, audioBitrate: number, embedCover: boolean, danmakuFormat: number, writeMetadata: boolean, lastOutputDir: string | null) : Promise<Result<null, TauriError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("save_convert_config", { videoQuality, audioBitrate }) };
+    return { status: "ok", data: await TAURI_INVOKE("save_convert_config", { videoQuality, audioBitrate, embedCover, danmakuFormat, writeMetadata, lastOutputDir }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -722,6 +734,145 @@ async listenConvertProgress(taskId: string, event: TAURI_CHANNEL<ConvertProgress
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * 批量暂停转换任务
+ * 
+ * 暂停多个转换任务，单个任务暂停失败不影响其他任务
+ */
+async batchPauseConvert(taskIds: string[]) : Promise<Result<BatchOperationIds, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_pause_convert", { taskIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 批量恢复转换任务
+ * 
+ * 恢复多个转换任务，单个任务恢复失败不影响其他任务
+ */
+async batchResumeConvert(taskIds: string[]) : Promise<Result<BatchOperationIds, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_resume_convert", { taskIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 批量取消转换任务
+ * 
+ * 取消多个转换任务，单个任务取消失败不影响其他任务
+ */
+async batchCancelConvert(taskIds: string[]) : Promise<Result<BatchOperationIds, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_cancel_convert", { taskIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取批量转换进度汇总
+ * 
+ * 返回多个任务的进度汇总信息
+ */
+async getBatchConvertProgress(taskIds: string[]) : Promise<Result<BatchConvertProgress, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_batch_convert_progress", { taskIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取未完成的转换任务
+ * 
+ * 在应用启动时调用，检测之前未完成的转换任务
+ */
+async getIncompleteConvertTasks() : Promise<Result<ConvertTaskView[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_incomplete_convert_tasks") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 恢复未完成的转换任务
+ * 
+ * 重新执行之前中断的转换任务
+ */
+async recoverConvertTask(taskId: string) : Promise<Result<string, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("recover_convert_task", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 批量恢复未完成的转换任务
+ */
+async batchRecoverConvert(taskIds: string[]) : Promise<Result<BatchConvertResult, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_recover_convert", { taskIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 放弃未完成的转换任务
+ * 
+ * 将未完成的任务标记为取消状态
+ */
+async abandonConvertTask(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("abandon_convert_task", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 批量放弃未完成的转换任务
+ */
+async batchAbandonConvert(taskIds: string[]) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("batch_abandon_convert", { taskIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 清理已完成的转换任务记录
+ * 
+ * 从数据库中删除已完成的任务记录
+ */
+async cleanupCompletedConvertTasks(daysToKeep: number | null) : Promise<Result<number, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cleanup_completed_convert_tasks", { daysToKeep }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 清理转换临时文件
+ * 
+ * 清理所有残留的转换临时目录
+ */
+async cleanupConvertTempFiles() : Promise<Result<[number, number], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cleanup_convert_temp_files") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -764,6 +915,42 @@ export type AudioBitrate =
  */
 "kbps128"
 /**
+ * 批量转换进度汇总
+ */
+export type BatchConvertProgress = { 
+/**
+ * 总任务数
+ */
+totalCount: number; 
+/**
+ * 已完成数量
+ */
+completedCount: number; 
+/**
+ * 失败数量
+ */
+failedCount: number; 
+/**
+ * 已取消数量
+ */
+cancelledCount: number; 
+/**
+ * 已暂停数量
+ */
+pausedCount: number; 
+/**
+ * 运行中数量
+ */
+runningCount: number; 
+/**
+ * 总体进度百分比
+ */
+overallPercentage: number; 
+/**
+ * 任务列表
+ */
+tasks: ConvertTaskView[] }
+/**
  * 批量转换结果
  */
 export type BatchConvertResult = { 
@@ -787,6 +974,18 @@ totalTime: number;
  * 各任务结果
  */
 results: ConvertResult[] }
+/**
+ * 批量操作ID结果
+ */
+export type BatchOperationIds = { 
+/**
+ * 成功的任务ID列表
+ */
+successIds: string[]; 
+/**
+ * 失败的任务ID列表
+ */
+failedIds: string[] }
 /**
  * 批量操作结果
  */
@@ -930,6 +1129,34 @@ outputPath: string | null;
  * 错误信息
  */
 error: string | null }
+/**
+ * 缓存转换配置（用于持久化用户的转换偏好设置）
+ */
+export type ConvertSettings = { 
+/**
+ * 默认视频质量 (0=原始, 1=高质量, 2=标准)
+ */
+videoQuality: number; 
+/**
+ * 默认音频码率 (0=原始, 1=192kbps, 2=128kbps)
+ */
+audioBitrate: number; 
+/**
+ * 是否默认嵌入封面
+ */
+embedCover: boolean; 
+/**
+ * 弹幕导出格式 (0=不导出, 1=XML, 2=ASS, 3=两者)
+ */
+danmakuFormat: number; 
+/**
+ * 是否默认写入元数据
+ */
+writeMetadata: boolean; 
+/**
+ * 上次使用的输出目录
+ */
+lastOutputDir: string | null }
 /**
  * 转换阶段
  */
@@ -1175,7 +1402,7 @@ export type ScanPreviewInfo = { title: string; file_size: number; duration: numb
 export type ScanResult = { root_path: string; total_directories: number; valid_directories: number; invalid_directories: number; estimated_total_size: number; scan_duration: number; directories: ScanDirectoryInfo[] }
 export type SchedulerState = "idle" | "running" | "paused" | "completed" | "failed" | "cancelled"
 export type SchedulerView = { sid: string; ts: number; list: string[]; queue: QueueType; state: SchedulerState }
-export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; cache_root: string | null; check_update: boolean; clipboard: boolean; convert: SettingsConvert; default: SettingsDefault; down_dir: string; drag_search: boolean; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy; sidecar: SettingsSidecar; speed_limit: number }
+export type Settings = { add_metadata: boolean; auto_check_update: boolean; auto_download: boolean; block_pcdn: boolean; cache_root: string | null; check_update: boolean; clipboard: boolean; convert: SettingsConvert; convert_config: ConvertSettings; default: SettingsDefault; down_dir: string; drag_search: boolean; format: SettingsFormat; language: string; max_conc: number; notify: boolean; temp_dir: string; theme: Theme; window_effect: WindowEffect; organize: SettingsOrganize; proxy: SettingsProxy; sidecar: SettingsSidecar; speed_limit: number }
 export type SettingsConvert = { danmaku: boolean; mp4: boolean; mp3: boolean }
 export type SettingsDefault = { res: number; abr: number; enc: number }
 export type SettingsFormat = { series: string; item: string; file: string }

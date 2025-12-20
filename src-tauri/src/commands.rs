@@ -1548,8 +1548,8 @@ pub async fn listen_transfer_progress(
 // 转换功能相关命令
 
 use crate::services::converter::{
-    ConvertConfig, ConvertProgress, ConvertService, ConvertTaskView, DiskSpaceCheck,
-    DiskSpaceChecker,
+    BatchConvertResult, ConvertConfig, ConvertProgress, ConvertService, ConvertTaskView,
+    DiskSpaceCheck, DiskSpaceChecker,
 };
 
 /// 创建并执行转换任务
@@ -1775,4 +1775,250 @@ pub async fn listen_convert_progress(
     });
 
     Ok(())
+}
+
+// ============================================================================
+// 批量转换操作
+// ============================================================================
+
+/// 批量暂停转换任务
+///
+/// 暂停多个转换任务，单个任务暂停失败不影响其他任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn batch_pause_convert(task_ids: Vec<String>) -> TauriResult<BatchOperationIds> {
+    let mut success_ids = Vec::new();
+    let mut failed_ids = Vec::new();
+
+    for task_id in task_ids {
+        match ConvertService::pause_task(&task_id).await {
+            Ok(_) => success_ids.push(task_id),
+            Err(e) => {
+                log::warn!("暂停任务 {} 失败: {}", task_id, e);
+                failed_ids.push(task_id);
+            }
+        }
+    }
+
+    Ok(BatchOperationIds {
+        success_ids,
+        failed_ids,
+    })
+}
+
+/// 批量恢复转换任务
+///
+/// 恢复多个转换任务，单个任务恢复失败不影响其他任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn batch_resume_convert(task_ids: Vec<String>) -> TauriResult<BatchOperationIds> {
+    let mut success_ids = Vec::new();
+    let mut failed_ids = Vec::new();
+
+    for task_id in task_ids {
+        match ConvertService::resume_task(&task_id).await {
+            Ok(_) => success_ids.push(task_id),
+            Err(e) => {
+                log::warn!("恢复任务 {} 失败: {}", task_id, e);
+                failed_ids.push(task_id);
+            }
+        }
+    }
+
+    Ok(BatchOperationIds {
+        success_ids,
+        failed_ids,
+    })
+}
+
+/// 批量取消转换任务
+///
+/// 取消多个转换任务，单个任务取消失败不影响其他任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn batch_cancel_convert(task_ids: Vec<String>) -> TauriResult<BatchOperationIds> {
+    let mut success_ids = Vec::new();
+    let mut failed_ids = Vec::new();
+
+    for task_id in task_ids {
+        match ConvertService::cancel_task(&task_id).await {
+            Ok(_) => success_ids.push(task_id),
+            Err(e) => {
+                log::warn!("取消任务 {} 失败: {}", task_id, e);
+                failed_ids.push(task_id);
+            }
+        }
+    }
+
+    Ok(BatchOperationIds {
+        success_ids,
+        failed_ids,
+    })
+}
+
+/// 获取批量转换进度汇总
+///
+/// 返回多个任务的进度汇总信息
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn get_batch_convert_progress(task_ids: Vec<String>) -> TauriResult<BatchConvertProgress> {
+    let mut tasks = Vec::new();
+    let mut total_percentage = 0.0;
+
+    for task_id in &task_ids {
+        if let Ok(task) = ConvertService::get_task(task_id).await {
+            total_percentage += task.progress.percentage;
+            tasks.push(task);
+        }
+    }
+
+    let total_count = tasks.len();
+    let completed_count = tasks
+        .iter()
+        .filter(|t| t.progress.stage == crate::services::converter::ConvertStage::Completed)
+        .count();
+    let failed_count = tasks
+        .iter()
+        .filter(|t| t.progress.stage == crate::services::converter::ConvertStage::Failed)
+        .count();
+    let cancelled_count = tasks
+        .iter()
+        .filter(|t| t.progress.stage == crate::services::converter::ConvertStage::Cancelled)
+        .count();
+    let paused_count = tasks
+        .iter()
+        .filter(|t| t.progress.stage == crate::services::converter::ConvertStage::Paused)
+        .count();
+    let running_count = total_count - completed_count - failed_count - cancelled_count - paused_count;
+
+    let overall_percentage = if total_count > 0 {
+        (total_percentage / total_count as f64).round()
+    } else {
+        0.0
+    };
+
+    Ok(BatchConvertProgress {
+        total_count: total_count as i32,
+        completed_count: completed_count as i32,
+        failed_count: failed_count as i32,
+        cancelled_count: cancelled_count as i32,
+        paused_count: paused_count as i32,
+        running_count: running_count as i32,
+        overall_percentage,
+        tasks,
+    })
+}
+
+/// 批量操作ID结果
+#[derive(Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchOperationIds {
+    /// 成功的任务ID列表
+    pub success_ids: Vec<String>,
+    /// 失败的任务ID列表
+    pub failed_ids: Vec<String>,
+}
+
+/// 批量转换进度汇总
+#[derive(Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchConvertProgress {
+    /// 总任务数
+    pub total_count: i32,
+    /// 已完成数量
+    pub completed_count: i32,
+    /// 失败数量
+    pub failed_count: i32,
+    /// 已取消数量
+    pub cancelled_count: i32,
+    /// 已暂停数量
+    pub paused_count: i32,
+    /// 运行中数量
+    pub running_count: i32,
+    /// 总体进度百分比
+    pub overall_percentage: f64,
+    /// 任务列表
+    pub tasks: Vec<ConvertTaskView>,
+}
+
+// ============================================================================
+// 转换任务恢复功能
+// ============================================================================
+
+/// 获取未完成的转换任务
+///
+/// 在应用启动时调用，检测之前未完成的转换任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_incomplete_convert_tasks() -> TauriResult<Vec<ConvertTaskView>> {
+    let tasks = ConvertService::get_incomplete_tasks()
+        .await
+        .map_err(|e| anyhow::anyhow!("获取未完成任务失败: {}", e))?;
+    Ok(tasks)
+}
+
+/// 恢复未完成的转换任务
+///
+/// 重新执行之前中断的转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn recover_convert_task(task_id: String) -> TauriResult<PathBuf> {
+    let output_path = ConvertService::recover_task(&task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("恢复转换任务失败: {}", e))?;
+    Ok(output_path)
+}
+
+/// 批量恢复未完成的转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn batch_recover_convert(task_ids: Vec<String>) -> TauriResult<BatchConvertResult> {
+    let result = ConvertService::recover_batch(task_ids).await;
+    Ok(result)
+}
+
+/// 放弃未完成的转换任务
+///
+/// 将未完成的任务标记为取消状态
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn abandon_convert_task(task_id: String) -> TauriResult<()> {
+    ConvertService::abandon_task(&task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("放弃转换任务失败: {}", e))?;
+    Ok(())
+}
+
+/// 批量放弃未完成的转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn batch_abandon_convert(task_ids: Vec<String>) -> TauriResult<i32> {
+    let abandoned_count = ConvertService::abandon_batch(task_ids).await;
+    Ok(abandoned_count)
+}
+
+/// 清理已完成的转换任务记录
+///
+/// 从数据库中删除已完成的任务记录
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn cleanup_completed_convert_tasks(days_to_keep: Option<i64>) -> TauriResult<i32> {
+    let deleted_count = ConvertService::cleanup_completed_tasks(days_to_keep)
+        .await
+        .map_err(|e| anyhow::anyhow!("清理已完成任务失败: {}", e))?;
+    Ok(deleted_count)
+}
+
+/// 清理转换临时文件
+///
+/// 清理所有残留的转换临时目录
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn cleanup_convert_temp_files() -> TauriResult<(i32, i32)> {
+    use crate::services::converter::TempFileCleaner;
+    
+    let (cleaned, failed) = TempFileCleaner::cleanup_all_temp()
+        .await
+        .map_err(|e| anyhow::anyhow!("清理临时文件失败: {}", e))?;
+    Ok((cleaned, failed))
 }

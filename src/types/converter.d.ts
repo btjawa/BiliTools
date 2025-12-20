@@ -199,6 +199,38 @@ export type ConvertEvent =
   | ConvertBatchResultEvent;
 
 /**
+ * 批量操作ID结果
+ */
+export interface BatchOperationIds {
+  /** 成功的任务ID列表 */
+  successIds: string[];
+  /** 失败的任务ID列表 */
+  failedIds: string[];
+}
+
+/**
+ * 批量转换进度汇总
+ */
+export interface BatchConvertProgressResult {
+  /** 总任务数 */
+  totalCount: number;
+  /** 已完成数量 */
+  completedCount: number;
+  /** 失败数量 */
+  failedCount: number;
+  /** 已取消数量 */
+  cancelledCount: number;
+  /** 已暂停数量 */
+  pausedCount: number;
+  /** 运行中数量 */
+  runningCount: number;
+  /** 总体进度百分比 */
+  overallPercentage: number;
+  /** 任务列表 */
+  tasks: ConvertTaskView[];
+}
+
+/**
  * 转换设置（持久化配置）
  */
 export interface ConvertSettings {

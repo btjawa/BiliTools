@@ -717,6 +717,18 @@
       "completed": "转换完成",
       "failed": "转换失败",
       "cancelled": "转换已取消"
+    },
+    "recovery": {
+      "title": "未完成的转换任务",
+      "description": "检测到 {count} 个未完成的转换任务，是否要恢复？",
+      "recover": "恢复",
+      "recoverAll": "全部恢复",
+      "abandon": "放弃",
+      "abandonAll": "全部放弃",
+      "recovering": "正在恢复任务...",
+      "recovered": "任务已恢复",
+      "abandoned": "任务已放弃",
+      "noIncompleteTasks": "没有未完成的转换任务"
     }
   },
   "transfer": {

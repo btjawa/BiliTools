@@ -42,6 +42,14 @@
               <i class="fa-solid fa-exclamation-circle"></i>
               <div class="text-sm text-(--content-color)">{{ lastError }}</div>
             </div>
+
+            <!-- 批量转换结果摘要 -->
+            <div v-if="batchResult && canClose" class="result-summary">
+              <i class="fa-solid fa-chart-pie text-blue-500"></i>
+              <div class="text-sm text-(--content-color)">
+                {{ formatBatchResult(batchResult) }}
+              </div>
+            </div>
           </div>
 
           <!-- 对话框底部 -->
@@ -92,6 +100,7 @@ import { useI18n } from 'vue-i18n';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import * as converterService from '@/services/converter';
 import type { ConvertTaskView, ConvertProgress } from '@/services/backend';
+import type { BatchConvertResult } from '@/services/backend';
 import SingleTaskProgress from './ConvertProgressDialog/SingleTaskProgress.vue';
 import OverallProgress from './ConvertProgressDialog/OverallProgress.vue';
 import TaskList from './ConvertProgressDialog/TaskList.vue';
@@ -127,6 +136,8 @@ const isPaused = ref(false);
 const lastError = ref<string | null>(null);
 const updateInterval = ref<number | null>(null);
 const unlistenProgress = ref<(() => void) | null>(null);
+const unlistenBatchResult = ref<(() => void) | null>(null);
+const batchResult = ref<BatchConvertResult | null>(null);
 
 // ============================================================================
 // 计算属性
@@ -252,9 +263,11 @@ watch(
     if (visible) {
       await loadTasks();
       startProgressListener();
+      startBatchResultListener();
       startPolling();
     } else {
       stopProgressListener();
+      stopBatchResultListener();
       stopPolling();
     }
   },
@@ -277,12 +290,14 @@ onMounted(() => {
   if (props.visible) {
     loadTasks();
     startProgressListener();
+    startBatchResultListener();
     startPolling();
   }
 });
 
 onUnmounted(() => {
   stopProgressListener();
+  stopBatchResultListener();
   stopPolling();
 });
 
@@ -330,6 +345,29 @@ function stopProgressListener() {
   if (unlistenProgress.value) {
     unlistenProgress.value();
     unlistenProgress.value = null;
+  }
+}
+
+/**
+ * 启动批量结果监听
+ */
+function startBatchResultListener() {
+  unlistenBatchResult.value = converterService.onConvertBatchResult(
+    (result: BatchConvertResult) => {
+      batchResult.value = result;
+      // 刷新任务状态
+      loadTasks();
+    },
+  );
+}
+
+/**
+ * 停止批量结果监听
+ */
+function stopBatchResultListener() {
+  if (unlistenBatchResult.value) {
+    unlistenBatchResult.value();
+    unlistenBatchResult.value = null;
   }
 }
 
@@ -383,36 +421,32 @@ async function handlePauseResume() {
   try {
     if (isPaused.value || canResume.value) {
       // 恢复所有暂停的任务
-      const pausedTasks = tasks.value.filter(
-        (task) => task.progress.stage === 'paused',
-      );
-      for (const task of pausedTasks) {
-        try {
-          await converterService.resumeConvert(task.id);
-        } catch (error) {
-          console.error(`恢复任务 ${task.id} 失败:`, error);
-        }
+      const pausedTaskIds = tasks.value
+        .filter((task) => task.progress.stage === 'paused')
+        .map((task) => task.id);
+
+      if (pausedTaskIds.length > 0) {
+        await converterService.batchResumeConvert(pausedTaskIds);
       }
       isPaused.value = false;
     } else {
       // 暂停所有运行中的任务
-      const runningTasks = tasks.value.filter((task) => {
-        const stage = task.progress.stage;
-        return (
-          stage === 'preparing' ||
-          stage === 'processing' ||
-          stage === 'merging' ||
-          stage === 'exportDanmaku' ||
-          stage === 'addingMeta' ||
-          stage === 'finalizing'
-        );
-      });
-      for (const task of runningTasks) {
-        try {
-          await converterService.pauseConvert(task.id);
-        } catch (error) {
-          console.error(`暂停任务 ${task.id} 失败:`, error);
-        }
+      const runningTaskIds = tasks.value
+        .filter((task) => {
+          const stage = task.progress.stage;
+          return (
+            stage === 'preparing' ||
+            stage === 'processing' ||
+            stage === 'merging' ||
+            stage === 'exportDanmaku' ||
+            stage === 'addingMeta' ||
+            stage === 'finalizing'
+          );
+        })
+        .map((task) => task.id);
+
+      if (runningTaskIds.length > 0) {
+        await converterService.batchPauseConvert(runningTaskIds);
       }
       isPaused.value = true;
     }
@@ -439,20 +473,19 @@ async function handleCancel() {
     }
 
     // 取消所有活跃的任务
-    const activeTasks = tasks.value.filter((task) => {
-      const stage = task.progress.stage;
-      return (
-        stage !== 'completed' && stage !== 'failed' && stage !== 'cancelled'
-      );
-    });
+    const activeTaskIds = tasks.value
+      .filter((task) => {
+        const stage = task.progress.stage;
+        return (
+          stage !== 'completed' && stage !== 'failed' && stage !== 'cancelled'
+        );
+      })
+      .map((task) => task.id);
 
-    for (const task of activeTasks) {
-      try {
-        await converterService.cancelConvert(task.id);
-      } catch (error) {
-        console.error(`取消任务 ${task.id} 失败:`, error);
-      }
+    if (activeTaskIds.length > 0) {
+      await converterService.batchCancelConvert(activeTaskIds);
     }
+
     // 刷新任务状态
     await loadTasks();
   } catch (error) {
@@ -466,6 +499,13 @@ async function handleCancel() {
  */
 function handleClose() {
   emit('close');
+}
+
+/**
+ * 格式化批量转换结果
+ */
+function formatBatchResult(result: BatchConvertResult): string {
+  return converterService.formatBatchResultSummary(result);
 }
 </script>
 
@@ -511,6 +551,12 @@ function handleClose() {
 .error-box {
   @apply bg-(--solid-button-color) border border-red-400/50 rounded-lg p-4 flex gap-3;
   @apply text-red-500;
+}
+
+/* 结果摘要框 */
+.result-summary {
+  @apply bg-(--solid-button-color) border border-blue-400/50 rounded-lg p-4 flex gap-3;
+  @apply text-blue-500;
 }
 
 /* 过渡动画 */

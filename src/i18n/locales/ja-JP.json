@@ -716,6 +716,18 @@
       "completed": "変換が完了しました",
       "failed": "変換に失敗しました",
       "cancelled": "変換がキャンセルされました"
+    },
+    "recovery": {
+      "title": "未完了の変換タスク",
+      "description": "{count} 件の未完了の変換タスクが見つかりました。復元しますか？",
+      "recover": "復元",
+      "recoverAll": "すべて復元",
+      "abandon": "破棄",
+      "abandonAll": "すべて破棄",
+      "recovering": "タスクを復元中...",
+      "recovered": "タスクが復元されました",
+      "abandoned": "タスクが破棄されました",
+      "noIncompleteTasks": "未完了の変換タスクはありません"
     }
   },
   "transfer": {

@@ -716,6 +716,18 @@
       "completed": "Conversion completed",
       "failed": "Conversion failed",
       "cancelled": "Conversion cancelled"
+    },
+    "recovery": {
+      "title": "Incomplete Conversion Tasks",
+      "description": "Found {count} incomplete conversion task(s). Would you like to recover them?",
+      "recover": "Recover",
+      "recoverAll": "Recover All",
+      "abandon": "Abandon",
+      "abandonAll": "Abandon All",
+      "recovering": "Recovering task...",
+      "recovered": "Task recovered",
+      "abandoned": "Task abandoned",
+      "noIncompleteTasks": "No incomplete conversion tasks"
     }
   },
   "transfer": {

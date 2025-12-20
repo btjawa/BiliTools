@@ -102,6 +102,19 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             get_all_convert_tasks,
             remove_convert_task,
             listen_convert_progress,
+            // Batch Convert
+            batch_pause_convert,
+            batch_resume_convert,
+            batch_cancel_convert,
+            get_batch_convert_progress,
+            // Convert Recovery
+            get_incomplete_convert_tasks,
+            recover_convert_task,
+            batch_recover_convert,
+            abandon_convert_task,
+            batch_abandon_convert,
+            cleanup_completed_convert_tasks,
+            cleanup_convert_temp_files,
         ])
         .events(collect_events![
             shared::HeadersData,
