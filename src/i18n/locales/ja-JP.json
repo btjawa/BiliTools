@@ -669,6 +669,55 @@
       "items": "個"
     }
   },
+  "convert": {
+    "title": "MP4に変換",
+    "outputDir": "出力ディレクトリ",
+    "selectedDir": "選択されたディレクトリ",
+    "selectDir": "出力ディレクトリを選択",
+    "diskSpace": "ディスク容量",
+    "checkingSpace": "ディスク容量を確認中...",
+    "requiredSpace": "必要な容量（推定）",
+    "availableSpace": "利用可能な容量",
+    "insufficientSpace": "ディスク容量が不足しています。別のディレクトリを選択するか、ディスク容量を確保してください。",
+    "options": "変換オプション",
+    "videoQuality": "動画品質",
+    "audioBitrate": "音声ビットレート",
+    "danmakuFormat": "弾幕形式",
+    "embedCover": "カバー画像を動画に埋め込む",
+    "writeMetadata": "動画メタデータを書き込む（タイトル、作者など）",
+    "cancel": "キャンセル",
+    "confirm": "変換開始",
+    "quality": {
+      "original": "オリジナル",
+      "high": "高品質",
+      "standard": "標準"
+    },
+    "bitrate": {
+      "original": "オリジナル"
+    },
+    "danmaku": {
+      "none": "なし",
+      "both": "XML + ASS"
+    },
+    "stage": {
+      "preparing": "準備中",
+      "processing": "m4sファイルを処理中",
+      "merging": "音声/動画を結合中",
+      "exportDanmaku": "弾幕をエクスポート中",
+      "addingMeta": "メタデータを追加中",
+      "finalizing": "完了処理中",
+      "completed": "完了",
+      "failed": "失敗",
+      "paused": "一時停止中",
+      "cancelled": "キャンセル済み"
+    },
+    "progress": {
+      "title": "変換進捗",
+      "completed": "変換が完了しました",
+      "failed": "変換に失敗しました",
+      "cancelled": "変換がキャンセルされました"
+    }
+  },
   "transfer": {
     "title": "ファイル転送",
     "copy": "コピー",

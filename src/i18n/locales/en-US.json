@@ -669,6 +669,55 @@
       "items": "items"
     }
   },
+  "convert": {
+    "title": "Convert to MP4",
+    "outputDir": "Output Directory",
+    "selectedDir": "Selected directory",
+    "selectDir": "Select output directory",
+    "diskSpace": "Disk Space",
+    "checkingSpace": "Checking disk space...",
+    "requiredSpace": "Estimated required space",
+    "availableSpace": "Available space",
+    "insufficientSpace": "Insufficient disk space. Please select another directory or free up disk space.",
+    "options": "Conversion Options",
+    "videoQuality": "Video Quality",
+    "audioBitrate": "Audio Bitrate",
+    "danmakuFormat": "Danmaku Format",
+    "embedCover": "Embed cover into video file",
+    "writeMetadata": "Write video metadata (title, author, etc.)",
+    "cancel": "Cancel",
+    "confirm": "Start Conversion",
+    "quality": {
+      "original": "Original",
+      "high": "High",
+      "standard": "Standard"
+    },
+    "bitrate": {
+      "original": "Original"
+    },
+    "danmaku": {
+      "none": "None",
+      "both": "XML + ASS"
+    },
+    "stage": {
+      "preparing": "Preparing",
+      "processing": "Processing m4s files",
+      "merging": "Merging audio/video",
+      "exportDanmaku": "Exporting danmaku",
+      "addingMeta": "Adding metadata",
+      "finalizing": "Finalizing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "paused": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "progress": {
+      "title": "Conversion Progress",
+      "completed": "Conversion completed",
+      "failed": "Conversion failed",
+      "cancelled": "Conversion cancelled"
+    }
+  },
   "transfer": {
     "title": "File Transfer",
     "copy": "Copy",

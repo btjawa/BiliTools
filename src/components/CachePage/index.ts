@@ -9,3 +9,5 @@ export { default as BatchActionBar } from './BatchActionBar.vue';
 export { default as TransferDialog } from './TransferDialog.vue';
 export { default as TransferProgressDialog } from './TransferProgressDialog.vue';
 export { default as CacheRootMigrationDialog } from './CacheRootMigrationDialog.vue';
+export { default as ConvertDialog } from './ConvertDialog.vue';
+export { default as ConvertProgressDialog } from './ConvertProgressDialog.vue';

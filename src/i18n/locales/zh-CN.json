@@ -670,6 +670,55 @@
       "items": "项"
     }
   },
+  "convert": {
+    "title": "转换为MP4",
+    "outputDir": "输出目录",
+    "selectedDir": "已选择的目录",
+    "selectDir": "选择输出目录",
+    "diskSpace": "磁盘空间",
+    "checkingSpace": "正在检查磁盘空间...",
+    "requiredSpace": "预估所需空间",
+    "availableSpace": "可用空间",
+    "insufficientSpace": "磁盘空间不足，请选择其他目录或清理磁盘空间",
+    "options": "转换选项",
+    "videoQuality": "视频质量",
+    "audioBitrate": "音频码率",
+    "danmakuFormat": "弹幕格式",
+    "embedCover": "嵌入封面到视频文件",
+    "writeMetadata": "写入视频元数据（标题、作者等）",
+    "cancel": "取消",
+    "confirm": "开始转换",
+    "quality": {
+      "original": "原始",
+      "high": "高质量",
+      "standard": "标准"
+    },
+    "bitrate": {
+      "original": "原始"
+    },
+    "danmaku": {
+      "none": "不导出",
+      "both": "XML + ASS"
+    },
+    "stage": {
+      "preparing": "准备中",
+      "processing": "处理m4s文件",
+      "merging": "合并音视频",
+      "exportDanmaku": "导出弹幕",
+      "addingMeta": "添加元数据",
+      "finalizing": "完成中",
+      "completed": "已完成",
+      "failed": "失败",
+      "paused": "已暂停",
+      "cancelled": "已取消"
+    },
+    "progress": {
+      "title": "转换进度",
+      "completed": "转换完成",
+      "failed": "转换失败",
+      "cancelled": "转换已取消"
+    }
+  },
   "transfer": {
     "title": "文件传输",
     "copy": "复制",

@@ -669,6 +669,55 @@
       "items": "項"
     }
   },
+  "convert": {
+    "title": "轉換為MP4",
+    "outputDir": "輸出目錄",
+    "selectedDir": "已選擇的目錄",
+    "selectDir": "選擇輸出目錄",
+    "diskSpace": "磁碟空間",
+    "checkingSpace": "正在檢查磁碟空間...",
+    "requiredSpace": "預估所需空間",
+    "availableSpace": "可用空間",
+    "insufficientSpace": "磁碟空間不足，請選擇其他目錄或清理磁碟空間",
+    "options": "轉換選項",
+    "videoQuality": "視訊品質",
+    "audioBitrate": "音訊位元率",
+    "danmakuFormat": "彈幕格式",
+    "embedCover": "嵌入封面到視訊檔案",
+    "writeMetadata": "寫入視訊元資料（標題、作者等）",
+    "cancel": "取消",
+    "confirm": "開始轉換",
+    "quality": {
+      "original": "原始",
+      "high": "高品質",
+      "standard": "標準"
+    },
+    "bitrate": {
+      "original": "原始"
+    },
+    "danmaku": {
+      "none": "不匯出",
+      "both": "XML + ASS"
+    },
+    "stage": {
+      "preparing": "準備中",
+      "processing": "處理m4s檔案",
+      "merging": "合併音視訊",
+      "exportDanmaku": "匯出彈幕",
+      "addingMeta": "新增元資料",
+      "finalizing": "完成中",
+      "completed": "已完成",
+      "failed": "失敗",
+      "paused": "已暫停",
+      "cancelled": "已取消"
+    },
+    "progress": {
+      "title": "轉換進度",
+      "completed": "轉換完成",
+      "failed": "轉換失敗",
+      "cancelled": "轉換已取消"
+    }
+  },
   "transfer": {
     "title": "檔案傳輸",
     "copy": "複製",

@@ -37,6 +37,7 @@
           @delete="$emit('deleteVideo', item.data)"
           @copy="$emit('copyVideo', $event)"
           @cut="$emit('cutVideo', $event)"
+          @convert="$emit('convertVideo', $event)"
         />
 
         <!-- 视频组项 -->
@@ -111,6 +112,7 @@ interface Emits {
   (e: 'deleteVideo', video: Types.CacheItem): void;
   (e: 'copyVideo', video: Types.CacheItem): void;
   (e: 'cutVideo', video: Types.CacheItem): void;
+  (e: 'convertVideo', video: Types.CacheItem): void;
 
   // 组相关事件
   (e: 'selectGroup', groupId: string): void;

@@ -72,6 +72,24 @@
 
       <!-- 右侧：批量操作按钮 -->
       <div class="flex gap-2">
+        <!-- 转换按钮 -->
+        <button
+          class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          :disabled="selectedCount === 0"
+          :title="
+            selectedCount === 0
+              ? $t('convert.title') + ' (无选中项)'
+              : $t('convert.title')
+          "
+          @click="handleBatchConvert"
+        >
+          <i :class="[$fa.weight, 'fa-file-video']"></i>
+          <span>{{ $t('convert.title') }}</span>
+          <span v-if="selectedCount > 0" class="text-xs opacity-75"
+            >({{ selectedCount }})</span
+          >
+        </button>
+
         <!-- 复制按钮 -->
         <button
           class="px-4 py-2 text-sm bg-(--primary-color) text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -159,6 +177,8 @@ interface Emits {
   batchCut: [];
   /** 批量删除事件 */
   batchDelete: [];
+  /** 批量转换事件 */
+  batchConvert: [];
 }
 
 withDefaults(defineProps<Props>(), {
@@ -262,6 +282,15 @@ function handleBatchCut(): void {
 function handleBatchDelete(): void {
   if (selectedCount.value > 0) {
     emit('batchDelete');
+  }
+}
+
+/**
+ * 处理批量转换
+ */
+function handleBatchConvert(): void {
+  if (selectedCount.value > 0) {
+    emit('batchConvert');
   }
 }
 </script>

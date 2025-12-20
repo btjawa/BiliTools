@@ -95,6 +95,7 @@
             @batch-copy="startCopyOperation"
             @batch-cut="startCutOperation"
             @batch-delete="batchDelete"
+            @batch-convert="startConvertOperation"
           />
         </Transition>
 
@@ -144,6 +145,7 @@
                 @delete-video="deleteItem"
                 @copy-video="handleCopyFromContextMenu"
                 @cut-video="handleCutFromContextMenu"
+                @convert-video="handleConvertFromContextMenu"
                 @select-group="toggleGroupSelection"
                 @select-group-range="handleGroupRangeSelect"
                 @toggle-expand="cacheStore.toggleGroupExpansion"
@@ -321,6 +323,13 @@
             {{ $t('cache.sidebar.clearSelection') }}
           </button>
           <button
+            class="w-full text-xs text-blue-500 hover:underline text-left mb-1"
+            @click="startConvertOperation"
+          >
+            <i :class="[$fa.weight, 'fa-file-video']"></i>
+            <span>{{ $t('convert.title') }}</span>
+          </button>
+          <button
             class="w-full text-xs text-red-500 hover:underline text-left"
             @click="batchDelete"
           >
@@ -374,6 +383,21 @@
       @confirm="handleCacheRootMigrationConfirm"
       @cancel="handleCacheRootMigrationCancel"
     />
+
+    <!-- 转换对话框 -->
+    <ConvertDialog
+      :visible="showConvertDialog"
+      :cache-ids="convertCacheIds"
+      @confirm="handleConvertConfirm"
+      @cancel="handleConvertCancel"
+    />
+
+    <!-- 转换进度对话框 -->
+    <ConvertProgressDialog
+      :visible="showConvertProgressDialog"
+      :task-ids="convertTaskIds"
+      @close="handleConvertProgressClose"
+    />
   </div>
 </template>
 
@@ -403,6 +427,8 @@ import {
   TransferDialog,
   TransferProgressDialog,
   CacheRootMigrationDialog,
+  ConvertDialog,
+  ConvertProgressDialog,
 } from '@/components/CachePage';
 import {
   initializeCacheKeyboardShortcuts,
@@ -410,6 +436,8 @@ import {
 } from '@/services/keyboard';
 import type * as Types from '@/types/cache.d';
 import type * as TransferTypes from '@/types/transfer.d';
+import type { ConvertConfig } from '@/services/backend';
+import * as converterService from '@/services/converter';
 
 // ============================================================================
 // 路由和状态管理
@@ -516,6 +544,12 @@ const showTransferProgressDialog = ref(false);
 const showCacheRootMigrationDialog = ref(false);
 const currentTransferOperation = ref<TransferTypes.TransferOperation>('Copy');
 const currentTransferType = ref<TransferTypes.TransferType>('individual');
+
+// 转换相关状态
+const showConvertDialog = ref(false);
+const showConvertProgressDialog = ref(false);
+const convertCacheIds = ref<string[]>([]);
+const convertTaskIds = ref<string[]>([]);
 
 // ============================================================================
 // 计算属性
@@ -1329,6 +1363,90 @@ function handleCutGroupFromContextMenu(group: Types.CacheGroup): void {
     cacheStore.selectGroup(group.groupId);
   }
   startCutOperation();
+}
+
+// ============================================================================
+// 转换相关方法
+// ============================================================================
+
+/**
+ * 开始转换操作
+ * 需求 1.1: 在工具栏添加转换按钮
+ */
+async function startConvertOperation(): Promise<void> {
+  try {
+    if (cacheStore.selectedItems.length === 0) {
+      new AppError('请先选择要转换的缓存', { name: 'warning' }).handle();
+      return;
+    }
+
+    convertCacheIds.value = [...cacheStore.selectedItems];
+    showConvertDialog.value = true;
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理右键菜单转换
+ * 需求 1.1: 在右键菜单添加"转换为MP4"选项
+ */
+function handleConvertFromContextMenu(item: Types.CacheItem): void {
+  // 确保项目被选中
+  if (!cacheStore.selectedItems.includes(item.id)) {
+    cacheStore.toggleCacheItemSelection(item.id);
+  }
+  startConvertOperation();
+}
+
+/**
+ * 处理转换对话框确认
+ * 需求 1.2, 1.3: 用户选择输出目录后开始转换
+ */
+async function handleConvertConfirm(
+  outputDir: string,
+  config: ConvertConfig,
+): Promise<void> {
+  try {
+    showConvertDialog.value = false;
+
+    if (convertCacheIds.value.length === 0) {
+      new AppError('没有选中任何项目', { name: 'warning' }).handle();
+      return;
+    }
+
+    // 调用转换服务创建任务
+    const taskIds = await converterService.convertCache(
+      convertCacheIds.value,
+      outputDir,
+      config,
+    );
+
+    if (taskIds && taskIds.length > 0) {
+      convertTaskIds.value = taskIds;
+      showConvertProgressDialog.value = true;
+    } else {
+      new AppError('创建转换任务失败', { name: 'error' }).handle();
+    }
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理转换对话框取消
+ */
+function handleConvertCancel(): void {
+  showConvertDialog.value = false;
+  convertCacheIds.value = [];
+}
+
+/**
+ * 处理转换进度对话框关闭
+ */
+function handleConvertProgressClose(): void {
+  showConvertProgressDialog.value = false;
+  convertTaskIds.value = [];
 }
 
 // ============================================================================

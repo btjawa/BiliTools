@@ -148,6 +148,7 @@ interface Emits {
   (e: 'delete', item: Types.CacheItem): void;
   (e: 'copy', item: Types.CacheItem): void;
   (e: 'cut', item: Types.CacheItem): void;
+  (e: 'convert', item: Types.CacheItem): void;
 }
 
 const props = defineProps<Props>();
@@ -182,6 +183,11 @@ function handleContextMenu(event: MouseEvent) {
       event,
       item: props.item,
       options: [
+        {
+          icon: 'fa-file-video',
+          text: 'convert.title',
+          action: () => emit('convert', props.item),
+        },
         {
           icon: 'fa-copy',
           text: 'transfer.copy',
