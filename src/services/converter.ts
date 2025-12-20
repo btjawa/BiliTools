@@ -272,9 +272,7 @@ export function onConvertCancelled(
 /**
  * 判断转换阶段是否为终态
  */
-export function isTerminalStage(
-  stage: ConvertProgress['stage'],
-): boolean {
+export function isTerminalStage(stage: ConvertProgress['stage']): boolean {
   return stage === 'completed' || stage === 'failed' || stage === 'cancelled';
 }
 

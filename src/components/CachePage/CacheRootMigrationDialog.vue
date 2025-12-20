@@ -299,10 +299,8 @@ async function handleBrowseFolder() {
       const localTarget: Types.TransferTarget = {
         id: `local_${Date.now()}`,
         name: folderPath.split(/[/\\]/).pop() || folderPath,
-        device_type: 'LocalDrive',
         path: folderPath,
         available_space: undefined,
-        connection_status: 'Connected',
       };
 
       selectedTarget.value = localTarget;

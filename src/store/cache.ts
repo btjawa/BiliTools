@@ -12,6 +12,7 @@ import { cacheImportService, cacheManagementService } from '@/services/cache';
 import { UnifiedErrorHandler } from '@/utils/error-handler';
 import { PROGRESS, PAGINATION } from '@/constants';
 import type * as Types from '@/types/cache.d';
+import type { ImportProgress as BackendImportProgress } from '@/services/backend';
 
 /**
  * 缓存 Store
@@ -49,7 +50,7 @@ export const useCacheStore = defineStore('cache', () => {
   });
 
   // 导入相关状态
-  const importProgress = ref<Types.ImportProgress | null>(null);
+  const importProgress = ref<BackendImportProgress | null>(null);
   const importHistory = ref<Types.ImportResult[]>([]);
   const activeImportId = ref<string | null>(null);
 
@@ -140,7 +141,6 @@ export const useCacheStore = defineStore('cache', () => {
     return cacheItems.value.length;
   });
 
-
   /**
    * 总文件大小（使用全量统计数据）
    */
@@ -195,7 +195,6 @@ export const useCacheStore = defineStore('cache', () => {
 
     return Array.from(groupIds).sort();
   });
-
 
   /**
    * 是否有选中的项目

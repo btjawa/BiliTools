@@ -1,6 +1,8 @@
 <template>
   <div class="space-y-3">
-    <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
+    <h3
+      class="text-sm font-medium text-(--content-color) flex items-center gap-2"
+    >
       <i class="fa-solid fa-list"></i>
       {{ $t('transfer.taskList') }}
     </h3>

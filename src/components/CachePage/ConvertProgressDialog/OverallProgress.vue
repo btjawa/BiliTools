@@ -2,7 +2,9 @@
   <div class="bg-(--solid-button-color) rounded-lg p-4 space-y-4">
     <!-- 标题 -->
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-medium text-(--content-color) flex items-center gap-2">
+      <h3
+        class="text-sm font-medium text-(--content-color) flex items-center gap-2"
+      >
         <i class="fa-solid fa-tasks"></i>
         {{ $t('transfer.overallProgress') }}
       </h3>
@@ -29,19 +31,25 @@
       <!-- 已完成 -->
       <div class="text-center">
         <div class="text-lg font-bold text-green-500">{{ completedCount }}</div>
-        <div class="text-xs text-(--desc-color)">{{ $t('transfer.completed') }}</div>
+        <div class="text-xs text-(--desc-color)">
+          {{ $t('transfer.completed') }}
+        </div>
       </div>
 
       <!-- 进行中 -->
       <div class="text-center">
         <div class="text-lg font-bold text-blue-500">{{ inProgressCount }}</div>
-        <div class="text-xs text-(--desc-color)">{{ $t('transfer.running') }}</div>
+        <div class="text-xs text-(--desc-color)">
+          {{ $t('transfer.running') }}
+        </div>
       </div>
 
       <!-- 失败 -->
       <div class="text-center">
         <div class="text-lg font-bold text-red-500">{{ failedCount }}</div>
-        <div class="text-xs text-(--desc-color)">{{ $t('transfer.failed') }}</div>
+        <div class="text-xs text-(--desc-color)">
+          {{ $t('transfer.failed') }}
+        </div>
       </div>
     </div>
   </div>

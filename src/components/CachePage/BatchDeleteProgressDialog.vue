@@ -14,7 +14,9 @@
           <div
             class="sticky top-0 bg-(--solid-block-color) border-b border-(--split-color) p-6 flex items-center justify-between"
           >
-            <h2 class="text-lg font-semibold flex items-center gap-2 text-(--content-color)">
+            <h2
+              class="text-lg font-semibold flex items-center gap-2 text-(--content-color)"
+            >
               <i class="fa-solid fa-trash text-red-500"></i>
               <span>{{ $t('cache.batchDelete.progressTitle') }}</span>
             </h2>

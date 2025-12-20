@@ -9,6 +9,7 @@ import { Channel, invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { AppError } from './error';
 import * as backend from './backend';
+import type { ImportProgress as BackendImportProgress } from './backend';
 import * as Types from '@/types/cache.d';
 import { transformCacheRecord } from '@/utils/transform';
 
@@ -149,10 +150,10 @@ export class CacheImportService {
    */
   async listenImportProgress(
     importId: string,
-    onProgress: (progress: Types.ImportProgress) => void,
+    onProgress: (progress: BackendImportProgress) => void,
   ): Promise<() => void> {
     try {
-      const channel = new Channel<Types.ImportProgress>();
+      const channel = new Channel<BackendImportProgress>();
       let isCancelled = false;
 
       // 监听进度更新
@@ -302,14 +303,14 @@ export class CacheManagementService {
   async refreshCacheItemStatus(id: string): Promise<Types.CacheItem> {
     // TODO: 等待后端实现 refresh_cache_item_status 命令
     // 目前通过重新加载显示项的方式实现
-    const displayItems = (await invoke(
+    const rawItems = (await invoke(
       'get_cache_display_items',
-    )) as Types.DisplayItem[];
-    const videoItem = displayItems.find(
-      (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
-        item.type === 'single_video' && item.video.id === id,
+    )) as Types.DisplayItemRaw[];
+    const videoItem = rawItems.find(
+      (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
+        item.type === 'single_video' && item.video?.id === id,
     );
-    if (!videoItem) {
+    if (!videoItem || !videoItem.video) {
       throw new AppError('缓存项不存在');
     }
     return transformCacheRecord(videoItem.video);
@@ -425,13 +426,13 @@ export class CacheManagementService {
   async exportCacheList(filter?: Types.CacheFilter): Promise<string> {
     // TODO: 等待后端实现 export_cache_list 命令
     // 目前通过前端实现导出功能
-    const displayItems = (await invoke(
+    const rawItems = (await invoke(
       'get_cache_display_items',
-    )) as Types.DisplayItem[];
-    const videoItems = displayItems
+    )) as Types.DisplayItemRaw[];
+    const videoItems = rawItems
       .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
-          item.type === 'single_video',
+        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
+          item.type === 'single_video' && !!item.video,
       )
       .map((item) => transformCacheRecord(item.video));
 
@@ -540,7 +541,7 @@ export async function selectAndScanCacheDirectory(): Promise<Types.ScanResult | 
  */
 export async function performFullImport(
   options: Types.ImportOptions,
-  onProgress?: (progress: Types.ImportProgress) => void,
+  onProgress?: (progress: BackendImportProgress) => void,
 ): Promise<Types.ImportResult | null> {
   // 选择目录
   const path = await cacheImportService.selectCacheDirectory();

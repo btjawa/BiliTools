@@ -228,9 +228,7 @@ const canResume = computed(() => {
 const canCancel = computed(() => {
   return tasks.value.some((task) => {
     const stage = task.progress.stage;
-    return (
-      stage !== 'completed' && stage !== 'failed' && stage !== 'cancelled'
-    );
+    return stage !== 'completed' && stage !== 'failed' && stage !== 'cancelled';
   });
 });
 
@@ -307,8 +305,7 @@ async function loadTasks() {
     tasks.value = loadedTasks;
   } catch (error) {
     console.error('加载转换任务失败:', error);
-    lastError.value =
-      error instanceof Error ? error.message : '加载任务失败';
+    lastError.value = error instanceof Error ? error.message : '加载任务失败';
   }
 }
 
@@ -423,8 +420,7 @@ async function handlePauseResume() {
     await loadTasks();
   } catch (error) {
     console.error('暂停/恢复转换失败:', error);
-    lastError.value =
-      error instanceof Error ? error.message : '操作失败';
+    lastError.value = error instanceof Error ? error.message : '操作失败';
   }
 }
 
@@ -461,8 +457,7 @@ async function handleCancel() {
     await loadTasks();
   } catch (error) {
     console.error('取消转换失败:', error);
-    lastError.value =
-      error instanceof Error ? error.message : '取消失败';
+    lastError.value = error instanceof Error ? error.message : '取消失败';
   }
 }
 

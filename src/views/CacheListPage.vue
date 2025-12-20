@@ -831,15 +831,15 @@ async function batchDelete(): Promise<void> {
     }
 
     // 从后端获取所有显示项（支持跨页选择）
-    const allDisplayItems = (await invoke(
+    const allRawItems = (await invoke(
       'get_cache_display_items',
-    )) as Types.DisplayItem[];
+    )) as Types.DisplayItemRaw[];
 
     // 提取所有视频项
-    const allCacheItems: Types.CacheItem[] = allDisplayItems
+    const allCacheItems: Types.CacheItem[] = allRawItems
       .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
-          item.type === 'single_video',
+        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
+          item.type === 'single_video' && !!item.video,
       )
       .map((item) => transformCacheRecord(item.video));
 
@@ -1200,15 +1200,15 @@ async function handleTransferConfirm(
     }
 
     // 获取所有显示项
-    const allDisplayItems = (await invoke(
+    const allRawItems = (await invoke(
       'get_cache_display_items',
-    )) as Types.DisplayItem[];
+    )) as Types.DisplayItemRaw[];
 
     // 提取所有视频项
-    const allCacheItems: Types.CacheItem[] = allDisplayItems
+    const allCacheItems: Types.CacheItem[] = allRawItems
       .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecord } =>
-          item.type === 'single_video',
+        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
+          item.type === 'single_video' && !!item.video,
       )
       .map((item) => transformCacheRecord(item.video));
 
