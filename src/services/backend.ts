@@ -604,6 +604,124 @@ async listenTransferProgress(taskId: string, event: TAURI_CHANNEL<TransferProgre
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * 创建并执行转换任务
+ * 
+ * 为每个缓存ID创建转换任务并开始执行
+ */
+async convertCache(cacheIds: string[], outputDir: string, config: ConvertConfig) : Promise<Result<string[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("convert_cache", { cacheIds, outputDir, config }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 暂停转换任务
+ */
+async pauseConvert(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pause_convert", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 恢复转换任务
+ */
+async resumeConvert(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("resume_convert", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 取消转换任务
+ */
+async cancelConvert(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cancel_convert", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 检查转换所需的磁盘空间
+ */
+async checkConvertSpace(cacheIds: string[], outputDir: string) : Promise<Result<DiskSpaceCheck, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("check_convert_space", { cacheIds, outputDir }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取默认转换配置
+ */
+async getDefaultConvertConfig() : Promise<ConvertConfig> {
+    return await TAURI_INVOKE("get_default_convert_config");
+},
+/**
+ * 保存转换配置到设置
+ */
+async saveConvertConfig(videoQuality: number, audioBitrate: number) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_convert_config", { videoQuality, audioBitrate }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取转换任务状态
+ */
+async getConvertTask(taskId: string) : Promise<Result<ConvertTaskView | null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_convert_task", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 获取所有转换任务
+ */
+async getAllConvertTasks() : Promise<Result<ConvertTaskView[], TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_all_convert_tasks") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 删除已完成的转换任务
+ */
+async removeConvertTask(taskId: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_convert_task", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * 监听转换进度更新（使用 Channel 事件流）
+ */
+async listenConvertProgress(taskId: string, event: TAURI_CHANNEL<ConvertProgress>) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("listen_convert_progress", { taskId, event }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -611,10 +729,12 @@ async listenTransferProgress(taskId: string, event: TAURI_CHANNEL<TransferProgre
 
 
 export const events = __makeEvents__<{
+convertEvent: ConvertEvent,
 headersData: HeadersData,
 processError: ProcessError,
 queueEvent: QueueEvent
 }>({
+convertEvent: "convert-event",
 headersData: "headers-data",
 processError: "process-error",
 queueEvent: "queue-event"
@@ -627,6 +747,46 @@ queueEvent: "queue-event"
 /** user-defined types **/
 
 export type AnyInt = number
+/**
+ * 音频码率预设
+ */
+export type AudioBitrate = 
+/**
+ * 原始码率（直接复制）
+ */
+"original" | 
+/**
+ * 192kbps
+ */
+"kbps192" | 
+/**
+ * 128kbps
+ */
+"kbps128"
+/**
+ * 批量转换结果
+ */
+export type BatchConvertResult = { 
+/**
+ * 总任务数
+ */
+totalCount: number; 
+/**
+ * 成功数量
+ */
+successCount: number; 
+/**
+ * 失败数量
+ */
+failureCount: number; 
+/**
+ * 总耗时（秒）
+ */
+totalTime: number; 
+/**
+ * 各任务结果
+ */
+results: ConvertResult[] }
 /**
  * 批量操作结果
  */
@@ -670,7 +830,239 @@ export type ConflictStrategy =
  * 询问用户
  */
 "Ask"
+/**
+ * 转换配置
+ */
+export type ConvertConfig = { 
+/**
+ * 视频质量预设
+ */
+videoQuality: VideoQuality; 
+/**
+ * 音频码率
+ */
+audioBitrate: AudioBitrate; 
+/**
+ * 是否嵌入封面
+ */
+embedCover: boolean; 
+/**
+ * 弹幕导出格式
+ */
+danmakuFormat: DanmakuFormat; 
+/**
+ * 是否写入元数据
+ */
+writeMetadata: boolean }
+/**
+ * 转换事件类型
+ */
+export type ConvertEvent = 
+/**
+ * 进度更新事件
+ */
+{ type: "progress"; task_id: string; progress: ConvertProgress } | 
+/**
+ * 任务完成事件
+ */
+{ type: "completed"; task_id: string; output_path: string } | 
+/**
+ * 任务失败事件
+ */
+{ type: "failed"; task_id: string; error: string } | 
+/**
+ * 任务取消事件
+ */
+{ type: "cancelled"; task_id: string } | 
+/**
+ * 批量转换结果事件
+ */
+{ type: "batchResult"; result: BatchConvertResult }
+/**
+ * 转换进度
+ */
+export type ConvertProgress = { 
+/**
+ * 当前阶段
+ */
+stage: ConvertStage; 
+/**
+ * 进度百分比 (0-100)
+ */
+percentage: number; 
+/**
+ * 当前处理的文件名
+ */
+currentFile: string; 
+/**
+ * 处理速度
+ */
+speed: string; 
+/**
+ * 已处理字节数
+ */
+processedBytes: number; 
+/**
+ * 总字节数
+ */
+totalBytes: number }
+/**
+ * 单个转换结果
+ */
+export type ConvertResult = { 
+/**
+ * 任务ID
+ */
+taskId: string; 
+/**
+ * 缓存ID
+ */
+cacheId: string; 
+/**
+ * 是否成功
+ */
+success: boolean; 
+/**
+ * 输出文件路径
+ */
+outputPath: string | null; 
+/**
+ * 错误信息
+ */
+error: string | null }
+/**
+ * 转换阶段
+ */
+export type ConvertStage = 
+/**
+ * 准备中
+ */
+"preparing" | 
+/**
+ * 处理m4s文件
+ */
+"processing" | 
+/**
+ * 合并音视频
+ */
+"merging" | 
+/**
+ * 导出弹幕
+ */
+"exportDanmaku" | 
+/**
+ * 添加元数据
+ */
+"addingMeta" | 
+/**
+ * 完成中
+ */
+"finalizing" | 
+/**
+ * 已完成
+ */
+"completed" | 
+/**
+ * 失败
+ */
+"failed" | 
+/**
+ * 已暂停
+ */
+"paused" | 
+/**
+ * 已取消
+ */
+"cancelled"
+/**
+ * 转换任务视图（用于前端展示和数据库存储）
+ */
+export type ConvertTaskView = { 
+/**
+ * 任务ID
+ */
+id: string; 
+/**
+ * 缓存记录ID
+ */
+cacheId: string; 
+/**
+ * 缓存路径
+ */
+cachePath: string; 
+/**
+ * 输出目录
+ */
+outputDir: string; 
+/**
+ * 输出文件路径（转换完成后设置）
+ */
+outputPath: string | null; 
+/**
+ * 转换配置
+ */
+config: ConvertConfig; 
+/**
+ * 当前进度
+ */
+progress: ConvertProgress; 
+/**
+ * 错误信息
+ */
+errorMessage: string | null; 
+/**
+ * 视频标题
+ */
+title: string; 
+/**
+ * 创建时间戳
+ */
+createdAt: number; 
+/**
+ * 更新时间戳
+ */
+updatedAt: number; 
+/**
+ * 完成时间戳
+ */
+completedAt: number | null }
 export type CtrlEvent = "pause" | "resume" | "cancel" | "retry"
+/**
+ * 弹幕导出格式
+ */
+export type DanmakuFormat = 
+/**
+ * 不导出弹幕
+ */
+"none" | 
+/**
+ * 仅导出 XML 格式
+ */
+"xml" | 
+/**
+ * 仅导出 ASS 格式（通过 DanmakuFactory 转换）
+ */
+"ass" | 
+/**
+ * 同时导出 XML 和 ASS
+ */
+"both"
+/**
+ * 磁盘空间检查结果
+ */
+export type DiskSpaceCheck = { 
+/**
+ * 预估所需空间（字节）
+ */
+requiredSpace: number; 
+/**
+ * 可用空间（字节）
+ */
+availableSpace: number; 
+/**
+ * 空间是否充足
+ */
+isSufficient: boolean }
 /**
  * 显示项枚举（组或单个视频）
  */
@@ -982,6 +1374,22 @@ updated_at: number;
  * 错误消息（如果失败）
  */
 error_message: string | null }
+/**
+ * 视频质量预设
+ */
+export type VideoQuality = 
+/**
+ * 原始质量（直接复制，不重新编码）
+ */
+"original" | 
+/**
+ * 高质量（CRF 18）
+ */
+"high" | 
+/**
+ * 标准质量（CRF 23）
+ */
+"standard"
 export type WindowEffect = 
 /**
  * Auto window effect based on platform

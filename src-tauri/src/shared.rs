@@ -20,8 +20,8 @@ use tokio::sync::{OnceCell, RwLock};
 
 use crate::storage::{
     config::{
-        self, Settings, SettingsConvert, SettingsDefault, SettingsFormat, SettingsOrganize,
-        SettingsProxy, SettingsSidecar,
+        self, ConvertSettings, Settings, SettingsConvert, SettingsDefault, SettingsFormat,
+        SettingsOrganize, SettingsProxy, SettingsSidecar,
     },
     cookies,
 };
@@ -43,6 +43,7 @@ pub static CONFIG: LazyLock<ArcSwap<Settings>> = LazyLock::new(|| {
             mp4: false,
             mp3: false,
         },
+        convert_config: ConvertSettings::default(),
         default: SettingsDefault {
             res: 80,
             abr: 30280,

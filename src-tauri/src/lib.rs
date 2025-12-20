@@ -88,11 +88,26 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             get_current_cache_root,
             set_cache_root,
             listen_transfer_progress,
+            // Convert
+            convert_cache,
+            pause_convert,
+            resume_convert,
+            cancel_convert,
+            check_convert_space,
+            get_default_convert_config,
+            get_saved_convert_config,
+            get_last_convert_output_dir,
+            save_convert_config,
+            get_convert_task,
+            get_all_convert_tasks,
+            remove_convert_task,
+            listen_convert_progress,
         ])
         .events(collect_events![
             shared::HeadersData,
             shared::ProcessError,
-            queue::frontend::QueueEvent
+            queue::frontend::QueueEvent,
+            services::converter::ConvertEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

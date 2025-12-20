@@ -1543,3 +1543,236 @@ pub async fn listen_transfer_progress(
 
     Ok(())
 }
+
+
+// 转换功能相关命令
+
+use crate::services::converter::{
+    ConvertConfig, ConvertProgress, ConvertService, ConvertTaskView, DiskSpaceCheck,
+    DiskSpaceChecker,
+};
+
+/// 创建并执行转换任务
+///
+/// 为每个缓存ID创建转换任务并开始执行
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn convert_cache(
+    cache_ids: Vec<String>,
+    output_dir: String,
+    config: ConvertConfig,
+) -> TauriResult<Vec<String>> {
+    let output_path = PathBuf::from(&output_dir);
+
+    // 创建转换任务
+    let task_ids = ConvertService::create_task(cache_ids, output_path, config)
+        .await
+        .map_err(|e| anyhow::anyhow!("创建转换任务失败: {}", e))?;
+
+    // 异步执行所有任务
+    let task_ids_clone = task_ids.clone();
+    tokio::spawn(async move {
+        let _ = ConvertService::execute_batch(task_ids_clone).await;
+    });
+
+    Ok(task_ids)
+}
+
+/// 暂停转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn pause_convert(task_id: String) -> TauriResult<()> {
+    ConvertService::pause_task(&task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("暂停转换任务失败: {}", e))?;
+    Ok(())
+}
+
+/// 恢复转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn resume_convert(task_id: String) -> TauriResult<()> {
+    ConvertService::resume_task(&task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("恢复转换任务失败: {}", e))?;
+    Ok(())
+}
+
+/// 取消转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn cancel_convert(task_id: String) -> TauriResult<()> {
+    ConvertService::cancel_task(&task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("取消转换任务失败: {}", e))?;
+    Ok(())
+}
+
+/// 检查转换所需的磁盘空间
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn check_convert_space(
+    cache_ids: Vec<String>,
+    output_dir: String,
+) -> TauriResult<DiskSpaceCheck> {
+    let output_path = PathBuf::from(&output_dir);
+
+    // 获取所有缓存记录的路径
+    let mut source_paths = Vec::new();
+    for cache_id in cache_ids {
+        if let Some(record) = cache_records::get_by_id(&cache_id).await? {
+            let cache_path = PathBuf::from(&record.cache_path);
+            // 收集缓存目录下的所有 m4s 文件
+            if cache_path.exists() && cache_path.is_dir() {
+                let mut entries = tokio::fs::read_dir(&cache_path).await?;
+                while let Some(entry) = entries.next_entry().await? {
+                    let path = entry.path();
+                    if path.extension().is_some_and(|ext| ext == "m4s") {
+                        source_paths.push(path);
+                    }
+                }
+            }
+        }
+    }
+
+    // 检查磁盘空间
+    let check = DiskSpaceChecker::check_disk_space(&source_paths, &output_path)
+        .map_err(|e| anyhow::anyhow!("检查磁盘空间失败: {}", e))?;
+
+    Ok(check)
+}
+
+/// 获取默认转换配置
+#[tauri::command]
+#[specta::specta]
+pub fn get_default_convert_config() -> ConvertConfig {
+    ConvertConfig::default()
+}
+
+/// 获取保存的转换配置
+#[tauri::command]
+#[specta::specta]
+pub fn get_saved_convert_config() -> ConvertConfig {
+    let settings = config::read();
+    let saved = &settings.convert_config;
+
+    ConvertConfig {
+        video_quality: saved.video_quality.into(),
+        audio_bitrate: saved.audio_bitrate.into(),
+        embed_cover: saved.embed_cover,
+        danmaku_format: saved.danmaku_format.into(),
+        write_metadata: saved.write_metadata,
+    }
+}
+
+/// 获取上次使用的输出目录
+#[tauri::command]
+#[specta::specta]
+pub fn get_last_convert_output_dir() -> Option<PathBuf> {
+    config::read().convert_config.last_output_dir.clone()
+}
+
+/// 保存转换配置到设置
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn save_convert_config(
+    video_quality: u8,
+    audio_bitrate: u8,
+    embed_cover: bool,
+    danmaku_format: u8,
+    write_metadata: bool,
+    last_output_dir: Option<String>,
+) -> TauriResult<()> {
+    // 将转换配置保存到应用设置中
+    let mut settings = serde_json::Map::new();
+
+    let convert_settings = serde_json::json!({
+        "videoQuality": video_quality,
+        "audioBitrate": audio_bitrate,
+        "embedCover": embed_cover,
+        "danmakuFormat": danmaku_format,
+        "writeMetadata": write_metadata,
+        "lastOutputDir": last_output_dir
+    });
+
+    settings.insert("convertConfig".to_string(), convert_settings);
+    config::write(settings).await?;
+
+    Ok(())
+}
+
+/// 获取转换任务状态
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn get_convert_task(task_id: String) -> TauriResult<Option<ConvertTaskView>> {
+    match ConvertService::get_task(&task_id).await {
+        Ok(task) => Ok(Some(task)),
+        Err(_) => Ok(None),
+    }
+}
+
+/// 获取所有转换任务
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_all_convert_tasks() -> TauriResult<Vec<ConvertTaskView>> {
+    let tasks = ConvertService::get_all_tasks().await;
+    Ok(tasks)
+}
+
+/// 删除已完成的转换任务
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn remove_convert_task(task_id: String) -> TauriResult<()> {
+    ConvertService::remove_task(&task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("删除转换任务失败: {}", e))?;
+    Ok(())
+}
+
+/// 监听转换进度更新（使用 Channel 事件流）
+#[tauri::command(async, rename_all = "camelCase")]
+#[specta::specta]
+pub async fn listen_convert_progress(
+    task_id: String,
+    event: tauri::ipc::Channel<ConvertProgress>,
+) -> TauriResult<()> {
+    // 启动一个后台任务持续发送进度更新
+    tokio::spawn(async move {
+        // 最多等待 10 秒让任务出现
+        let mut retry_count = 0;
+        let max_retries = 20;
+
+        loop {
+            match ConvertService::get_task(&task_id).await {
+                Ok(task) => {
+                    // 发送进度更新
+                    if event.send(task.progress.clone()).is_err() {
+                        // Channel 已关闭，停止监听
+                        break;
+                    }
+
+                    // 如果转换已完成或失败，停止监听
+                    if task.progress.stage.is_terminal() {
+                        break;
+                    }
+
+                    // 重置重试计数
+                    retry_count = 0;
+                }
+                Err(_) => {
+                    // 任务不存在，可能还没开始或已完成
+                    retry_count += 1;
+                    if retry_count >= max_retries {
+                        // 超过最大重试次数，停止监听
+                        break;
+                    }
+                }
+            }
+
+            // 每200ms检查一次进度
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        }
+    });
+
+    Ok(())
+}

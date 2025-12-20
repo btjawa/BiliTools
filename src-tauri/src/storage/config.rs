@@ -35,6 +35,7 @@ pub struct Settings {
     pub check_update: bool,
     pub clipboard: bool,
     pub convert: SettingsConvert,
+    pub convert_config: ConvertSettings,
     pub default: SettingsDefault,
     pub down_dir: PathBuf,
     pub drag_search: bool,
@@ -112,6 +113,37 @@ pub struct SettingsConvert {
     pub danmaku: bool,
     pub mp4: bool,
     pub mp3: bool,
+}
+
+/// 缓存转换配置（用于持久化用户的转换偏好设置）
+#[derive(Clone, Debug, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertSettings {
+    /// 默认视频质量 (0=原始, 1=高质量, 2=标准)
+    pub video_quality: u8,
+    /// 默认音频码率 (0=原始, 1=192kbps, 2=128kbps)
+    pub audio_bitrate: u8,
+    /// 是否默认嵌入封面
+    pub embed_cover: bool,
+    /// 弹幕导出格式 (0=不导出, 1=XML, 2=ASS, 3=两者)
+    pub danmaku_format: u8,
+    /// 是否默认写入元数据
+    pub write_metadata: bool,
+    /// 上次使用的输出目录
+    pub last_output_dir: Option<PathBuf>,
+}
+
+impl Default for ConvertSettings {
+    fn default() -> Self {
+        Self {
+            video_quality: 0,    // 原始质量
+            audio_bitrate: 0,    // 原始码率
+            embed_cover: true,
+            danmaku_format: 0,   // 不导出弹幕
+            write_metadata: true,
+            last_output_dir: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]

@@ -1,5 +1,6 @@
 pub mod aria2c;
 pub mod cache;
+pub mod converter;
 pub mod ffmpeg;
 pub mod login;
 pub mod queue;
