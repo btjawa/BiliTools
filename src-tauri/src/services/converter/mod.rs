@@ -770,6 +770,7 @@ impl ConvertService {
                 &output_with_meta,
                 &record,
                 &task.cache_path,
+                temp_dir,
                 &task.config,
             )
             .await?;
@@ -829,12 +830,14 @@ impl ConvertService {
     /// - `output`: 输出视频文件路径
     /// - `record`: 缓存记录（包含元数据信息）
     /// - `cache_path`: 缓存目录路径（用于查找封面文件）
+    /// - `temp_dir`: 临时目录路径（用于存放转换后的封面）
     /// - `config`: 转换配置
     async fn add_metadata_and_cover(
         input: &Path,
         output: &Path,
         record: &crate::storage::cache_records::CacheRecord,
         cache_path: &Path,
+        temp_dir: &Path,
         config: &ConvertConfig,
     ) -> Result<(), ConvertError> {
         let app = get_app_handle();
@@ -855,7 +858,7 @@ impl ConvertService {
 
         // 查找封面文件
         let cover_path = if config.embed_cover {
-            Self::find_cover_file(cache_path).await
+            Self::find_cover_file(cache_path, temp_dir).await
         } else {
             None
         };
@@ -929,20 +932,43 @@ impl ConvertService {
         Ok(())
     }
 
-    /// 在缓存目录中查找封面文件
-    ///
-    /// 按优先级查找：image.jpg > image.png
-    async fn find_cover_file(cache_path: &Path) -> Option<PathBuf> {
-        let cover_files = ["image.jpg", "image.png"];
+    /// 在缓存目录中查找封面文件，PNG 会自动转换为 JPG
+    async fn find_cover_file(cache_path: &Path, temp_dir: &Path) -> Option<PathBuf> {
+        // 优先使用 JPG
+        let jpg_path = cache_path.join("image.jpg");
+        if jpg_path.exists() && jpg_path.is_file() {
+            return Some(jpg_path);
+        }
 
-        for file_name in &cover_files {
-            let cover_path = cache_path.join(file_name);
-            if cover_path.exists() && cover_path.is_file() {
-                return Some(cover_path);
+        // PNG 需要转换为 JPG（精简版 FFmpeg 不支持 PNG 像素格式）
+        let png_path = cache_path.join("image.png");
+        if png_path.exists() && png_path.is_file() {
+            let converted_jpg = temp_dir.join("cover.jpg");
+            if Self::convert_png_to_jpg(&png_path, &converted_jpg).await.is_ok() {
+                return Some(converted_jpg);
             }
         }
 
         None
+    }
+
+    /// 使用 image crate 将 PNG 转换为 JPG
+    async fn convert_png_to_jpg(png_path: &Path, jpg_path: &Path) -> Result<(), ConvertError> {
+        let png_path = png_path.to_path_buf();
+        let jpg_path = jpg_path.to_path_buf();
+
+        tokio::task::spawn_blocking(move || {
+            let img = image::open(&png_path).map_err(|e| ConvertError::MetadataFailed {
+                reason: format!("无法读取封面图片: {}", e),
+            })?;
+            img.save(&jpg_path).map_err(|e| ConvertError::MetadataFailed {
+                reason: format!("无法保存封面图片: {}", e),
+            })
+        })
+        .await
+        .map_err(|e| ConvertError::MetadataFailed {
+            reason: format!("封面转换任务失败: {}", e),
+        })?
     }
 
     /// 格式化时长（秒转换为 HH:MM:SS 格式）

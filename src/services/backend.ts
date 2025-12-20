@@ -265,6 +265,17 @@ async openCacheFolder(cachePath: string) : Promise<Result<null, TauriError>> {
 }
 },
 /**
+ * 打开任意路径（文件或文件夹）
+ */
+async openPath(path: string) : Promise<Result<null, TauriError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_path", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * 检查本地封面文件
  */
 async checkLocalCover(cachePath: string) : Promise<Result<string | null, TauriError>> {

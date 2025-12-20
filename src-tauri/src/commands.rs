@@ -434,6 +434,19 @@ pub async fn open_cache_folder(cache_path: String) -> TauriResult<()> {
     Ok(())
 }
 
+/// 打开任意路径（文件或文件夹）
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn open_path(path: String) -> TauriResult<()> {
+    let path = PathBuf::from(&path);
+    if path.exists() {
+        tauri_plugin_opener::open_path(path, None::<&str>)?;
+    } else {
+        return Err(anyhow::anyhow!("路径不存在: {}", path.display()).into());
+    }
+    Ok(())
+}
+
 /// 检查本地封面文件
 #[tauri::command(async)]
 #[specta::specta]

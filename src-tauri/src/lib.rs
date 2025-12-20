@@ -55,6 +55,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             incremental_scan_cache_root,
             delete_cache_item,
             open_cache_folder,
+            open_path,
             check_local_cover,
             get_cache_stats,
             get_cache_statistics,

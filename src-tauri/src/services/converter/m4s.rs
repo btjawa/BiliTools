@@ -11,6 +11,10 @@ use super::ConvertError;
 /// B站m4s文件头部标记长度（9字节）
 const BILIBILI_HEADER_LENGTH: usize = 9;
 
+/// B站m4s文件头部标记（ASCII '0' = 0x30）
+/// B站缓存的m4s文件开头是 "000000000"（9个ASCII字符'0'）
+const BILIBILI_HEADER_MARKER: u8 = 0x30; // ASCII '0'
+
 /// 流式处理缓冲区大小（64KB）
 const BUFFER_SIZE: usize = 64 * 1024;
 
@@ -20,7 +24,7 @@ pub struct M4sProcessor;
 impl M4sProcessor {
     /// 检查文件是否包含B站特殊头部标记
     ///
-    /// B站m4s文件开头有9个字节的特殊标记（全为0x00），
+    /// B站m4s文件开头有9个字节的特殊标记（ASCII "000000000"，即9个0x30），
     /// 需要在转换前移除。
     ///
     /// # 参数
@@ -45,8 +49,9 @@ impl M4sProcessor {
             return Ok(false);
         }
 
-        // 检查是否全为0x00
-        Ok(header.iter().all(|&b| b == 0x00))
+        // 检查是否全为 ASCII '0' (0x30)
+        // B站缓存文件头部是 "000000000"
+        Ok(header.iter().all(|&b| b == BILIBILI_HEADER_MARKER))
     }
 
     /// 处理m4s文件，移除头部标记并写入输出文件

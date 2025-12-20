@@ -77,6 +77,16 @@
                 {{ $t('transfer.stop') }}
               </button>
 
+              <!-- 打开文件夹按钮 -->
+              <button
+                v-if="canClose && outputDir"
+                class="px-4 py-2 rounded-lg border border-(--border-color) text-(--content-color) hover:bg-(--hover-color) transition-colors flex items-center gap-2"
+                @click="openOutputFolder"
+              >
+                <i class="fa-solid fa-folder-open"></i>
+                {{ $t('cache.card.openFolder') }}
+              </button>
+
               <!-- 关闭按钮 -->
               <button
                 v-if="canClose"
@@ -98,6 +108,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { confirm } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import * as converterService from '@/services/converter';
 import type { ConvertTaskView, ConvertProgress } from '@/services/backend';
 import type { BatchConvertResult } from '@/services/backend';
@@ -251,6 +262,19 @@ const canClose = computed(() => {
     const stage = task.progress.stage;
     return stage === 'completed' || stage === 'failed' || stage === 'cancelled';
   });
+});
+
+/**
+ * 输出目录（从第一个成功任务获取）
+ */
+const outputDir = computed(() => {
+  const completedTask = tasks.value.find(
+    (task) => task.progress.stage === 'completed' && task.outputPath,
+  );
+  if (completedTask?.outputPath) {
+    return completedTask.outputPath.replace(/[/\\][^/\\]*$/, '');
+  }
+  return null;
 });
 
 // ============================================================================
@@ -506,6 +530,19 @@ function handleClose() {
  */
 function formatBatchResult(result: BatchConvertResult): string {
   return converterService.formatBatchResultSummary(result);
+}
+
+/**
+ * 打开输出文件夹
+ */
+async function openOutputFolder() {
+  if (outputDir.value) {
+    try {
+      await invoke('open_path', { path: outputDir.value });
+    } catch (error) {
+      console.error('打开文件夹失败:', error);
+    }
+  }
 }
 </script>
 
