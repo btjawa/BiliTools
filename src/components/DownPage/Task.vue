@@ -6,7 +6,7 @@
   >
     <div class="flex w-full text">
       <span class="w-full truncate">{{ task.item.title }}</span>
-      <span class="flex-shrink-0">{{ timestamp(task.ts) }}</span>
+      <span class="shrink-0">{{ timestamp(task.ts) }}</span>
     </div>
     <div class="flex gap-2 desc w-full text items-center justify-center">
       <div
@@ -48,7 +48,7 @@
           {{ $t('taskType.opusImages') }}
         </span>
       </div>
-      <div class="flex gap-1 ml-auto flex-shrink-0 items-center">
+      <div class="flex gap-1 ml-auto shrink-0 items-center">
         <i :class="[$fa.weight, 'fa-id-badge ml-auto']"></i>
         {{ task.id }}
         <i :class="[$fa.weight, 'fa-hashtag']"></i>

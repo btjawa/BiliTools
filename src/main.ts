@@ -7,25 +7,10 @@ import { PAGINATION } from '@/constants';
 import App from './App.vue';
 
 import { getVersion as getAppVersion } from '@tauri-apps/api/app';
-import Toast, { PluginOptions, POSITION } from 'vue-toastification';
-import VueDatePicker from '@vuepic/vue-datepicker';
 
 import '@/style.css';
-import 'vue-toastification/dist/index.css';
 import '@vuepic/vue-datepicker/dist/main.css';
-
-const ToastOptions: PluginOptions = {
-  transition: 'Vue-Toastification__fade',
-  position: POSITION.TOP_CENTER,
-  draggable: false,
-  pauseOnFocusLoss: true,
-  pauseOnHover: true,
-  closeButton: 'button',
-  closeOnClick: false,
-  maxToasts: PAGINATION.MAX_TOASTS,
-  newestOnTop: true,
-  icon: true,
-};
+import 'vue-sonner/style.css';
 
 window.onerror = (_, __, ___, ____, e) => {
   if (e) new AppError(e, { name: 'WindowError' }).handle();
@@ -39,13 +24,7 @@ window.onunhandledrejection = (e) => {
   new AppError(e.reason, { name: 'UnhandledRejection' }).handle();
 };
 
-createApp(App)
-  .use(store)
-  .use(router)
-  .use(i18n)
-  .use(Toast, ToastOptions)
-  .component('VueDatePicker', VueDatePicker)
-  .mount('#app');
+createApp(App).use(store).use(router).use(i18n).mount('#app');
 
 const version = await getAppVersion();
 console.log(

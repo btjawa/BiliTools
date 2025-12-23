@@ -4,7 +4,7 @@
       <i :class="[$fa.weight, 'fa-clock']"></i>
       <span>{{ $t('history.title') }}</span>
     </h1>
-    <div class="flex w-full h-full mt-[22px] flex-1 gap-3 min-h-0">
+    <div class="flex w-full h-full mt-5.5 flex-1 gap-3 min-h-0">
       <Transition name="slide">
         <VList
           v-if="v.listActive"
@@ -15,7 +15,7 @@
             <Empty v-if="item === 'empty'" :text="$t('empty')" />
             <div
               v-else
-              class="flex gap-4 p-3 rounded-lg my-px bg-(--block-color) text-sm h-[120px]"
+              class="flex gap-4 p-3 rounded-lg my-px bg-(--block-color) text-sm h-30"
             >
               <div class="relative flex rounded-lg min-w-40 overflow-hidden">
                 <Image

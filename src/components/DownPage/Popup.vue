@@ -28,9 +28,7 @@
         :key="t.id"
         class="flex w-full gap-4 items-center"
       >
-        <span class="flex-shrink-0 min-w-28">{{
-          $t('taskType.' + t.type)
-        }}</span>
+        <span class="shrink-0 min-w-28">{{ $t('taskType.' + t.type) }}</span>
         <span class="w-16">{{ stat(t.id).toFixed(2) }}%</span>
         <ProgressBar :progress="stat(t.id)" />
       </div>

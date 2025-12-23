@@ -38,7 +38,7 @@ pub struct CookiesTable;
 
 impl TableSpec for CookiesTable {
     const NAME: &'static str = "cookies";
-    const LATEST: i32 = 1;
+    const LATEST: i32 = 2;
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Cookies::Table)

@@ -42,7 +42,6 @@
                 format="yyyy-MM-dd"
                 :teleport="true"
                 :max-date="new Date()"
-                :locale="$i18n.locale"
                 :dark="$fa.isDark"
               />
             </template>
@@ -111,6 +110,8 @@ import { getNfoByItem, getPlayUrl } from '@/services/media/data';
 import { getAISummary, getSubtitle } from '@/services/media/extras';
 import { getDefaultQuality } from '@/services/utils';
 import { openUrl } from '@tauri-apps/plugin-opener';
+
+import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 import Dropdown from '../Dropdown.vue';
 
@@ -282,7 +283,7 @@ async function getSelect(item: Types.MediaItem, select?: Types.PopupSelect) {
       media: {
         video: false,
         audio: false,
-        audioVideo: false,
+        audioVideo: true,
       },
     });
   }
@@ -352,14 +353,13 @@ function click(key: keyof typeof extras.value | 'media', id: string) {
 @reference 'tailwindcss';
 
 .el {
-  @apply absolute inset-0 mx-6 bg-(--block-color) mt-[30px];
+  @apply absolute inset-0 mx-6 bg-(--block-color) mt-7.5;
 }
 hr {
   @apply my-2.5;
 }
 button {
-  @apply flex-shrink-0;
-  @apply border-2 border-solid border-transparent;
+  @apply shrink-0 border-2 border-solid border-transparent;
   &.selected {
     @apply border-(--primary-color);
   }

@@ -8,7 +8,7 @@
         <button
           v-for="v in edge.list"
           :key="v.cursor"
-          class="w-9 h-9 rounded-full relative p-0 flex-shrink-0"
+          class="w-9 h-9 rounded-full relative p-0 shrink-0"
           @click="updateEdge(v.edge_id)"
         >
           <i

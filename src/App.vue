@@ -2,6 +2,7 @@
   <SideBar />
   <div id="main" @contextmenu.prevent="handleMainContextMenu">
     <TitleBar />
+    <Toaster v-bind="toasterOptions" />
     <ContextMenu ref="contextMenu" />
     <div class="loading"></div>
     <router-view v-slot="{ Component }">
@@ -18,6 +19,7 @@
 <script setup lang="ts">
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 import { ref, onMounted, watch, getCurrentInstance, reactive } from 'vue';
+import { Toaster } from 'vue-sonner';
 import {
   TitleBar,
   ContextMenu,
@@ -31,11 +33,16 @@ import { useComponentsStore, routeMap } from './store/components';
 import router from './router';
 import { CACHE_AUTO_REFRESH, TIME_CONVERSION } from '@/constants';
 
+import {
+  toasterOptions,
+  AppLog,
+  parseId,
+  setEventHook,
+} from '@/services/utils';
 import { fetchUser, activateCookies } from '@/services/login';
-import { AppLog, parseId, setEventHook } from '@/services/utils';
+import * as clipboard from '@/services/clipboard';
 import { commands } from '@/services/backend';
 import { AppError } from '@/services/error';
-import * as clipboard from '@/services/clipboard';
 
 import { Task as TaskType } from './types/shared.d';
 import i18n from './i18n';
@@ -242,7 +249,7 @@ onMounted(async () => {
 @reference 'tailwindcss';
 
 .loading {
-  @apply absolute w-8 h-8 top-[38px] right-6 opacity-0 z-99 pointer-events-none transition-opacity;
+  @apply absolute w-8 h-8 top-9.5 right-6 opacity-0 z-99 pointer-events-none transition-opacity;
   @apply border-solid border-2 border-(--solid-block-color) border-l-(--content-color) rounded-full;
   animation: circle infinite 0.75s linear;
   &.active {

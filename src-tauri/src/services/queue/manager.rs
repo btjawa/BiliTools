@@ -215,27 +215,24 @@ pub async fn plan_scheduler(sid: String, folder: String) -> TauriResult<Schedule
 pub async fn process_scheduler(sid: String) -> TauriResult<()> {
     let scheduler = MANAGER.get_scheduler(&sid).await?;
     let folder = scheduler.folder.clone().to_string_lossy().into_owned();
-    if scheduler.dispatch().await.is_ok() {
-        MANAGER.move_scheduler(&sid, QueueType::Complete).await?;
-        if config::read().notify {
-            #[cfg(target_os = "windows")]
-            notify_rust::Notification::new()
-                .app_id("com.btjawa.bilitools")
-                .summary("BiliTools")
-                .body(&format!("(#{sid}) {folder}\nDownload complete~"))
+    if scheduler.dispatch().await.is_ok() && config::read().notify {
+        #[cfg(target_os = "windows")]
+        notify_rust::Notification::new()
+            .app_id("com.btjawa.bilitools")
+            .summary("BiliTools")
+            .body(&format!("(#{sid}) {folder}\nDownload complete~"))
+            .show()?;
+        #[cfg(not(target_os = "windows"))]
+        {
+            use crate::shared::get_app_handle;
+            use tauri_plugin_notification::NotificationExt;
+            let app = get_app_handle();
+            app.notification()
+                .builder()
+                .title("BiliTools")
+                .body(format!("(#{sid}) {folder}\nDownload complete~"))
                 .show()?;
-            #[cfg(not(target_os = "windows"))]
-            {
-                use crate::shared::get_app_handle;
-                use tauri_plugin_notification::NotificationExt;
-                let app = get_app_handle();
-                app.notification()
-                    .builder()
-                    .title("BiliTools")
-                    .body(format!("(#{sid}) {folder}\nDownload complete~"))
-                    .show()?;
-            }
         }
-    };
+    }
     Ok(())
 }

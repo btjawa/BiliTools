@@ -210,10 +210,15 @@ impl Scheduler {
         // `task.cancel()` will deadlock if we iterate while holding the lock.
         let list = self.list.read().await.clone();
         for id in list {
-            let Ok(task) = MANAGER.get_task(&id).await else {
-                continue;
-            };
-            task.cancel(&self.sid).await?;
+            RUNTIME
+                .ctrl
+                .send_task(
+                    Some(&self.sid),
+                    &id,
+                    &CtrlEvent::Cancel,
+                    TaskState::Cancelled,
+                )
+                .await?;
         }
         MANAGER.remove(&self.sid, None).await?;
 

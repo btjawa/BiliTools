@@ -47,7 +47,7 @@ button:hover i {
   @apply bg-(--solid-block-color) border border-solid border-(--split-color) max-h-64;
   @apply overflow-auto rounded-lg min-w-40 w-max z-50;
   button {
-    @apply text-left rounded-none h-[27px];
+    @apply text-left rounded-none h-6.75;
   }
 }
 .flat > button {

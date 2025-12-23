@@ -4,11 +4,7 @@
       <button class="close" @click="cancel">
         <i :class="[$fa.weight, 'fa-close']"></i>
       </button>
-      <div
-        v-for="(val, k) in filters"
-        :key="k"
-        class="flex gap-2 *:flex-shrink-0"
-      >
+      <div v-for="(val, k) in filters" :key="k" class="flex gap-2 *:shrink-0">
         <button
           v-for="i in val"
           :key="i"
@@ -26,7 +22,6 @@
           :placeholder="$t('history.placeholder')"
           format="yyyy/MM/dd"
           :max-date="new Date()"
-          :locale="$i18n.locale"
           :dark="$fa.isDark"
         />
       </div>
@@ -46,7 +41,7 @@
 
 <script lang="ts" setup>
 import { reactive, watch } from 'vue';
-import VueDatePicker from '@vuepic/vue-datepicker';
+import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 const filters = {
   duration: ['all', 'under10', '10to30', '30to60', 'over60'] as const,

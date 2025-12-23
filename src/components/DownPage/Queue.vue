@@ -6,7 +6,7 @@
       height: getHeight(queue[model].length),
     }"
   >
-    <div class="flex mb-2.5 mx-[14px] text items-center">
+    <div class="flex mb-2.5 mx-3.5 text items-center">
       <i class="fa-solid fa-books-medical"></i>
       <span>{{ $t('down.backlog') }} ({{ queue.backlog.length }})</span>
       <button

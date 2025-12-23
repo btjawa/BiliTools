@@ -33,7 +33,7 @@ pub struct TasksTable;
 
 impl TableSpec for TasksTable {
     const NAME: &'static str = "tasks";
-    const LATEST: i32 = 1;
+    const LATEST: i32 = 2;
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Tasks::Table)

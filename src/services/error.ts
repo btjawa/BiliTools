@@ -71,11 +71,12 @@ export class AppError extends Error {
     };
   }
   async handle() {
+    const title = `${this.name}: ${this.message}`;
     const frames = await StackTrace.fromError(this.original ?? this);
     if (import.meta.env.DEV) {
-      console.log('Got StackFrames for ' + this.message + '\n', frames);
+      console.log('Got StackFrames for ' + title + '\n', frames);
       const stack = (this.original ?? this).stack;
-      return AppLog(stack ?? '', 'error');
+      return AppLog(title, 'error', stack);
     }
     const stack: string[] = [];
     const raw: MappedPosition[] = [];
@@ -101,10 +102,7 @@ export class AppError extends Error {
         stack.push('<anonymous>');
       }
     }
-    console.log('Got MappedPositions for ' + this.message + '\n', raw);
-    return AppLog(
-      `${this.name}: ${this.message}\n` + stack.join('\n'),
-      'error',
-    );
+    console.log('Got MappedPositions for ' + title + '\n', raw);
+    return AppLog(title, 'error', stack.join('\n'));
   }
 }

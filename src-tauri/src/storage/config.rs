@@ -198,7 +198,7 @@ pub struct ConfigTable;
 
 impl TableSpec for ConfigTable {
     const NAME: &'static str = "config";
-    const LATEST: i32 = 1;
+    const LATEST: i32 = 2;
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Config::Table)

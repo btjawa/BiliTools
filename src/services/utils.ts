@@ -1,10 +1,10 @@
 import { useSettingsStore, useAppStore } from '@/store';
-import { TYPE, useToast } from 'vue-toastification';
 import { MediaType } from '@/types/shared.d';
-import { watch } from 'vue';
 import i18n from '@/i18n';
 import { NOTIFICATION, TIMER } from '@/constants';
 
+import { toast, ToasterProps, ExternalToast } from 'vue-sonner';
+import { watch } from 'vue';
 import { fetch } from '@tauri-apps/plugin-http';
 import * as log from '@tauri-apps/plugin-log';
 
@@ -13,36 +13,52 @@ import { handleEvent } from './queue';
 import { AppError } from './error';
 import * as auth from './auth';
 
-export function AppLog(message: string, _type?: `${TYPE}`) {
-  const type = Object.values(TYPE).includes(_type as TYPE)
-    ? (_type as TYPE)
-    : TYPE.INFO;
+export const toasterOptions: ToasterProps = {
+  closeButton: true,
+  expand: true,
+  position: 'top-right',
+  richColors: true,
+  visibleToasts: 8,
+  offset: '32px',
+  theme: 'system',
+};
+
+export function AppLog(
+  message: string,
+  type: 'success' | 'info' | 'warning' | 'error',
+  trace?: string,
+) {
+  const options: ExternalToast = {
+    classes: {
+      toast: 'min-w-fit',
+      title: 'whitespace-pre',
+      description: 'whitespace-pre',
+    },
+    duration: 3000,
+    description: trace,
+  };
+
   switch (type) {
-    case TYPE.ERROR: {
-      log.error(message);
-      console.error(message);
+    case 'warning':
+    case 'error': {
+      const func = type === 'error' ? 'error' : 'warn';
+      log[func](`${message}\n${trace}`);
+      console[func](message + '\n', trace);
+      options.duration = 6000;
       break;
     }
-    case TYPE.WARNING: {
-      log.warn(message);
-      console.warn(message);
-      break;
-    }
-    case TYPE.INFO:
-    case TYPE.SUCCESS:
-    case TYPE.DEFAULT: {
+    default: {
       log.info(message);
       console.log(message);
       break;
     }
   }
-  useToast()(message, {
-    type,
-    timeout:
-      type === TYPE.ERROR
-        ? NOTIFICATION.ERROR_TIMEOUT
-        : NOTIFICATION.SUCCESS_TIMEOUT,
-  });
+
+  if (trace) {
+    options.classes!.title += ' text-sm';
+  }
+
+  toast[type](message, options);
 }
 
 export function setEventHook() {

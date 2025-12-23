@@ -1,14 +1,14 @@
 <template>
   <div
     data-tauri-drag-region
-    class="z-100 h-[30px] bg-transparent"
+    class="z-1000000000 h-7.5 bg-transparent"
     @dblclick="appWindow.toggleMaximize()"
   >
     <div v-if="osType() !== 'macos'" class="relative float-right">
       <div class="button" @click="toggleTop">
         <i :class="[isTop ? 'fa-solid' : 'fa-light', 'fa-thumbtack']"></i>
       </div>
-      <div class="button translate-y-[-5px]" @click="appWindow.minimize()">
+      <div class="button -translate-y-1.25" @click="appWindow.minimize()">
         <div class="h-px!"></div>
       </div>
       <div class="button" @click="appWindow.toggleMaximize()">

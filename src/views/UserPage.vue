@@ -59,11 +59,11 @@
       <template v-else>
         <div class="flex flex-col items-center gap-4 m-16 mr-8 w-fit">
           <h1>{{ $t('user.scan') }}</h1>
-          <div class="relative flex w-[160px] p-2 rounded-lg bg-white">
+          <div class="relative flex w-40 p-2 rounded-lg bg-white">
             <img
               v-if="v.scanStatus === -2"
               src="@/assets/img/user/loadTV.gif"
-              class="absolute m-[22px]"
+              class="absolute m-5.5"
             />
             <div
               v-if="v.scanStatus === 86038 || v.scanStatus === 86090"
@@ -99,7 +99,7 @@
               <Dropdown
                 v-if="v.tab"
                 v-model="v.cid"
-                class="flat min-w-[52px]"
+                class="flat min-w-13!"
                 :drop="v.countries"
               />
               <span v-else>{{ $t('user.account') }}</span>

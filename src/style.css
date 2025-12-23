@@ -62,7 +62,7 @@
   #main {
     @apply flex flex-col relative w-full h-full overflow-hidden;
     &::before {
-      @apply content-[''] absolute inset-0 bg-black/60 z-[1];
+      @apply content-[''] absolute inset-0 bg-black/60 z-1;
       @apply transition-opacity opacity-0 pointer-events-none;
     }
     &:has(.popup)::before {
@@ -86,7 +86,7 @@
     @apply cursor-pointer text-(--primary-color);
   }
   hr {
-    @apply border-none h-px my-4 bg-(--split-color) flex-shrink-0;
+    @apply border-none h-px my-4 bg-(--split-color) shrink-0;
   }
   img {
     -webkit-user-drag: none;
@@ -156,7 +156,7 @@
         @apply w-4;
       }
       label {
-        @apply w-[3px] rounded-md h-4 invisible shrink-0;
+        @apply w-0.75 rounded-md h-4 invisible shrink-0;
       }
       &.active {
         @apply bg-(--button-color) text-(--primary-color);
@@ -171,7 +171,7 @@
   }
   .popup {
     @apply flex flex-col rounded-lg shadow-lg bg-(--solid-block-color);
-    @apply absolute inset-0 m-auto w-fit! h-fit! gap-2 p-4 z-[2];
+    @apply absolute inset-0 m-auto w-fit! h-fit! gap-2 p-4 z-2;
     .close {
       @apply absolute top-4 right-4 rounded-full w-8 h-8;
     }
@@ -186,16 +186,6 @@
     li {
       @apply list-disc list-inside ml-4;
     }
-  }
-}
-
-.Vue-Toastification__container {
-  transform: translateY(10px) translateX(28px);
-  .Vue-Toastification__toast {
-    @apply flex items-center py-4 px-6;
-  }
-  .Vue-Toastification__toast-body {
-    @apply text-sm whitespace-pre-wrap select-text;
   }
 }
 

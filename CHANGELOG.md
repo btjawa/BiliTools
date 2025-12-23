@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.7] - 2025-11-21
+
+## 问题修复
+
+- [`d74c47d`](https://github.com/btjawa/BiliTools/commit/d74c47d6972f10e618d0a87107a36a1a4fa17367) 修复取消 Scheduler 任务时概率导致大量报错的问题 ([#215](https://github.com/btjawa/BiliTools/issues/215))
+- [`d74c47d`](https://github.com/btjawa/BiliTools/commit/d74c47d6972f10e618d0a87107a36a1a4fa17367) 迁移至 `vue-sonner`，改善报错信息显示体验 ([#211](https://github.com/btjawa/BiliTools/issues/211))
+- [`d74c47d`](https://github.com/btjawa/BiliTools/commit/d74c47d6972f10e618d0a87107a36a1a4fa17367) 更新数据库基准版本，解决部分历史遗留问题  ([#227](https://github.com/btjawa/BiliTools/issues/227), [#199](https://github.com/btjawa/BiliTools/issues/199))
+
 ## [1.4.6] - 2025-11-19
 
 ### 问题修复

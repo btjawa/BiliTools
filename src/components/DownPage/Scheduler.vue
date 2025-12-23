@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <div class="flex mb-2.5 mx-[14px] text items-center">
+    <div class="flex mb-2.5 mx-3.5 text items-center">
       <i :class="[$fa.weight, 'fa-id-badge']"></i>
       <span class="mr-auto">{{ sche.sid }} ({{ sche.list.length }})</span>
       <div class="flex gap-2 items-center">

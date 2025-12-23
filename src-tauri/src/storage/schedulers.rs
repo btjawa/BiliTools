@@ -35,7 +35,7 @@ pub struct SchedulersTable;
 
 impl TableSpec for SchedulersTable {
     const NAME: &'static str = "schedulers";
-    const LATEST: i32 = 3;
+    const LATEST: i32 = 4;
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Schedulers::Table)

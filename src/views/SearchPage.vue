@@ -1,7 +1,7 @@
 <template>
   <div class="w-full h-full flex flex-col justify-center items-center">
     <div
-      class="flex w-[628px] rounded-full mb-auto p-2 gap-2 bg-(--block-color) border border-(--split-color)"
+      class="flex w-157 rounded-full mb-auto p-2 gap-2 bg-(--block-color) border border-(--split-color)"
     >
       <input
         v-model="v.searchInput"

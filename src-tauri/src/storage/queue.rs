@@ -21,7 +21,7 @@ pub struct QueueTable;
 
 impl TableSpec for QueueTable {
     const NAME: &'static str = "queue";
-    const LATEST: i32 = 1;
+    const LATEST: i32 = 2;
     fn create_stmt() -> TableCreateStatement {
         Table::create()
             .table(Queue::Table)
