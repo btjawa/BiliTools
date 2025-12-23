@@ -185,22 +185,39 @@ use crate::storage::cache_records::{self, CacheRecord};
 pub async fn scan_cache_directory(path: String) -> TauriResult<ScanResult> {
     let import_service = ImportService::new();
     let root_path = PathBuf::from(&path);
+    let start_time = std::time::Instant::now();
     let cache_dirs = import_service.scan_cache_directories(&root_path).await?;
+
+    // 异步计算总大小
+    let mut estimated_total_size: i64 = 0;
+    for dir in &cache_dirs {
+        if let Ok(mut entries) = tokio::fs::read_dir(dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                if let Ok(metadata) = entry.metadata().await {
+                    if metadata.is_file() {
+                        estimated_total_size += metadata.len() as i64;
+                    }
+                }
+            }
+        }
+    }
+
+    let scan_duration = start_time.elapsed().as_millis() as i64;
 
     Ok(ScanResult {
         root_path: path,
         total_directories: cache_dirs.len() as i32,
-        valid_directories: cache_dirs.len() as i32, // 扫描到的都是有效的
+        valid_directories: cache_dirs.len() as i32,
         invalid_directories: 0,
-        estimated_total_size: 0, // 暂时不计算大小，避免扫描过慢
-        scan_duration: 0,
+        estimated_total_size,
+        scan_duration,
         directories: cache_dirs
             .into_iter()
             .map(|dir| ScanDirectoryInfo {
                 path: dir.to_string_lossy().to_string(),
                 is_valid: true,
                 invalid_reason: None,
-                preview: None, // 暂时不提供预览信息
+                preview: None,
             })
             .collect(),
     })

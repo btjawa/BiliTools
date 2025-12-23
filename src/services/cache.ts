@@ -211,34 +211,35 @@ export class CacheManagementService {
 
   /**
    * 批量删除缓存项
-   * 批量删除多个缓存记录和本地文件
+   * 调用后端批量删除命令，支持组和单个视频
    *
    * @param ids 缓存项ID列表
+   * @param types 对应的项目类型列表 ('video' | 'group')
    * @returns 批量操作结果
    */
   async batchDeleteCacheItems(
     ids: string[],
-  ): Promise<Types.BatchOperationResult[]> {
-    // 当前后端未实现批量删除，使用单个删除的方式实现
-    const results: Types.BatchOperationResult[] = [];
+    types: ('video' | 'group')[],
+  ): Promise<Types.BatchDeleteResult> {
+    try {
+      const result = (await invoke('batch_delete_cache_items', {
+        itemIds: ids,
+        itemTypes: types,
+      })) as Types.BatchDeleteResultRaw;
 
-    for (const id of ids) {
-      try {
-        await this.deleteCacheItem(id);
-        results.push({
-          cacheId: id,
-          success: true,
-        });
-      } catch (error) {
-        results.push({
-          cacheId: id,
-          success: false,
-          error: error instanceof Error ? error.message : '删除失败',
-        });
-      }
+      return {
+        successCount: result.success_count,
+        deletedVideos: result.deleted_videos,
+        deletedGroups: result.deleted_groups,
+        errorCount: result.error_count,
+        errors: result.errors,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        `批量删除失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      );
     }
-
-    return results;
   }
 
   /**

@@ -4,7 +4,7 @@ import viteCompression from 'vite-plugin-compression';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
-const host = 'localhost';
+const host = '127.0.0.1';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -36,7 +36,7 @@ export default defineConfig({
     hmr: {
       protocol: 'ws',
       host,
-      port: 1421,
+      port: 1521,
     },
     watch: {
       // 3. tell vite to ignore watching `src-tauri`

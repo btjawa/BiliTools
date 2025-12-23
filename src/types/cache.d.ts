@@ -595,6 +595,31 @@ export interface BatchOperationResult {
   /** 错误信息（如果失败） */
   error?: string;
 }
+
+/**
+ * 批量删除结果
+ */
+export interface BatchDeleteResult {
+  /** 成功操作数量 */
+  successCount: number;
+  /** 删除的视频数量 */
+  deletedVideos: number;
+  /** 删除的组数量 */
+  deletedGroups: number;
+  /** 错误数量 */
+  errorCount: number;
+  /** 错误信息列表 */
+  errors: string[];
+}
+
+/** 后端批量删除结果原始格式 */
+export interface BatchDeleteResultRaw {
+  success_count: number;
+  deleted_videos: number;
+  deleted_groups: number;
+  error_count: number;
+  errors: string[];
+}
 // ============================================================================
 // 后端原始数据类型（用于类型转换）
 // ============================================================================

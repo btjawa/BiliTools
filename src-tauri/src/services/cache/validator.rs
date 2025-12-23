@@ -165,15 +165,17 @@ impl ValidatorService {
         }
 
         let size_difference = actual_size as i64 - expected_size as i64;
-        let size_difference_abs = size_difference.abs();
+        let size_difference_abs = size_difference.abs() as u64;
 
-        // 允许1MB的差异
-        const MAX_ALLOWED_DIFFERENCE: i64 = 1024 * 1024; // 1MB
+        // 使用百分比容差：允许 1% 的差异，最小 1MB
+        let percentage_tolerance = (expected_size as f64 * 0.01) as u64;
+        let min_tolerance: u64 = 1024 * 1024; // 1MB
+        let max_allowed_difference = percentage_tolerance.max(min_tolerance);
 
-        if size_difference_abs > MAX_ALLOWED_DIFFERENCE {
+        if size_difference_abs > max_allowed_difference {
             errors.push(format!(
-                "文件大小不匹配，期望: {} bytes, 实际: {} bytes, 差异: {} bytes",
-                expected_size, actual_size, size_difference
+                "文件大小不匹配，期望: {} bytes, 实际: {} bytes, 差异: {} bytes (容差: {} bytes)",
+                expected_size, actual_size, size_difference, max_allowed_difference
             ));
             (false, size_difference)
         } else {
@@ -254,10 +256,13 @@ impl ValidatorService {
             }
         }
 
-        let difference = (actual_size as i64 - expected_size as i64).abs();
-        const MAX_ALLOWED_DIFFERENCE: i64 = 1024 * 1024; // 1MB
+        let difference = (actual_size as i64 - expected_size as i64).abs() as u64;
+        // 使用百分比容差：允许 1% 的差异，最小 1MB
+        let percentage_tolerance = (expected_size as f64 * 0.01) as u64;
+        let min_tolerance: u64 = 1024 * 1024; // 1MB
+        let max_allowed_difference = percentage_tolerance.max(min_tolerance);
 
-        Ok(difference <= MAX_ALLOWED_DIFFERENCE)
+        Ok(difference <= max_allowed_difference)
     }
 }
 

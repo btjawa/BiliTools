@@ -8,6 +8,19 @@ use std::path::PathBuf;
 use super::error::CacheImportError;
 use crate::storage::{cache_group_states, cache_records::CacheRecord};
 
+/// 读取图片文件并转换为 base64 data URL
+async fn read_image_as_base64(path: &std::path::Path) -> Result<String> {
+    let file_data = tokio::fs::read(path).await?;
+    let base64_data = BASE64_STANDARD.encode(&file_data);
+    let mime_type = match path.extension().and_then(|ext| ext.to_str()) {
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("png") => "image/png",
+        Some("webp") => "image/webp",
+        _ => "image/jpeg",
+    };
+    Ok(format!("data:{};base64,{}", mime_type, base64_data))
+}
+
 /// 缓存视频组
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CacheGroup {
@@ -296,13 +309,6 @@ impl GroupService {
     }
 
     /// 获取组封面
-    ///
-    /// # 参数
-    /// * `group_id` - 组ID
-    /// * `videos` - 组内视频列表
-    ///
-    /// # 返回
-    /// * `Result<String>` - 封面URL
     pub async fn get_group_cover(&self, _group_id: &str, videos: &[CacheRecord]) -> Result<String> {
         // 1. 尝试从任一视频目录获取组封面（支持多种格式）
         let group_cover_files = ["group.jpg", "group.png", "image.jpg", "image.png"];
@@ -314,19 +320,8 @@ impl GroupService {
                 let group_cover_path = cache_dir.join(cover_file);
 
                 if group_cover_path.exists() && group_cover_path.is_file() {
-                    // 读取文件并转换为 base64 data URL
-                    match tokio::fs::read(&group_cover_path).await {
-                        Ok(file_data) => {
-                            let base64_data = BASE64_STANDARD.encode(&file_data);
-                            let mime_type =
-                                match group_cover_path.extension().and_then(|ext| ext.to_str()) {
-                                    Some("jpg") | Some("jpeg") => "image/jpeg",
-                                    Some("png") => "image/png",
-                                    Some("webp") => "image/webp",
-                                    _ => "image/jpeg", // 默认
-                                };
-                            return Ok(format!("data:{};base64,{}", mime_type, base64_data));
-                        }
+                    match read_image_as_base64(&group_cover_path).await {
+                        Ok(data_url) => return Ok(data_url),
                         Err(e) => {
                             eprintln!("读取组封面文件失败 {:?}: {}", group_cover_path, e);
                             continue;
@@ -338,11 +333,9 @@ impl GroupService {
 
         // 2. 回退到第一个视频的封面
         if let Some(first_video) = videos.first() {
-            // 尝试获取本地封面
             if let Ok(Some(local_cover)) = self.get_local_cover(&first_video.cache_path).await {
                 return Ok(local_cover);
             }
-            // 回退到原始封面URL
             Ok(first_video.cover_url.clone())
         } else {
             Err(CacheImportError::MissingRequiredFields {
@@ -352,31 +345,20 @@ impl GroupService {
         }
     }
 
-    /// 获取本地封面文件（复用现有逻辑）
+    /// 获取本地封面文件
     async fn get_local_cover(&self, cache_path: &str) -> Result<Option<String>> {
         let cache_dir = PathBuf::from(cache_path);
         if !cache_dir.exists() {
             return Ok(None);
         }
 
-        // B站缓存的封面文件名（按优先级排序）
         let cover_files = ["image.jpg", "image.png"];
 
         for file_name in &cover_files {
             let cover_path = cache_dir.join(file_name);
             if cover_path.exists() && cover_path.is_file() {
-                // 读取文件并转换为 base64 data URL
-                match tokio::fs::read(&cover_path).await {
-                    Ok(file_data) => {
-                        let base64_data = BASE64_STANDARD.encode(&file_data);
-                        let mime_type = match cover_path.extension().and_then(|ext| ext.to_str()) {
-                            Some("jpg") | Some("jpeg") => "image/jpeg",
-                            Some("png") => "image/png",
-                            Some("webp") => "image/webp",
-                            _ => "image/jpeg", // 默认
-                        };
-                        return Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)));
-                    }
+                match read_image_as_base64(&cover_path).await {
+                    Ok(data_url) => return Ok(Some(data_url)),
                     Err(e) => {
                         eprintln!("读取封面文件失败 {:?}: {}", cover_path, e);
                         continue;
