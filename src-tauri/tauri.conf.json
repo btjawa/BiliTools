@@ -5,7 +5,7 @@
   "identifier": "com.btjawa.bilitools",
   "build": {
     "beforeDevCommand": "pnpm web:dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://127.0.0.1:3000",
     "beforeBuildCommand": "pnpm web:build",
     "frontendDist": "../dist"
   },
