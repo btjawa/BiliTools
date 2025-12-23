@@ -776,17 +776,6 @@ function goToImport(): void {
 }
 
 /**
- * 播放缓存项
- */
-async function playItem(item: Types.CacheItem): Promise<void> {
-  try {
-    await cacheStore.playCacheItem(item);
-  } catch (error) {
-    new AppError(error).handle();
-  }
-}
-
-/**
  * 打开文件夹
  */
 async function openFolder(item: Types.CacheItem): Promise<void> {
@@ -1453,6 +1442,8 @@ function handleConvertProgressClose(): void {
 // ============================================================================
 
 onMounted(async () => {
+  // 加载缓存根目录状态（用于刷新按钮判断）
+  await transferStore.loadCurrentCacheRoot();
   // 加载所有UP主列表（从全量数据）
   await cacheStore.loadAllUploaders();
   // 初始加载缓存列表
