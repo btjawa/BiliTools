@@ -250,12 +250,6 @@ export type DuplicateHandlingStrategy =
 export interface ImportOptions {
   /** 重复处理策略 */
   duplicateHandling: DuplicateHandlingStrategy;
-  /** 验证文件完整性 */
-  verifyIntegrity: boolean;
-  /** 导入后删除原文件 */
-  deleteAfterImport: boolean;
-  /** 自动创建播放列表 */
-  createPlaylist: boolean;
   /** 最大并发处理数 */
   maxConcurrency: number;
 }

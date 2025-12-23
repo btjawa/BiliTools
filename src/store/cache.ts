@@ -287,9 +287,12 @@ export const useCacheStore = defineStore('cache', () => {
     if (!importProgress.value) return 0;
     const progress = importProgress.value;
     if (progress.totalDirectories === 0) return 0;
+    const completed =
+      (progress.successCount ?? 0) +
+      (progress.failureCount ?? 0) +
+      (progress.skippedCount ?? 0);
     const percentage = Math.round(
-      (progress.processedDirectories / progress.totalDirectories) *
-        PROGRESS.MAX_PERCENTAGE,
+      (completed / progress.totalDirectories) * PROGRESS.MAX_PERCENTAGE,
     );
     return isNaN(percentage) ? 0 : percentage;
   });

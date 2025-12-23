@@ -71,28 +71,6 @@
               />
             </div>
 
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="importOptions.verifyIntegrity"
-                type="checkbox"
-                class="w-4 h-4"
-              />
-              <span class="text-sm">{{
-                $t('cache.import.verifyIntegrity')
-              }}</span>
-            </label>
-
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="importOptions.createPlaylist"
-                type="checkbox"
-                class="w-4 h-4"
-              />
-              <span class="text-sm">{{
-                $t('cache.import.createPlaylist')
-              }}</span>
-            </label>
-
             <div class="flex items-center gap-2">
               <span class="text-sm"
                 >{{ $t('cache.import.maxConcurrency') }}:</span
@@ -115,7 +93,7 @@
             <span>{{ $t('cache.import.scanResult') }}</span>
           </h2>
 
-          <div class="grid grid-cols-4 gap-4 mb-4">
+          <div class="grid grid-cols-4 gap-4">
             <div class="text-center">
               <div class="text-2xl font-bold text-(--primary-color)">
                 {{ scanResult.totalDirectories }}
@@ -147,53 +125,6 @@
               <div class="text-sm text-(--desc-color)">
                 {{ $t('cache.import.totalSize') }}
               </div>
-            </div>
-          </div>
-
-          <!-- 预览列表 -->
-          <div
-            v-if="scanResult.directories.length > 0"
-            class="max-h-64 overflow-y-auto"
-          >
-            <div
-              v-for="(dir, index) in scanResult.directories.slice(0, 10)"
-              :key="index"
-              class="flex items-center gap-3 p-3 border-b border-(--border-color) last:border-b-0"
-            >
-              <i
-                :class="[
-                  $fa.weight,
-                  dir.isValid
-                    ? 'fa-check-circle text-green-500'
-                    : 'fa-times-circle text-red-500',
-                ]"
-              ></i>
-              <div class="flex-1 min-w-0">
-                <div v-if="dir.preview" class="font-medium truncate">
-                  {{ dir.preview.title }}
-                </div>
-                <div class="text-sm text-(--desc-color) truncate">
-                  {{ dir.path }}
-                </div>
-                <div
-                  v-if="!dir.isValid && dir.invalidReason"
-                  class="text-sm text-red-500"
-                >
-                  {{ dir.invalidReason }}
-                </div>
-              </div>
-              <div v-if="dir.preview" class="text-sm text-(--desc-color)">
-                {{ formatBytes(dir.preview.fileSize) }}
-              </div>
-            </div>
-
-            <div
-              v-if="scanResult.directories.length > 10"
-              class="text-center py-2 text-sm text-(--desc-color)"
-            >
-              {{
-                $t('cache.import.andMore', [scanResult.directories.length - 10])
-              }}
             </div>
           </div>
         </div>
@@ -369,9 +300,6 @@ const isScanning = ref(false);
 // 导入选项
 const importOptions = ref<Types.ImportOptions>({
   duplicateHandling: 'skip',
-  verifyIntegrity: true,
-  deleteAfterImport: false,
-  createPlaylist: false,
   maxConcurrency: 4,
 });
 
@@ -460,9 +388,6 @@ function resetForm(): void {
   scanResult.value = null;
   Object.assign(importOptions.value, {
     duplicateHandling: 'skip',
-    verifyIntegrity: true,
-    deleteAfterImport: false,
-    createPlaylist: false,
     maxConcurrency: 4,
   });
 }

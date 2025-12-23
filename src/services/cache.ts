@@ -107,9 +107,10 @@ export class CacheImportService {
             : options.duplicateHandling === 'overwrite'
               ? 'Overwrite'
               : 'Ask',
-        verify_integrity: options.verifyIntegrity,
-        delete_after_import: options.deleteAfterImport,
-        create_playlist: options.createPlaylist,
+        verify_integrity: true,
+        delete_after_import: false,
+        create_playlist: false,
+        max_concurrency: options.maxConcurrency,
       };
 
       const importId = (await invoke('import_cache_directory', {

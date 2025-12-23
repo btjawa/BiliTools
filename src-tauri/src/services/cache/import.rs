@@ -43,6 +43,13 @@ pub struct ImportOptions {
     pub delete_after_import: bool,
     /// 是否自动创建播放列表
     pub create_playlist: bool,
+    /// 最大并发处理数
+    #[serde(default = "default_max_concurrency")]
+    pub max_concurrency: usize,
+}
+
+fn default_max_concurrency() -> usize {
+    4
 }
 
 impl Default for ImportOptions {
@@ -51,7 +58,8 @@ impl Default for ImportOptions {
             duplicate_handling: DuplicateHandlingStrategy::Skip,
             verify_integrity: true,
             delete_after_import: false,
-            create_playlist: true,
+            create_playlist: false,
+            max_concurrency: default_max_concurrency(),
         }
     }
 }
@@ -142,8 +150,6 @@ pub struct ImportError {
 pub struct ImportService {
     parser: ParserService,
     validator: ValidatorService,
-    // 并发控制：最多4个并发处理
-    semaphore: Arc<Semaphore>,
 }
 
 impl ImportError {
@@ -171,7 +177,6 @@ impl ImportService {
         Self {
             parser: ParserService::new(),
             validator: ValidatorService::new(),
-            semaphore: Arc::new(Semaphore::new(4)), // 最多4个并发
         }
     }
 
@@ -263,16 +268,19 @@ impl ImportService {
         let mut failure_count = 0;
         let mut skipped_count = 0;
 
+        // 根据选项创建并发控制信号量
+        let max_concurrency = options.max_concurrency.clamp(1, 8);
+        let semaphore = Arc::new(Semaphore::new(max_concurrency));
+
         // 并发处理缓存目录
         let mut handles = Vec::new();
 
-        for (index, cache_dir) in cache_dirs.into_iter().enumerate() {
-            let permit = self.semaphore.clone().acquire_owned().await?;
+        for (_index, cache_dir) in cache_dirs.into_iter().enumerate() {
+            let permit = semaphore.clone().acquire_owned().await?;
             let parser = self.parser.clone();
             let validator = self.validator.clone();
             let cache_dir_clone = cache_dir.clone();
             let progress_clone = progress.clone();
-            let current_index = index as i32;
             let options_clone = options.clone();
 
             let handle = tokio::spawn(async move {
@@ -282,7 +290,6 @@ impl ImportService {
                 {
                     let mut prog = progress_clone.write().await;
                     prog.current_directory = cache_dir_clone.to_string_lossy().to_string();
-                    prog.processed_directories = current_index;
                     prog.status = ImportProgressStatus::Validating;
                 }
 
@@ -298,14 +305,12 @@ impl ImportService {
                 // 更新进度
                 {
                     let mut prog = progress_clone.write().await;
-                    prog.processed_directories = current_index + 1;
 
                     // 计算处理速度和预计剩余时间
-                    let elapsed_dirs = prog.processed_directories as f64;
-                    if elapsed_dirs > 0.0 {
-                        prog.processing_speed = elapsed_dirs / 60.0; // 假设已经过了1分钟，实际应该记录开始时间
-                        let remaining_dirs =
-                            (prog.total_directories - prog.processed_directories) as f64;
+                    let completed = (prog.success_count + prog.failure_count + prog.skipped_count) as f64;
+                    if completed > 0.0 {
+                        prog.processing_speed = completed / 60.0;
+                        let remaining_dirs = (prog.total_directories as f64) - completed;
                         if prog.processing_speed > 0.0 {
                             prog.estimated_time_remaining =
                                 Some((remaining_dirs / prog.processing_speed * 60.0) as u64);

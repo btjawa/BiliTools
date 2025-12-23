@@ -1353,7 +1353,11 @@ delete_after_import: boolean;
 /**
  * 是否自动创建播放列表
  */
-create_playlist: boolean }
+create_playlist: boolean; 
+/**
+ * 最大并发处理数
+ */
+max_concurrency?: number }
 /**
  * 导入进度
  */
