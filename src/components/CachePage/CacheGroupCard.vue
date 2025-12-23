@@ -208,9 +208,9 @@
         <button
           class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
           :disabled="video.status === 'unavailable'"
-          @click.stop="$emit('playVideo', video)"
+          @click.stop="$emit('convertVideo', video)"
         >
-          <i class="fa-solid fa-play"></i>
+          <i class="fa-solid fa-right-left"></i>
         </button>
 
         <button
@@ -287,7 +287,7 @@ interface Emits {
   (e: 'cutGroup', group: Types.CacheGroup): void;
   (e: 'selectVideo', videoId: string): void;
   (e: 'selectVideoRange', videoId: string): void;
-  (e: 'playVideo', video: Types.CacheItem): void;
+  (e: 'convertVideo', video: Types.CacheItem): void;
   (e: 'openVideoFolder', video: Types.CacheItem): void;
   (e: 'deleteVideo', video: Types.CacheItem): void;
 }

@@ -69,10 +69,10 @@
       <button
         class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-(--primary-color) text-white hover:bg-(--primary-color-hover) transition-colors"
         :disabled="item.status === 'unavailable'"
-        @click.stop="$emit('play', item)"
+        @click.stop="$emit('convert', item)"
       >
-        <i class="fa-solid fa-play"></i>
-        <span>{{ $t('cache.card.play') }}</span>
+        <i class="fa-solid fa-right-left"></i>
+        <span>{{ $t('convert.title') }}</span>
       </button>
 
       <button
@@ -143,7 +143,6 @@ interface Props {
 interface Emits {
   (e: 'select'): void;
   (e: 'selectRange', itemId: string): void;
-  (e: 'play', item: Types.CacheItem): void;
   (e: 'openFolder', item: Types.CacheItem): void;
   (e: 'delete', item: Types.CacheItem): void;
   (e: 'copy', item: Types.CacheItem): void;

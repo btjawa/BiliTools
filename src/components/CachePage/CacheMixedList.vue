@@ -32,7 +32,6 @@
           :in-range-preview="props.rangePreview.includes(item.data.id)"
           @select="$emit('selectVideo', item.data.id)"
           @select-range="$emit('selectVideoRange', $event)"
-          @play="$emit('playVideo', item.data)"
           @open-folder="$emit('openVideoFolder', item.data)"
           @delete="$emit('deleteVideo', item.data)"
           @copy="$emit('copyVideo', $event)"
@@ -61,7 +60,7 @@
           @cut-group="$emit('cutGroup', $event)"
           @select-video="$emit('selectVideo', $event)"
           @select-video-range="$emit('selectVideoRange', $event)"
-          @play-video="$emit('playVideo', $event)"
+          @convert-video="$emit('convertVideo', $event)"
           @open-video-folder="$emit('openVideoFolder', $event)"
           @delete-video="$emit('deleteVideo', $event)"
         />
@@ -107,7 +106,7 @@ interface Emits {
   // 视频相关事件
   (e: 'selectVideo', videoId: string): void;
   (e: 'selectVideoRange', videoId: string): void;
-  (e: 'playVideo', video: Types.CacheItem): void;
+  (e: 'convertVideo', video: Types.CacheItem): void;
   (e: 'openVideoFolder', video: Types.CacheItem): void;
   (e: 'deleteVideo', video: Types.CacheItem): void;
   (e: 'copyVideo', video: Types.CacheItem): void;
