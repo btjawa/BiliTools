@@ -232,53 +232,6 @@ export type ImportErrorType =
   | 'permission_denied' // 权限不足
   | 'unknown_error'; // 未知错误
 
-/**
- * 导入结果
- * 表示一次完整导入操作的最终结果
- */
-export interface ImportResult {
-  /** 导入操作的唯一标识符 */
-  importId: string;
-  /** 扫描发现的总目录数 */
-  totalFound: number;
-  /** 成功导入的数量 */
-  successCount: number;
-  /** 导入失败的数量 */
-  failureCount: number;
-  /** 跳过的数量（重复或无效） */
-  skippedCount: number;
-  /** 导入开始时间 */
-  startTime: Date;
-  /** 导入结束时间 */
-  endTime: Date;
-  /** 详细的导入结果列表 */
-  details: ImportDetail[];
-}
-
-/**
- * 单个目录的导入详情
- */
-export interface ImportDetail {
-  /** 目录路径 */
-  directoryPath: string;
-  /** 处理状态 */
-  status: ImportDetailStatus;
-  /** 失败或跳过的原因 */
-  reason?: string;
-  /** 成功导入时生成的缓存项目 */
-  cacheItem?: CacheItem;
-  /** 处理耗时（毫秒） */
-  processingTime: number;
-}
-
-/**
- * 导入详情状态枚举
- */
-export type ImportDetailStatus =
-  | 'success' // 成功导入
-  | 'failure' // 导入失败
-  | 'skipped'; // 跳过处理
-
 // ============================================================================
 // 导入配置和选项
 // ============================================================================

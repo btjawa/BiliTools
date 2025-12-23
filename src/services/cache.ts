@@ -180,29 +180,6 @@ export class CacheImportService {
       );
     }
   }
-
-  /**
-   * 获取导入结果
-   * 获取已完成导入操作的详细结果
-   * 注意：此功能需要后端实现 get_import_result 命令
-   *
-   * @param importId 导入操作ID
-   * @returns 导入结果详情
-   */
-  async getImportResult(importId: string): Promise<Types.ImportResult> {
-    // TODO: 等待后端实现 get_import_result 命令
-    // 目前返回模拟数据用于开发
-    return {
-      importId,
-      totalFound: 0,
-      successCount: 0,
-      failureCount: 0,
-      skippedCount: 0,
-      startTime: new Date(),
-      endTime: new Date(),
-      details: [],
-    };
-  }
 }
 
 // ============================================================================
@@ -529,45 +506,6 @@ export async function selectAndScanCacheDirectory(): Promise<Types.ScanResult | 
   if (!path) return null;
 
   return await cacheImportService.scanCacheDirectory(path);
-}
-
-/**
- * 执行完整的导入流程
- * 从选择目录到完成导入的完整流程
- *
- * @param options 导入选项配置
- * @param onProgress 进度更新回调
- * @returns 导入结果
- */
-export async function performFullImport(
-  options: Types.ImportOptions,
-  onProgress?: (progress: BackendImportProgress) => void,
-): Promise<Types.ImportResult | null> {
-  // 选择目录
-  const path = await cacheImportService.selectCacheDirectory();
-  if (!path) return null;
-
-  // 开始导入
-  const importId = await cacheImportService.startImport(path, options);
-
-  // 监听进度（如果提供了回调）
-  let cancelProgress: (() => void) | undefined;
-  if (onProgress) {
-    cancelProgress = await cacheImportService.listenImportProgress(
-      importId,
-      onProgress,
-    );
-  }
-
-  try {
-    // 等待导入完成并获取结果
-    return await cacheImportService.getImportResult(importId);
-  } finally {
-    // 清理进度监听
-    if (cancelProgress) {
-      cancelProgress();
-    }
-  }
 }
 
 /**

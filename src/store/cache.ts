@@ -51,7 +51,6 @@ export const useCacheStore = defineStore('cache', () => {
 
   // 导入相关状态
   const importProgress = ref<BackendImportProgress | null>(null);
-  const importHistory = ref<Types.ImportResult[]>([]);
   const activeImportId = ref<string | null>(null);
 
   // UI状态
@@ -1416,24 +1415,6 @@ export const useCacheStore = defineStore('cache', () => {
   }
 
   /**
-   * 完成导入
-   */
-  function completeImport(result: Types.ImportResult): void {
-    isImporting.value = false;
-    importProgress.value = null;
-    activeImportId.value = null;
-
-    // 添加到导入历史
-    importHistory.value.unshift(result);
-
-    // 重置分页到第一页（导入新数据后应在第一页查看）
-    pagination.value.currentPage = 1;
-
-    // 刷新缓存列表
-    loadDisplayItems();
-  }
-
-  /**
    * 增量扫描缓存根目录
    * 检测新增或删除的视频，自动导入新视频并清理已删除的记录
    */
@@ -1647,7 +1628,6 @@ export const useCacheStore = defineStore('cache', () => {
     currentFilter,
     currentSort,
     importProgress,
-    importHistory,
     activeImportId,
     isLoading,
     isImporting,
@@ -1748,7 +1728,6 @@ export const useCacheStore = defineStore('cache', () => {
     // 导入管理
     startImport,
     cancelImport,
-    completeImport,
     incrementalScanCacheRoot,
 
     // 数据转换
