@@ -32,3 +32,4 @@ dist-ssr
 
 # Claude
 .claude/
+~/.tauri/bilitools.key

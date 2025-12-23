@@ -55,10 +55,17 @@ For installation instructions, guides and FAQs, please refer to the documents.
 | Scan login     | ✅ Completed | Light & Dark Theme | ✅ Completed |
 | Password login | ✅ Completed | Clipboard Monitor  | ✅ Completed |
 | SMS login      | ✅ Completed | HTTP Proxy         | ✅ Completed |
-| Auto refresh login state | ✅ Completed | PCDN Filter | ✅ Completed
+| Auto refresh login state | ✅ Completed | PCDN Filter | ✅ Completed |
 | Params signing | ✅ Completed | MP3 Converter      | ✅ Completed |
 | Risk ctrl      | ✅ Completed | Naming Format      | ✅ Completed |
 | Fingerprint    | ✅ Completed | Watch History      | ✅ Completed |
+|                |              | Offline Cache Manager | ✅ Completed |
+
+**Offline Cache Manager Features:**
+- Recognize Bilibili offline cache directory structure with collection support
+- Batch select, delete, and transfer cache files
+- Convert M4S to MP4 format
+- Smart suggestions during multi-selection
 
 ## 🚀 Contributing
 
