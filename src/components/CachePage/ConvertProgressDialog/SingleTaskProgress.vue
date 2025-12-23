@@ -2,7 +2,7 @@
   <div class="space-y-4">
     <!-- 任务标题 -->
     <div class="flex items-center gap-3">
-      <i class="fa-solid fa-file-video text-2xl text-blue-500"></i>
+      <i class="fa-solid fa-right-left text-2xl text-blue-500"></i>
       <div class="flex-1 min-w-0">
         <h3 class="text-lg font-medium text-(--content-color) truncate">
           {{ task.title }}

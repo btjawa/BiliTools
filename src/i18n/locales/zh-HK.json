@@ -602,7 +602,8 @@
       "selectedItems": "已選擇 {0} 項",
       "clearSelection": "清除選擇",
       "batchDelete": "批次刪除",
-      "singleVideos": "個單獨影片"
+      "singleVideos": "個單獨影片",
+      "groups": "個合集"
     },
     "batchDelete": {
       "title": "批次刪除確認",
@@ -728,6 +729,12 @@
       "recovered": "任務已恢復",
       "abandoned": "任務已放棄",
       "noIncompleteTasks": "沒有未完成的轉換任務"
+    },
+    "batchResult": {
+      "summary": "共 {total} 個任務，成功 {success} 個，失敗 {failure} 個，耗時 {time}",
+      "hours": "{0}小時{1}分{2}秒",
+      "minutes": "{0}分{1}秒",
+      "seconds": "{0}秒"
     }
   },
   "transfer": {

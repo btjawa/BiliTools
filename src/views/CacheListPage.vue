@@ -326,7 +326,7 @@
             class="w-full text-xs text-blue-500 hover:underline text-left mb-1"
             @click="startConvertOperation"
           >
-            <i :class="[$fa.weight, 'fa-file-video']"></i>
+            <i :class="[$fa.weight, 'fa-right-left']"></i>
             <span>{{ $t('convert.title') }}</span>
           </button>
           <button

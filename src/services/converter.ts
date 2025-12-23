@@ -13,6 +13,7 @@ import type {
   DiskSpaceCheck,
   ConvertEvent,
 } from './backend';
+import i18n from '@/i18n';
 
 export type {
   ConvertConfig,
@@ -454,22 +455,27 @@ export function formatBatchResultSummary(
   result: import('./backend').BatchConvertResult,
 ): string {
   const { totalCount, successCount, failureCount, totalTime } = result;
+  const t = i18n.global.t;
 
-  // 格式化耗时
   const hours = Math.floor(totalTime / 3600);
   const minutes = Math.floor((totalTime % 3600) / 60);
   const seconds = totalTime % 60;
 
   let timeStr = '';
   if (hours > 0) {
-    timeStr = `${hours}小时${minutes}分${seconds}秒`;
+    timeStr = t('convert.batchResult.hours', [hours, minutes, seconds]);
   } else if (minutes > 0) {
-    timeStr = `${minutes}分${seconds}秒`;
+    timeStr = t('convert.batchResult.minutes', [minutes, seconds]);
   } else {
-    timeStr = `${seconds}秒`;
+    timeStr = t('convert.batchResult.seconds', [seconds]);
   }
 
-  return `共 ${totalCount} 个任务，成功 ${successCount} 个，失败 ${failureCount} 个，耗时 ${timeStr}`;
+  return t('convert.batchResult.summary', {
+    total: totalCount,
+    success: successCount,
+    failure: failureCount,
+    time: timeStr,
+  });
 }
 
 // ============================================================================

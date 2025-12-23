@@ -184,7 +184,7 @@ function handleContextMenu(event: MouseEvent) {
       item: props.item,
       options: [
         {
-          icon: 'fa-file-video',
+          icon: 'fa-right-left',
           text: 'convert.title',
           action: () => emit('convert', props.item),
         },

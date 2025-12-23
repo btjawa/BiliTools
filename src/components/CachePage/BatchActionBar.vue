@@ -83,7 +83,7 @@
           "
           @click="handleBatchConvert"
         >
-          <i :class="[$fa.weight, 'fa-file-video']"></i>
+          <i :class="[$fa.weight, 'fa-right-left']"></i>
           <span>{{ $t('convert.title') }}</span>
           <span v-if="selectedCount > 0" class="text-xs opacity-75"
             >({{ selectedCount }})</span

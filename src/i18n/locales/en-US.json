@@ -602,7 +602,8 @@
       "selectedItems": "{0} items selected",
       "clearSelection": "Clear selection",
       "batchDelete": "Batch delete",
-      "singleVideos": " single videos"
+      "singleVideos": " single videos",
+      "groups": " collections"
     },
     "batchDelete": {
       "title": "Confirm Batch Delete",
@@ -728,6 +729,12 @@
       "recovered": "Task recovered",
       "abandoned": "Task abandoned",
       "noIncompleteTasks": "No incomplete conversion tasks"
+    },
+    "batchResult": {
+      "summary": "{total} tasks total, {success} succeeded, {failure} failed, took {time}",
+      "hours": "{0}h {1}m {2}s",
+      "minutes": "{0}m {1}s",
+      "seconds": "{0}s"
     }
   },
   "transfer": {

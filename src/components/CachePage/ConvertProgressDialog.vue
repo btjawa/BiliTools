@@ -8,7 +8,7 @@
           <!-- 对话框头部 -->
           <div class="modal-header">
             <h2 class="modal-title">
-              <i class="fa-solid fa-file-video text-blue-500"></i>
+              <i class="fa-solid fa-right-left text-blue-500"></i>
               <span class="text-(--content-color)">{{ dialogTitle }}</span>
             </h2>
             <button v-if="canClose" class="close-btn" @click="handleClose">

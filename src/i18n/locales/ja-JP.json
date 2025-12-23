@@ -602,7 +602,8 @@
       "selectedItems": "{0} 件選択中",
       "clearSelection": "選択をクリア",
       "batchDelete": "一括削除",
-      "singleVideos": "個の単独動画"
+      "singleVideos": "個の単独動画",
+      "groups": "個のコレクション"
     },
     "batchDelete": {
       "title": "一括削除の確認",
@@ -728,6 +729,12 @@
       "recovered": "タスクが復元されました",
       "abandoned": "タスクが破棄されました",
       "noIncompleteTasks": "未完了の変換タスクはありません"
+    },
+    "batchResult": {
+      "summary": "合計 {total} タスク、成功 {success}、失敗 {failure}、所要時間 {time}",
+      "hours": "{0}時間{1}分{2}秒",
+      "minutes": "{0}分{1}秒",
+      "seconds": "{0}秒"
     }
   },
   "transfer": {
