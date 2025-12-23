@@ -1215,13 +1215,15 @@ async function handleTransferConfirm(
       'get_cache_display_items',
     )) as Types.DisplayItemRaw[];
 
-    // 提取所有视频项
-    const allCacheItems: Types.CacheItem[] = allRawItems
-      .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
-          item.type === 'single_video' && !!item.video,
-      )
-      .map((item) => transformCacheRecord(item.video));
+    // 提取所有视频项（包括单独视频和合集内的视频）
+    const allCacheItems: Types.CacheItem[] = allRawItems.flatMap((item) => {
+      if (item.type === 'single_video' && item.video) {
+        return [transformCacheRecord(item.video)];
+      } else if (item.type === 'video_group' && item.group) {
+        return item.group.videos.map((video) => transformCacheRecord(video));
+      }
+      return [];
+    });
 
     // 构建源文件列表
     const source_files: string[] = [];
@@ -1481,13 +1483,15 @@ async function openSuggestionPanel(): Promise<void> {
       'get_cache_display_items',
     )) as Types.DisplayItemRaw[];
 
-    // 提取所有视频项
-    const allCacheItems: Types.CacheItem[] = allRawItems
-      .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
-          item.type === 'single_video' && !!item.video,
-      )
-      .map((item) => transformCacheRecord(item.video));
+    // 提取所有视频项（包括单独视频和合集内的视频）
+    const allCacheItems: Types.CacheItem[] = allRawItems.flatMap((item) => {
+      if (item.type === 'single_video' && item.video) {
+        return [transformCacheRecord(item.video)];
+      } else if (item.type === 'video_group' && item.group) {
+        return item.group.videos.map((video) => transformCacheRecord(video));
+      }
+      return [];
+    });
 
     // 获取已选中的缓存项
     const selectedCacheItems = allCacheItems.filter((item) =>
@@ -1521,13 +1525,15 @@ async function refreshSuggestions(): Promise<void> {
       'get_cache_display_items',
     )) as Types.DisplayItemRaw[];
 
-    // 提取所有视频项
-    const allCacheItems: Types.CacheItem[] = allRawItems
-      .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
-          item.type === 'single_video' && !!item.video,
-      )
-      .map((item) => transformCacheRecord(item.video));
+    // 提取所有视频项（包括单独视频和合集内的视频）
+    const allCacheItems: Types.CacheItem[] = allRawItems.flatMap((item) => {
+      if (item.type === 'single_video' && item.video) {
+        return [transformCacheRecord(item.video)];
+      } else if (item.type === 'video_group' && item.group) {
+        return item.group.videos.map((video) => transformCacheRecord(video));
+      }
+      return [];
+    });
 
     // 获取已选中的缓存项
     const selectedCacheItems = allCacheItems.filter((item) =>

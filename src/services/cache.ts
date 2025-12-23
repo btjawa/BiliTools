@@ -285,14 +285,20 @@ export class CacheManagementService {
     const rawItems = (await invoke(
       'get_cache_display_items',
     )) as Types.DisplayItemRaw[];
-    const videoItem = rawItems.find(
-      (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
-        item.type === 'single_video' && item.video?.id === id,
-    );
-    if (!videoItem || !videoItem.video) {
-      throw new AppError('缓存项不存在');
+
+    // 在单独视频和合集视频中查找
+    for (const item of rawItems) {
+      if (item.type === 'single_video' && item.video?.id === id) {
+        return transformCacheRecord(item.video);
+      } else if (item.type === 'video_group' && item.group) {
+        const video = item.group.videos.find((v) => v.id === id);
+        if (video) {
+          return transformCacheRecord(video);
+        }
+      }
     }
-    return transformCacheRecord(videoItem.video);
+
+    throw new AppError('缓存项不存在');
   }
 
   /**
@@ -408,12 +414,16 @@ export class CacheManagementService {
     const rawItems = (await invoke(
       'get_cache_display_items',
     )) as Types.DisplayItemRaw[];
-    const videoItems = rawItems
-      .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
-          item.type === 'single_video' && !!item.video,
-      )
-      .map((item) => transformCacheRecord(item.video));
+
+    // 提取所有视频项（包括单独视频和合集内的视频）
+    const videoItems = rawItems.flatMap((item) => {
+      if (item.type === 'single_video' && item.video) {
+        return [transformCacheRecord(item.video)];
+      } else if (item.type === 'video_group' && item.group) {
+        return item.group.videos.map((video) => transformCacheRecord(video));
+      }
+      return [];
+    });
 
     // 应用筛选条件（如果提供）
     const items = filter
