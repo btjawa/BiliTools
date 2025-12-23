@@ -1,7 +1,7 @@
 import { useSettingsStore, useAppStore } from '@/store';
 import { MediaType } from '@/types/shared.d';
 import i18n from '@/i18n';
-import { NOTIFICATION, TIMER } from '@/constants';
+import { TIMER } from '@/constants';
 
 import { toast, ToasterProps, ExternalToast } from 'vue-sonner';
 import { watch } from 'vue';

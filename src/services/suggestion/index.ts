@@ -261,7 +261,7 @@ function createPartialResult(
   const groups: SuggestionGroup[] = [
     {
       id: 'group-0',
-      label: '特征: 相似内容',
+      labelInfo: { keys: ['suggestion.group.similarContent'] },
       dominantFeatures: [],
       items: suggestionItems.slice(0, opts.maxItemsPerGroup),
       averageSimilarity:

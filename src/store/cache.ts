@@ -641,7 +641,7 @@ export const useCacheStore = defineStore('cache', () => {
           await cacheManagementService.batchDeleteCacheItems(ids, types);
 
         // 转换为 BatchOperationResult[] 格式
-        const results: Types.BatchOperationResult[] = ids.map((id, index) => {
+        const results: Types.BatchOperationResult[] = ids.map((id) => {
           const hasError = deleteResult.errors.some((err) => err.includes(id));
           return {
             cacheId: id,
