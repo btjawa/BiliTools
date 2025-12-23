@@ -635,7 +635,22 @@ export const useCacheStore = defineStore('cache', () => {
   ): Promise<Types.BatchOperationResult[]> {
     const result = await UnifiedErrorHandler.withErrorBoundary(
       async () => {
-        const results = await cacheManagementService.batchDeleteCacheItems(ids);
+        // 所有项目都是视频类型
+        const types = ids.map(() => 'video' as const);
+        const deleteResult =
+          await cacheManagementService.batchDeleteCacheItems(ids, types);
+
+        // 转换为 BatchOperationResult[] 格式
+        const results: Types.BatchOperationResult[] = ids.map((id, index) => {
+          const hasError = deleteResult.errors.some((err) => err.includes(id));
+          return {
+            cacheId: id,
+            success: !hasError,
+            error: hasError
+              ? deleteResult.errors.find((err) => err.includes(id))
+              : undefined,
+          };
+        });
 
         // 移除成功删除的项目
         const successIds = results

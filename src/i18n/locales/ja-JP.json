@@ -737,6 +737,51 @@
       "seconds": "{0}秒"
     }
   },
+  "suggestion": {
+    "button": {
+      "title": "スマート提案",
+      "tooltip": "スマート提案 (Ctrl+I)",
+      "disabledHint": "先にキャッシュ項目を選択してください",
+      "calculating": "提案を計算中..."
+    },
+    "panel": {
+      "title": "スマート選択提案",
+      "close": "閉じる",
+      "calculating": "選択特徴を分析中...",
+      "empty": "類似コンテンツが見つかりません",
+      "statistics": "{0} 件の提案、{1} グループ",
+      "progress": "{0}/{1} グループ審査済み",
+      "approveAll": "すべて承認",
+      "reset": "リセット",
+      "cancel": "キャンセル",
+      "apply": "適用"
+    },
+    "group": {
+      "itemCount": "{0} 件",
+      "itemCountWithMore": "{0}/{1} 件を表示",
+      "hasMore": "+{0} 件",
+      "approveHint": "承認",
+      "rejectHint": "スキップ"
+    },
+    "filter": {
+      "all": "すべて",
+      "sameUploader": "同じ投稿者",
+      "sameGroup": "同じコレクション",
+      "similarTime": "近い時間"
+    },
+    "feature": {
+      "prefix": "特徴",
+      "similar": "類似コンテンツ",
+      "sameUploader": "同じ投稿者",
+      "sameGroup": "同じコレクション",
+      "recentDownload": "最近のダウンロード",
+      "mediumDownload": "中期ダウンロード",
+      "oldDownload": "古いダウンロード",
+      "sameTime": "同時期",
+      "sameSize": "近いサイズ",
+      "sameDuration": "近い長さ"
+    }
+  },
   "transfer": {
     "title": "ファイル転送",
     "copy": "コピー",

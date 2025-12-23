@@ -10,3 +10,7 @@ export { default as TransferProgressDialog } from './TransferProgressDialog.vue'
 export { default as CacheRootMigrationDialog } from './CacheRootMigrationDialog.vue';
 export { default as ConvertDialog } from './ConvertDialog.vue';
 export { default as ConvertProgressDialog } from './ConvertProgressDialog.vue';
+export { default as SuggestionButton } from './SuggestionButton.vue';
+export { default as SuggestionPanel } from './SuggestionPanel.vue';
+export { default as SuggestionGroup } from './SuggestionGroup.vue';
+export { default as SuggestionItem } from './SuggestionItem.vue';

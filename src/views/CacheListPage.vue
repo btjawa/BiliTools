@@ -89,6 +89,8 @@
             v-if="cacheStore.hasSelectedItems"
             :visible="true"
             :show-group-details="true"
+            :suggestion-count="suggestionStore.totalSuggestionCount"
+            :is-calculating-suggestions="suggestionStore.isCalculating"
             @select-all="cacheStore.selectAllCurrentPage"
             @unselect-all="cacheStore.unselectAllCurrentPage"
             @clear-selection="cacheStore.clearSelection"
@@ -96,6 +98,7 @@
             @batch-cut="startCutOperation"
             @batch-delete="batchDelete"
             @batch-convert="startConvertOperation"
+            @suggestion-click="openSuggestionPanel"
           />
         </Transition>
 
@@ -397,6 +400,15 @@
       :task-ids="convertTaskIds"
       @close="handleConvertProgressClose"
     />
+
+    <!-- 智能建议面板 Requirements 6.4, 6.6 -->
+    <SuggestionPanel
+      :visible="showSuggestionPanel"
+      :groups="suggestionStore.suggestions"
+      :is-calculating="suggestionStore.isCalculating"
+      @close="closeSuggestionPanel"
+      @apply="handleSuggestionApply"
+    />
   </div>
 </template>
 
@@ -428,11 +440,13 @@ import {
   CacheRootMigrationDialog,
   ConvertDialog,
   ConvertProgressDialog,
+  SuggestionPanel,
 } from '@/components/CachePage';
 import {
   initializeCacheKeyboardShortcuts,
   cleanupCacheKeyboardShortcuts,
 } from '@/services/keyboard';
+import { useSuggestionStore } from '@/store/suggestion';
 import type * as Types from '@/types/cache.d';
 import type * as TransferTypes from '@/types/transfer.d';
 import type { ConvertConfig } from '@/services/backend';
@@ -446,6 +460,7 @@ const router = useRouter();
 const { t: $t } = useI18n();
 const cacheStore = useCacheStore();
 const transferStore = useTransferStore();
+const suggestionStore = useSuggestionStore();
 
 // ============================================================================
 // 响应式状态
@@ -549,6 +564,10 @@ const showConvertDialog = ref(false);
 const showConvertProgressDialog = ref(false);
 const convertCacheIds = ref<string[]>([]);
 const convertTaskIds = ref<string[]>([]);
+
+// 智能建议相关状态
+const showSuggestionPanel = ref(false);
+let suggestionRefreshTimeout: number | null = null;
 
 // ============================================================================
 // 计算属性
@@ -823,18 +842,22 @@ async function batchDelete(): Promise<void> {
       'get_cache_display_items',
     )) as Types.DisplayItemRaw[];
 
-    // 提取所有视频项
-    const allCacheItems: Types.CacheItem[] = allRawItems
-      .filter(
-        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
-          item.type === 'single_video' && !!item.video,
-      )
-      .map((item) => transformCacheRecord(item.video));
-
     // 创建 ID 到缓存项的映射，方便快速查找
+    // 需要同时处理 single_video 和 video_group 中的视频
     const cacheItemMap = new Map<string, Types.CacheItem>();
-    for (const item of allCacheItems) {
-      cacheItemMap.set(item.id, item);
+
+    for (const rawItem of allRawItems) {
+      if (rawItem.type === 'single_video' && rawItem.video) {
+        // 单个视频
+        const cacheItem = transformCacheRecord(rawItem.video);
+        cacheItemMap.set(cacheItem.id, cacheItem);
+      } else if (rawItem.type === 'video_group' && rawItem.group) {
+        // 视频组中的所有视频
+        for (const video of rawItem.group.videos) {
+          const cacheItem = transformCacheRecord(video);
+          cacheItemMap.set(cacheItem.id, cacheItem);
+        }
+      }
     }
 
     // 构建要删除的项目列表
@@ -1438,6 +1461,103 @@ function handleConvertProgressClose(): void {
 }
 
 // ============================================================================
+// 智能建议相关方法
+// ============================================================================
+
+/**
+ * 打开智能建议面板
+ * Requirements 1.5: 点击建议按钮打开面板
+ */
+async function openSuggestionPanel(): Promise<void> {
+  try {
+    if (cacheStore.selectedItems.length === 0) {
+      return;
+    }
+
+    showSuggestionPanel.value = true;
+
+    // 获取所有显示项用于建议生成
+    const allRawItems = (await invoke(
+      'get_cache_display_items',
+    )) as Types.DisplayItemRaw[];
+
+    // 提取所有视频项
+    const allCacheItems: Types.CacheItem[] = allRawItems
+      .filter(
+        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
+          item.type === 'single_video' && !!item.video,
+      )
+      .map((item) => transformCacheRecord(item.video));
+
+    // 获取已选中的缓存项
+    const selectedCacheItems = allCacheItems.filter((item) =>
+      cacheStore.selectedItems.includes(item.id),
+    );
+
+    // 生成建议
+    await suggestionStore.generate(selectedCacheItems, allCacheItems);
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 关闭智能建议面板
+ */
+function closeSuggestionPanel(): void {
+  showSuggestionPanel.value = false;
+}
+
+/**
+ * 刷新智能建议
+ * 当选择变化时重新生成建议
+ */
+async function refreshSuggestions(): Promise<void> {
+  try {
+    if (cacheStore.selectedItems.length === 0) return;
+
+    // 获取所有显示项用于建议生成
+    const allRawItems = (await invoke(
+      'get_cache_display_items',
+    )) as Types.DisplayItemRaw[];
+
+    // 提取所有视频项
+    const allCacheItems: Types.CacheItem[] = allRawItems
+      .filter(
+        (item): item is { type: 'single_video'; video: Types.CacheRecordRaw } =>
+          item.type === 'single_video' && !!item.video,
+      )
+      .map((item) => transformCacheRecord(item.video));
+
+    // 获取已选中的缓存项
+    const selectedCacheItems = allCacheItems.filter((item) =>
+      cacheStore.selectedItems.includes(item.id),
+    );
+
+    // 重新生成建议
+    await suggestionStore.generate(selectedCacheItems, allCacheItems);
+  } catch (error) {
+    new AppError(error).handle();
+  }
+}
+
+/**
+ * 处理建议应用
+ * Requirements 6.4, 6.6: 应用已批准的选择到主列表
+ */
+function handleSuggestionApply(approvedItemIds: string[]): void {
+  // 将批准的项目添加到选择状态
+  approvedItemIds.forEach((itemId) => {
+    if (!cacheStore.selectedItems.includes(itemId)) {
+      cacheStore.selectedItems.push(itemId);
+    }
+  });
+
+  // 关闭面板
+  closeSuggestionPanel();
+}
+
+// ============================================================================
 // 生命周期
 // ============================================================================
 
@@ -1468,6 +1588,11 @@ onUnmounted(() => {
   window.removeEventListener('cache:batchDelete', handleBatchDeleteEvent);
   window.removeEventListener('cache:navigateUp', handleNavigateUpEvent);
   window.removeEventListener('cache:navigateDown', handleNavigateDownEvent);
+
+  // 清理建议刷新定时器
+  if (suggestionRefreshTimeout) {
+    clearTimeout(suggestionRefreshTimeout);
+  }
 });
 
 // 监听路由变化，清除选择状态（需求 7.3）
@@ -1490,6 +1615,38 @@ watch(
   () => cacheStore.pagination.currentPage,
   (newPage) => {
     pageInput.value = newPage;
+  },
+);
+
+// 监听选择变化，自动刷新建议（防抖 300ms）
+watch(
+  () => [...cacheStore.selectedItems],
+  (newSelection, oldSelection) => {
+    // 清除之前的定时器
+    if (suggestionRefreshTimeout) {
+      clearTimeout(suggestionRefreshTimeout);
+      suggestionRefreshTimeout = null;
+    }
+
+    // 选择为空时清除建议
+    if (newSelection.length === 0) {
+      suggestionStore.clearAll();
+      return;
+    }
+
+    // 避免相同选择触发刷新
+    if (
+      oldSelection &&
+      newSelection.length === oldSelection.length &&
+      newSelection.every((id) => oldSelection.includes(id))
+    ) {
+      return;
+    }
+
+    // 防抖刷新建议
+    suggestionRefreshTimeout = window.setTimeout(() => {
+      refreshSuggestions();
+    }, 300);
   },
 );
 

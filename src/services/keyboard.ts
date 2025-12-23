@@ -3,9 +3,13 @@
  *
  * 提供全局键盘事件监听、快捷键注册和分发功能
  * 支持缓存选择相关的快捷键操作
+ * 支持智能建议面板的键盘导航
+ *
+ * @see .kiro/specs/smart-selection-suggestion/design.md
  */
 
 import { useCacheStore } from '@/store/cache';
+import { useSuggestionStore } from '@/store/suggestion';
 
 /**
  * 快捷键处理器类型
@@ -188,7 +192,7 @@ export function initializeCacheKeyboardShortcuts(): void {
     handleDelete(event);
   });
 
-  // Escape: 取消选择
+  // Escape: 取消选择（仅在建议面板未打开时）
   keyboardService.registerShortcut('Escape', (event) => {
     handleEscape(event);
   });
@@ -207,6 +211,38 @@ export function initializeCacheKeyboardShortcuts(): void {
   keyboardService.registerShortcut(' ', (event) => {
     handleSpace(event);
   });
+
+  // ============================================================================
+  // 智能建议面板快捷键
+  // Requirements: 2.1, 2.3, 2.4, 2.1.2, 2.1.3, 2.1.4
+  // ============================================================================
+
+  // Ctrl+I: 打开建议面板
+  keyboardService.registerShortcut(
+    'i',
+    (event) => {
+      handleOpenSuggestionPanel(event);
+    },
+    { ctrlKey: true },
+  );
+
+  // Ctrl+Enter: 应用所有已批准选择并关闭面板
+  keyboardService.registerShortcut(
+    'Enter',
+    (event) => {
+      handleApplySuggestions(event);
+    },
+    { ctrlKey: true },
+  );
+
+  // Ctrl+Escape: 取消并关闭建议面板
+  keyboardService.registerShortcut(
+    'Escape',
+    (event) => {
+      handleCancelSuggestions(event);
+    },
+    { ctrlKey: true },
+  );
 
   // 启动监听
   keyboardService.startListening();
@@ -266,9 +302,18 @@ function handleDelete(event: KeyboardEvent): void {
  */
 function handleEscape(event: KeyboardEvent): void {
   const cacheStore = useCacheStore();
+  const suggestionStore = useSuggestionStore();
 
   // 检查是否在缓存列表页面
   if (!isInCacheListPage()) {
+    return;
+  }
+
+  // 如果建议面板打开，由面板内部处理 Escape
+  // 这里只处理非 Ctrl 的 Escape（Ctrl+Escape 由 handleCancelSuggestions 处理）
+  if (suggestionStore.isPanelVisible) {
+    // 触发建议面板的拒绝当前组事件
+    window.dispatchEvent(new CustomEvent('suggestion:rejectCurrentGroup'));
     return;
   }
 
@@ -351,6 +396,144 @@ function isInCacheListPage(): boolean {
   // 检查当前路由是否为缓存列表页面
   const currentPath = window.location.pathname;
   return currentPath.includes('cache') || currentPath.includes('list');
+}
+
+// ============================================================================
+// 智能建议面板快捷键处理函数
+// Requirements: 2.1, 2.3, 2.4, 2.1.2, 2.1.3, 2.1.4
+// ============================================================================
+
+/**
+ * 处理 Ctrl+I 打开建议面板
+ * Requirements 2.1: 按下 Ctrl+I 且有选中项时打开建议面板
+ */
+function handleOpenSuggestionPanel(event: KeyboardEvent): void {
+  const cacheStore = useCacheStore();
+  const suggestionStore = useSuggestionStore();
+
+  // 检查是否在缓存列表页面
+  if (!isInCacheListPage()) {
+    return;
+  }
+
+  // Requirements 2.2: 无选中项时不响应
+  if (!cacheStore.hasSelectedItems) {
+    return;
+  }
+
+  event.preventDefault();
+
+  // 如果面板已打开，则关闭
+  if (suggestionStore.isPanelVisible) {
+    suggestionStore.closePanel();
+    return;
+  }
+
+  // 触发打开建议面板事件
+  window.dispatchEvent(
+    new CustomEvent('suggestion:openPanel', {
+      detail: { selectedItems: cacheStore.selectedItems },
+    }),
+  );
+}
+
+/**
+ * 处理 Ctrl+Enter 应用建议选择
+ * Requirements 2.3: 建议面板打开时按 Ctrl+Enter 应用所有已批准选择并关闭面板
+ */
+function handleApplySuggestions(event: KeyboardEvent): void {
+  const suggestionStore = useSuggestionStore();
+
+  // 检查是否在缓存列表页面
+  if (!isInCacheListPage()) {
+    return;
+  }
+
+  // 只在建议面板打开时响应
+  if (!suggestionStore.isPanelVisible) {
+    return;
+  }
+
+  event.preventDefault();
+
+  // 触发应用建议事件
+  window.dispatchEvent(
+    new CustomEvent('suggestion:apply', {
+      detail: { approvedItemIds: suggestionStore.getApprovedItemIds() },
+    }),
+  );
+}
+
+/**
+ * 处理 Ctrl+Escape 取消建议
+ * Requirements 2.4: 建议面板打开时按 Ctrl+Escape 取消所有更改并关闭面板
+ */
+function handleCancelSuggestions(event: KeyboardEvent): void {
+  const suggestionStore = useSuggestionStore();
+
+  // 检查是否在缓存列表页面
+  if (!isInCacheListPage()) {
+    return;
+  }
+
+  // 只在建议面板打开时响应
+  if (!suggestionStore.isPanelVisible) {
+    return;
+  }
+
+  event.preventDefault();
+
+  // 关闭面板并清除状态
+  suggestionStore.clearAll();
+  suggestionStore.closePanel();
+
+  // 触发取消事件
+  window.dispatchEvent(new CustomEvent('suggestion:cancel'));
+}
+
+/**
+ * 处理 Tab 键批准当前组并移动到下一组
+ * Requirements 2.1.2: 按 Tab 批准当前组并移动到下一组
+ * 注意：此函数由 SuggestionPanel 组件内部调用，不在全局注册
+ */
+export function handleSuggestionTabKey(): void {
+  const suggestionStore = useSuggestionStore();
+
+  if (!suggestionStore.isPanelVisible) {
+    return;
+  }
+
+  suggestionStore.approveCurrentAndNext();
+}
+
+/**
+ * 处理 Shift+Tab 键移动到上一组
+ * Requirements 2.1.4: 按 Shift+Tab 移动到上一组
+ * 注意：此函数由 SuggestionPanel 组件内部调用，不在全局注册
+ */
+export function handleSuggestionShiftTabKey(): void {
+  const suggestionStore = useSuggestionStore();
+
+  if (!suggestionStore.isPanelVisible) {
+    return;
+  }
+
+  suggestionStore.moveToPreviousGroup();
+}
+
+/**
+ * 处理建议面板内的 Escape 键拒绝当前组
+ * Requirements 2.1.3: 按 Escape 拒绝当前组并移动到下一组
+ * 注意：此函数由 SuggestionPanel 组件内部调用，不在全局注册
+ */
+export function handleSuggestionEscapeKey(): void {
+  const suggestionStore = useSuggestionStore();
+
+  if (!suggestionStore.isPanelVisible) {
+    return;
+  }
+
+  suggestionStore.rejectCurrentAndNext();
 }
 
 export { keyboardService };

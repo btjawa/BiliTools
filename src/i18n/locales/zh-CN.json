@@ -738,6 +738,51 @@
       "seconds": "{0}秒"
     }
   },
+  "suggestion": {
+    "button": {
+      "title": "智能建议",
+      "tooltip": "智能建议 (Ctrl+I)",
+      "disabledHint": "请先选择缓存项",
+      "calculating": "正在计算建议..."
+    },
+    "panel": {
+      "title": "智能选择建议",
+      "close": "关闭",
+      "calculating": "正在分析选择特征...",
+      "empty": "未找到相似内容",
+      "statistics": "共 {0} 项建议，{1} 个分组",
+      "progress": "已审批 {0}/{1} 组",
+      "approveAll": "全部批准",
+      "reset": "重置",
+      "cancel": "取消",
+      "apply": "应用"
+    },
+    "group": {
+      "itemCount": "{0} 项",
+      "itemCountWithMore": "显示 {0}/{1} 项",
+      "hasMore": "+{0} 更多",
+      "approveHint": "批准",
+      "rejectHint": "跳过"
+    },
+    "filter": {
+      "all": "全部",
+      "sameUploader": "同UP主",
+      "sameGroup": "同合集",
+      "similarTime": "相近时间"
+    },
+    "feature": {
+      "prefix": "特征",
+      "similar": "相似内容",
+      "sameUploader": "同UP主",
+      "sameGroup": "同合集",
+      "recentDownload": "近期下载",
+      "mediumDownload": "中期下载",
+      "oldDownload": "早期下载",
+      "sameTime": "同期下载",
+      "sameSize": "相近大小",
+      "sameDuration": "相近时长"
+    }
+  },
   "transfer": {
     "title": "文件传输",
     "copy": "复制",

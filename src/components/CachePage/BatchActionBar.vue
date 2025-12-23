@@ -72,6 +72,13 @@
 
       <!-- 右侧：批量操作按钮 -->
       <div class="flex gap-2">
+        <!-- 智能建议按钮 Requirements 1.5 -->
+        <SuggestionButton
+          :disabled="selectedCount === 0"
+          :suggestion-count="suggestionCount"
+          :is-calculating="isCalculatingSuggestions"
+          @click="handleSuggestionClick"
+        />
         <!-- 转换按钮 -->
         <button
           class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -152,6 +159,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useCacheStore } from '@/store/cache';
+import SuggestionButton from './SuggestionButton.vue';
 
 // ============================================================================
 // Props and Emits
@@ -162,6 +170,10 @@ interface Props {
   visible: boolean;
   /** 是否显示组和单个视频的详细信息 */
   showGroupDetails?: boolean;
+  /** 可用建议数量 */
+  suggestionCount?: number;
+  /** 是否正在计算建议 */
+  isCalculatingSuggestions?: boolean;
 }
 
 interface Emits {
@@ -179,10 +191,14 @@ interface Emits {
   batchDelete: [];
   /** 批量转换事件 */
   batchConvert: [];
+  /** 智能建议点击事件 Requirements 1.5 */
+  suggestionClick: [];
 }
 
 withDefaults(defineProps<Props>(), {
   showGroupDetails: true,
+  suggestionCount: 0,
+  isCalculatingSuggestions: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -291,6 +307,16 @@ function handleBatchDelete(): void {
 function handleBatchConvert(): void {
   if (selectedCount.value > 0) {
     emit('batchConvert');
+  }
+}
+
+/**
+ * 处理智能建议点击
+ * Requirements 1.5: 建议按钮位于批量操作栏
+ */
+function handleSuggestionClick(): void {
+  if (selectedCount.value > 0) {
+    emit('suggestionClick');
   }
 }
 </script>

@@ -737,6 +737,51 @@
       "seconds": "{0}s"
     }
   },
+  "suggestion": {
+    "button": {
+      "title": "Smart Suggest",
+      "tooltip": "Smart Suggest (Ctrl+I)",
+      "disabledHint": "Please select cache items first",
+      "calculating": "Calculating suggestions..."
+    },
+    "panel": {
+      "title": "Smart Selection Suggestions",
+      "close": "Close",
+      "calculating": "Analyzing selection features...",
+      "empty": "No similar content found",
+      "statistics": "{0} suggestions in {1} groups",
+      "progress": "Reviewed {0}/{1} groups",
+      "approveAll": "Approve All",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "apply": "Apply"
+    },
+    "group": {
+      "itemCount": "{0} items",
+      "itemCountWithMore": "Showing {0}/{1} items",
+      "hasMore": "+{0} more",
+      "approveHint": "Approve",
+      "rejectHint": "Skip"
+    },
+    "filter": {
+      "all": "All",
+      "sameUploader": "Same Uploader",
+      "sameGroup": "Same Collection",
+      "similarTime": "Similar Time"
+    },
+    "feature": {
+      "prefix": "Feature",
+      "similar": "Similar Content",
+      "sameUploader": "Same Uploader",
+      "sameGroup": "Same Collection",
+      "recentDownload": "Recent Download",
+      "mediumDownload": "Medium-term Download",
+      "oldDownload": "Old Download",
+      "sameTime": "Same Period",
+      "sameSize": "Similar Size",
+      "sameDuration": "Similar Duration"
+    }
+  },
   "transfer": {
     "title": "File Transfer",
     "copy": "Copy",

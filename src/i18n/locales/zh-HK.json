@@ -737,6 +737,51 @@
       "seconds": "{0}秒"
     }
   },
+  "suggestion": {
+    "button": {
+      "title": "智能建議",
+      "tooltip": "智能建議 (Ctrl+I)",
+      "disabledHint": "請先選擇快取項目",
+      "calculating": "正在計算建議..."
+    },
+    "panel": {
+      "title": "智能選擇建議",
+      "close": "關閉",
+      "calculating": "正在分析選擇特徵...",
+      "empty": "未找到相似內容",
+      "statistics": "共 {0} 項建議，{1} 個分組",
+      "progress": "已審批 {0}/{1} 組",
+      "approveAll": "全部批准",
+      "reset": "重設",
+      "cancel": "取消",
+      "apply": "套用"
+    },
+    "group": {
+      "itemCount": "{0} 項",
+      "itemCountWithMore": "顯示 {0}/{1} 項",
+      "hasMore": "+{0} 更多",
+      "approveHint": "批准",
+      "rejectHint": "跳過"
+    },
+    "filter": {
+      "all": "全部",
+      "sameUploader": "同UP主",
+      "sameGroup": "同合集",
+      "similarTime": "相近時間"
+    },
+    "feature": {
+      "prefix": "特徵",
+      "similar": "相似內容",
+      "sameUploader": "同UP主",
+      "sameGroup": "同合集",
+      "recentDownload": "近期下載",
+      "mediumDownload": "中期下載",
+      "oldDownload": "早期下載",
+      "sameTime": "同期下載",
+      "sameSize": "相近大小",
+      "sameDuration": "相近時長"
+    }
+  },
   "transfer": {
     "title": "檔案傳輸",
     "copy": "複製",
