@@ -27,6 +27,7 @@
             :src="props.info.nfo.upper.avatar"
             :height="36"
             class="rounded-full!"
+            prevent
           />
           <span class="text-xs truncate mt-1 w-20 text-center">{{
             info.nfo.upper?.name
